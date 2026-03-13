@@ -58,6 +58,5 @@ These are **short-term tasks only** and will evolve as the project develops.
 
 ---
 
-# License
-
+# Licenseы
 MIT
