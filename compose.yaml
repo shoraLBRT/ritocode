@@ -57,8 +57,9 @@ services:
       retries: 20
       start_period: 10s
 
-  # Creates the buckets the platform expects, then exits. Runs on every `up`; bucket
-  # creation is idempotent, so a restart is harmless.
+  # Creates the buckets the platform expects, then exits. Bucket creation is idempotent, so
+  # running it again is harmless. Note that `docker compose up --wait` treats a container that
+  # exits as a failure, so scripts wait on postgres and minio and run this one separately.
   minio-init:
     image: minio/mc:RELEASE.2025-04-16T18-13-26Z
     container_name: ritocode-minio-init
