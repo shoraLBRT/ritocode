@@ -1,2 +1,8 @@
 <Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Ritocode.Shared/Ritocode.Shared.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Ritocode.Shared.Tests/Ritocode.Shared.Tests.csproj" />
+  </Folder>
 </Solution>
