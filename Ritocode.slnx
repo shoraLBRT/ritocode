@@ -2,6 +2,15 @@
   <Folder Name="/src/">
     <Project Path="src/Ritocode.Shared/Ritocode.Shared.csproj" />
   </Folder>
+  <Folder Name="/src/Modules/">
+    <Project Path="src/Modules/Ritocode.Modules.Auth/Ritocode.Modules.Auth.csproj" />
+    <Project Path="src/Modules/Ritocode.Modules.Evaluations/Ritocode.Modules.Evaluations.csproj" />
+    <Project Path="src/Modules/Ritocode.Modules.Problems/Ritocode.Modules.Problems.csproj" />
+    <Project Path="src/Modules/Ritocode.Modules.Progress/Ritocode.Modules.Progress.csproj" />
+    <Project Path="src/Modules/Ritocode.Modules.Submissions/Ritocode.Modules.Submissions.csproj" />
+    <Project Path="src/Modules/Ritocode.Modules.Users/Ritocode.Modules.Users.csproj" />
+    <Project Path="src/Modules/Ritocode.Modules.Workspaces/Ritocode.Modules.Workspaces.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Ritocode.Shared.Tests/Ritocode.Shared.Tests.csproj" />
   </Folder>
