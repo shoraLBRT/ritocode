@@ -1,0 +1,16 @@
+# Normalise line endings in the repository so builds and dotnet format behave the same on
+# Windows development machines and Linux CI.
+* text=auto eol=lf
+
+*.sln    text eol=crlf
+*.slnx   text eol=lf
+*.csproj text eol=lf
+*.props  text eol=lf
+*.targets text eol=lf
+
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
