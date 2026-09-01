@@ -13,6 +13,7 @@
     <Project Path="src/Modules/Ritocode.Modules.Workspaces/Ritocode.Modules.Workspaces.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Ritocode.Api.Tests/Ritocode.Api.Tests.csproj" />
     <Project Path="tests/Ritocode.Shared.Tests/Ritocode.Shared.Tests.csproj" />
   </Folder>
 </Solution>
