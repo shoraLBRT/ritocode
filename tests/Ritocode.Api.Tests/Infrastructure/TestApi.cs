@@ -29,6 +29,16 @@ public sealed class TestApi : IAsyncLifetime
         builder.Environment.EnvironmentName = Environments.Development;
         builder.WebHost.UseTestServer();
 
+        // Module DbContexts validate their settings at startup, and the readiness probe queries
+        // each schema, so the host needs a real database even for tests that never touch one.
+        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Database:ConnectionString"] = TestDatabase.ConnectionString,
+            // Retries would turn an unreachable database into a slow failure rather than an
+            // immediate, legible one.
+            ["Database:MaxRetryCount"] = "0",
+        });
+
         builder.AddRitocodeApi();
         builder.Services.AddScoped<IValidator<EchoRequest>, EchoRequestValidator>();
 
