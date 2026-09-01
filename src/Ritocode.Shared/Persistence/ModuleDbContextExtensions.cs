@@ -57,6 +57,10 @@ public static class ModuleDbContextExtensions
             builder.UseSnakeCaseNamingConvention();
         });
 
+        // Published so the migration tool can enumerate every context without a hand-maintained
+        // list that would drift from the modules.
+        services.AddSingleton(new ModuleDbContextRegistration(typeof(TContext), schema));
+
         // Readiness gains a check per module schema, so a partially migrated database is
         // reported as not ready rather than failing on the first request that needs it.
         services.AddHealthChecks().AddCheck<ModuleDbContextHealthCheck<TContext>>(
