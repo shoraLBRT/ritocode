@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
+using Ritocode.Shared.Diagnostics;
 
 namespace Ritocode.Shared.Persistence;
 
@@ -25,11 +27,15 @@ public static class ModuleDbContextExtensions
         ArgumentNullException.ThrowIfNull(configuration);
         ArgumentException.ThrowIfNullOrWhiteSpace(schema);
 
-        // Bound once regardless of how many modules call this; options validation runs at startup.
-        services.AddOptions<DatabaseOptions>()
-            .Bind(configuration.GetSection(DatabaseOptions.SectionName))
-            .ValidateDataAnnotations()
-            .ValidateOnStart();
+        // Every module calls this, but the settings are shared. Registering the binding and
+        // validation once keeps a single missing connection string from being reported five times.
+        if (!services.Any(d => d.ServiceType == typeof(IValidateOptions<DatabaseOptions>)))
+        {
+            services.AddOptions<DatabaseOptions>()
+                .Bind(configuration.GetSection(DatabaseOptions.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+        }
 
         services.AddDbContext<TContext>((provider, builder) =>
         {
@@ -50,6 +56,13 @@ public static class ModuleDbContextExtensions
             // so it follows PostgreSQL convention rather than C# convention.
             builder.UseSnakeCaseNamingConvention();
         });
+
+        // Readiness gains a check per module schema, so a partially migrated database is
+        // reported as not ready rather than failing on the first request that needs it.
+        services.AddHealthChecks().AddCheck<ModuleDbContextHealthCheck<TContext>>(
+            name: $"database:{schema}",
+            failureStatus: HealthStatus.Unhealthy,
+            tags: [HealthCheckTags.Ready]);
 
         return services;
     }
