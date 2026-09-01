@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/Ritocode.Api/Ritocode.Api.csproj" />
     <Project Path="src/Ritocode.Shared/Ritocode.Shared.csproj" />
   </Folder>
   <Folder Name="/src/Modules/">
