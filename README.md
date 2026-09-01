@@ -40,9 +40,11 @@ High-level platform capabilities:
 
 # Roadmap (near term)
 
-These are **short-term tasks only** and will evolve as the project develops.
+Tracked on the [project board](https://github.com/users/shoraLBRT/projects/3).
+Current implementation status, and what is being built next, lives in
+[docs/PROJECT_STATE.md](docs/PROJECT_STATE.md).
 
-- [ ] backend service skeleton
+- [x] backend service skeleton
 - [ ] core database schema
 - [ ] problem package format
 - [ ] problem catalog API
@@ -57,6 +59,11 @@ These are **short-term tasks only** and will evolve as the project develops.
 - [ ] observability and logging
 
 ---
+
+# Contributing
+
+The repository is built largely by AI agents working from the backlog. If you are one, start with
+[AGENTS.md](AGENTS.md) and [docs/PROJECT_STATE.md](docs/PROJECT_STATE.md).
 
 # License
 
