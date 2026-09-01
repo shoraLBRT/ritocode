@@ -1,0 +1,45 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+indent_style = space
+indent_size = 2
+trim_trailing_whitespace = true
+
+[*.{cs,csx}]
+indent_size = 4
+
+[*.{csproj,props,targets,slnx,xml}]
+indent_size = 2
+
+[*.{json,yml,yaml}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.cs]
+# --- Language conventions ---
+csharp_style_namespace_declarations = file_scoped:error
+csharp_prefer_braces = true:error
+csharp_style_var_for_built_in_types = false:silent
+csharp_style_var_when_type_is_apparent = true:suggestion
+dotnet_style_require_accessibility_modifiers = for_non_interface_members:error
+dotnet_style_readonly_field = true:warning
+dotnet_sort_system_directives_first = true
+
+# --- Analyzer rules deliberately disabled ---
+# CA1000: static factory members on generic types. Result<T>.Success / Page<T>.From are the
+#         intended construction path; the alternative is a non-generic helper class that reads worse.
+dotnet_diagnostic.CA1000.severity = none
+
+# CA1716: namespace segments clashing with reserved words in other .NET languages (Shared, Error).
+#         Ritocode ships no cross-language public API, so this only forces worse names.
+dotnet_diagnostic.CA1716.severity = none
+
+# CA1707: underscores in identifiers. Test method names use Method_Condition_Expectation.
+[tests/**/*.cs]
+dotnet_diagnostic.CA1707.severity = none
+dotnet_diagnostic.CA1848.severity = none

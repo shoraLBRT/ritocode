@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <UserSecretsId>ritocode-api</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+  </ItemGroup>
+
+  <!-- The API host is the composition root: it is the only project allowed to reference every module. -->
+  <ItemGroup>
+    <ProjectReference Include="../Ritocode.Shared/Ritocode.Shared.csproj" />
+    <ProjectReference Include="../Modules/Ritocode.Modules.Auth/Ritocode.Modules.Auth.csproj" />
+    <ProjectReference Include="../Modules/Ritocode.Modules.Users/Ritocode.Modules.Users.csproj" />
+    <ProjectReference Include="../Modules/Ritocode.Modules.Problems/Ritocode.Modules.Problems.csproj" />
+    <ProjectReference Include="../Modules/Ritocode.Modules.Workspaces/Ritocode.Modules.Workspaces.csproj" />
+    <ProjectReference Include="../Modules/Ritocode.Modules.Submissions/Ritocode.Modules.Submissions.csproj" />
+    <ProjectReference Include="../Modules/Ritocode.Modules.Evaluations/Ritocode.Modules.Evaluations.csproj" />
+    <ProjectReference Include="../Modules/Ritocode.Modules.Progress/Ritocode.Modules.Progress.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Ritocode.Api.Tests" />
+  </ItemGroup>
+
+</Project>

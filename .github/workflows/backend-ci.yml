@@ -1,0 +1,77 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+jobs:
+  build-and-test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('Directory.Packages.props', 'global.json') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore Ritocode.slnx
+
+      # Warnings are errors via Directory.Build.props, so this also fails on newly
+      # disclosed vulnerabilities in transitive packages (NU1903).
+      - name: Build
+        run: dotnet build Ritocode.slnx --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test Ritocode.slnx --configuration Release --no-build --logger "trx;LogFileName=results.trx" --results-directory ./test-results
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results
+          path: ./test-results
+          retention-days: 7
+
+  verify-formatting:
+    name: Verify formatting
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      # Style rules come from .editorconfig; this fails the build on unformatted code
+      # rather than leaving it to review comments.
+      - name: Check formatting
+        run: dotnet format Ritocode.slnx --verify-no-changes --verbosity diagnostic
