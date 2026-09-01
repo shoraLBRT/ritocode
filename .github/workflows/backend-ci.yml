@@ -24,6 +24,27 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
+    # Readiness probes query every module schema, so the host tests need a real database.
+    # The ICU locale matches compose.yaml so text ordering is identical here and locally.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: ritocode
+          POSTGRES_PASSWORD: ritocode
+          POSTGRES_DB: ritocode
+          POSTGRES_INITDB_ARGS: "--locale-provider=icu --icu-locale=en-US --encoding=UTF8"
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ritocode -d ritocode"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      RITOCODE_TEST_DATABASE: "Host=localhost;Port=5432;Database=ritocode;Username=ritocode;Password=ritocode"
+
     steps:
       - uses: actions/checkout@v7
 
@@ -75,3 +96,60 @@ jobs:
       # rather than leaving it to review comments.
       - name: Check formatting
         run: dotnet format Ritocode.slnx --verify-no-changes --verbosity diagnostic
+
+  database:
+    name: Migrations and schema drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: ritocode
+          POSTGRES_PASSWORD: ritocode
+          POSTGRES_DB: ritocode
+          POSTGRES_INITDB_ARGS: "--locale-provider=icu --icu-locale=en-US --encoding=UTF8"
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ritocode -d ritocode"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      Database__ConnectionString: "Host=localhost;Port=5432;Database=ritocode;Username=ritocode;Password=ritocode"
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('Directory.Packages.props', 'global.json') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore tools
+        run: dotnet tool restore
+
+      # The service container is a fresh database on every run, so this is the
+      # "migrations run from an empty DB" guarantee, checked rather than assumed.
+      - name: Apply migrations to an empty database
+        run: dotnet run --project src/Ritocode.DbMigrator
+
+      # Exit code 2 means pending migrations. Immediately after applying them there must be none;
+      # anything else means a migration did not actually take effect.
+      - name: Verify nothing is left pending
+        run: dotnet run --project src/Ritocode.DbMigrator -- status
+
+      # Fails when a module's EF model no longer matches its last migration — the schema-drift
+      # check #4 asks for.
+      - name: Verify no model drift
+        run: ./scripts/db-verify-no-drift.sh
