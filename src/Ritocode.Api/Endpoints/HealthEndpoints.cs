@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Ritocode.Shared.Diagnostics;
 
 namespace Ritocode.Api.Endpoints;
 
@@ -8,13 +9,10 @@ namespace Ritocode.Api.Endpoints;
 /// Liveness and readiness probes.
 /// <c>/health/live</c> answers "is the process up" and must never touch a dependency — a failing
 /// database should not get the container killed. <c>/health/ready</c> answers "can it serve
-/// traffic" and includes every check tagged <see cref="ReadyTag"/>.
+/// traffic" and includes every check tagged <see cref="HealthCheckTags.Ready"/>.
 /// </summary>
 public static class HealthEndpoints
 {
-    /// <summary>Tag marking a health check as gating readiness.</summary>
-    public const string ReadyTag = "ready";
-
     public static IEndpointRouteBuilder MapHealthEndpoints(this IEndpointRouteBuilder endpoints)
     {
         ArgumentNullException.ThrowIfNull(endpoints);
@@ -28,7 +26,7 @@ public static class HealthEndpoints
 
         endpoints.MapHealthChecks("/health/ready", new HealthCheckOptions
         {
-            Predicate = registration => registration.Tags.Contains(ReadyTag),
+            Predicate = registration => registration.Tags.Contains(HealthCheckTags.Ready),
             ResponseWriter = WriteResponseAsync,
         }).WithTags("Health").AllowAnonymous();
 

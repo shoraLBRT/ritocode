@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Ritocode.Modules.Users.Persistence;
 using Ritocode.Shared.Modules;
+using Ritocode.Shared.Persistence;
 
 namespace Ritocode.Modules.Users;
 
@@ -9,8 +11,7 @@ namespace Ritocode.Modules.Users;
 /// User accounts, profiles and account-level settings.
 /// </summary>
 /// <remarks>
-/// No behaviour yet — the skeleton exists so the module boundary is in place before the domain
-/// logic lands. Endpoints and services arrive with issues #25.
+/// Owns the <c>users</c> schema. No endpoints yet — those arrive with issue #25.
 /// </remarks>
 public sealed class UsersModule : IModule
 {
@@ -20,7 +21,7 @@ public sealed class UsersModule : IModule
 
     public void RegisterServices(IServiceCollection services, IConfiguration configuration)
     {
-        // Intentionally empty: this module owns no services yet.
+        services.AddModuleDbContext<UsersDbContext>(configuration, UsersDbContext.SchemaName);
     }
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints)

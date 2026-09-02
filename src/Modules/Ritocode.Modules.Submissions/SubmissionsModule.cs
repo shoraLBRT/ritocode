@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Ritocode.Modules.Submissions.Persistence;
 using Ritocode.Shared.Modules;
+using Ritocode.Shared.Persistence;
 
 namespace Ritocode.Modules.Submissions;
 
@@ -9,8 +11,7 @@ namespace Ritocode.Modules.Submissions;
 /// Submission lifecycle, attempt history and report retrieval.
 /// </summary>
 /// <remarks>
-/// No behaviour yet — the skeleton exists so the module boundary is in place before the domain
-/// logic lands. Endpoints and services arrive with issues #14, #15, #16.
+/// Owns the <c>submissions</c> schema. No endpoints yet — those arrive with issues #14, #15 and #16.
 /// </remarks>
 public sealed class SubmissionsModule : IModule
 {
@@ -20,7 +21,7 @@ public sealed class SubmissionsModule : IModule
 
     public void RegisterServices(IServiceCollection services, IConfiguration configuration)
     {
-        // Intentionally empty: this module owns no services yet.
+        services.AddModuleDbContext<SubmissionsDbContext>(configuration, SubmissionsDbContext.SchemaName);
     }
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints)
