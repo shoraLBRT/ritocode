@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Ritocode.Modules.Workspaces.Persistence;
 using Ritocode.Shared.Modules;
+using Ritocode.Shared.Persistence;
 
 namespace Ritocode.Modules.Workspaces;
 
@@ -9,8 +11,7 @@ namespace Ritocode.Modules.Workspaces;
 /// Workspace lifecycle: creation from a problem version, file tree, drafts and resets.
 /// </summary>
 /// <remarks>
-/// No behaviour yet — the skeleton exists so the module boundary is in place before the domain
-/// logic lands. Endpoints and services arrive with issues #10, #11, #12, #13, #43.
+/// Owns the <c>workspaces</c> schema. No endpoints yet — those arrive with issues #10 to #13 and #43.
 /// </remarks>
 public sealed class WorkspacesModule : IModule
 {
@@ -20,7 +21,7 @@ public sealed class WorkspacesModule : IModule
 
     public void RegisterServices(IServiceCollection services, IConfiguration configuration)
     {
-        // Intentionally empty: this module owns no services yet.
+        services.AddModuleDbContext<WorkspacesDbContext>(configuration, WorkspacesDbContext.SchemaName);
     }
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints)

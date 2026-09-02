@@ -9,6 +9,7 @@ and the old one is marked `Superseded by NNNN` rather than edited.
 | [0001](0001-technology-stack.md) | Technology stack | Accepted |
 | [0002](0002-modular-monolith-layout.md) | Modular monolith layout | Accepted |
 | [0003](0003-api-conventions.md) | API conventions | Accepted |
+| [0004](0004-persistence-and-migrations.md) | Persistence and migrations | Accepted |
 
 ## Writing a new ADR
 

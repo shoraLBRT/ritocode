@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <UserSecretsId>ritocode-dbmigrator</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <!--
+    References the API host to reuse ModuleRegistry rather than keeping a second list of modules.
+    The migrator and the host are one deployable unit; a tool that migrated a different set of
+    schemas than the host expects is exactly the failure this avoids.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="../Ritocode.Api/Ritocode.Api.csproj" />
+  </ItemGroup>
+
+</Project>

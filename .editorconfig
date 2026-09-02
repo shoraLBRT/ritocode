@@ -43,3 +43,11 @@ dotnet_diagnostic.CA1716.severity = none
 [tests/**/*.cs]
 dotnet_diagnostic.CA1707.severity = none
 dotnet_diagnostic.CA1848.severity = none
+
+# EF Core writes migrations and model snapshots itself and rewrites them on every `migrations add`.
+# Hand-written style rules do not apply to files nobody edits by hand, and enforcing them would
+# mean reformatting generated output after every schema change.
+[**/Persistence/Migrations/*.cs]
+generated_code = true
+dotnet_diagnostic.IDE0161.severity = none
+dotnet_diagnostic.CA1861.severity = none
