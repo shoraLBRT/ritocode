@@ -53,5 +53,7 @@ CodeCoverage/
 TestResult.xml
 nunit-*.xml
 
-# Local environment overrides for docker compose. .env.example is the committed template.
+# Environment secrets
 .env
+.env.*
+!.env.example
