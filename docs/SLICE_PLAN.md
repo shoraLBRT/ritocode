@@ -9,8 +9,8 @@ reductions that are allowed and the list that are forbidden. **Read that ADR bef
 anything here.** This file tracks progress; it holds no decisions.
 
 - **Last updated:** 2026-09-03
-- **Progress:** 0 / 34
-- **Estimate:** 28–32 sessions, six weeks at five sessions a week
+- **Progress:** 0 / 37
+- **Estimate:** 30–34 sessions, six to seven weeks at five sessions a week
 - **Then:** [stage two](#after-the-slice) — the rest of Phase 1
 
 ---
@@ -30,9 +30,9 @@ anything here.** This file tracks progress; it holds no decisions.
 | --- | --- | --- |
 | [1 — Foundation](#stage-1--foundation) | 5 | 0 / 5 |
 | [2 — Content and catalog](#stage-2--content-and-catalog) | 5 | 0 / 6 |
-| [3 — Identity and workspace](#stage-3--identity-and-workspace) | 5 | 0 / 6 |
-| [4 — Submission and queue](#stage-4--submission-and-queue) | 5 | 0 / 4 |
-| [5 — Execution](#stage-5--execution) | 6 | 0 / 7 |
+| [3 — Identity and workspace](#stage-3--identity-and-workspace) | 6 | 0 / 7 |
+| [4 — Submission and queue](#stage-4--submission-and-queue) | 5 | 0 / 5 |
+| [5 — Execution](#stage-5--execution) | 7 | 0 / 8 |
 | [6 — Product face](#stage-6--product-face) | 6 | 0 / 6 |
 
 ---
@@ -110,6 +110,12 @@ first time.
   Path normalisation, no escaping the workspace root, no symlink traversal, limits on file size and
   file count. Ships **in the same PR as #12**, not after it. Deferred as a whole this is not
   technical debt, it is a hole.
+- [ ] **[#35](https://github.com/shoraLBRT/ritocode/issues/35) (partial) — ownership guards.**
+  Every workspace and submission endpoint checks that the resource belongs to the caller, returning
+  404 rather than 403 per [ADR 0003](adr/0003-api-conventions.md). Without this the identity seam
+  is decorative: `user_id` comes from `ICurrentUser` exactly as the ADR requires, and anyone can
+  still read and write anyone else's workspace by id. Not hardening — the authorisation half of
+  having authentication at all.
 
 ## Stage 4 — Submission and queue
 
@@ -129,6 +135,11 @@ The button exists and the state machine is real, but nothing runs yet.
 - [ ] **[#17](https://github.com/shoraLBRT/ritocode/issues/17) (partial) — orchestrator.**
   Sequential validator execution and status transitions. No retries, priorities, cancellation or
   parallelism.
+- [ ] **[#35](https://github.com/shoraLBRT/ritocode/issues/35) (partial) — submission rate limit.**
+  A cap on submissions per user per window, plus a cap on how many evaluations run at once. A
+  submission starts a container: without a limit, one impatient tester — or one loop in a browser
+  tab — is a denial of service against your own test, and an open invitation to use the runner as
+  free compute. `RateLimited` is already in `ErrorType` and maps to 429.
 
 ## Stage 5 — Execution
 
@@ -148,6 +159,11 @@ forbidden list.
 - [ ] **[#23](https://github.com/shoraLBRT/ritocode/issues/23) — runner logs and artifacts.**
   Captured to object storage under the keys from stage 2, referenced by
   `submission_reports.logs_reference`.
+- [ ] **[#38](https://github.com/shoraLBRT/ritocode/issues/38) (partial) — determinism tests.**
+  Unit tests for both validators, and a test that evaluates the same submission twice and asserts
+  an identical score and report. Determinism is the claim the whole product rests on — asserting it
+  in a definition of done and never testing it is how it quietly stops being true. The full suite,
+  including runner integration across images, is stage two.
 - [ ] **[#33](https://github.com/shoraLBRT/ritocode/issues/33) (partial) — structured logging.**
   `RequestIdMiddleware` and `X-Request-Id` already work; the correlation id has to reach the worker
   and the runner, or a failed evaluation cannot be traced. Dashboards are
@@ -188,8 +204,9 @@ All of these, together:
 Listed so nobody builds them by accident, and so nobody mistakes their absence for an oversight:
 profile, XP, levels and leaderboard; GitHub login; workspace reset and snapshot history; catalog
 search and filters; lint and patch-scope validators; a second language; metrics and dashboards;
-rate limiting and the rest of the security baseline; cleanup jobs; the full validator and runner
-test suites.
+cleanup jobs; the rest of the security baseline — input validation hardening, security headers,
+CORS policy; and the rest of the validator and runner test suites, including runner integration
+across images.
 
 ## After the slice
 
@@ -199,7 +216,7 @@ step either substitutes an implementation behind an existing seam or adds a scre
 1. Real sign-in: [#6](https://github.com/shoraLBRT/ritocode/issues/6) completed and
    [#7](https://github.com/shoraLBRT/ritocode/issues/7), behind the seam built in stage 3.
 2. The remaining validators — lint and patch-scope in
-   [#19](https://github.com/shoraLBRT/ritocode/issues/19) — then
+   [#19](https://github.com/shoraLBRT/ritocode/issues/19) — then the rest of
    [#38](https://github.com/shoraLBRT/ritocode/issues/38).
 3. Progress, XP and leaderboard: [#24](https://github.com/shoraLBRT/ritocode/issues/24),
    [#25](https://github.com/shoraLBRT/ritocode/issues/25),
@@ -207,7 +224,8 @@ step either substitutes an implementation behind an existing seam or adds a scre
    back.**
 4. A second language: the image matrix in [#22](https://github.com/shoraLBRT/ritocode/issues/22),
    more problems in [#42](https://github.com/shoraLBRT/ritocode/issues/42).
-5. Hardening before anything is public: [#35](https://github.com/shoraLBRT/ritocode/issues/35),
+5. Hardening before anything is public: the rest of
+   [#35](https://github.com/shoraLBRT/ritocode/issues/35),
    [#36](https://github.com/shoraLBRT/ritocode/issues/36) in full,
    [#34](https://github.com/shoraLBRT/ritocode/issues/34),
    [#43](https://github.com/shoraLBRT/ritocode/issues/43).

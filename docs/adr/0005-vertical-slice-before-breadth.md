@@ -67,6 +67,7 @@ cheaply. A session that finds one of them in the code fixes it rather than build
 | --- | --- |
 | Executing user code outside a sandbox runner — including "just for our own tasks" | The whole evaluation path is rewritten, and until then anyone testing the product owns the host. Restates the rule in `docs/AGENT_GUIDELINES.md` |
 | Taking `user_id` from a request body or query string | Every workspace and submission endpoint is rewritten, and each one carries an IDOR until that happens |
+| Serving a workspace or submission without checking it belongs to the caller | The identity seam becomes decorative — the user comes from `ICurrentUser` exactly as required, and every resource is still readable and writable by id. Authorisation is not part of the hardening that gets deferred; it is the other half of having authentication |
 | Reaching into another module's `DbContext` | `ModuleBoundaryTests` fails, correctly. Cross-module needs go through a contract in `Ritocode.Shared` — [ADR 0002](0002-modular-monolith-layout.md) |
 | Evaluating synchronously in the HTTP request, skipping `Queued` and `Running` | `ck_submissions_completed_at_matches_status` becomes a lie and the status machine a fiction, repaired later with production rows already in the table |
 | Writing repository tests on ad-hoc fixtures instead of [#37](https://github.com/shoraLBRT/ritocode/issues/37) | Every module's tests are rewritten the first time one of them needs database isolation |
