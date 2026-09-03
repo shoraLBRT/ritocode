@@ -88,6 +88,8 @@ src/
   Ritocode.Shared/            errors, Result<T>, paging, IModule, correlation, persistence base
   Modules/Ritocode.Modules.*  one project per module: domain, DbContext, migrations
 tests/
+  Ritocode.TestSupport/         integration test harness: a PostgreSQL container per test
+                                assembly, a migrated database per test class
   Ritocode.Shared.Tests/        unit tests for the shared primitives
   Ritocode.Api.Tests/           in-memory host tests over the real composition root
   Ritocode.Architecture.Tests/  module boundary rules, executable
@@ -109,6 +111,7 @@ docs/
 | [#3](https://github.com/shoraLBRT/ritocode/issues/3) Core schema | Done | Seven tables across five module schemas, [ADR 0004](adr/0004-persistence-and-migrations.md), ERD in [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md), initial migrations | `src/Modules/*/Domain`, `src/Modules/*/Persistence` |
 | [#4](https://github.com/shoraLBRT/ritocode/issues/4) Migration workflow | Done | `Ritocode.DbMigrator` (`apply` / `status`), `dotnet-ef` pinned as a local tool, CI applies from an empty database and fails on model drift | `src/Ritocode.DbMigrator`, `.github/workflows/backend-ci.yml` |
 | [#32](https://github.com/shoraLBRT/ritocode/issues/32) Local environment | Done | `compose.yaml` (PostgreSQL + MinIO with buckets), `scripts/dev-up.sh` / `.ps1` doing setup and migrations in one command | `compose.yaml`, `scripts/` |
+| [#37](https://github.com/shoraLBRT/ritocode/issues/37) Integration test harness | Partial | `PostgresTestServer`: one Testcontainers PostgreSQL per test assembly, one migrated database per test class, copied from a template migrated once by `MigrationRunner`. API tests moved onto it; CI's test job dropped its service container | `tests/Ritocode.TestSupport` |
 
 Nothing else from the backlog is implemented. Every module owns a schema and a `DbContext`, but
 none exposes an endpoint or a service yet — the boundary and the storage are in place, the behaviour
@@ -118,6 +121,10 @@ is not.
 
 - **CI ([#31](https://github.com/shoraLBRT/ritocode/issues/31))** covers the backend only; the
   frontend job lands with the frontend, so the issue stays open.
+- **The flow tests in [#37](https://github.com/shoraLBRT/ritocode/issues/37)** — auth, problems,
+  workspace, submission — need endpoints that do not exist yet. The harness they will be written
+  on does exist, which was the point of doing #37 first; the tests themselves arrive with the
+  features, in slice stages 2 to 4, and the issue stays open until then.
 - **No repositories or services over the schema.** The tables exist and are migrated; nothing
   reads or writes them yet. The first module to do so is Problems, in
   [#9](https://github.com/shoraLBRT/ritocode/issues/9).
@@ -137,18 +144,17 @@ is not.
 The slice plan is the ordered list now: **[`docs/SLICE_PLAN.md`](SLICE_PLAN.md)**. Take the first
 unticked box. The stages there are ordered so that each depends only on stages above it.
 
-Immediately: stage 1, which is the whole of the first week and blocks everything after it.
+Immediately: the rest of stage 1, which blocks everything after it.
 
-1. **[#37](https://github.com/shoraLBRT/ritocode/issues/37) — Backend integration test harness.**
-   Testcontainers, a database per test class. It is first because it is the one item that gets
-   cheaper by being done earlier: #9 is the first module that writes to its schema, and without a
-   harness its tests invent a fixture that has to be rewritten later.
-2. **[#8](https://github.com/shoraLBRT/ritocode/issues/8) — Problem package manifest format.**
+1. **[#8](https://github.com/shoraLBRT/ritocode/issues/8) — Problem package manifest format.**
    `problem.yaml`, the shape of `validator_config`, allowed paths, hints, constraints. No database
-   dependency, so it runs as a second branch in parallel with #37.
-3. **Sandbox spike, then ADR 0006 and ADR 0007.** The spike is time-boxed and closes no issue; the
+   dependency, so it needs nothing that is not already here.
+2. **Sandbox spike, then ADR 0006 and ADR 0007.** The spike is time-boxed and closes no issue; the
    two ADRs settle the sandbox execution model and the form of the cross-module contract. Both are
    assumed by work in stage 3 and stage 4, so they are written before that work starts.
+
+[#37](https://github.com/shoraLBRT/ritocode/issues/37) is off this list: the harness landed, and
+the flow tests the issue also asks for arrive with the endpoints they exercise.
 
 What used to be items 3 to 6 here — #9, #42, #5, #6 — are now stages 2 and 3 of the slice, entered
 partially. The rest of Phase 1 is [after the slice](SLICE_PLAN.md#after-the-slice).
@@ -172,8 +178,11 @@ Decisions a future session will hit, and where in the slice each one comes due.
   [ADR 0005](adr/0005-vertical-slice-before-breadth.md) fixes `docker run` with limits for the
   slice; ADR 0006 records what the spike found. Docker-in-Docker, a dedicated runner VM and a warm
   pool stay open until queue depth makes one of them necessary.
-- **Test database isolation.** *Now the first item in the slice* — it is the substance of #37, and
-  it is first precisely because every later test depends on the answer.
+- **Test database isolation.** *Settled.* One PostgreSQL container per test assembly, one database
+  per test class, each copied from a template that `MigrationRunner` migrated once. Isolation is
+  per database rather than per transaction because a test that wants to see what a migration, a
+  trigger or a check constraint actually did cannot see it inside a transaction the harness rolls
+  back. Consequence: `dotnet test` now needs a Docker daemon, and no longer needs `dev-up`.
 - **Who validates cross-module references?** [ADR 0004](adr/0004-persistence-and-migrations.md)
   says the module creating the row does, but there is still no mechanism. ADR 0002 already settled
   *where* the contract lives (`Ritocode.Shared`); ADR 0007 in stage 1 settles *what shape* it takes,
@@ -191,12 +200,8 @@ Decisions a future session will hit, and where in the slice each one comes due.
 
 Run from the repository root. All of these must be clean before opening a PR.
 
-**Start the dependencies first.** The API tests exercise the readiness probe, which queries every
-module schema, so they need a running PostgreSQL:
-
-```bash
-./scripts/dev-up.sh
-```
+**A Docker daemon has to be running.** Tests that need PostgreSQL start their own container
+through Testcontainers, so `dotnet test` no longer needs `dev-up` — but it does need Docker.
 
 ```bash
 dotnet build Ritocode.slnx --warnaserror
@@ -205,6 +210,15 @@ dotnet build Ritocode.slnx --warnaserror
 ```bash
 dotnet test Ritocode.slnx
 ```
+
+The drift check and the host below run against the compose stack, which needs starting:
+
+```bash
+./scripts/dev-up.sh
+```
+
+`db-verify-no-drift.sh` and `dotnet ef` read `Database__ConnectionString` from the environment and
+fail with a validation error if it is unset. `dev-up` prints the value.
 
 ```bash
 ./scripts/db-verify-no-drift.sh
@@ -224,8 +238,8 @@ With the host running, these are the current smoke checks:
 | any response | carries an `X-Request-Id` header |
 
 The host reads `Database:ConnectionString`; locally it comes from `Database__ConnectionString`,
-which `scripts/dev-up` prints the value for. The tests read `RITOCODE_TEST_DATABASE` and fall back
-to the compose defaults, so they need no configuration on a machine that ran `dev-up`.
+which `scripts/dev-up` prints the value for. The tests configure themselves from the container the
+harness starts, so they need no environment variable at all.
 
-Current baseline: **54 tests, all passing** — 33 shared, 16 API, 5 architecture.
+Current baseline: **56 tests, all passing** — 33 shared, 18 API, 5 architecture.
 A session that leaves this number lower than it found it has broken something.

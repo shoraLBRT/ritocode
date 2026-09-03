@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Shared harness for tests that need a real PostgreSQL. Not a test project itself: it holds no
+    tests and is never collected by the runner, which is why the name does not end in `.Tests`.
+  -->
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <!-- The composition root is an ASP.NET Core project; referencing it needs the same framework. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Npgsql" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
+  </ItemGroup>
+
+  <!--
+    The harness migrates with the same runner the deploy step and CI use, so a test database can
+    never be built by a second, drifting code path. That runner lives in the migrator, which
+    references the composition root for ModuleRegistry.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="../../src/Ritocode.Api/Ritocode.Api.csproj" />
+    <ProjectReference Include="../../src/Ritocode.DbMigrator/Ritocode.DbMigrator.csproj" />
+  </ItemGroup>
+
+</Project>
