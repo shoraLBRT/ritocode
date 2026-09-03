@@ -53,6 +53,10 @@ CodeCoverage/
 TestResult.xml
 nunit-*.xml
 
+# Visual Studio — IDE cache and per-user project settings
+.vs/
+*.user
+
 # Environment secrets
 .env
 .env.*
