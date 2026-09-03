@@ -17,5 +17,6 @@
     <Project Path="tests/Ritocode.Api.Tests/Ritocode.Api.Tests.csproj" />
     <Project Path="tests/Ritocode.Architecture.Tests/Ritocode.Architecture.Tests.csproj" />
     <Project Path="tests/Ritocode.Shared.Tests/Ritocode.Shared.Tests.csproj" />
+    <Project Path="tests/Ritocode.TestSupport/Ritocode.TestSupport.csproj" />
   </Folder>
 </Solution>

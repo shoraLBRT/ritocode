@@ -8,6 +8,7 @@ using Microsoft.Extensions.Hosting;
 using Ritocode.Api.Setup;
 using Ritocode.Shared.Errors;
 using Ritocode.Shared.Validation;
+using Ritocode.TestSupport;
 
 namespace Ritocode.Api.Tests.Infrastructure;
 
@@ -17,14 +18,25 @@ namespace Ritocode.Api.Tests.Infrastructure;
 /// middleware order under test is the one that ships; the probes only exist to trigger
 /// behaviour no real endpoint provides yet.
 /// </summary>
-public sealed class TestApi : IAsyncLifetime
+/// <remarks>
+/// One instance per test class, each on a migrated database of its own from
+/// <see cref="PostgresTestServer"/>. Nothing here writes yet, but the isolation has to be in place
+/// before the first module does — retrofitting it means rewriting the tests that assumed a shared
+/// database.
+/// </remarks>
+public sealed class TestApi(PostgresTestServer postgres) : IAsyncLifetime
 {
     private WebApplication? _app;
 
     public HttpClient Client { get; private set; } = null!;
 
+    /// <summary>Connection string of this class's database, for tests that assert against it directly.</summary>
+    public string ConnectionString { get; private set; } = string.Empty;
+
     public async ValueTask InitializeAsync()
     {
+        ConnectionString = await postgres.CreateDatabaseAsync(nameof(TestApi), TestContext.Current.CancellationToken);
+
         var builder = WebApplication.CreateBuilder();
         builder.Environment.EnvironmentName = Environments.Development;
         builder.WebHost.UseTestServer();
@@ -33,7 +45,7 @@ public sealed class TestApi : IAsyncLifetime
         // each schema, so the host needs a real database even for tests that never touch one.
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
         {
-            ["Database:ConnectionString"] = TestDatabase.ConnectionString,
+            ["Database:ConnectionString"] = ConnectionString,
             // Retries would turn an unreachable database into a slow failure rather than an
             // immediate, legible one.
             ["Database:MaxRetryCount"] = "0",

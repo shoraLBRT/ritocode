@@ -9,7 +9,7 @@ reductions that are allowed and the list that are forbidden. **Read that ADR bef
 anything here.** This file tracks progress; it holds no decisions.
 
 - **Last updated:** 2026-09-03
-- **Progress:** 0 / 37
+- **Progress:** 1 / 37
 - **Estimate:** 30–34 sessions, six to seven weeks at five sessions a week
 - **Then:** [stage two](#after-the-slice) — the rest of Phase 1
 
@@ -28,7 +28,7 @@ anything here.** This file tracks progress; it holds no decisions.
 
 | Stage | Sessions | Done |
 | --- | --- | --- |
-| [1 — Foundation](#stage-1--foundation) | 5 | 0 / 5 |
+| [1 — Foundation](#stage-1--foundation) | 5 | 1 / 5 |
 | [2 — Content and catalog](#stage-2--content-and-catalog) | 5 | 0 / 6 |
 | [3 — Identity and workspace](#stage-3--identity-and-workspace) | 6 | 0 / 7 |
 | [4 — Submission and queue](#stage-4--submission-and-queue) | 5 | 0 / 5 |
@@ -42,9 +42,12 @@ anything here.** This file tracks progress; it holds no decisions.
 Everything here gets more expensive the longer it waits. Nothing downstream is safe to start until
 the two ADRs are written.
 
-- [ ] **[#37](https://github.com/shoraLBRT/ritocode/issues/37) — Integration test harness.**
-  Testcontainers, one database per test class. Existing API tests move onto it and the current
-  baseline of 54 tests stays green.
+- [x] **[#37](https://github.com/shoraLBRT/ritocode/issues/37) (partial) — Integration test harness.**
+  Testcontainers, one database per test class, each copied from a template migrated once by the
+  same runner the deploy step uses. The API tests moved onto it and the baseline rose from 54 to
+  56. Marked partial because the issue also asks for integration tests over the auth, problems,
+  workspace and submission flows — none of those endpoints exist yet, so those tests land with the
+  features that make them possible, in stages 2 to 4. The harness itself is complete.
 - [ ] **[#8](https://github.com/shoraLBRT/ritocode/issues/8) — Problem package manifest.**
   `problem.yaml` schema, the shape of `validator_config`, allowed paths, hints, constraints. The
   `problem_versions.validator_config` column is already `jsonb` and waiting for this. An example

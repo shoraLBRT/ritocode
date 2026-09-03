@@ -9,11 +9,18 @@ namespace Ritocode.DbMigrator;
 /// Applies each module's migrations in registration order.
 /// </summary>
 /// <remarks>
+/// <para>
 /// The API host never migrates itself: several instances starting at once would race, and a failed
 /// migration should take down one job rather than every serving instance. See
 /// docs/adr/0004-persistence-and-migrations.md.
+/// </para>
+/// <para>
+/// Public rather than internal because the integration test harness builds each test database with
+/// it. A test database assembled by a second, parallel code path would stop being evidence that
+/// the migrations CI applies are the ones the tests ran against.
+/// </para>
 /// </remarks>
-internal sealed partial class MigrationRunner(IServiceProvider services, ILogger<MigrationRunner> logger)
+public sealed partial class MigrationRunner(IServiceProvider services, ILogger<MigrationRunner> logger)
 {
     /// <summary>Applies every pending migration. Idempotent, so it is safe to run on every deploy.</summary>
     public async Task<int> ApplyAsync(CancellationToken cancellationToken = default)

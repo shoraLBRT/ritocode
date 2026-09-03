@@ -24,26 +24,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
-    # Readiness probes query every module schema, so the host tests need a real database.
-    # The ICU locale matches compose.yaml so text ordering is identical here and locally.
-    services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_USER: ritocode
-          POSTGRES_PASSWORD: ritocode
-          POSTGRES_DB: ritocode
-          POSTGRES_INITDB_ARGS: "--locale-provider=icu --icu-locale=en-US --encoding=UTF8"
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U ritocode -d ritocode"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
-
-    env:
-      RITOCODE_TEST_DATABASE: "Host=localhost;Port=5432;Database=ritocode;Username=ritocode;Password=ritocode"
+    # No database service here. Tests that need PostgreSQL start their own container through
+    # Testcontainers and take a database per test class from it, so a shared service container
+    # would only be a second, less isolated database sitting unused. Docker is preinstalled on
+    # GitHub-hosted runners.
 
     steps:
       - uses: actions/checkout@v7
