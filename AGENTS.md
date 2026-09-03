@@ -15,6 +15,8 @@ Then, as needed:
 - [`docs/AGENT_GUIDELINES.md`](docs/AGENT_GUIDELINES.md) — how to write code here.
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/DOMAIN_MODEL.md`](docs/DOMAIN_MODEL.md) —
   the system and its entities.
+- [`docs/SLICE_PLAN.md`](docs/SLICE_PLAN.md) — the current milestone, and the checklist work is
+  taken from.
 - [`docs/MVP_SCOPE.md`](docs/MVP_SCOPE.md) — what Phase 1 must deliver.
 - [`docs/PROBLEM_PACKAGE_SPEC.md`](docs/PROBLEM_PACKAGE_SPEC.md),
   [`docs/EVALUATION_PIPELINE.md`](docs/EVALUATION_PIPELINE.md) — the training content and how it is
@@ -66,4 +68,18 @@ Avoid hidden side effects, dynamic runtime magic, and frameworks introduced with
 
 ## Priority
 
-Finish [`docs/MVP_SCOPE.md`](docs/MVP_SCOPE.md) — Phase 1 — before touching Phase 2 or Phase 3 work.
+Phase 1 ships in two stages, decided in
+[ADR 0005](docs/adr/0005-vertical-slice-before-breadth.md).
+
+Stage one is **the vertical slice**: one complete user journey — browse, open a workspace, edit,
+submit, evaluate in a sandbox, read the verdict — built narrow but at full architectural quality.
+It is tracked box by box in [`docs/SLICE_PLAN.md`](docs/SLICE_PLAN.md), and that file is where work
+is taken from. Stage two is the rest of [`docs/MVP_SCOPE.md`](docs/MVP_SCOPE.md), which still
+defines what Phase 1 must deliver — the slice changes the order, not the destination.
+
+ADR 0005 lists the reductions the slice is allowed to make, each with the seam that keeps it
+reversible, and the reductions it must never make. **Read that list before cutting anything.** A
+shortcut from the forbidden list is not a trade-off, it is a defect, and a session that finds one
+in the code fixes it rather than building on it.
+
+Phase 2 and Phase 3 work stays closed until Phase 1 closes.
