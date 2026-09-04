@@ -26,6 +26,11 @@ Requirements:
 
 ## Validators
 
+Which validators run, in what order, with what weight and what timeout, is declared per problem in
+its package manifest and stored on the problem version as `validator_config` — see
+[PROBLEM_PACKAGE_SPEC.md](PROBLEM_PACKAGE_SPEC.md#validators). The list below is what a full
+pipeline can be made of, not a fixed sequence every problem runs.
+
 Validators run sequentially.
 
 Example pipeline:

@@ -10,4 +10,11 @@
     <ProjectReference Include="../../Ritocode.Shared/Ritocode.Shared.csproj" />
   </ItemGroup>
 
+  <!-- Problem package manifests: YamlDotNet reads them, FluentValidation states the rules.
+       See docs/PROBLEM_PACKAGE_SPEC.md. -->
+  <ItemGroup>
+    <PackageReference Include="FluentValidation" />
+    <PackageReference Include="YamlDotNet" />
+  </ItemGroup>
+
 </Project>

@@ -1,0 +1,6 @@
+<!--
+  Deliberately empty. A problem package builds inside a runner image, not as part of this
+  repository, and must not inherit the repository's MSBuild settings. This file is what stops
+  MSBuild walking further up for them. See README.md.
+-->
+<Project />

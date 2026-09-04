@@ -19,9 +19,9 @@ public sealed class ProblemVersion
     public string SnapshotReference { get; set; } = string.Empty;
 
     /// <summary>
-    /// Validator pipeline configuration, stored as JSON. Its schema is defined by
-    /// <see href="https://github.com/shoraLBRT/ritocode/issues/8">#8</see>; until then this
-    /// column is opaque to the catalog and read only by the evaluation pipeline.
+    /// Validator pipeline configuration, stored as the canonical JSON of
+    /// <see cref="Packaging.ValidatorPipeline"/> — see docs/PROBLEM_PACKAGE_SPEC.md. Opaque to the
+    /// catalog; read by the evaluation pipeline.
     /// </summary>
     public string ValidatorConfig { get; set; } = "{}";
 

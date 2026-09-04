@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Modules/Ritocode.Modules.Problems/Ritocode.Modules.Problems.csproj" />
+  </ItemGroup>
+
+  <!--
+    The reference package is validated as it is committed, not as a copy someone remembered to
+    update: the real content/ tree is copied into the test output and loaded from there.
+  -->
+  <ItemGroup>
+    <Content Include="../../content/problems/**/*"
+             LinkBase="content/problems"
+             CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

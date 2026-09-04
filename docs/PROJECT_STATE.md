@@ -4,7 +4,7 @@
 what to build next, and how to verify it. Read it before touching anything; update it before
 finishing.
 
-- **Last updated:** 2026-09-03
+- **Last updated:** 2026-09-04
 - **Current phase:** Phase 1 (MVP) — see `docs/MVP_SCOPE.md`
 - **Current milestone:** the vertical slice — [`docs/SLICE_PLAN.md`](SLICE_PLAN.md), decided in
   [ADR 0005](adr/0005-vertical-slice-before-breadth.md). Phase 1 now ships in two stages; the slice
@@ -82,17 +82,21 @@ Directory.Packages.props      central package versions
 .editorconfig                 style, plus analyzer rules deliberately disabled, each with a reason
 compose.yaml                  PostgreSQL and MinIO for local development
 scripts/                      dev-up, migration helpers, drift check
+content/
+  problems/                   problem packages; the reference one is validated by tests
 src/
   Ritocode.Api/               composition root: pipeline, config, health, meta, module wiring
   Ritocode.DbMigrator/        applies each module's migrations; the host never migrates itself
   Ritocode.Shared/            errors, Result<T>, paging, IModule, correlation, persistence base
   Modules/Ritocode.Modules.*  one project per module: domain, DbContext, migrations
+                              Problems also owns Packaging/: the problem package format
 tests/
   Ritocode.TestSupport/         integration test harness: a PostgreSQL container per test
                                 assembly, a migrated database per test class
   Ritocode.Shared.Tests/        unit tests for the shared primitives
   Ritocode.Api.Tests/           in-memory host tests over the real composition root
   Ritocode.Architecture.Tests/  module boundary rules, executable
+  Ritocode.Modules.Problems.Tests/  the problem package format, and the reference package
 docs/
   adr/                        architecture decision records
   DATABASE_SCHEMA.md          ERD, conventions, and what the schema enforces
@@ -112,10 +116,12 @@ docs/
 | [#4](https://github.com/shoraLBRT/ritocode/issues/4) Migration workflow | Done | `Ritocode.DbMigrator` (`apply` / `status`), `dotnet-ef` pinned as a local tool, CI applies from an empty database and fails on model drift | `src/Ritocode.DbMigrator`, `.github/workflows/backend-ci.yml` |
 | [#32](https://github.com/shoraLBRT/ritocode/issues/32) Local environment | Done | `compose.yaml` (PostgreSQL + MinIO with buckets), `scripts/dev-up.sh` / `.ps1` doing setup and migrations in one command | `compose.yaml`, `scripts/` |
 | [#37](https://github.com/shoraLBRT/ritocode/issues/37) Integration test harness | Partial | `PostgresTestServer`: one Testcontainers PostgreSQL per test assembly, one migrated database per test class, copied from a template migrated once by `MigrationRunner`. API tests moved onto it; CI's test job dropped its service container | `tests/Ritocode.TestSupport` |
+| [#8](https://github.com/shoraLBRT/ritocode/issues/8) Problem package manifest | Done | The format in [PROBLEM_PACKAGE_SPEC.md](PROBLEM_PACKAGE_SPEC.md) — `problem.yaml`, allowed paths, hints, limits, the validator pipeline and its canonical `validator_config` JSON — with a loader that reports every fault at once, and a reference package validated from the committed tree | `src/Modules/Ritocode.Modules.Problems/Packaging`, `content/problems/example-order-total`, `tests/Ritocode.Modules.Problems.Tests` |
 
 Nothing else from the backlog is implemented. Every module owns a schema and a `DbContext`, but
 none exposes an endpoint or a service yet — the boundary and the storage are in place, the behaviour
-is not.
+is not. The Problems module is the first with domain code of its own: the package format reads and
+validates content, and still writes nothing to its schema.
 
 ### Deliberately deferred
 
@@ -125,6 +131,11 @@ is not.
   workspace, submission — need endpoints that do not exist yet. The harness they will be written
   on does exist, which was the point of doing #37 first; the tests themselves arrive with the
   features, in slice stages 2 to 4, and the issue stays open until then.
+- **Nothing ingests a problem package yet.** The format is defined and packages load and validate,
+  but no code turns one into a `Problem`, a `ProblemVersion` and a bundle in object storage. That
+  is [#9](https://github.com/shoraLBRT/ritocode/issues/9) and
+  [#42](https://github.com/shoraLBRT/ritocode/issues/42), in slice stage 2. The reference package
+  is content for the tests, not catalog content.
 - **No repositories or services over the schema.** The tables exist and are migrated; nothing
   reads or writes them yet. The first module to do so is Problems, in
   [#9](https://github.com/shoraLBRT/ritocode/issues/9).
@@ -146,15 +157,15 @@ unticked box. The stages there are ordered so that each depends only on stages a
 
 Immediately: the rest of stage 1, which blocks everything after it.
 
-1. **[#8](https://github.com/shoraLBRT/ritocode/issues/8) — Problem package manifest format.**
-   `problem.yaml`, the shape of `validator_config`, allowed paths, hints, constraints. No database
-   dependency, so it needs nothing that is not already here.
-2. **Sandbox spike, then ADR 0006 and ADR 0007.** The spike is time-boxed and closes no issue; the
+1. **Sandbox spike, then ADR 0006 and ADR 0007.** The spike is time-boxed and closes no issue; the
    two ADRs settle the sandbox execution model and the form of the cross-module contract. Both are
-   assumed by work in stage 3 and stage 4, so they are written before that work starts.
+   assumed by work in stage 3 and stage 4, so they are written before that work starts. The spike
+   now has something real to run: the reference package's `validators` list says what a runner is
+   being asked to execute.
 
 [#37](https://github.com/shoraLBRT/ritocode/issues/37) is off this list: the harness landed, and
 the flow tests the issue also asks for arrive with the endpoints they exercise.
+[#8](https://github.com/shoraLBRT/ritocode/issues/8) is off it because it is done.
 
 What used to be items 3 to 6 here — #9, #42, #5, #6 — are now stages 2 and 3 of the slice, entered
 partially. The rest of Phase 1 is [after the slice](SLICE_PLAN.md#after-the-slice).
@@ -166,7 +177,9 @@ partially. The rest of Phase 1 is [after the slice](SLICE_PLAN.md#after-the-slic
 Decisions a future session will hit, and where in the slice each one comes due.
 
 - **Language of the first problems.** *Due in slice stage 2, and nothing else is blocked by it.*
-  Undecided, and it is the maintainer's call. C# means your own stack and the fastest validators;
+  Still undecided, and it is the maintainer's call. The reference package that ships with the
+  manifest format is C#, which decides nothing: `language` is a manifest field, and the runner
+  image registry it selects from belongs to [#22](https://github.com/shoraLBRT/ritocode/issues/22). C# means your own stack and the fastest validators;
   JavaScript or TypeScript means a wider pool of testers. The tiebreaker is neither: pick the
   language in which you can author three honest tasks in two days, because a weak task proves
   nothing on a popular language and a strong one proves plenty on an unpopular one.
@@ -241,5 +254,5 @@ The host reads `Database:ConnectionString`; locally it comes from `Database__Con
 which `scripts/dev-up` prints the value for. The tests configure themselves from the container the
 harness starts, so they need no environment variable at all.
 
-Current baseline: **56 tests, all passing** — 33 shared, 18 API, 5 architecture.
+Current baseline: **121 tests, all passing** — 33 shared, 65 problems, 18 API, 5 architecture.
 A session that leaves this number lower than it found it has broken something.

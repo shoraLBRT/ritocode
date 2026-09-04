@@ -61,8 +61,9 @@ Fields:
 - problem_id
 - version — starts at 1, unique per problem
 - snapshot_reference — object storage key of the problem bundle
-- validator_config — validator pipeline configuration; its schema is defined by
-  [#8](https://github.com/shoraLBRT/ritocode/issues/8)
+- validator_config — validator pipeline configuration; the canonical JSON projection of a problem
+  package's `validators` list, defined in
+  [PROBLEM_PACKAGE_SPEC.md](PROBLEM_PACKAGE_SPEC.md#validator_config)
 - created_at
 - published_at — null while the version is a draft
 

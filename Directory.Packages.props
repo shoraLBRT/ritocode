@@ -20,6 +20,10 @@
          forward within the 2.x line, which is the major version the ASP.NET package targets. -->
     <PackageVersion Include="Microsoft.OpenApi" Version="2.12.2" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+    <!-- Problem package manifests are YAML (docs/PROBLEM_PACKAGE_SPEC.md); .NET ships no YAML
+         reader. The manifest is authored by hand, so the format has to be comfortable to write and
+         to diff, which rules out JSON. -->
+    <PackageVersion Include="YamlDotNet" Version="18.1.0" />
   </ItemGroup>
 
   <ItemGroup Label="Testing">

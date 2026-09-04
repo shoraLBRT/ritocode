@@ -11,7 +11,8 @@ namespace Ritocode.Modules.Problems;
 /// Problem catalog, problem versions and problem package resolution.
 /// </summary>
 /// <remarks>
-/// Owns the <c>problems</c> schema. No endpoints yet — those arrive with issues #8, #9 and #42.
+/// Owns the <c>problems</c> schema, and the problem package format in <c>Packaging</c>
+/// (docs/PROBLEM_PACKAGE_SPEC.md). No endpoints yet — those arrive with issues #9 and #42.
 /// </remarks>
 public sealed class ProblemsModule : IModule
 {
