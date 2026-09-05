@@ -27,7 +27,7 @@ is in.
 | --- | --- | --- |
 | 1 | Orient | You can name the current stage and the next box out loud |
 | 2 | Pick | One item is chosen and its issue confirmed open |
-| 3 | Branch | You are off `main` |
+| 3 | Branch | You are off a freshly pulled `main` |
 | 4 | Build | Code and its tests exist |
 | 5 | Verify | Everything in the verification section passes |
 | 6 | Ship | PR open, issue commented |
@@ -78,11 +78,22 @@ Some boxes close no issue at all — spikes and ADRs. That is intended, not an o
 
 ### 3. Branch
 
-One issue per branch, off `main`:
+One issue per branch, off a `main` that is actually current:
 
 ```bash
+git checkout main && git pull --ff-only origin main
 git checkout -b feat/<short-slug>
 ```
+
+Do the pull every session, including the ones that start on the branch a previous session left
+behind. Sessions do not share memory, so the local `main` is as old as the last time *someone* here
+updated it — which may be days and several merged PRs ago. Branching off a stale `main` builds on
+code that is no longer what the project has, and the conflict surfaces at review time rather than
+now, when it is a single command to avoid.
+
+`--ff-only` is the part that carries the information. If it fails, the local `main` has diverged
+from the remote — a commit landed on it directly, against the rule below. Stop and ask the
+maintainer; do not merge it away, because the merge hides how it got there.
 
 Prefix by what the change is: `feat/`, `fix/`, `test/`, `docs/`, `chore/`.
 
