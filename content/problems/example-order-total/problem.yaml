@@ -1,0 +1,49 @@
+schema_version: 1
+
+slug: example-order-total
+title: Untangle the order total calculator
+difficulty: medium
+language: csharp
+tags:
+  - refactoring
+  - code-quality
+description: description.md
+
+hints:
+  - OrderTotal.Calculate does three jobs at once. Name them before you move any code.
+  - The tests describe the behaviour that has to survive. Nothing outside them has to.
+
+workspace:
+  root: starter
+  editable:
+    - src/**/*.cs
+  readonly:
+    - tests/**
+    - "*.csproj"
+    - "*.md"
+
+limits:
+  max_files: 50
+  max_file_bytes: 65536
+  max_total_bytes: 1048576
+
+validators:
+  - id: compile
+    type: compile
+    weight: 30
+    required: true
+    timeout_seconds: 120
+    with:
+      command: [dotnet, build, --warnaserror]
+
+  - id: tests
+    type: test
+    weight: 70
+    required: true
+    timeout_seconds: 300
+    with:
+      command: [dotnet, test, --no-build]
+
+fixtures:
+  passing: fixtures/passing
+  failing: fixtures/failing

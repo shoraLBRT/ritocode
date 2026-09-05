@@ -1,0 +1,9 @@
+<!--
+  Deliberately empty, for the reason in Directory.Build.props: a problem package pins its own
+  package versions, so the repository's central version management must not reach it.
+-->
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+</Project>

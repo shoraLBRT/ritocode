@@ -8,8 +8,8 @@ Decided in [ADR 0005](adr/0005-vertical-slice-before-breadth.md), which also car
 reductions that are allowed and the list that are forbidden. **Read that ADR before ticking
 anything here.** This file tracks progress; it holds no decisions.
 
-- **Last updated:** 2026-09-03
-- **Progress:** 1 / 37
+- **Last updated:** 2026-09-04
+- **Progress:** 2 / 37
 - **Estimate:** 30–34 sessions, six to seven weeks at five sessions a week
 - **Then:** [stage two](#after-the-slice) — the rest of Phase 1
 
@@ -28,7 +28,7 @@ anything here.** This file tracks progress; it holds no decisions.
 
 | Stage | Sessions | Done |
 | --- | --- | --- |
-| [1 — Foundation](#stage-1--foundation) | 5 | 1 / 5 |
+| [1 — Foundation](#stage-1--foundation) | 5 | 2 / 5 |
 | [2 — Content and catalog](#stage-2--content-and-catalog) | 5 | 0 / 6 |
 | [3 — Identity and workspace](#stage-3--identity-and-workspace) | 6 | 0 / 7 |
 | [4 — Submission and queue](#stage-4--submission-and-queue) | 5 | 0 / 5 |
@@ -48,10 +48,13 @@ the two ADRs are written.
   56. Marked partial because the issue also asks for integration tests over the auth, problems,
   workspace and submission flows — none of those endpoints exist yet, so those tests land with the
   features that make them possible, in stages 2 to 4. The harness itself is complete.
-- [ ] **[#8](https://github.com/shoraLBRT/ritocode/issues/8) — Problem package manifest.**
-  `problem.yaml` schema, the shape of `validator_config`, allowed paths, hints, constraints. The
-  `problem_versions.validator_config` column is already `jsonb` and waiting for this. An example
-  package validates against the schema in a test.
+- [x] **[#8](https://github.com/shoraLBRT/ritocode/issues/8) — Problem package manifest.**
+  `problem.yaml` schema, the shape of `validator_config`, allowed paths, hints, constraints — all
+  in [PROBLEM_PACKAGE_SPEC.md](PROBLEM_PACKAGE_SPEC.md), implemented by
+  `Ritocode.Modules.Problems.Packaging` and enforced by 65 tests. The reference package in
+  `content/problems/example-order-total` is loaded from the committed tree, so the format cannot
+  drift from its example. `validator_config` is a canonical JSON projection of the pipeline: the
+  same manifest serialises to the same bytes whatever order it was written in.
 - [ ] **Spike — sandbox execution.** Time-boxed, no issue closed. Run a real task under `docker run`
   with `--network none`, cpu / memory / pid limits, read-only root, non-root user and a timeout.
   Find out what actually works on the development machine and what the orchestrator can assume.
