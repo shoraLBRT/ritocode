@@ -61,3 +61,6 @@ nunit-*.xml
 .env
 .env.*
 !.env.example
+
+# Claude Code local worktrees (the skills under .claude/skills are checked in)
+.claude/worktrees/
