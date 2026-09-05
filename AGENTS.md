@@ -21,6 +21,8 @@ Then, as needed:
 - [`docs/PROBLEM_PACKAGE_SPEC.md`](docs/PROBLEM_PACKAGE_SPEC.md),
   [`docs/EVALUATION_PIPELINE.md`](docs/EVALUATION_PIPELINE.md) — the training content and how it is
   validated.
+- [`docs/STORAGE_LAYOUT.md`](docs/STORAGE_LAYOUT.md) — the buckets, the object keys, and what the
+  `*_reference` columns hold. Read it before writing or reading an object.
 - [`docs/SCALING_PLAN.md`](docs/SCALING_PLAN.md) — where service boundaries may go later, and why
   not yet.
 
