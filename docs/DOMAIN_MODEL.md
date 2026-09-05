@@ -60,7 +60,8 @@ Fields:
 - id
 - problem_id
 - version — starts at 1, unique per problem
-- snapshot_reference — object storage key of the problem bundle
+- snapshot_reference — storage reference of the problem bundle, in the form fixed by
+  [STORAGE_LAYOUT.md](STORAGE_LAYOUT.md)
 - validator_config — validator pipeline configuration; the canonical JSON projection of a problem
   package's `validators` list, defined in
   [PROBLEM_PACKAGE_SPEC.md](PROBLEM_PACKAGE_SPEC.md#validator_config)
@@ -79,7 +80,8 @@ Fields:
 - id
 - user_id
 - problem_version_id
-- snapshot_reference — object storage key of the current working tree
+- snapshot_reference — storage reference of the current working tree, overwritten on every save;
+  see [STORAGE_LAYOUT.md](STORAGE_LAYOUT.md)
 - created_at
 - updated_at — last write, and never earlier than created_at
 
@@ -116,5 +118,7 @@ Fields:
 - submission_id — unique
 - validator_results — per-validator outcomes; shape follows the validator plugin interface from
   [#18](https://github.com/shoraLBRT/ritocode/issues/18)
-- logs_reference — object storage key of the captured runner logs, null when nothing was captured
+- logs_reference — storage reference of the submission's artifacts, null when nothing was captured.
+  A prefix rather than a single object, because one run produces a file per validator — see
+  [STORAGE_LAYOUT.md](STORAGE_LAYOUT.md)
 - created_at

@@ -114,6 +114,10 @@ enum column carries a check constraint listing the allowed values. Text alone wo
 **JSON** columns are `jsonb`, not `text`: PostgreSQL validates them on write, and they can be
 queried directly when diagnosing an evaluation.
 
+**Storage references** — `problem_versions.snapshot_reference`, `workspaces.snapshot_reference` and
+`submission_reports.logs_reference` — are `varchar(512)` holding a storage role and an object key,
+never a URL. The form and the key layout are fixed in [STORAGE_LAYOUT.md](STORAGE_LAYOUT.md).
+
 ## Cross-module references
 
 `workspaces.user_id` points at a row in `users.users`, but there is no `FOREIGN KEY`. Constraints

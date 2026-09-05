@@ -9,7 +9,7 @@ reductions that are allowed and the list that are forbidden. **Read that ADR bef
 anything here.** This file tracks progress; it holds no decisions.
 
 - **Last updated:** 2026-09-05
-- **Progress:** 5 / 37
+- **Progress:** 6 / 37
 - **Estimate:** 30–34 sessions, six to seven weeks at five sessions a week
 - **Then:** [stage two](#after-the-slice) — the rest of Phase 1
 
@@ -29,7 +29,7 @@ anything here.** This file tracks progress; it holds no decisions.
 | Stage | Sessions | Done |
 | --- | --- | --- |
 | [1 — Foundation](#stage-1--foundation) | 5 | 5 / 5 |
-| [2 — Content and catalog](#stage-2--content-and-catalog) | 5 | 0 / 6 |
+| [2 — Content and catalog](#stage-2--content-and-catalog) | 5 | 1 / 6 |
 | [3 — Identity and workspace](#stage-3--identity-and-workspace) | 6 | 0 / 7 |
 | [4 — Submission and queue](#stage-4--submission-and-queue) | 5 | 0 / 5 |
 | [5 — Execution](#stage-5--execution) | 7 | 0 / 8 |
@@ -95,10 +95,16 @@ the two ADRs are written.
 The first module that reads and writes its schema, the first real content, and the frontend gets
 started early so its CI job stops waiting.
 
-- [ ] **[#5](https://github.com/shoraLBRT/ritocode/issues/5) (partial) — storage key layout.**
-  Bucket naming and object key conventions for problem bundles, workspace snapshots and evaluation
-  artifacts, documented. Retention rules are deferred with
-  [#43](https://github.com/shoraLBRT/ritocode/issues/43).
+- [x] **[#5](https://github.com/shoraLBRT/ritocode/issues/5) (partial) — storage key layout.**
+  [STORAGE_LAYOUT.md](STORAGE_LAYOUT.md): three buckets as roles whose physical names are
+  configuration, a reference form of `role/key` — never a URL — with a trailing slash separating a
+  prefix reference from an object one, and the keys for bundles, workspace snapshots and evaluation
+  artifacts. Two decisions in it that later stages would otherwise each make alone: a submission is
+  evaluated from a frozen copy of the workspace tree rather than from the live key, or the
+  determinism claim fails below the runner; and a key is read back from its stored reference, never
+  recomputed, which is what lets the layout move without a data migration. Retention rules are
+  deferred with [#43](https://github.com/shoraLBRT/ritocode/issues/43), and no code writes an object
+  yet — that is the next box.
 - [ ] **[#5](https://github.com/shoraLBRT/ritocode/issues/5) (partial) — object storage client.**
   Put and get against the MinIO already running in `compose.yaml`. No fake implementation: a stub
   costs more to replace than the client costs to write.

@@ -104,6 +104,7 @@ spikes/
 docs/
   adr/                        architecture decision records
   DATABASE_SCHEMA.md          ERD, conventions, and what the schema enforces
+  STORAGE_LAYOUT.md           buckets, object keys, and what a *_reference column holds
   SLICE_PLAN.md               the current milestone, tracked box by box
   PROJECT_STATE.md            this file
 ```
@@ -121,6 +122,7 @@ docs/
 | [#32](https://github.com/shoraLBRT/ritocode/issues/32) Local environment | Done | `compose.yaml` (PostgreSQL + MinIO with buckets), `scripts/dev-up.sh` / `.ps1` doing setup and migrations in one command | `compose.yaml`, `scripts/` |
 | [#37](https://github.com/shoraLBRT/ritocode/issues/37) Integration test harness | Partial | `PostgresTestServer`: one Testcontainers PostgreSQL per test assembly, one migrated database per test class, copied from a template migrated once by `MigrationRunner`. API tests moved onto it; CI's test job dropped its service container | `tests/Ritocode.TestSupport` |
 | [#8](https://github.com/shoraLBRT/ritocode/issues/8) Problem package manifest | Done | The format in [PROBLEM_PACKAGE_SPEC.md](PROBLEM_PACKAGE_SPEC.md) — `problem.yaml`, allowed paths, hints, limits, the validator pipeline and its canonical `validator_config` JSON — with a loader that reports every fault at once, and a reference package validated from the committed tree | `src/Modules/Ritocode.Modules.Problems/Packaging`, `content/problems/example-order-total`, `tests/Ritocode.Modules.Problems.Tests` |
+| [#5](https://github.com/shoraLBRT/ritocode/issues/5) Object storage layout | Partial | [STORAGE_LAYOUT.md](STORAGE_LAYOUT.md): three buckets as roles with configurable physical names, the `role/key` reference form stored in the three `*_reference` columns, object versus prefix references, and the keys for bundles, workspace snapshots and evaluation artifacts. Documentation only — no code writes an object yet, and retention stays deferred | `docs/STORAGE_LAYOUT.md` |
 
 Nothing else from the backlog is implemented. Every module owns a schema and a `DbContext`, but
 none exposes an endpoint or a service yet — the boundary and the storage are in place, the behaviour
@@ -146,8 +148,11 @@ validates content, and still writes nothing to its schema.
 - **No authentication.** Endpoints are anonymous. `AllowAnonymous()` on health and meta is
   deliberate so they keep working once authentication is switched on in
   [#6](https://github.com/shoraLBRT/ritocode/issues/6).
-- **No object storage client.** MinIO runs and its buckets exist, but no code talks to it. That
-  arrives with [#5](https://github.com/shoraLBRT/ritocode/issues/5).
+- **No object storage client.** MinIO runs, its buckets exist and
+  [STORAGE_LAYOUT.md](STORAGE_LAYOUT.md) now fixes what goes in them, but no code talks to it. The
+  put-and-get client is the second half of [#5](https://github.com/shoraLBRT/ritocode/issues/5) and
+  the next box in the slice, so the issue stays open. Retention and deletion are a third piece,
+  deferred separately with [#43](https://github.com/shoraLBRT/ritocode/issues/43).
 - **Cross-module references carry no foreign key**, by design — see
   [ADR 0004](adr/0004-persistence-and-migrations.md). Whichever module creates such a row is
   responsible for validating the reference first.
@@ -159,18 +164,18 @@ validates content, and still writes nothing to its schema.
 The slice plan is the ordered list now: **[`docs/SLICE_PLAN.md`](SLICE_PLAN.md)**. Take the first
 unticked box. The stages there are ordered so that each depends only on stages above it.
 
-**Stage 1 is complete.** Both ADRs are written and both spikes it needed are done, so nothing in
-the plan is now waiting on a decision. Work moves to stage 2, and its first two boxes are the ones
-everything after them mounts on:
+**Stage 1 is complete**, and stage 2 has started: the storage key layout is documented in
+[STORAGE_LAYOUT.md](STORAGE_LAYOUT.md), so the keys exist on paper before any code writes an object.
+The next boxes:
 
-1. **[#5](https://github.com/shoraLBRT/ritocode/issues/5) (partial) — storage key layout.** Bucket
-   naming and object key conventions for problem bundles, workspace snapshots and evaluation
-   artifacts, documented before anything writes an object. Retention is deferred with
-   [#43](https://github.com/shoraLBRT/ritocode/issues/43).
-2. **[#5](https://github.com/shoraLBRT/ritocode/issues/5) (partial) — object storage client.** Put
-   and get against the MinIO already in `compose.yaml`. No fake implementation — ADR 0005's
-   reduction table does not list one, and a stub costs more to replace than the client costs to
-   write.
+1. **[#5](https://github.com/shoraLBRT/ritocode/issues/5) (partial) — object storage client.** Put
+   and get against the MinIO already in `compose.yaml`, over the roles and keys in
+   [STORAGE_LAYOUT.md](STORAGE_LAYOUT.md). No fake implementation — ADR 0005's reduction table does
+   not list one, and a stub costs more to replace than the client costs to write. This is where the
+   role-to-bucket configuration and the reference form become code and get their tests.
+2. **[#9](https://github.com/shoraLBRT/ritocode/issues/9) (partial) — catalog.** List published
+   problem versions and fetch one by slug, over `Page<T>` and `PageRequest`. Search, facets, tag and
+   difficulty filters and explicit version resolution are all deferred.
 
 One decision falls due at the same time and is the maintainer's, not a session's: **the language of
 the first problems**, which stage 2's [#42](https://github.com/shoraLBRT/ritocode/issues/42) cannot
@@ -240,6 +245,15 @@ Decisions a future session will hit, and where in the slice each one comes due.
   can never be evaluated by anyone, so the rejection belongs at ingest. Until that check exists the
   failure still happens — as a failed compile validator at submission time, blamed on the submitter
   rather than on the content.
+- **A submission's evaluated tree has nowhere to be recorded.** *Created by
+  [STORAGE_LAYOUT.md](STORAGE_LAYOUT.md), due in stage 4 with
+  [#14](https://github.com/shoraLBRT/ritocode/issues/14).* An evaluation reads a frozen copy at
+  `evaluation-artifacts/submissions/{id}/input/tree.tar.gz`, never the live workspace key — that key
+  is overwritten on every save, so evaluating from it means re-evaluating one submission reads
+  different bytes, and the determinism claim fails underneath anything ADR 0006 guarantees. But
+  `submissions` has no reference column, so this is the single key derived from an id instead of
+  read back from a row, against the layout's own rule. #14 should add the column while it builds the
+  lifecycle; until it does, moving that part of the layout strands existing rows.
 - **Where a submission report carries a timeout or a resource exhaustion.** *Created by
   [ADR 0006](adr/0006-sandbox-execution-model.md) §5, due in stage 4 with
   [#14](https://github.com/shoraLBRT/ritocode/issues/14) and
