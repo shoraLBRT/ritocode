@@ -157,18 +157,28 @@ validates content, and still writes nothing to its schema.
 The slice plan is the ordered list now: **[`docs/SLICE_PLAN.md`](SLICE_PLAN.md)**. Take the first
 unticked box. The stages there are ordered so that each depends only on stages above it.
 
-Immediately: the rest of stage 1, which blocks everything after it.
+**Stage 1 is complete.** Both ADRs are written and both spikes it needed are done, so nothing in
+the plan is now waiting on a decision. Work moves to stage 2, and its first two boxes are the ones
+everything after them mounts on:
 
-1. **ADR 0007 — cross-module contract form.** The last box in stage 1, and the only one left. ADR
-   0002 already settled that the contract lives in `Ritocode.Shared`; this settles its shape — thin
-   read-interfaces, one per need, rather than an in-process mediator. Unblocked, untouched by the
-   sandbox spike, and assumed by #10 in stage 3. It is an ADR, so it is the maintainer's decision to
-   agree before it is written.
+1. **[#5](https://github.com/shoraLBRT/ritocode/issues/5) (partial) — storage key layout.** Bucket
+   naming and object key conventions for problem bundles, workspace snapshots and evaluation
+   artifacts, documented before anything writes an object. Retention is deferred with
+   [#43](https://github.com/shoraLBRT/ritocode/issues/43).
+2. **[#5](https://github.com/shoraLBRT/ritocode/issues/5) (partial) — object storage client.** Put
+   and get against the MinIO already in `compose.yaml`. No fake implementation — ADR 0005's
+   reduction table does not list one, and a stub costs more to replace than the client costs to
+   write.
 
-[ADR 0006](adr/0006-sandbox-execution-model.md) is off this list: the sandbox execution model is
-decided. What it obliges later stages to do is in [Open questions](#open-questions) below —
-briefly, ingest gains a dependency check, submission reports gain somewhere to carry a timeout or a
-resource exhaustion, and #22 gains a runner registry.
+One decision falls due at the same time and is the maintainer's, not a session's: **the language of
+the first problems**, which stage 2's [#42](https://github.com/shoraLBRT/ritocode/issues/42) cannot
+start without. It is the first entry under [Open questions](#open-questions).
+
+The three ADRs written so far are off this list and their obligations are in
+[Open questions](#open-questions) instead. Briefly: ingest gains a dependency check against the
+runner image's offline cache, submission reports gain somewhere to carry a timeout or a resource
+exhaustion, #22 gains a runner registry, and #10 gains two lookup interfaces plus the three
+architecture-test assertions that keep them honest.
 
 [#37](https://github.com/shoraLBRT/ritocode/issues/37) is off this list: the harness landed, and
 the flow tests the issue also asks for arrive with the endpoints they exercise.
@@ -242,10 +252,27 @@ Decisions a future session will hit, and where in the slice each one comes due.
   per database rather than per transaction because a test that wants to see what a migration, a
   trigger or a check constraint actually did cannot see it inside a transaction the harness rolls
   back. Consequence: `dotnet test` now needs a Docker daemon, and no longer needs `dev-up`.
-- **Who validates cross-module references?** [ADR 0004](adr/0004-persistence-and-migrations.md)
-  says the module creating the row does, but there is still no mechanism. ADR 0002 already settled
-  *where* the contract lives (`Ritocode.Shared`); ADR 0007 in stage 1 settles *what shape* it takes,
-  and #10 in stage 3 is the first consumer.
+- **Who validates cross-module references, and how?** *Settled by
+  [ADR 0007](adr/0007-cross-module-contract-form.md), due in stage 3 with
+  [#10](https://github.com/shoraLBRT/ritocode/issues/10).*
+  [ADR 0004](adr/0004-persistence-and-migrations.md) says the module creating the row does; ADR 0002
+  said the contract lives in `Ritocode.Shared`; ADR 0007 fixes its shape. Thin read-interfaces, one
+  per consumer need, taken as constructor parameters — so a cross-module dependency is visible in a
+  signature, which a mediator would have hidden while still passing `ModuleBoundaryTests`. Contracts
+  answer facts, never policy: they return the row's summary or `null`, never a `Result<T>`, because
+  an `AppError` supplied by the owning module means the wrong module chose the error code a client
+  branches on. Read-only for the slice. Three consequences a later session inherits: a contract call
+  is outside the caller's transaction, so check-then-write races and is meant to — ADR 0004 gave up
+  referential integrity on purpose; a per-row call in a list endpoint is an N+1, and the fix is a
+  batch method on the contract, never a cross-schema join; and routing through an interface turns a
+  missing DI registration into a startup failure, which is what ADR 0007 §7's third assertion exists
+  to move back into `dotnet test`.
+- **How does one module *change* another's state?** *Open, and outside the slice.* ADR 0007 is
+  read-only by decision, so there is no mechanism and no need for one yet. The first real case is
+  user deletion in [#43](https://github.com/shoraLBRT/ritocode/issues/43), which
+  [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) already says must notify each module rather than run a
+  single `DELETE`. Whether the answer is a command interface or a domain event is worth deciding
+  against that case rather than in advance; it supersedes ADR 0007 rather than editing it.
 - **Queue transport.** *Settled for the slice:* a PostgreSQL table drained with `SKIP LOCKED`. The
   partial index `(status, created_at) WHERE status IN ('Queued','Running')` has been in
   `SubmissionConfiguration` since #3 — the schema was designed for this query. Redis is not adopted

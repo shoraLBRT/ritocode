@@ -12,6 +12,7 @@ and the old one is marked `Superseded by NNNN` rather than edited.
 | [0004](0004-persistence-and-migrations.md) | Persistence and migrations | Accepted |
 | [0005](0005-vertical-slice-before-breadth.md) | Vertical slice before breadth | Accepted |
 | [0006](0006-sandbox-execution-model.md) | Sandbox execution model | Accepted |
+| [0007](0007-cross-module-contract-form.md) | Cross-module contract form | Accepted |
 
 ## Writing a new ADR
 
