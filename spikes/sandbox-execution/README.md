@@ -2,7 +2,8 @@
 
 - **Date:** 2026-09-05
 - **Slice item:** stage 1, *Spike — sandbox execution* in [`docs/SLICE_PLAN.md`](../../docs/SLICE_PLAN.md)
-- **Closes no issue.** Its output is this page and [ADR 0006](../../docs/adr/), which is written from it.
+- **Closes no issue.** Its output is this page and
+  [ADR 0006](../../docs/adr/0006-sandbox-execution-model.md), which is written from it.
 - **Reproduce:** `./spikes/sandbox-execution/run-spike.sh` — needs a Docker daemon, and a network
   for the image build only.
 

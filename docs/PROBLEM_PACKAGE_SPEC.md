@@ -190,6 +190,13 @@ adding a validator silently reweights the others, and the author does not see it
 compile and test validators of the slice read `command`; a lint validator will read something else,
 and neither this document nor the loader has to change for it.
 
+**A declared command is not executed verbatim.** Per
+[ADR 0006](adr/0006-sandbox-execution-model.md), the runner appends the arguments its image needs in
+order to win against configuration a submitted tree can plant — for the .NET image, a
+`--configfile` naming no package source, `-p:NuGetAudit=false` and `--artifacts-path`. Those
+arguments belong to the image, not to the task, and an author neither writes them nor can override
+them. Write the command the task means; assume the runner's guarantees hold underneath it.
+
 ### Fixtures
 
 | Field | Type | Required | Rule |

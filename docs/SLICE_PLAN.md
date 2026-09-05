@@ -9,7 +9,7 @@ reductions that are allowed and the list that are forbidden. **Read that ADR bef
 anything here.** This file tracks progress; it holds no decisions.
 
 - **Last updated:** 2026-09-05
-- **Progress:** 3 / 37
+- **Progress:** 4 / 37
 - **Estimate:** 30–34 sessions, six to seven weeks at five sessions a week
 - **Then:** [stage two](#after-the-slice) — the rest of Phase 1
 
@@ -28,7 +28,7 @@ anything here.** This file tracks progress; it holds no decisions.
 
 | Stage | Sessions | Done |
 | --- | --- | --- |
-| [1 — Foundation](#stage-1--foundation) | 5 | 3 / 5 |
+| [1 — Foundation](#stage-1--foundation) | 5 | 4 / 5 |
 | [2 — Content and catalog](#stage-2--content-and-catalog) | 5 | 0 / 6 |
 | [3 — Identity and workspace](#stage-3--identity-and-workspace) | 6 | 0 / 7 |
 | [4 — Submission and queue](#stage-4--submission-and-queue) | 5 | 0 / 5 |
@@ -67,9 +67,17 @@ the two ADRs are written.
   what [#38](https://github.com/shoraLBRT/ritocode/issues/38) may assert; and the submitted tree
   outranks anything the runner sets through configuration, so guarantees have to live in the flags.
   Closes no issue, as planned.
-- [ ] **ADR 0006 — sandbox execution model.** Written from the spike. Fixes what the runner
-  contract looks like for the slice and states plainly that the production host — warm pool,
-  dedicated VM, Docker-in-Docker — is deferred.
+- [x] **[ADR 0006](adr/0006-sandbox-execution-model.md) — sandbox execution model.** Written from
+  the spike, and it answers the four things the spike refused to settle. Containment lives in the
+  container flags and nowhere else. The runner appends precedence-winning arguments to the
+  manifest's command, and those arguments belong to the **image**, not the runner — so
+  `ISandboxRunner` stays language-agnostic and a second language adds a registry row. One container
+  per validator over a read-only workspace mount and a shared writable output mount. The runner
+  reports `Completed` / `TimedOut` / `ResourceExhausted` / `Crashed` and is allowed not to know why
+  a container died — `OOMKilled` is a reliable positive and an unreliable negative. Determinism is
+  a property of the normalised projection, and the resource limits are part of that contract rather
+  than an operational knob. The production host — warm pool, dedicated VM, Docker-in-Docker —
+  stays deferred, unchanged from ADR 0005. Closes no issue, as planned.
 - [ ] **ADR 0007 — cross-module contract form.** [ADR 0002](adr/0002-modular-monolith-layout.md)
   already settled that the contract lives in `Ritocode.Shared`; this settles the shape. Thin
   read-interfaces, one per need, over an in-process mediator — `docs/AGENT_GUIDELINES.md` warns

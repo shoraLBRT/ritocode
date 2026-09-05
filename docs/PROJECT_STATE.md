@@ -159,16 +159,16 @@ unticked box. The stages there are ordered so that each depends only on stages a
 
 Immediately: the rest of stage 1, which blocks everything after it.
 
-1. **ADR 0006 — sandbox execution model.** The spike behind it is done and written up in
-   [`spikes/sandbox-execution/`](../spikes/sandbox-execution/README.md); the ADR is now a matter of
-   deciding, not of finding out. Four decisions are waiting there and are listed under *What the
-   orchestrator may assume*: what the runner reports back and which failure causes it is allowed to
-   leave unknown, whether the runner injects flags into the manifest's command or the package format
-   forbids the files that would override it, that the resource limits are part of the determinism
-   contract rather than an operational setting, and that the offline package cache makes an image a
-   dependency set. Nothing in the spike disturbed ADR 0005's deferral of the production host.
-2. **ADR 0007 — cross-module contract form.** Unblocked and untouched by the spike; assumed by #10
-   in stage 3.
+1. **ADR 0007 — cross-module contract form.** The last box in stage 1, and the only one left. ADR
+   0002 already settled that the contract lives in `Ritocode.Shared`; this settles its shape — thin
+   read-interfaces, one per need, rather than an in-process mediator. Unblocked, untouched by the
+   sandbox spike, and assumed by #10 in stage 3. It is an ADR, so it is the maintainer's decision to
+   agree before it is written.
+
+[ADR 0006](adr/0006-sandbox-execution-model.md) is off this list: the sandbox execution model is
+decided. What it obliges later stages to do is in [Open questions](#open-questions) below —
+briefly, ingest gains a dependency check, submission reports gain somewhere to carry a timeout or a
+resource exhaustion, and #22 gains a runner registry.
 
 [#37](https://github.com/shoraLBRT/ritocode/issues/37) is off this list: the harness landed, and
 the flow tests the issue also asks for arrive with the endpoints they exercise.
@@ -196,27 +196,47 @@ Decisions a future session will hit, and where in the slice each one comes due.
   the choice gets made by whoever writes the endpoint.
 - **Sandbox runner host.** *Slice answer settled and now measured, production answer deferred.*
   [ADR 0005](adr/0005-vertical-slice-before-breadth.md) fixes `docker run` with limits for the
-  slice, and the spike confirmed every flag in that list holds while both of the reference
-  package's real validators run underneath them — ~500 ms of container overhead, ~8.5 s per
-  submission, and the passing and failing fixtures separated correctly. Docker-in-Docker, a
-  dedicated runner VM and a warm pool stay open until queue depth makes one of them necessary.
-  Measured on one Windows/WSL2 machine on cgroups v1; a Linux host on cgroups v2 is worth
-  re-measuring, which is one run of `spikes/sandbox-execution/run-spike.sh`.
-- **How a verdict is derived from a runner artifact.** *Answered by the spike, due in stage 5 with
-  [#20](https://github.com/shoraLBRT/ritocode/issues/20).* The TRX a test run produces is different
-  on every run — run ids, timestamps, the container hostname, per-test durations, and the order a
-  parallel test host finished in. The sorted `testName` → `outcome` projection is identical every
-  time. Scores come from the projection; the raw artifact is what a person reads, under
-  `submission_reports.logs_reference`. The determinism test in
-  [#38](https://github.com/shoraLBRT/ritocode/issues/38) asserts on the projection — asserting on
-  the file gives a test that fails constantly and gets deleted, and the claim stops being checked.
-- **Where a runner's guarantees may live.** *Answered by the spike, due in stage 5 with
-  [#21](https://github.com/shoraLBRT/ritocode/issues/21).* Two files dropped into a workspace —
-  a `NuGet.Config` and a `Directory.Build.props` — override anything the runner sets through
-  environment variables or discovered configuration, and turn a clean build into a failed one.
-  Containment itself never depended on them, which is the point: security properties belong in the
-  container flags, and ADR 0006 has to choose between the runner injecting winning flags and the
-  package format rejecting those files at ingest.
+  slice, the spike confirmed every flag in that list holds while both of the reference package's
+  real validators run underneath them, and [ADR 0006](adr/0006-sandbox-execution-model.md) now
+  fixes the contract around it. Docker-in-Docker, a dedicated runner VM and a warm pool stay open
+  until queue depth makes one of them necessary. Measured on one Windows/WSL2 machine on cgroups
+  v1; a Linux host on cgroups v2 is worth re-measuring, which is one run of
+  `spikes/sandbox-execution/run-spike.sh`.
+- **How a verdict is derived from a runner artifact.** *Settled by
+  [ADR 0006](adr/0006-sandbox-execution-model.md) §6, due in stage 5 with
+  [#20](https://github.com/shoraLBRT/ritocode/issues/20).* Scores come from a normalised projection
+  — for the test validator, the sorted `testName` → `outcome` pairs, which are byte-identical
+  across runs whose raw TRX differs every time. The raw artifact is what a person reads, under
+  `submission_reports.logs_reference`, and is never what a score is derived from.
+  [#38](https://github.com/shoraLBRT/ritocode/issues/38) asserts on the projection. The resource
+  limits are part of the same contract: `--cpus` and `--memory` are visible to the runtime, so
+  changing them can legitimately change a test's answer, and results are comparable only within one
+  image-and-limits version.
+- **Where a runner's guarantees may live.** *Settled by
+  [ADR 0006](adr/0006-sandbox-execution-model.md) §1–2, due in stage 5 with
+  [#21](https://github.com/shoraLBRT/ritocode/issues/21).* Containment lives in the container flags
+  and nowhere else. Where a toolchain lets a submitted `NuGet.Config` or `Directory.Build.props`
+  outrank the runner's intent, the runner appends arguments that win by precedence — and those
+  arguments belong to the **image**, not the runner, so `ISandboxRunner` stays language-agnostic and
+  a second language adds a registry row rather than a branch. The ingest-denylist alternative was
+  rejected: a user can write the same files into a workspace, where ingest never sees them.
+- **Ingest has to check a package's dependencies against the image's offline cache.** *Created by
+  [ADR 0006](adr/0006-sandbox-execution-model.md) §3, due in stage 2 with
+  [#9](https://github.com/shoraLBRT/ritocode/issues/9) and
+  [#42](https://github.com/shoraLBRT/ritocode/issues/42).* `--network none` means the runner image's
+  warmed package cache is the entire set of dependencies a problem may have. A problem outside it
+  can never be evaluated by anyone, so the rejection belongs at ingest. Until that check exists the
+  failure still happens — as a failed compile validator at submission time, blamed on the submitter
+  rather than on the content.
+- **Where a submission report carries a timeout or a resource exhaustion.** *Created by
+  [ADR 0006](adr/0006-sandbox-execution-model.md) §5, due in stage 4 with
+  [#14](https://github.com/shoraLBRT/ritocode/issues/14) and
+  [#17](https://github.com/shoraLBRT/ritocode/issues/17).* The runner distinguishes `Completed`,
+  `TimedOut`, `ResourceExhausted` and `Crashed`, and is explicitly allowed not to know which of the
+  last two applies — `OOMKilled` is a reliable positive and an unreliable negative, since a managed
+  `OutOfMemoryException` aborts at 134 before the kernel is involved. If the schema above the runner
+  has nowhere to put that distinction, the honesty is discarded on the way up and a person is told
+  their tests failed when the container was killed.
 - **Test database isolation.** *Settled.* One PostgreSQL container per test assembly, one database
   per test class, each copied from a template that `MigrationRunner` migrated once. Isolation is
   per database rather than per transaction because a test that wants to see what a migration, a
