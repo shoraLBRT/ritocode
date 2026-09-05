@@ -25,9 +25,9 @@ is in.
 
 | # | Phase | Ends when |
 | --- | --- | --- |
-| 1 | Orient | You can name the current stage and the next box out loud |
+| 1 | Orient | The checkout is current, and you can name the current stage and the next box out loud |
 | 2 | Pick | One item is chosen and its issue confirmed open |
-| 3 | Branch | You are off a freshly pulled `main` |
+| 3 | Branch | You are off a freshly fetched `origin/main` |
 | 4 | Build | Code and its tests exist |
 | 5 | Verify | Everything in the verification section passes |
 | 6 | Ship | PR open, issue commented |
@@ -36,6 +36,35 @@ is in.
 ---
 
 ### 1. Orient
+
+**Make the checkout current before reading anything.** The files below are only as true as the tree
+they are read from, and this repository is worked by sessions that do not share memory — the branch
+you start on is as old as the last time *someone* here updated it, which may be several merged PRs
+ago. Read a stale copy and the plan on `main` says a box is ticked while your copy still offers it
+as the next task. The failure is silent, because a stale `SLICE_PLAN.md` is a perfectly well-formed
+file with nothing wrong on its face.
+
+```bash
+git fetch origin main
+git rev-list --left-right --count main...origin/main
+```
+
+The second command prints two numbers: how far the local `main` is **ahead** of the remote, then how
+far **behind**. Behind is ordinary and is the whole reason for this step. Ahead is not — a non-zero
+first number means a commit landed on `main` directly, against the rule in **Branch** below. Stop
+and ask the maintainer rather than merging it away, because the merge hides how it got there.
+
+Then read from `origin/main` rather than from whatever the working tree happens to hold. Moving the
+local branch up is the direct way:
+
+```bash
+git checkout main && git pull --ff-only origin main
+```
+
+In a git worktree that command usually fails, because `main` is checked out in another worktree —
+and a failure here is exactly when the step is most tempting to skip and most costly to skip. Read
+the files straight from the fetched ref instead (`git show origin/main:docs/SLICE_PLAN.md`), and
+branch off `origin/main` by name in **Branch**.
 
 Read, in this order — actually read them, do not rely on what a previous session or a summary said
 they contain, because these files move and being wrong about them is how work lands in the wrong
@@ -78,22 +107,16 @@ Some boxes close no issue at all — spikes and ADRs. That is intended, not an o
 
 ### 3. Branch
 
-One issue per branch, off a `main` that is actually current:
+One issue per branch, off the `main` you made current in **Orient**:
 
 ```bash
-git checkout main && git pull --ff-only origin main
-git checkout -b feat/<short-slug>
+git checkout -b feat/<short-slug> origin/main
 ```
 
-Do the pull every session, including the ones that start on the branch a previous session left
-behind. Sessions do not share memory, so the local `main` is as old as the last time *someone* here
-updated it — which may be days and several merged PRs ago. Branching off a stale `main` builds on
-code that is no longer what the project has, and the conflict surfaces at review time rather than
-now, when it is a single command to avoid.
-
-`--ff-only` is the part that carries the information. If it fails, the local `main` has diverged
-from the remote — a commit landed on it directly, against the rule below. Stop and ask the
-maintainer; do not merge it away, because the merge hides how it got there.
+Naming `origin/main` explicitly is what makes this work whether or not the local branch could be
+moved up — in a worktree it usually could not. If you reached this phase without the fetch in Orient,
+go back and do it before branching: branching off a stale `main` builds on code the project no longer
+has, and the conflict surfaces at review time rather than now, when it is one command to avoid.
 
 Prefix by what the change is: `feat/`, `fix/`, `test/`, `docs/`, `chore/`.
 

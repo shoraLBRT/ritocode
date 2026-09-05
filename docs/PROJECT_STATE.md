@@ -20,9 +20,11 @@ finishing.
 
 Follow this loop. It is what makes the project continue without the maintainer re-explaining it.
 
-1. **Orient.** Read `AGENTS.md`, this file, `docs/SLICE_PLAN.md`, and `docs/adr/` (at least the
-   index and [ADR 0005](adr/0005-vertical-slice-before-breadth.md), which says what may and may not
-   be cut).
+1. **Orient.** `git fetch origin main` **before reading anything**, then read from `origin/main`:
+   `AGENTS.md`, this file, `docs/SLICE_PLAN.md`, and `docs/adr/` (at least the index and
+   [ADR 0005](adr/0005-vertical-slice-before-breadth.md), which says what may and may not be cut).
+   These files are only as true as the checkout they are read from; reading a branch a previous
+   session left behind is how a session takes a box that is already ticked on `main`.
 2. **Pick work.** Take the first unticked box in `docs/SLICE_PLAN.md`. Confirm the issue behind it
    is still open:
 
@@ -30,7 +32,7 @@ Follow this loop. It is what makes the project continue without the maintainer r
    gh issue list --repo shoraLBRT/ritocode --state open --label phase:1 --limit 60
    ```
 
-3. **Branch.** One issue per branch: `git checkout -b feat/<short-slug>` off `main`.
+3. **Branch.** One issue per branch: `git checkout -b feat/<short-slug> origin/main`.
 4. **Build it.** Follow `docs/AGENT_GUIDELINES.md` and the ADRs. Tests come with the code, not after.
 5. **Verify.** Everything under [Verification](#verification) must pass. No exceptions, no
    "will fix in CI".
