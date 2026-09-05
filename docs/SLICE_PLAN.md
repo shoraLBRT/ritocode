@@ -9,7 +9,7 @@ reductions that are allowed and the list that are forbidden. **Read that ADR bef
 anything here.** This file tracks progress; it holds no decisions.
 
 - **Last updated:** 2026-09-05
-- **Progress:** 4 / 37
+- **Progress:** 5 / 37
 - **Estimate:** 30–34 sessions, six to seven weeks at five sessions a week
 - **Then:** [stage two](#after-the-slice) — the rest of Phase 1
 
@@ -28,7 +28,7 @@ anything here.** This file tracks progress; it holds no decisions.
 
 | Stage | Sessions | Done |
 | --- | --- | --- |
-| [1 — Foundation](#stage-1--foundation) | 5 | 4 / 5 |
+| [1 — Foundation](#stage-1--foundation) | 5 | 5 / 5 |
 | [2 — Content and catalog](#stage-2--content-and-catalog) | 5 | 0 / 6 |
 | [3 — Identity and workspace](#stage-3--identity-and-workspace) | 6 | 0 / 7 |
 | [4 — Submission and queue](#stage-4--submission-and-queue) | 5 | 0 / 5 |
@@ -78,11 +78,17 @@ the two ADRs are written.
   a property of the normalised projection, and the resource limits are part of that contract rather
   than an operational knob. The production host — warm pool, dedicated VM, Docker-in-Docker —
   stays deferred, unchanged from ADR 0005. Closes no issue, as planned.
-- [ ] **ADR 0007 — cross-module contract form.** [ADR 0002](adr/0002-modular-monolith-layout.md)
-  already settled that the contract lives in `Ritocode.Shared`; this settles the shape. Thin
-  read-interfaces, one per need, over an in-process mediator — `docs/AGENT_GUIDELINES.md` warns
-  against dynamic runtime magic, and a mediator hides the coupling the interface would show in a
-  signature. First consumer is [#10](https://github.com/shoraLBRT/ritocode/issues/10).
+- [x] **[ADR 0007](adr/0007-cross-module-contract-form.md) — cross-module contract form.**
+  [ADR 0002](adr/0002-modular-monolith-layout.md) settled that the contract lives in
+  `Ritocode.Shared`; this settles the shape. Thin read-interfaces, one per consumer need, taken as
+  constructor parameters — chosen over an in-process mediator because a mediator satisfies ADR
+  0002's letter while removing the property it exists for: with it, coupling stops appearing in any
+  signature, and neither a reviewer nor `ModuleBoundaryTests` can see a new cross-module edge.
+  Contracts answer facts and never policy, so they return the row's data or `null` rather than a
+  `Result<T>` whose error code would be chosen by the wrong module. Contract types are their own
+  flat records in `Shared`, never a module's domain entity. Read-only for the slice; a write need
+  supersedes the ADR rather than editing it. Three architecture-test assertions are specified and
+  land with the first contract, in stage 3. Closes no issue, as planned.
 
 ## Stage 2 — Content and catalog
 
@@ -120,10 +126,14 @@ first time.
   `workspaces.user_id` and `submissions.user_id` are `IsRequired()`, so a user is not optional.
   Endpoints take the user from the seam and never from the request — see the forbidden list in
   ADR 0005. Login, session issuance and `/me` land in stage two.
-- [ ] **Cross-module contract in `Ritocode.Shared`.** Per ADR 0007: the Workspaces module asks
-  whether a user and a problem version exist before creating a row.
+- [ ] **Cross-module contract in `Ritocode.Shared`.** Per
+  [ADR 0007](adr/0007-cross-module-contract-form.md): the Workspaces module asks whether a user and
+  a problem version exist before creating a row.
   [ADR 0004](adr/0004-persistence-and-migrations.md) requires this — there is no foreign key across
-  schemas to do it for us.
+  schemas to do it for us. Two interfaces, `IUserLookup` and `IProblemVersionLookup`, returning the
+  row's summary or `null`. The three architecture-test assertions in ADR 0007 §7 ship **in this
+  PR**, not after: assertion 3 is what turns a missing DI registration back into a test failure
+  instead of a startup failure.
 - [ ] **[#10](https://github.com/shoraLBRT/ritocode/issues/10) — create workspace from a problem
   version.** Materialises the bundle into a workspace snapshot. Never from a problem, always from a
   version.
