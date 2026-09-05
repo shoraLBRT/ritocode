@@ -8,8 +8,8 @@ Decided in [ADR 0005](adr/0005-vertical-slice-before-breadth.md), which also car
 reductions that are allowed and the list that are forbidden. **Read that ADR before ticking
 anything here.** This file tracks progress; it holds no decisions.
 
-- **Last updated:** 2026-09-04
-- **Progress:** 2 / 37
+- **Last updated:** 2026-09-05
+- **Progress:** 3 / 37
 - **Estimate:** 30–34 sessions, six to seven weeks at five sessions a week
 - **Then:** [stage two](#after-the-slice) — the rest of Phase 1
 
@@ -28,7 +28,7 @@ anything here.** This file tracks progress; it holds no decisions.
 
 | Stage | Sessions | Done |
 | --- | --- | --- |
-| [1 — Foundation](#stage-1--foundation) | 5 | 2 / 5 |
+| [1 — Foundation](#stage-1--foundation) | 5 | 3 / 5 |
 | [2 — Content and catalog](#stage-2--content-and-catalog) | 5 | 0 / 6 |
 | [3 — Identity and workspace](#stage-3--identity-and-workspace) | 6 | 0 / 7 |
 | [4 — Submission and queue](#stage-4--submission-and-queue) | 5 | 0 / 5 |
@@ -55,9 +55,18 @@ the two ADRs are written.
   `content/problems/example-order-total` is loaded from the committed tree, so the format cannot
   drift from its example. `validator_config` is a canonical JSON projection of the pipeline: the
   same manifest serialises to the same bytes whatever order it was written in.
-- [ ] **Spike — sandbox execution.** Time-boxed, no issue closed. Run a real task under `docker run`
-  with `--network none`, cpu / memory / pid limits, read-only root, non-root user and a timeout.
-  Find out what actually works on the development machine and what the orchestrator can assume.
+- [x] **Spike — sandbox execution.** Written up in
+  [`spikes/sandbox-execution/`](../spikes/sandbox-execution/README.md), reproducible with the
+  script beside it. The reference package's two real validators run under the whole flag set from
+  ADR 0005 and separate the passing fixture from the failing one, at ~500 ms of container overhead
+  and ~8.5 s per submission. Four things the ADR has to answer came out of it: `--network none`
+  makes the offline package cache part of the runner image contract; `docker run` has no timeout
+  and its exit code cannot say why a container died, so a managed out-of-memory looks like an
+  ordinary crash; determinism holds for the normalised name-to-outcome projection and never for the
+  raw artifact, which decides how [#20](https://github.com/shoraLBRT/ritocode/issues/20) scores and
+  what [#38](https://github.com/shoraLBRT/ritocode/issues/38) may assert; and the submitted tree
+  outranks anything the runner sets through configuration, so guarantees have to live in the flags.
+  Closes no issue, as planned.
 - [ ] **ADR 0006 — sandbox execution model.** Written from the spike. Fixes what the runner
   contract looks like for the slice and states plainly that the production host — warm pool,
   dedicated VM, Docker-in-Docker — is deferred.

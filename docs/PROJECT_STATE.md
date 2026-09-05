@@ -4,7 +4,7 @@
 what to build next, and how to verify it. Read it before touching anything; update it before
 finishing.
 
-- **Last updated:** 2026-09-04
+- **Last updated:** 2026-09-05
 - **Current phase:** Phase 1 (MVP) — see `docs/MVP_SCOPE.md`
 - **Current milestone:** the vertical slice — [`docs/SLICE_PLAN.md`](SLICE_PLAN.md), decided in
   [ADR 0005](adr/0005-vertical-slice-before-breadth.md). Phase 1 now ships in two stages; the slice
@@ -97,6 +97,8 @@ tests/
   Ritocode.Api.Tests/           in-memory host tests over the real composition root
   Ritocode.Architecture.Tests/  module boundary rules, executable
   Ritocode.Modules.Problems.Tests/  the problem package format, and the reference package
+spikes/
+  sandbox-execution/          time-boxed experiment behind ADR 0006, with the script that repeats it
 docs/
   adr/                        architecture decision records
   DATABASE_SCHEMA.md          ERD, conventions, and what the schema enforces
@@ -157,11 +159,16 @@ unticked box. The stages there are ordered so that each depends only on stages a
 
 Immediately: the rest of stage 1, which blocks everything after it.
 
-1. **Sandbox spike, then ADR 0006 and ADR 0007.** The spike is time-boxed and closes no issue; the
-   two ADRs settle the sandbox execution model and the form of the cross-module contract. Both are
-   assumed by work in stage 3 and stage 4, so they are written before that work starts. The spike
-   now has something real to run: the reference package's `validators` list says what a runner is
-   being asked to execute.
+1. **ADR 0006 — sandbox execution model.** The spike behind it is done and written up in
+   [`spikes/sandbox-execution/`](../spikes/sandbox-execution/README.md); the ADR is now a matter of
+   deciding, not of finding out. Four decisions are waiting there and are listed under *What the
+   orchestrator may assume*: what the runner reports back and which failure causes it is allowed to
+   leave unknown, whether the runner injects flags into the manifest's command or the package format
+   forbids the files that would override it, that the resource limits are part of the determinism
+   contract rather than an operational setting, and that the offline package cache makes an image a
+   dependency set. Nothing in the spike disturbed ADR 0005's deferral of the production host.
+2. **ADR 0007 — cross-module contract form.** Unblocked and untouched by the spike; assumed by #10
+   in stage 3.
 
 [#37](https://github.com/shoraLBRT/ritocode/issues/37) is off this list: the harness landed, and
 the flow tests the issue also asks for arrive with the endpoints they exercise.
@@ -187,10 +194,29 @@ Decisions a future session will hit, and where in the slice each one comes due.
   the slice* — the identity seam hides it. Opaque tokens make revocation trivial, which matters
   once submissions can open real pull requests in Phase 3. Worth an ADR before #6 is completed, or
   the choice gets made by whoever writes the endpoint.
-- **Sandbox runner host.** *Slice answer settled, production answer deferred.*
+- **Sandbox runner host.** *Slice answer settled and now measured, production answer deferred.*
   [ADR 0005](adr/0005-vertical-slice-before-breadth.md) fixes `docker run` with limits for the
-  slice; ADR 0006 records what the spike found. Docker-in-Docker, a dedicated runner VM and a warm
-  pool stay open until queue depth makes one of them necessary.
+  slice, and the spike confirmed every flag in that list holds while both of the reference
+  package's real validators run underneath them — ~500 ms of container overhead, ~8.5 s per
+  submission, and the passing and failing fixtures separated correctly. Docker-in-Docker, a
+  dedicated runner VM and a warm pool stay open until queue depth makes one of them necessary.
+  Measured on one Windows/WSL2 machine on cgroups v1; a Linux host on cgroups v2 is worth
+  re-measuring, which is one run of `spikes/sandbox-execution/run-spike.sh`.
+- **How a verdict is derived from a runner artifact.** *Answered by the spike, due in stage 5 with
+  [#20](https://github.com/shoraLBRT/ritocode/issues/20).* The TRX a test run produces is different
+  on every run — run ids, timestamps, the container hostname, per-test durations, and the order a
+  parallel test host finished in. The sorted `testName` → `outcome` projection is identical every
+  time. Scores come from the projection; the raw artifact is what a person reads, under
+  `submission_reports.logs_reference`. The determinism test in
+  [#38](https://github.com/shoraLBRT/ritocode/issues/38) asserts on the projection — asserting on
+  the file gives a test that fails constantly and gets deleted, and the claim stops being checked.
+- **Where a runner's guarantees may live.** *Answered by the spike, due in stage 5 with
+  [#21](https://github.com/shoraLBRT/ritocode/issues/21).* Two files dropped into a workspace —
+  a `NuGet.Config` and a `Directory.Build.props` — override anything the runner sets through
+  environment variables or discovered configuration, and turn a clean build into a failed one.
+  Containment itself never depended on them, which is the point: security properties belong in the
+  container flags, and ADR 0006 has to choose between the runner injecting winning flags and the
+  package format rejecting those files at ingest.
 - **Test database isolation.** *Settled.* One PostgreSQL container per test assembly, one database
   per test class, each copied from a template that `MigrationRunner` migrated once. Isolation is
   per database rather than per transaction because a test that wants to see what a migration, a
