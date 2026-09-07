@@ -8,8 +8,8 @@ Decided in [ADR 0005](adr/0005-vertical-slice-before-breadth.md), which also car
 reductions that are allowed and the list that are forbidden. **Read that ADR before ticking
 anything here.** This file tracks progress; it holds no decisions.
 
-- **Last updated:** 2026-09-05
-- **Progress:** 6 / 37
+- **Last updated:** 2026-09-07
+- **Progress:** 7 / 37
 - **Estimate:** 30–34 sessions, six to seven weeks at five sessions a week
 - **Then:** [stage two](#after-the-slice) — the rest of Phase 1
 
@@ -29,7 +29,7 @@ anything here.** This file tracks progress; it holds no decisions.
 | Stage | Sessions | Done |
 | --- | --- | --- |
 | [1 — Foundation](#stage-1--foundation) | 5 | 5 / 5 |
-| [2 — Content and catalog](#stage-2--content-and-catalog) | 5 | 1 / 6 |
+| [2 — Content and catalog](#stage-2--content-and-catalog) | 5 | 2 / 6 |
 | [3 — Identity and workspace](#stage-3--identity-and-workspace) | 6 | 0 / 7 |
 | [4 — Submission and queue](#stage-4--submission-and-queue) | 5 | 0 / 5 |
 | [5 — Execution](#stage-5--execution) | 7 | 0 / 8 |
@@ -103,11 +103,19 @@ started early so its CI job stops waiting.
   evaluated from a frozen copy of the workspace tree rather than from the live key, or the
   determinism claim fails below the runner; and a key is read back from its stored reference, never
   recomputed, which is what lets the layout move without a data migration. Retention rules are
-  deferred with [#43](https://github.com/shoraLBRT/ritocode/issues/43), and no code writes an object
-  yet — that is the next box.
-- [ ] **[#5](https://github.com/shoraLBRT/ritocode/issues/5) (partial) — object storage client.**
-  Put and get against the MinIO already running in `compose.yaml`. No fake implementation: a stub
-  costs more to replace than the client costs to write.
+  deferred with [#43](https://github.com/shoraLBRT/ritocode/issues/43); the client that writes these
+  keys is the box below.
+- [x] **[#5](https://github.com/shoraLBRT/ritocode/issues/5) (partial) — object storage client.**
+  `IObjectStore` in `Ritocode.Shared.Storage`, over the S3 API the `compose.yaml` MinIO speaks and a
+  managed provider speaks too, so the swap is configuration. The layout became code: `StorageRole`
+  and `StorageReference` for the `role/key` form, `StorageKeys` for every key the platform writes —
+  including the assertion that the longest one is the 127 characters
+  [STORAGE_LAYOUT.md](STORAGE_LAYOUT.md) rule 4 claims. Tested against a real MinIO from
+  `MinioTestServer`, a bucket set per test class beside the PostgreSQL harness; no fake. Put and get
+  and nothing else: deletion and prefix listing are one piece — deleting a prefix reference is a
+  list-then-delete — deferred with [#43](https://github.com/shoraLBRT/ritocode/issues/43), and
+  server-side copy arrives with [#14](https://github.com/shoraLBRT/ritocode/issues/14), the first
+  caller that needs it. Nothing calls the client yet; ingest writes the first bundle.
 - [ ] **[#9](https://github.com/shoraLBRT/ritocode/issues/9) (partial) — catalog.** List published
   problem versions and fetch one by slug, over `Page<T>` and `PageRequest`. Search, facets, tag and
   difficulty filters, explicit version resolution: all deferred.

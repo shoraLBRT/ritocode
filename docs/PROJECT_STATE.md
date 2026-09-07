@@ -4,7 +4,7 @@
 what to build next, and how to verify it. Read it before touching anything; update it before
 finishing.
 
-- **Last updated:** 2026-09-05
+- **Last updated:** 2026-09-07
 - **Current phase:** Phase 1 (MVP) — see `docs/MVP_SCOPE.md`
 - **Current milestone:** the vertical slice — [`docs/SLICE_PLAN.md`](SLICE_PLAN.md), decided in
   [ADR 0005](adr/0005-vertical-slice-before-breadth.md). Phase 1 now ships in two stages; the slice
@@ -90,12 +90,14 @@ src/
   Ritocode.Api/               composition root: pipeline, config, health, meta, module wiring
   Ritocode.DbMigrator/        applies each module's migrations; the host never migrates itself
   Ritocode.Shared/            errors, Result<T>, paging, IModule, correlation, persistence base
+                              Storage/ holds the object storage client and the key layout as code
   Modules/Ritocode.Modules.*  one project per module: domain, DbContext, migrations
                               Problems also owns Packaging/: the problem package format
 tests/
-  Ritocode.TestSupport/         integration test harness: a PostgreSQL container per test
-                                assembly, a migrated database per test class
-  Ritocode.Shared.Tests/        unit tests for the shared primitives
+  Ritocode.TestSupport/         integration test harnesses: a PostgreSQL container per test
+                                assembly with a migrated database per test class, and a MinIO
+                                container with a bucket set per test class
+  Ritocode.Shared.Tests/        the shared primitives, and the storage client against a real MinIO
   Ritocode.Api.Tests/           in-memory host tests over the real composition root
   Ritocode.Architecture.Tests/  module boundary rules, executable
   Ritocode.Modules.Problems.Tests/  the problem package format, and the reference package
@@ -120,14 +122,16 @@ docs/
 | [#3](https://github.com/shoraLBRT/ritocode/issues/3) Core schema | Done | Seven tables across five module schemas, [ADR 0004](adr/0004-persistence-and-migrations.md), ERD in [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md), initial migrations | `src/Modules/*/Domain`, `src/Modules/*/Persistence` |
 | [#4](https://github.com/shoraLBRT/ritocode/issues/4) Migration workflow | Done | `Ritocode.DbMigrator` (`apply` / `status`), `dotnet-ef` pinned as a local tool, CI applies from an empty database and fails on model drift | `src/Ritocode.DbMigrator`, `.github/workflows/backend-ci.yml` |
 | [#32](https://github.com/shoraLBRT/ritocode/issues/32) Local environment | Done | `compose.yaml` (PostgreSQL + MinIO with buckets), `scripts/dev-up.sh` / `.ps1` doing setup and migrations in one command | `compose.yaml`, `scripts/` |
-| [#37](https://github.com/shoraLBRT/ritocode/issues/37) Integration test harness | Partial | `PostgresTestServer`: one Testcontainers PostgreSQL per test assembly, one migrated database per test class, copied from a template migrated once by `MigrationRunner`. API tests moved onto it; CI's test job dropped its service container | `tests/Ritocode.TestSupport` |
+| [#37](https://github.com/shoraLBRT/ritocode/issues/37) Integration test harness | Partial | `PostgresTestServer`: one Testcontainers PostgreSQL per test assembly, one migrated database per test class, copied from a template migrated once by `MigrationRunner`. API tests moved onto it; CI's test job dropped its service container. `MinioTestServer` beside it does the same for object storage: one container per test assembly, a bucket per role per test class | `tests/Ritocode.TestSupport` |
 | [#8](https://github.com/shoraLBRT/ritocode/issues/8) Problem package manifest | Done | The format in [PROBLEM_PACKAGE_SPEC.md](PROBLEM_PACKAGE_SPEC.md) — `problem.yaml`, allowed paths, hints, limits, the validator pipeline and its canonical `validator_config` JSON — with a loader that reports every fault at once, and a reference package validated from the committed tree | `src/Modules/Ritocode.Modules.Problems/Packaging`, `content/problems/example-order-total`, `tests/Ritocode.Modules.Problems.Tests` |
-| [#5](https://github.com/shoraLBRT/ritocode/issues/5) Object storage layout | Partial | [STORAGE_LAYOUT.md](STORAGE_LAYOUT.md): three buckets as roles with configurable physical names, the `role/key` reference form stored in the three `*_reference` columns, object versus prefix references, and the keys for bundles, workspace snapshots and evaluation artifacts. Documentation only — no code writes an object yet, and retention stays deferred | `docs/STORAGE_LAYOUT.md` |
+| [#5](https://github.com/shoraLBRT/ritocode/issues/5) Object storage layout and client | Partial | [STORAGE_LAYOUT.md](STORAGE_LAYOUT.md): three buckets as roles with configurable physical names, the `role/key` reference form stored in the three `*_reference` columns, object versus prefix references, and the keys for bundles, workspace snapshots and evaluation artifacts — and now the client that reads and writes them. `StorageRole`, `StorageReference` and `StorageKeys` make the layout executable; `IObjectStore` / `S3ObjectStore` put and get over the S3 API, registered from the composition root and tested against a real MinIO. Deletion, prefix listing and server-side copy stay out | `src/Ritocode.Shared/Storage`, `tests/Ritocode.TestSupport/MinioTestServer.cs`, `docs/STORAGE_LAYOUT.md` |
 
 Nothing else from the backlog is implemented. Every module owns a schema and a `DbContext`, but
 none exposes an endpoint or a service yet — the boundary and the storage are in place, the behaviour
 is not. The Problems module is the first with domain code of its own: the package format reads and
-validates content, and still writes nothing to its schema.
+validates content, and still writes nothing to its schema. Object storage can now be written to and
+read from, and nothing calls it yet: the first caller is ingest, in
+[#9](https://github.com/shoraLBRT/ritocode/issues/9).
 
 ### Deliberately deferred
 
@@ -148,11 +152,21 @@ validates content, and still writes nothing to its schema.
 - **No authentication.** Endpoints are anonymous. `AllowAnonymous()` on health and meta is
   deliberate so they keep working once authentication is switched on in
   [#6](https://github.com/shoraLBRT/ritocode/issues/6).
-- **No object storage client.** MinIO runs, its buckets exist and
-  [STORAGE_LAYOUT.md](STORAGE_LAYOUT.md) now fixes what goes in them, but no code talks to it. The
-  put-and-get client is the second half of [#5](https://github.com/shoraLBRT/ritocode/issues/5) and
-  the next box in the slice, so the issue stays open. Retention and deletion are a third piece,
-  deferred separately with [#43](https://github.com/shoraLBRT/ritocode/issues/43).
+- **The object storage client puts and gets, and does nothing else.**
+  [#5](https://github.com/shoraLBRT/ritocode/issues/5) stays open for the three operations left out,
+  each because its first real caller decides its shape:
+  **deletion and prefix listing** go together — deleting a prefix reference is a list-then-delete —
+  and belong to retention, deferred with
+  [#43](https://github.com/shoraLBRT/ritocode/issues/43);
+  **server-side copy**, which [STORAGE_LAYOUT.md](STORAGE_LAYOUT.md) requires at enqueue to freeze
+  the workspace tree, arrives with [#14](https://github.com/shoraLBRT/ritocode/issues/14). Nothing
+  calls the client yet either: the buckets are empty until ingest
+  ([#9](https://github.com/shoraLBRT/ritocode/issues/9)) writes the first bundle.
+- **Object storage has no readiness check.** `AddObjectStorage` registers a client that contacts
+  nothing at startup, so `/health/ready` still reports one check per module schema and no more.
+  Adding a storage check would make `dotnet test` and a bare `dotnet run` require MinIO — the
+  property [#37](https://github.com/shoraLBRT/ritocode/issues/37) spent a session buying back — so
+  it waits for the first endpoint that cannot serve a request without an object.
 - **Cross-module references carry no foreign key**, by design — see
   [ADR 0004](adr/0004-persistence-and-migrations.md). Whichever module creates such a row is
   responsible for validating the reference first.
@@ -164,28 +178,30 @@ validates content, and still writes nothing to its schema.
 The slice plan is the ordered list now: **[`docs/SLICE_PLAN.md`](SLICE_PLAN.md)**. Take the first
 unticked box. The stages there are ordered so that each depends only on stages above it.
 
-**Stage 1 is complete**, and stage 2 has started: the storage key layout is documented in
-[STORAGE_LAYOUT.md](STORAGE_LAYOUT.md), so the keys exist on paper before any code writes an object.
-The next boxes:
+**Stage 1 is complete**, and stage 2 is two boxes in: the storage key layout is documented in
+[STORAGE_LAYOUT.md](STORAGE_LAYOUT.md) and the client that reads and writes those keys exists, so
+an object can now be put and got. The next boxes:
 
-1. **[#5](https://github.com/shoraLBRT/ritocode/issues/5) (partial) — object storage client.** Put
-   and get against the MinIO already in `compose.yaml`, over the roles and keys in
-   [STORAGE_LAYOUT.md](STORAGE_LAYOUT.md). No fake implementation — ADR 0005's reduction table does
-   not list one, and a stub costs more to replace than the client costs to write. This is where the
-   role-to-bucket configuration and the reference form become code and get their tests.
-2. **[#9](https://github.com/shoraLBRT/ritocode/issues/9) (partial) — catalog.** List published
+1. **[#9](https://github.com/shoraLBRT/ritocode/issues/9) (partial) — catalog.** List published
    problem versions and fetch one by slug, over `Page<T>` and `PageRequest`. Search, facets, tag and
-   difficulty filters and explicit version resolution are all deferred.
+   difficulty filters and explicit version resolution are all deferred. This is the first module to
+   read and write its schema, and the first caller of `IObjectStore` — ingest turns a validated
+   package into a `Problem`, a `ProblemVersion` and a bundle under
+   `StorageKeys.ProblemBundle`. ADR 0006 §3 adds an obligation to it: the package's dependencies
+   have to be checked against the runner image's offline cache, because `--network none` makes that
+   cache the entire set a problem may have.
+2. **[#42](https://github.com/shoraLBRT/ritocode/issues/42) (partial) — three problems**, which
+   cannot start until the language below is chosen.
 
-One decision falls due at the same time and is the maintainer's, not a session's: **the language of
-the first problems**, which stage 2's [#42](https://github.com/shoraLBRT/ritocode/issues/42) cannot
-start without. It is the first entry under [Open questions](#open-questions).
+One decision falls due now and is the maintainer's, not a session's: **the language of the first
+problems**, which [#42](https://github.com/shoraLBRT/ritocode/issues/42) cannot start without. It is
+the first entry under [Open questions](#open-questions). Nothing else in stage 2 is blocked by it —
+#9, #26 and #31 can all be taken first.
 
 The three ADRs written so far are off this list and their obligations are in
-[Open questions](#open-questions) instead. Briefly: ingest gains a dependency check against the
-runner image's offline cache, submission reports gain somewhere to carry a timeout or a resource
-exhaustion, #22 gains a runner registry, and #10 gains two lookup interfaces plus the three
-architecture-test assertions that keep them honest.
+[Open questions](#open-questions) instead. Briefly: submission reports gain somewhere to carry a
+timeout or a resource exhaustion, #22 gains a runner registry, and #10 gains two lookup interfaces
+plus the three architecture-test assertions that keep them honest.
 
 [#37](https://github.com/shoraLBRT/ritocode/issues/37) is off this list: the harness landed, and
 the flow tests the issue also asks for arrive with the endpoints they exercise.
@@ -263,6 +279,38 @@ Decisions a future session will hit, and where in the slice each one comes due.
   `OutOfMemoryException` aborts at 134 before the kernel is involved. If the schema above the runner
   has nowhere to put that distinction, the honesty is discarded on the way up and a person is told
   their tests failed when the container was killed.
+- **Nothing enforces the reference form at the database.** *Created by the storage client, due in
+  stage 2 with [#9](https://github.com/shoraLBRT/ritocode/issues/9), which writes the first one.*
+  `problem_versions.snapshot_reference`, `workspaces.snapshot_reference` and
+  `submission_reports.logs_reference` are `varchar(512)` holding free text; `StorageReference` is
+  the only thing that knows the shape, and it lives in application code. A row written by hand, by
+  a repair script, or by a build that predates a role rename will be rejected at read time by
+  `TryParse` — correctly, but as a failure in the module that was only trying to fetch a bundle.
+  Three answers are open and the first writer should pick one: an EF value converter so the column
+  is typed as `StorageReference` and never a raw string, a check constraint on the role prefix, or
+  neither, on the grounds that only application code ever writes these. The converter is the
+  cheapest to add now and the most annoying to retrofit, because retrofitting it means proving
+  every existing row parses.
+- **Who creates the buckets in a deployment?** *Created by the storage client, due before anything
+  is deployed.* `compose.yaml` creates the three local buckets with `mc mb` and `MinioTestServer`
+  creates a set per test class, so both environments that exist today are covered by accident of
+  their own setup. A real deployment has neither, and a missing bucket surfaces as a failed put at
+  the first ingest rather than at startup — the client validates bucket *names* at startup and
+  cannot check existence without a network call. Options are a migrator-style one-shot step
+  alongside `Ritocode.DbMigrator`, infrastructure-as-code outside the application, or a create-if-
+  absent on first use, which is the tempting one and the wrong one: it needs bucket-creation rights
+  in the running service's credentials forever.
+- **The shape of the object storage client.** *Settled.* Put and get, addressed by
+  `StorageReference`; a read copies into a destination the caller supplies rather than returning a
+  stream, so nothing has to decide who disposes the HTTP response and no version of the interface
+  buffers a whole archive to avoid that question. A missing object is `false`, not an exception and
+  not an `AppError`: the module that owns the row pointing at it is the one entitled to choose the
+  error code a client branches on, which is [ADR 0007](adr/0007-cross-module-contract-form.md)'s
+  reasoning applied to infrastructure. Transport, permission and bucket faults throw
+  `ObjectStoreException`, so no AWS SDK type reaches a caller. The client lives in
+  `Ritocode.Shared` because [ADR 0002](adr/0002-modular-monolith-layout.md) rule 1 leaves a module
+  nowhere else to reference; the cost is that the AWS SDK is now on every module's transitive
+  reference list, the same way EF Core already is.
 - **Test database isolation.** *Settled.* One PostgreSQL container per test assembly, one database
   per test class, each copied from a template that `MigrationRunner` migrated once. Isolation is
   per database rather than per transaction because a test that wants to see what a migration, a
@@ -343,5 +391,8 @@ The host reads `Database:ConnectionString`; locally it comes from `Database__Con
 which `scripts/dev-up` prints the value for. The tests configure themselves from the container the
 harness starts, so they need no environment variable at all.
 
-Current baseline: **121 tests, all passing** — 33 shared, 65 problems, 18 API, 5 architecture.
+Current baseline: **192 tests, all passing** — 104 shared, 65 problems, 18 API, 5 architecture.
 A session that leaves this number lower than it found it has broken something.
+
+The shared assembly now starts a MinIO container as well, so a Docker daemon is required by two
+test assemblies rather than one.

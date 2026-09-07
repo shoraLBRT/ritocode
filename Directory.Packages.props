@@ -6,6 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup Label="Runtime">
+    <!-- Object storage is S3-compatible (docs/STORAGE_LAYOUT.md, compose.yaml runs MinIO locally),
+         so a deployment can swap in a managed service without touching application code. The AWS
+         SDK is taken rather than hand-rolled HTTP because SigV4 request signing is the part of an
+         S3 client that must not be written twice. -->
+    <PackageVersion Include="AWSSDK.S3" Version="4.0.102.5" />
     <PackageVersion Include="EFCore.NamingConventions" Version="10.0.1" />
     <PackageVersion Include="FluentValidation" Version="12.1.1" />
     <!-- Pinned explicitly, not only through the provider: the Npgsql provider asks for an older
@@ -32,6 +37,10 @@
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <!-- Used by the integration test harness to create and copy databases inside its container. -->
     <PackageVersion Include="Npgsql" Version="10.0.3" />
+    <!-- Kept on the same version as Testcontainers.PostgreSql: the two share the Testcontainers
+         core package, and transitive pinning would otherwise resolve one of them against a core
+         version it was not built for. -->
+    <PackageVersion Include="Testcontainers.Minio" Version="4.14.0" />
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.14.0" />
     <PackageVersion Include="xunit.v3" Version="3.2.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />

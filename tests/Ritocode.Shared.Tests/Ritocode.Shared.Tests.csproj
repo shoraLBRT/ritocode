@@ -13,6 +13,12 @@
 
   <ItemGroup>
     <ProjectReference Include="../../src/Ritocode.Shared/Ritocode.Shared.csproj" />
+    <!--
+      The storage tests run against a real MinIO from the shared harness. ADR 0005 forbids ad-hoc
+      fixtures, so the container lives in TestSupport beside the PostgreSQL one rather than being
+      hand-rolled here.
+    -->
+    <ProjectReference Include="../Ritocode.TestSupport/Ritocode.TestSupport.csproj" />
   </ItemGroup>
 
   <ItemGroup>

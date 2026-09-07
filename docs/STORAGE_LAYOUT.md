@@ -4,17 +4,21 @@ Three things live in object storage rather than in PostgreSQL: **problem bundles
 snapshots** and **evaluation artifacts**. This document fixes where each one goes — the buckets, the
 key form, and what the database columns that point at them actually contain.
 
-It is written *before* any code puts an object anywhere. A key is the most expensive kind of string
-to change: once rows reference it, a different layout is a data migration rather than an edit, and
+It was written *before* any code put an object anywhere, and the client that reads and writes these
+keys now implements it — `Ritocode.Shared.Storage`, where `StorageRole`, `StorageReference` and
+`StorageKeys` are this document in executable form, and `StorageKeysTests` asserts the keys below
+literally. A key is the most expensive kind of string to change: once rows reference it, a different
+layout is a data migration rather than an edit, and
 `problem_versions.snapshot_reference`, `workspaces.snapshot_reference` and
 `submission_reports.logs_reference` are all `varchar(512)` columns whose content this document is
 the only description of.
 
-- Defined by [#5](https://github.com/shoraLBRT/ritocode/issues/5) *(partial)*. The storage client
-  that reads and writes these keys is the next item in [SLICE_PLAN.md](SLICE_PLAN.md).
+- Defined by [#5](https://github.com/shoraLBRT/ritocode/issues/5) *(partial)*, and implemented by
+  `IObjectStore` in `src/Ritocode.Shared/Storage`. Put and get only — the client cannot delete or
+  list, and does not copy server-side.
 - **Retention and deletion are out of scope**, deferred with
   [#43](https://github.com/shoraLBRT/ritocode/issues/43). Nothing here says when an object dies.
-- **Last updated:** 2026-09-05
+- **Last updated:** 2026-09-07
 
 ## Buckets are roles; their names are configuration
 
@@ -35,9 +39,11 @@ costs two lines of `mc mb`, already written.
 
 **The names above are the local names, not the layout.** Bucket names are globally unique on real
 S3, so a deployment prefixes them (`ritocode-prod-problem-bundles`) and the application resolves a
-role to a physical name through configuration — the option shape lands with the storage client.
-Nothing inside a key ever names the environment, so an object copied between deployments keeps its
-key.
+role to a physical name through configuration — `ObjectStorageOptions`, one setting per role, bound
+from the `ObjectStorage` section and validated at startup. Nothing inside a key ever names the
+environment, so an object copied between deployments keeps its key. Nothing creates the buckets in a
+deployment either; `compose.yaml` does it locally and the test harness does it per test class, which
+is an open question in [PROJECT_STATE.md](PROJECT_STATE.md) rather than a settled answer.
 
 ## What a reference column contains
 
@@ -131,12 +137,16 @@ the lifecycle, and should if this layout ever moves.
    bytes, no nesting that varies with content. Every key above can be reconstructed by a person
    reading the table.
 3. **A key is constructed on write and read back from the stored reference — never recomputed for a
-   row that already has one.** This is what lets the layout change without a data migration: old
+   row that already has one.** `StorageKeys` is for the write; a row that already stores a reference
+   is reopened with `StorageReference.TryParse`, and a `false` there means the row holds something
+   this build cannot resolve, which is a fault to report rather than a key to guess at. This is what lets the layout change without a data migration: old
    rows keep pointing at where their objects actually are, and only new writes follow the new rule.
    Code that rebuilds a key from an id in order to find an existing object makes this document
    load-bearing forever.
 4. **A reference fits in `varchar(512)`.** The longest this layout can produce is 127 characters, at
-   `evaluation-artifacts/submissions/{36}/validators/{32}/output.tar.gz`. The margin is deliberate:
+   `evaluation-artifacts/submissions/{36}/validators/{32}/output.tar.gz` — a number `StorageKeysTests`
+   asserts, so a new class of key that exceeds it fails a test rather than this paragraph quietly
+   becoming wrong. The margin is deliberate:
    a provider that prefixes keys, or a later class of artifact, has room without a migration.
 5. **No date or hash partitioning.** An object store at this scale does not need a key spread, and a
    date in a key is a second source of truth for a timestamp that is already a column.
