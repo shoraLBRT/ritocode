@@ -16,9 +16,15 @@ the only description of.
 - Defined by [#5](https://github.com/shoraLBRT/ritocode/issues/5) *(partial)*, and implemented by
   `IObjectStore` in `src/Ritocode.Shared/Storage`. Put and get only — the client cannot delete or
   list, and does not copy server-side.
+- **Problem bundles are the only objects anything writes today**, by ingest
+  ([#9](https://github.com/shoraLBRT/ritocode/issues/9)). The other two buckets stay empty until
+  stages 3 and 4. `problem_versions.snapshot_reference` is the first reference column with a value
+  in it, and it is typed as a `StorageReference` through an EF value converter rather than held as
+  free text — see [PROJECT_STATE.md](PROJECT_STATE.md#open-questions); the other two columns keep
+  their `string` mapping until their first writer.
 - **Retention and deletion are out of scope**, deferred with
   [#43](https://github.com/shoraLBRT/ritocode/issues/43). Nothing here says when an object dies.
-- **Last updated:** 2026-09-07
+- **Last updated:** 2026-09-08
 
 ## Buckets are roles; their names are configuration
 
@@ -175,7 +181,9 @@ later put wins, which is the same answer `workspaces.updated_at` gives.
   [#38](https://github.com/shoraLBRT/ritocode/issues/38), which has the committed package tree — and
   an object that must never be served to a user is safest as an object that does not exist. The
   bundle is the manifest, the description and the workspace root, which is why it can be served
-  without filtering.
+  without filtering. `ProblemBundleWriter` is that rule in code: entries keep their
+  package-relative paths, so a bundle is a filtered copy of the package and a reader finds the
+  workspace tree the way the loader did — by reading `workspace.root` out of the manifest.
 - **Retention, lifecycle rules and deletion.** Deferred with
   [#43](https://github.com/shoraLBRT/ritocode/issues/43). Every object written today is written
   forever; that is a known hole rather than an oversight, and the bucket split above is what keeps

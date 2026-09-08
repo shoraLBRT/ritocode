@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Ritocode.Modules.Problems.Domain;
+using Ritocode.Shared.Persistence;
+using Ritocode.Shared.Storage;
 
 namespace Ritocode.Modules.Problems.Persistence.Configurations;
 
@@ -18,8 +20,12 @@ internal sealed class ProblemVersionConfiguration : IEntityTypeConfiguration<Pro
 
         builder.Property(v => v.ProblemId).IsRequired();
         builder.Property(v => v.Version).IsRequired();
+        // Typed rather than a bare string: the column can then only ever hold the role/key form of
+        // docs/STORAGE_LAYOUT.md, and a value a later build cannot resolve fails where it is read
+        // instead of somewhere downstream that assumed it parsed. See StorageReferenceConverter.
         builder.Property(v => v.SnapshotReference)
-            .HasMaxLength(ProblemVersion.SnapshotReferenceMaxLength).IsRequired();
+            .HasConversion<StorageReferenceConverter>()
+            .HasMaxLength(StorageReference.MaxLength).IsRequired();
         builder.Property(v => v.CreatedAt).IsRequired();
 
         // jsonb rather than text: it is validated on write by PostgreSQL and can be queried

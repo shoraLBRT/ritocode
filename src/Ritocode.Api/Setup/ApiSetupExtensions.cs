@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Options;
 using Ritocode.Api.Configuration;
 using Ritocode.Api.Endpoints;
@@ -25,6 +27,13 @@ public static class ApiSetupExtensions
             .Bind(builder.Configuration.GetSection(ApiOptions.SectionName))
             .ValidateDataAnnotations()
             .ValidateOnStart();
+
+        // Enums go on the wire as their names, not their ordinals. A numeric difficulty would make
+        // every client keep a copy of this enum's member order, and a member inserted in the middle
+        // would silently change what existing clients read. The database stores these as text for
+        // the same reason; camelCase matches how a problem manifest writes them.
+        builder.Services.ConfigureHttpJsonOptions(options =>
+            options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)));
 
         builder.Services.AddProblemDetails();
         builder.Services.AddExceptionHandler<AppExceptionHandler>();

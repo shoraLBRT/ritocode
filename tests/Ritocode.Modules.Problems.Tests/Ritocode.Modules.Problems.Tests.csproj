@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../src/Modules/Ritocode.Modules.Problems/Ritocode.Modules.Problems.csproj" />
+    <ProjectReference Include="../Ritocode.TestSupport/Ritocode.TestSupport.csproj" />
   </ItemGroup>
 
   <!--

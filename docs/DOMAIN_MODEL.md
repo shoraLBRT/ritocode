@@ -61,7 +61,9 @@ Fields:
 - problem_id
 - version — starts at 1, unique per problem
 - snapshot_reference — storage reference of the problem bundle, in the form fixed by
-  [STORAGE_LAYOUT.md](STORAGE_LAYOUT.md)
+  [STORAGE_LAYOUT.md](STORAGE_LAYOUT.md). Typed as `StorageReference` in the model, not as a string:
+  an EF value converter maps it onto the `varchar(512)` column, so nothing can put another kind of
+  value there and a value the build cannot resolve fails at the read
 - validator_config — validator pipeline configuration; the canonical JSON projection of a problem
   package's `validators` list, defined in
   [PROBLEM_PACKAGE_SPEC.md](PROBLEM_PACKAGE_SPEC.md#validator_config)
@@ -69,7 +71,13 @@ Fields:
 - published_at — null while the version is a draft
 
 A workspace is created from a version, never from a problem, so editing a problem never alters an
-in-flight attempt. The catalog only ever resolves published versions.
+in-flight attempt. The catalog only ever resolves published versions, and resolves the **highest
+published** one — a draft with a higher number is invisible to it.
+
+Ingest creates a version and publishes it in the same step: it adds a version to a problem every
+time it runs and never replaces one, because a published version is what a workspace was created
+from. A draft and review flow is what `published_at` is nullable for, and nothing in Phase 1 stage
+one moves a version through one.
 
 ## Workspace
 
