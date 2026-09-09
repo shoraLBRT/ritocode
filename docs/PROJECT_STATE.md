@@ -4,7 +4,7 @@
 what to build next, and how to verify it. Read it before touching anything; update it before
 finishing.
 
-- **Last updated:** 2026-09-07
+- **Last updated:** 2026-09-08
 - **Current phase:** Phase 1 (MVP) — see `docs/MVP_SCOPE.md`
 - **Current milestone:** the vertical slice — [`docs/SLICE_PLAN.md`](SLICE_PLAN.md), decided in
   [ADR 0005](adr/0005-vertical-slice-before-breadth.md). Phase 1 now ships in two stages; the slice
@@ -92,7 +92,8 @@ src/
   Ritocode.Shared/            errors, Result<T>, paging, IModule, correlation, persistence base
                               Storage/ holds the object storage client and the key layout as code
   Modules/Ritocode.Modules.*  one project per module: domain, DbContext, migrations
-                              Problems also owns Packaging/: the problem package format
+                              Problems also owns Packaging/ (the problem package format),
+                              Ingest/ (package -> published version + bundle) and Catalog/
 tests/
   Ritocode.TestSupport/         integration test harnesses: a PostgreSQL container per test
                                 assembly with a migrated database per test class, and a MinIO
@@ -100,7 +101,8 @@ tests/
   Ritocode.Shared.Tests/        the shared primitives, and the storage client against a real MinIO
   Ritocode.Api.Tests/           in-memory host tests over the real composition root
   Ritocode.Architecture.Tests/  module boundary rules, executable
-  Ritocode.Modules.Problems.Tests/  the problem package format, and the reference package
+  Ritocode.Modules.Problems.Tests/  the problem package format, the reference package, and
+                                    ingest against a real PostgreSQL and MinIO
 spikes/
   sandbox-execution/          time-boxed experiment behind ADR 0006, with the script that repeats it
 docs/
@@ -125,13 +127,15 @@ docs/
 | [#37](https://github.com/shoraLBRT/ritocode/issues/37) Integration test harness | Partial | `PostgresTestServer`: one Testcontainers PostgreSQL per test assembly, one migrated database per test class, copied from a template migrated once by `MigrationRunner`. API tests moved onto it; CI's test job dropped its service container. `MinioTestServer` beside it does the same for object storage: one container per test assembly, a bucket per role per test class | `tests/Ritocode.TestSupport` |
 | [#8](https://github.com/shoraLBRT/ritocode/issues/8) Problem package manifest | Done | The format in [PROBLEM_PACKAGE_SPEC.md](PROBLEM_PACKAGE_SPEC.md) — `problem.yaml`, allowed paths, hints, limits, the validator pipeline and its canonical `validator_config` JSON — with a loader that reports every fault at once, and a reference package validated from the committed tree | `src/Modules/Ritocode.Modules.Problems/Packaging`, `content/problems/example-order-total`, `tests/Ritocode.Modules.Problems.Tests` |
 | [#5](https://github.com/shoraLBRT/ritocode/issues/5) Object storage layout and client | Partial | [STORAGE_LAYOUT.md](STORAGE_LAYOUT.md): three buckets as roles with configurable physical names, the `role/key` reference form stored in the three `*_reference` columns, object versus prefix references, and the keys for bundles, workspace snapshots and evaluation artifacts — and now the client that reads and writes them. `StorageRole`, `StorageReference` and `StorageKeys` make the layout executable; `IObjectStore` / `S3ObjectStore` put and get over the S3 API, registered from the composition root and tested against a real MinIO. Deletion, prefix listing and server-side copy stay out | `src/Ritocode.Shared/Storage`, `tests/Ritocode.TestSupport/MinioTestServer.cs`, `docs/STORAGE_LAYOUT.md` |
+| [#9](https://github.com/shoraLBRT/ritocode/issues/9) Problem catalog | Partial | `GET /api/v1/problems` and `GET /api/v1/problems/{slug}` over `Page<T>`, and the ingest behind them: a validated package becomes a `Problem`, a published `ProblemVersion` and a bundle in object storage. The catalog resolves a problem's highest **published** version and never a draft. `snapshot_reference` is now a typed `StorageReference` column. A development-only content seeder is the first caller of ingest | `src/Modules/Ritocode.Modules.Problems/Catalog`, `.../Ingest`, `src/Ritocode.Shared/Persistence/StorageReferenceConverter.cs` |
 
-Nothing else from the backlog is implemented. Every module owns a schema and a `DbContext`, but
-none exposes an endpoint or a service yet — the boundary and the storage are in place, the behaviour
-is not. The Problems module is the first with domain code of its own: the package format reads and
-validates content, and still writes nothing to its schema. Object storage can now be written to and
-read from, and nothing calls it yet: the first caller is ingest, in
-[#9](https://github.com/shoraLBRT/ritocode/issues/9).
+Nothing else from the backlog is implemented. Six of the seven modules own a schema and a
+`DbContext` and expose neither an endpoint nor a service — the boundary and the storage are in
+place, the behaviour is not. **Problems is the exception and the first module that is actually
+alive**: it reads and writes its own schema, serves two endpoints, and is the first caller of
+`IObjectStore`. Everything downstream of it is still empty — nothing creates a workspace from a
+published version yet, which is [#10](https://github.com/shoraLBRT/ritocode/issues/10) in stage 3,
+and it is the first code that will read a bundle back.
 
 ### Deliberately deferred
 
@@ -141,14 +145,26 @@ read from, and nothing calls it yet: the first caller is ingest, in
   workspace, submission — need endpoints that do not exist yet. The harness they will be written
   on does exist, which was the point of doing #37 first; the tests themselves arrive with the
   features, in slice stages 2 to 4, and the issue stays open until then.
-- **Nothing ingests a problem package yet.** The format is defined and packages load and validate,
-  but no code turns one into a `Problem`, a `ProblemVersion` and a bundle in object storage. That
-  is [#9](https://github.com/shoraLBRT/ritocode/issues/9) and
-  [#42](https://github.com/shoraLBRT/ritocode/issues/42), in slice stage 2. The reference package
-  is content for the tests, not catalog content.
-- **No repositories or services over the schema.** The tables exist and are migrated; nothing
-  reads or writes them yet. The first module to do so is Problems, in
-  [#9](https://github.com/shoraLBRT/ritocode/issues/9).
+- **The catalog reads; nothing else about a problem is exposed.**
+  [#9](https://github.com/shoraLBRT/ritocode/issues/9) stays open for search, facets, tag and
+  difficulty filters, and explicit version resolution — a client can list published problems and
+  fetch one by slug, and cannot ask for a particular version of it. Each of those is an addition to
+  `IProblemCatalog` rather than a change to it, which is the reduction ADR 0005 allows.
+- **Ingest does not check a package's dependencies against the runner image's offline cache**,
+  which ADR 0006 §3 says it must. Neither half of that check exists to build on: a manifest does
+  not declare dependencies, and there is no runner image or registry to name a cache — both arrive
+  with [#22](https://github.com/shoraLBRT/ritocode/issues/22) in stage 5. It stays under
+  [Open questions](#open-questions) with what unblocks it.
+- **Ingest has no caller in a deployment.** `ProblemContentSeeder` publishes the packages in a
+  content directory once, after startup, and is off unless `Problems:Content:SeedOnStartup` says
+  otherwise — on in `appsettings.Development.json`, so a local run has a catalog to browse. It
+  publishes a slug's *first* version only and skips a slug that already has one, so a restart is
+  not a revision. Editing a package and wanting the new revision published is a real need with no
+  answer yet, and the real content pipeline is
+  [#42](https://github.com/shoraLBRT/ritocode/issues/42).
+- **Only the Problems module writes rows.** The other six own migrated tables that nothing reads or
+  writes. The next to change is Workspaces, in
+  [#10](https://github.com/shoraLBRT/ritocode/issues/10).
 - **No authentication.** Endpoints are anonymous. `AllowAnonymous()` on health and meta is
   deliberate so they keep working once authentication is switched on in
   [#6](https://github.com/shoraLBRT/ritocode/issues/6).
@@ -159,9 +175,9 @@ read from, and nothing calls it yet: the first caller is ingest, in
   and belong to retention, deferred with
   [#43](https://github.com/shoraLBRT/ritocode/issues/43);
   **server-side copy**, which [STORAGE_LAYOUT.md](STORAGE_LAYOUT.md) requires at enqueue to freeze
-  the workspace tree, arrives with [#14](https://github.com/shoraLBRT/ritocode/issues/14). Nothing
-  calls the client yet either: the buckets are empty until ingest
-  ([#9](https://github.com/shoraLBRT/ritocode/issues/9)) writes the first bundle.
+  the workspace tree, arrives with [#14](https://github.com/shoraLBRT/ritocode/issues/14). Put and
+  get now have a real caller: ingest writes problem bundles, and nothing reads one back until
+  [#10](https://github.com/shoraLBRT/ritocode/issues/10) materialises a workspace from one.
 - **Object storage has no readiness check.** `AddObjectStorage` registers a client that contacts
   nothing at startup, so `/health/ready` still reports one check per module schema and no more.
   Adding a storage check would make `dotnet test` and a bare `dotnet run` require MinIO — the
@@ -178,25 +194,21 @@ read from, and nothing calls it yet: the first caller is ingest, in
 The slice plan is the ordered list now: **[`docs/SLICE_PLAN.md`](SLICE_PLAN.md)**. Take the first
 unticked box. The stages there are ordered so that each depends only on stages above it.
 
-**Stage 1 is complete**, and stage 2 is two boxes in: the storage key layout is documented in
-[STORAGE_LAYOUT.md](STORAGE_LAYOUT.md) and the client that reads and writes those keys exists, so
-an object can now be put and got. The next boxes:
+**Stage 1 is complete**, and stage 2 is three boxes in: the storage key layout, the client that
+reads and writes those keys, and now the catalog and the ingest that fills it. The next boxes:
 
-1. **[#9](https://github.com/shoraLBRT/ritocode/issues/9) (partial) — catalog.** List published
-   problem versions and fetch one by slug, over `Page<T>` and `PageRequest`. Search, facets, tag and
-   difficulty filters and explicit version resolution are all deferred. This is the first module to
-   read and write its schema, and the first caller of `IObjectStore` — ingest turns a validated
-   package into a `Problem`, a `ProblemVersion` and a bundle under
-   `StorageKeys.ProblemBundle`. ADR 0006 §3 adds an obligation to it: the package's dependencies
-   have to be checked against the runner image's offline cache, because `--network none` makes that
-   cache the entire set a problem may have.
-2. **[#42](https://github.com/shoraLBRT/ritocode/issues/42) (partial) — three problems**, which
-   cannot start until the language below is chosen.
+1. **[#42](https://github.com/shoraLBRT/ritocode/issues/42) (partial) — three problems**, which
+   cannot start until the language below is chosen. The machinery is now waiting for it: ingest
+   publishes whatever packages are in the content directory, so the remaining work in #42 is
+   authoring, not plumbing.
+2. **[#26](https://github.com/shoraLBRT/ritocode/issues/26) — frontend shell and API client**, and
+   then **[#31](https://github.com/shoraLBRT/ritocode/issues/31) (partial) — frontend CI job**.
+   Neither is blocked by the language decision, and the catalog they will call now exists.
 
 One decision falls due now and is the maintainer's, not a session's: **the language of the first
 problems**, which [#42](https://github.com/shoraLBRT/ritocode/issues/42) cannot start without. It is
 the first entry under [Open questions](#open-questions). Nothing else in stage 2 is blocked by it —
-#9, #26 and #31 can all be taken first.
+#26 and #31 can be taken first.
 
 The three ADRs written so far are off this list and their obligations are in
 [Open questions](#open-questions) instead. Briefly: submission reports gain somewhere to carry a
@@ -207,8 +219,9 @@ plus the three architecture-test assertions that keep them honest.
 the flow tests the issue also asks for arrive with the endpoints they exercise.
 [#8](https://github.com/shoraLBRT/ritocode/issues/8) is off it because it is done.
 
-What used to be items 3 to 6 here — #9, #42, #5, #6 — are now stages 2 and 3 of the slice, entered
-partially. The rest of Phase 1 is [after the slice](SLICE_PLAN.md#after-the-slice).
+[#9](https://github.com/shoraLBRT/ritocode/issues/9) is off this list and stays open: the catalog
+reads, and search, facets, filters and explicit version resolution are stage two. The rest of
+Phase 1 is [after the slice](SLICE_PLAN.md#after-the-slice).
 
 ---
 
@@ -254,13 +267,64 @@ Decisions a future session will hit, and where in the slice each one comes due.
   a second language adds a registry row rather than a branch. The ingest-denylist alternative was
   rejected: a user can write the same files into a workspace, where ingest never sees them.
 - **Ingest has to check a package's dependencies against the image's offline cache.** *Created by
-  [ADR 0006](adr/0006-sandbox-execution-model.md) §3, due in stage 2 with
-  [#9](https://github.com/shoraLBRT/ritocode/issues/9) and
-  [#42](https://github.com/shoraLBRT/ritocode/issues/42).* `--network none` means the runner image's
-  warmed package cache is the entire set of dependencies a problem may have. A problem outside it
-  can never be evaluated by anyone, so the rejection belongs at ingest. Until that check exists the
-  failure still happens — as a failed compile validator at submission time, blamed on the submitter
-  rather than on the content.
+  [ADR 0006](adr/0006-sandbox-execution-model.md) §3, was due in stage 2 with
+  [#9](https://github.com/shoraLBRT/ritocode/issues/9); moved to stage 5 with
+  [#22](https://github.com/shoraLBRT/ritocode/issues/22), which is the first point it can exist.*
+  `--network none` means the runner image's warmed package cache is the entire set of dependencies
+  a problem may have. A problem outside it can never be evaluated by anyone, so the rejection
+  belongs at ingest. Ingest now exists and does **not** do this, because neither side of the
+  comparison does: a `problem.yaml` declares no dependencies —
+  [PROBLEM_PACKAGE_SPEC.md](PROBLEM_PACKAGE_SPEC.md) has no field for them, and reading them out of
+  a `.csproj` would be the language-specific branch ADR 0006 §2 exists to keep out of shared code —
+  and there is no runner image or registry to name a cache. Implementing it before #22 would mean
+  inventing both. Two things a session taking #22 inherits: the manifest needs a dependency
+  declaration or the runner registry needs to expose its cache in a form ingest can read, and
+  whichever it is, `IProblemIngest.IngestAsync` gains its first expected failure and returns a
+  `Result<T>` — it returns the ingested version directly today because there is nothing yet that a
+  valid package can be rejected for. Until then the failure still happens, as a failed compile
+  validator at submission time, blamed on the submitter rather than on the content.
+- **`validator_config` does not round-trip byte for byte.** *Found by
+  [#9](https://github.com/shoraLBRT/ritocode/issues/9), which wrote the first one.* The column is
+  `jsonb`, and PostgreSQL normalises `jsonb` on write: it reorders an object's keys and rewrites the
+  whitespace. So the canonical bytes `ValidatorPipeline.ToJson()` produces are **not** the bytes a
+  read returns, and a test asserting string equality between them fails — correctly. The property
+  the spec actually claims survives, because the normalisation is itself deterministic: the same
+  manifest still stores the same value, and array order — which the pipeline's execution order
+  rides on — is preserved, which `TheStoredValidatorConfig_KeepsThePipelineInOrder` asserts. The
+  consequence to carry: **a content digest over the pipeline has to be computed before the write,
+  from `ToJson()`, never from the column** — which is exactly what the republishing question below
+  will want. Storing it as `json` instead of `jsonb` would preserve the bytes and give up the
+  indexing [ADR 0004](adr/0004-persistence-and-migrations.md) chose `jsonb` for; it is not worth
+  reopening until something needs the bytes.
+- **How a revised problem gets republished.** *Created by
+  [#9](https://github.com/shoraLBRT/ritocode/issues/9), due in stage 2 with
+  [#42](https://github.com/shoraLBRT/ritocode/issues/42).* Ingest adds a version every time it is
+  called and never replaces one, which is right — a published version is what a workspace was
+  created from. The seeder therefore has to decide when *not* to call it, and its rule is the
+  crudest one that is safe: skip a slug that already has a published version. The consequence is
+  that editing a package and restarting changes nothing, silently, and there is no other way to
+  publish revision 2. #42 is where that starts to hurt, and the answer is probably a content
+  digest on `problem_versions` so the seeder can tell "already published" from "published, but not
+  this content" — which is a column, and therefore a migration, and therefore a decision rather
+  than a detail.
+- **What the API says beyond the error body and the page envelope.** *Settled by
+  [#9](https://github.com/shoraLBRT/ritocode/issues/9), the first module endpoints.* Enums are
+  serialised as camelCase names host-wide, not ordinals — a number would make every client depend
+  on a C# enum's member order, and inserting a member in the middle would change what existing
+  clients read without changing a single response shape. The catalog's list order is newest first,
+  with the id breaking ties: the id is a UUIDv7, so it agrees with `created_at` and makes the sort
+  total, without which two rows created in the same instant could swap places between two requests
+  for the same page. Neither is in [ADR 0003](adr/0003-api-conventions.md); both belong there if a
+  second endpoint has to restate them.
+- **The migrator composes host infrastructure it does not use.** *Created by
+  [#9](https://github.com/shoraLBRT/ritocode/issues/9), settled for now.* `Ritocode.DbMigrator`
+  calls `AddObjectStorage` before `AddModules`. It needs no object storage to apply a migration,
+  but it composes the same module set the API does, and a module offering a service that depends on
+  `IObjectStore` cannot be composed into a host that has none — the container validates that on
+  build, and design-time `dotnet ef` fails first. Registration contacts nothing and every setting
+  has a default, so this adds no requirement to migrating. If a third host ever appears, the
+  alternative worth weighing is splitting `IModule.RegisterServices` into persistence and the rest,
+  so a host can compose only what it needs.
 - **A submission's evaluated tree has nowhere to be recorded.** *Created by
   [STORAGE_LAYOUT.md](STORAGE_LAYOUT.md), due in stage 4 with
   [#14](https://github.com/shoraLBRT/ritocode/issues/14).* An evaluation reads a frozen copy at
@@ -279,18 +343,20 @@ Decisions a future session will hit, and where in the slice each one comes due.
   `OutOfMemoryException` aborts at 134 before the kernel is involved. If the schema above the runner
   has nowhere to put that distinction, the honesty is discarded on the way up and a person is told
   their tests failed when the container was killed.
-- **Nothing enforces the reference form at the database.** *Created by the storage client, due in
-  stage 2 with [#9](https://github.com/shoraLBRT/ritocode/issues/9), which writes the first one.*
-  `problem_versions.snapshot_reference`, `workspaces.snapshot_reference` and
-  `submission_reports.logs_reference` are `varchar(512)` holding free text; `StorageReference` is
-  the only thing that knows the shape, and it lives in application code. A row written by hand, by
-  a repair script, or by a build that predates a role rename will be rejected at read time by
-  `TryParse` — correctly, but as a failure in the module that was only trying to fetch a bundle.
-  Three answers are open and the first writer should pick one: an EF value converter so the column
-  is typed as `StorageReference` and never a raw string, a check constraint on the role prefix, or
-  neither, on the grounds that only application code ever writes these. The converter is the
-  cheapest to add now and the most annoying to retrofit, because retrofitting it means proving
-  every existing row parses.
+- **How the reference form is enforced at the database.** *Settled by
+  [#9](https://github.com/shoraLBRT/ritocode/issues/9), which wrote the first reference; adopted
+  for one column of three.* An EF value converter, `StorageReferenceConverter` in
+  `Ritocode.Shared.Persistence`. The property is typed as `StorageReference`, so no code path can
+  put an arbitrary string in the column, and a value this build cannot resolve throws where it is
+  read rather than reaching a caller that assumed it parsed. A check constraint on the role prefix
+  was the alternative and buys little the converter does not: the writes it would catch are the
+  ones the converter makes unexpressible. **`workspaces.snapshot_reference` and
+  `submission_reports.logs_reference` are still `string`.** Converting them was left to their first
+  writers — [#12](https://github.com/shoraLBRT/ritocode/issues/12) and
+  [#23](https://github.com/shoraLBRT/ritocode/issues/23) — rather than done speculatively here, and
+  both tables are empty, so it stays a two-line change until they are not. Adopting it needs no
+  migration: the store type and width are unchanged, and `has-pending-model-changes` reported no
+  drift.
 - **Who creates the buckets in a deployment?** *Created by the storage client, due before anything
   is deployed.* `compose.yaml` creates the three local buckets with `mc mb` and `MinioTestServer`
   creates a set per test class, so both environments that exist today are covered by accident of
@@ -385,14 +451,40 @@ With the host running, these are the current smoke checks:
 | `GET /health/live` | `200`, `{"status":"Healthy","checks":[]}` |
 | `GET /health/ready` | `200`, `"status":"Healthy"`, one check per module schema |
 | `GET /api/v1/meta/modules` | `200`, all seven modules listed |
+| `GET /api/v1/problems` | `200`, the page envelope — `items`, `pageNumber`, `pageSize`, `totalItems`, `totalPages`, `hasNextPage`, `hasPreviousPage` |
+| `GET /api/v1/problems?pageSize=1000` | `400`, `application/problem+json`, `code: "validation_failed"`, `errors.pageSize` present |
+| `GET /api/v1/problems/no-such-problem` | `404`, `code: "problem_not_found"` |
 | any response | carries an `X-Request-Id` header |
+
+The command above runs without a launch profile, so the host starts in **Production** — content
+seeding is off there and `items` is empty. To see the catalog with content in it, start the host in
+Development instead, which turns seeding on and publishes the packages under `content/problems`:
+
+```bash
+ASPNETCORE_ENVIRONMENT=Development dotnet run --project src/Ritocode.Api --no-launch-profile --urls http://127.0.0.1:5199
+```
+
+The content path is relative to the host's **content root**, which `dotnet run` sets to the project
+directory rather than the repository root — which is why `appsettings.Development.json` says
+`../../content/problems` and not `content/problems`. A path that resolves nowhere is a logged
+warning naming the absolute path it tried, not a silent empty catalog.
+
+| Request | Expected |
+| --- | --- |
+| `GET /api/v1/problems` | `200`, `totalItems: 1`, one item with `slug: "example-order-total"`, `difficulty: "medium"`, `version: 1` |
+| `GET /api/v1/problems/example-order-total` | `200`, the same fields plus `description` and a `problemVersionId` |
+
+Seeding needs the MinIO from `dev-up`, and the reference package is the only content there is until
+[#42](https://github.com/shoraLBRT/ritocode/issues/42) — it is a fixture that a development host
+also publishes so there is something to browse, not the Phase 1 problem set.
 
 The host reads `Database:ConnectionString`; locally it comes from `Database__ConnectionString`,
 which `scripts/dev-up` prints the value for. The tests configure themselves from the container the
 harness starts, so they need no environment variable at all.
 
-Current baseline: **192 tests, all passing** — 104 shared, 65 problems, 18 API, 5 architecture.
+Current baseline: **231 tests, all passing** — 110 shared, 91 problems, 25 API, 5 architecture.
 A session that leaves this number lower than it found it has broken something.
 
-The shared assembly now starts a MinIO container as well, so a Docker daemon is required by two
-test assemblies rather than one.
+Three of the four test assemblies now need a Docker daemon: the shared assembly starts MinIO, the
+API assembly starts PostgreSQL, and the Problems assembly starts both — its ingest and catalog
+tests write rows and objects for real. Only `Ritocode.Architecture.Tests` runs without one.

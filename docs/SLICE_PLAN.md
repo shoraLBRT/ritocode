@@ -8,8 +8,8 @@ Decided in [ADR 0005](adr/0005-vertical-slice-before-breadth.md), which also car
 reductions that are allowed and the list that are forbidden. **Read that ADR before ticking
 anything here.** This file tracks progress; it holds no decisions.
 
-- **Last updated:** 2026-09-07
-- **Progress:** 7 / 37
+- **Last updated:** 2026-09-08
+- **Progress:** 8 / 37
 - **Estimate:** 30–34 sessions, six to seven weeks at five sessions a week
 - **Then:** [stage two](#after-the-slice) — the rest of Phase 1
 
@@ -29,7 +29,7 @@ anything here.** This file tracks progress; it holds no decisions.
 | Stage | Sessions | Done |
 | --- | --- | --- |
 | [1 — Foundation](#stage-1--foundation) | 5 | 5 / 5 |
-| [2 — Content and catalog](#stage-2--content-and-catalog) | 5 | 2 / 6 |
+| [2 — Content and catalog](#stage-2--content-and-catalog) | 5 | 3 / 6 |
 | [3 — Identity and workspace](#stage-3--identity-and-workspace) | 6 | 0 / 7 |
 | [4 — Submission and queue](#stage-4--submission-and-queue) | 5 | 0 / 5 |
 | [5 — Execution](#stage-5--execution) | 7 | 0 / 8 |
@@ -116,9 +116,18 @@ started early so its CI job stops waiting.
   list-then-delete — deferred with [#43](https://github.com/shoraLBRT/ritocode/issues/43), and
   server-side copy arrives with [#14](https://github.com/shoraLBRT/ritocode/issues/14), the first
   caller that needs it. Nothing calls the client yet; ingest writes the first bundle.
-- [ ] **[#9](https://github.com/shoraLBRT/ritocode/issues/9) (partial) — catalog.** List published
-  problem versions and fetch one by slug, over `Page<T>` and `PageRequest`. Search, facets, tag and
-  difficulty filters, explicit version resolution: all deferred.
+- [x] **[#9](https://github.com/shoraLBRT/ritocode/issues/9) (partial) — catalog.**
+  `GET /api/v1/problems` and `GET /api/v1/problems/{slug}`, over `Page<T>` and `PageRequest`, both
+  anonymous. Behind them, the first module code that reads and writes its own schema and the first
+  caller of `IObjectStore`: ingest turns a validated package into a `Problem`, a published
+  `ProblemVersion` and a bundle at `StorageKeys.ProblemBundle`, and the bundle is written before the
+  row that points at it commits, so a published version never names a missing object. A problem
+  enters the catalog only once it has a published version, and the version resolved is its highest
+  **published** one — a newer draft is invisible, or a review flow would hand out content nobody
+  approved. Search, facets, tag and difficulty filters and explicit version resolution stay
+  deferred, and so does the ADR 0006 §3 dependency check, which has nothing to check against until
+  [#22](https://github.com/shoraLBRT/ritocode/issues/22) builds an image with a cache — see
+  [PROJECT_STATE.md](PROJECT_STATE.md#open-questions).
 - [ ] **[#42](https://github.com/shoraLBRT/ritocode/issues/42) (partial) — three problems.** Three,
   not ten, all in the language chosen in `PROJECT_STATE.md`. Three is the minimum that shows the
   verdict distinguishes a good solution from a bad one rather than being tuned to a single task.

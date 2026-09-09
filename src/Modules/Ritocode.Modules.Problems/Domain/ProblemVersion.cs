@@ -1,3 +1,5 @@
+using Ritocode.Shared.Storage;
+
 namespace Ritocode.Modules.Problems.Domain;
 
 /// <summary>
@@ -6,8 +8,6 @@ namespace Ritocode.Modules.Problems.Domain;
 /// </summary>
 public sealed class ProblemVersion
 {
-    public const int SnapshotReferenceMaxLength = 512;
-
     public Guid Id { get; set; }
 
     public Guid ProblemId { get; set; }
@@ -15,8 +15,12 @@ public sealed class ProblemVersion
     /// <summary>Monotonic per problem, starting at 1.</summary>
     public int Version { get; set; }
 
-    /// <summary>Object storage key of the problem bundle, per docs/ARCHITECTURE.md.</summary>
-    public string SnapshotReference { get; set; } = string.Empty;
+    /// <summary>
+    /// Where the problem bundle lives, per docs/STORAGE_LAYOUT.md. Derived from <see cref="Id"/>
+    /// once, at construction; every later read comes from this stored value rather than rebuilding
+    /// the key, which is what lets the layout move without a data migration.
+    /// </summary>
+    public StorageReference SnapshotReference { get; set; } = null!;
 
     /// <summary>
     /// Validator pipeline configuration, stored as the canonical JSON of
@@ -32,19 +36,36 @@ public sealed class ProblemVersion
 
     public Problem? Problem { get; set; }
 
+    /// <summary>
+    /// Creates a draft version. The bundle key is built here rather than by the caller, so a
+    /// version cannot exist whose <see cref="SnapshotReference"/> points somewhere other than at
+    /// its own bundle.
+    /// </summary>
     public static ProblemVersion Create(
         Guid problemId,
         int version,
-        string snapshotReference,
         string validatorConfig,
-        DateTimeOffset createdAt) => new()
+        DateTimeOffset createdAt)
+    {
+        var id = Guid.CreateVersion7();
+
+        return new ProblemVersion
         {
-            Id = Guid.CreateVersion7(),
+            Id = id,
             ProblemId = problemId,
             Version = version,
-            SnapshotReference = snapshotReference,
+            SnapshotReference = StorageKeys.ProblemBundle(id),
             ValidatorConfig = validatorConfig,
             CreatedAt = createdAt.ToUniversalTime(),
             PublishedAt = null,
         };
+    }
+
+    /// <summary>
+    /// Makes the version visible to the catalog. Publishing is idempotent: a version already
+    /// published keeps the timestamp it was published with, because that timestamp orders the
+    /// catalog and is not a detail of when someone last ran ingest.
+    /// </summary>
+    public void Publish(DateTimeOffset publishedAt) =>
+        PublishedAt ??= publishedAt.ToUniversalTime();
 }

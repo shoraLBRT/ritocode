@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Ritocode.Api.Setup;
+using Ritocode.Modules.Problems.Ingest;
 using Ritocode.Shared.Errors;
 using Ritocode.Shared.Validation;
 using Ritocode.TestSupport;
@@ -49,6 +50,11 @@ public sealed class TestApi(PostgresTestServer postgres) : IAsyncLifetime
             // Retries would turn an unreachable database into a slow failure rather than an
             // immediate, legible one.
             ["Database:MaxRetryCount"] = "0",
+            // The API project's appsettings.Development.json is copied into this assembly's output
+            // and the environment above is Development, so content seeding arrives switched on.
+            // Off here explicitly: a seeding test host would need MinIO to start, and today only a
+            // content directory that happens not to exist beside the test binaries prevents it.
+            [$"{ProblemContentOptions.SectionName}:SeedOnStartup"] = "false",
         });
 
         builder.AddRitocodeApi();
