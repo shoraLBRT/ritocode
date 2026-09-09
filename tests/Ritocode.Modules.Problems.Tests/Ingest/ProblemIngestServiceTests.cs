@@ -1,5 +1,6 @@
 using System.Formats.Tar;
 using System.IO.Compression;
+using System.Text.Json.Nodes;
 using Microsoft.EntityFrameworkCore;
 using Ritocode.Modules.Problems.Domain;
 using Ritocode.Modules.Problems.Ingest;
@@ -84,7 +85,35 @@ public sealed class ProblemIngestServiceTests(PostgresTestServer postgres, Minio
             .AsNoTracking()
             .SingleAsync(v => v.Id == ingested.ProblemVersionId, TestContext.Current.CancellationToken);
 
-        Assert.Equal(package.ValidatorConfigJson, version.ValidatorConfig);
+        // Compared as JSON, not as text. The column is jsonb, and PostgreSQL normalises jsonb on
+        // write — it reorders an object's keys and rewrites the whitespace — so the canonical bytes
+        // ValidatorPipeline produces are not the bytes that come back. Array order, which is what
+        // the pipeline's execution order rides on, is preserved.
+        Assert.True(JsonNode.DeepEquals(
+            JsonNode.Parse(package.ValidatorConfigJson),
+            JsonNode.Parse(version.ValidatorConfig)));
+    }
+
+    [Fact]
+    public async Task TheStoredValidatorConfig_KeepsThePipelineInOrder()
+    {
+        var database = await NewDatabaseAsync();
+        var package = LoadExample();
+        var ingested = await IngestAsync(database, package);
+
+        await using var context = database.CreateContext();
+        var version = await context.ProblemVersions
+            .AsNoTracking()
+            .SingleAsync(v => v.Id == ingested.ProblemVersionId, TestContext.Current.CancellationToken);
+
+        // The one part of the stored config that jsonb must not touch: the validators run in the
+        // order the manifest declared them, and a store that reordered them would change what a
+        // submission is graded by without changing anything visible.
+        var validators = JsonNode.Parse(version.ValidatorConfig)!["validators"]!.AsArray();
+
+        Assert.Equal(
+            [.. package.Pipeline.Steps.Select(step => step.Id)],
+            validators.Select(validator => validator!["id"]!.GetValue<string>()).ToArray());
     }
 
     [Fact]

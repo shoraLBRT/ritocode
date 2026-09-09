@@ -18,7 +18,7 @@ public sealed class ProblemCatalog(ProblemsDbContext context) : IProblemCatalog
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var published = Published();
+        var published = LatestPublished();
         var totalItems = await published.LongCountAsync(cancellationToken);
 
         // Offset is a long because a page number is unbounded, and Skip is not. Past the end there
@@ -28,18 +28,24 @@ public sealed class ProblemCatalog(ProblemsDbContext context) : IProblemCatalog
             return Page<CatalogProblem>.From([], request, totalItems);
         }
 
-        var items = await Ordered(published)
+        var items = await published
+            // Newest first. ProblemId breaks ties rather than decorating the ordering: it is a
+            // UUIDv7, so it agrees with CreatedAt and makes the sort total — without which two
+            // problems created in the same instant could swap places between two requests for the
+            // same page.
+            .OrderByDescending(version => version.Problem!.CreatedAt)
+            .ThenByDescending(version => version.ProblemId)
             .Skip((int)request.Offset)
             .Take(request.PageSize)
-            .Select(row => new CatalogProblem(
-                row.Problem.Id,
-                row.Problem.Slug,
-                row.Problem.Title,
-                row.Problem.Difficulty,
-                row.Problem.Tags,
-                row.Version!.Id,
-                row.Version.Version,
-                row.Version.PublishedAt!.Value))
+            .Select(version => new CatalogProblem(
+                version.ProblemId,
+                version.Problem!.Slug,
+                version.Problem.Title,
+                version.Problem.Difficulty,
+                version.Problem.Tags,
+                version.Id,
+                version.Version,
+                version.PublishedAt!.Value))
             .ToListAsync(cancellationToken);
 
         return Page<CatalogProblem>.From(items, request, totalItems);
@@ -60,18 +66,18 @@ public sealed class ProblemCatalog(ProblemsDbContext context) : IProblemCatalog
             return NotFound(slug);
         }
 
-        var detail = await Published()
-            .Where(row => row.Problem.Slug == normalized)
-            .Select(row => new CatalogProblemDetail(
-                row.Problem.Id,
-                row.Problem.Slug,
-                row.Problem.Title,
-                row.Problem.Difficulty,
-                row.Problem.Tags,
-                row.Version!.Id,
-                row.Version.Version,
-                row.Version.PublishedAt!.Value,
-                row.Problem.Description))
+        var detail = await LatestPublished()
+            .Where(version => version.Problem!.Slug == normalized)
+            .Select(version => new CatalogProblemDetail(
+                version.ProblemId,
+                version.Problem!.Slug,
+                version.Problem.Title,
+                version.Problem.Difficulty,
+                version.Problem.Tags,
+                version.Id,
+                version.Version,
+                version.PublishedAt!.Value,
+                version.Problem.Description))
             .FirstOrDefaultAsync(cancellationToken);
 
         return detail is null ? NotFound(slug) : detail;
@@ -81,29 +87,23 @@ public sealed class ProblemCatalog(ProblemsDbContext context) : IProblemCatalog
         AppError.NotFound(NotFoundCode, $"No published problem is addressed by '{slug}'.");
 
     /// <summary>
-    /// Every problem that has at least one published version, paired with the highest-numbered one.
-    /// Draft versions are invisible: the catalog resolves published versions only, per
-    /// docs/DOMAIN_MODEL.md.
+    /// The highest published version of every problem that has one — one row per catalog entry.
+    /// Draft versions are invisible, and a draft numbered above the published one does not hide it:
+    /// the catalog resolves published versions only, per docs/DOMAIN_MODEL.md.
     /// </summary>
-    private IQueryable<CatalogRow> Published() =>
-        context.Problems
+    /// <remarks>
+    /// Written from <c>ProblemVersions</c> rather than from <c>Problems</c> with the version
+    /// attached, because the second shape does not survive translation: projecting a problem and a
+    /// subquery into a type and then filtering on that type's member leaves EF unable to map the
+    /// member back to the constructor argument, and the query fails at runtime rather than at
+    /// compile time. Starting from the version keeps the whole thing one correlated
+    /// <c>MAX</c> and the navigation to <c>Problem</c> a plain join.
+    /// </remarks>
+    private IQueryable<ProblemVersion> LatestPublished() =>
+        context.ProblemVersions
             .AsNoTracking()
-            .Select(problem => new CatalogRow(
-                problem,
-                context.ProblemVersions
-                    .Where(version => version.ProblemId == problem.Id && version.PublishedAt != null)
-                    .OrderByDescending(version => version.Version)
-                    .FirstOrDefault()))
-            .Where(row => row.Version != null);
-
-    /// <summary>
-    /// Newest first. <c>Id</c> breaks ties rather than decorating the ordering: it is a UUIDv7, so
-    /// it agrees with <c>CreatedAt</c> and makes the sort total — without which two problems
-    /// created in the same instant could swap places between two requests for the same page.
-    /// </summary>
-    private static IOrderedQueryable<CatalogRow> Ordered(IQueryable<CatalogRow> rows) =>
-        rows.OrderByDescending(row => row.Problem.CreatedAt)
-            .ThenByDescending(row => row.Problem.Id);
-
-    private sealed record CatalogRow(Problem Problem, ProblemVersion? Version);
+            .Where(version => version.PublishedAt != null
+                && version.Version == context.ProblemVersions
+                    .Where(other => other.ProblemId == version.ProblemId && other.PublishedAt != null)
+                    .Max(other => other.Version));
 }

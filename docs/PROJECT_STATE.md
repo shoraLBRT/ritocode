@@ -283,6 +283,19 @@ Decisions a future session will hit, and where in the slice each one comes due.
   `Result<T>` — it returns the ingested version directly today because there is nothing yet that a
   valid package can be rejected for. Until then the failure still happens, as a failed compile
   validator at submission time, blamed on the submitter rather than on the content.
+- **`validator_config` does not round-trip byte for byte.** *Found by
+  [#9](https://github.com/shoraLBRT/ritocode/issues/9), which wrote the first one.* The column is
+  `jsonb`, and PostgreSQL normalises `jsonb` on write: it reorders an object's keys and rewrites the
+  whitespace. So the canonical bytes `ValidatorPipeline.ToJson()` produces are **not** the bytes a
+  read returns, and a test asserting string equality between them fails — correctly. The property
+  the spec actually claims survives, because the normalisation is itself deterministic: the same
+  manifest still stores the same value, and array order — which the pipeline's execution order
+  rides on — is preserved, which `TheStoredValidatorConfig_KeepsThePipelineInOrder` asserts. The
+  consequence to carry: **a content digest over the pipeline has to be computed before the write,
+  from `ToJson()`, never from the column** — which is exactly what the republishing question below
+  will want. Storing it as `json` instead of `jsonb` would preserve the bytes and give up the
+  indexing [ADR 0004](adr/0004-persistence-and-migrations.md) chose `jsonb` for; it is not worth
+  reopening until something needs the bytes.
 - **How a revised problem gets republished.** *Created by
   [#9](https://github.com/shoraLBRT/ritocode/issues/9), due in stage 2 with
   [#42](https://github.com/shoraLBRT/ritocode/issues/42).* Ingest adds a version every time it is
@@ -451,6 +464,11 @@ Development instead, which turns seeding on and publishes the packages under `co
 ASPNETCORE_ENVIRONMENT=Development dotnet run --project src/Ritocode.Api --no-launch-profile --urls http://127.0.0.1:5199
 ```
 
+The content path is relative to the host's **content root**, which `dotnet run` sets to the project
+directory rather than the repository root — which is why `appsettings.Development.json` says
+`../../content/problems` and not `content/problems`. A path that resolves nowhere is a logged
+warning naming the absolute path it tried, not a silent empty catalog.
+
 | Request | Expected |
 | --- | --- |
 | `GET /api/v1/problems` | `200`, `totalItems: 1`, one item with `slug: "example-order-total"`, `difficulty: "medium"`, `version: 1` |
@@ -464,7 +482,7 @@ The host reads `Database:ConnectionString`; locally it comes from `Database__Con
 which `scripts/dev-up` prints the value for. The tests configure themselves from the container the
 harness starts, so they need no environment variable at all.
 
-Current baseline: **230 tests** — 110 shared, 90 problems, 25 API, 5 architecture.
+Current baseline: **231 tests, all passing** — 110 shared, 91 problems, 25 API, 5 architecture.
 A session that leaves this number lower than it found it has broken something.
 
 Three of the four test assemblies now need a Docker daemon: the shared assembly starts MinIO, the
