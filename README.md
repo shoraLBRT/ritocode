@@ -44,18 +44,29 @@ Tracked on the [project board](https://github.com/users/shoraLBRT/projects/3).
 Current implementation status, and what is being built next, lives in
 [docs/PROJECT_STATE.md](docs/PROJECT_STATE.md).
 
+A box is ticked only when that piece of work is finished. Several items have landed in part on
+purpose — the platform is being built as one vertical slice first, decided in
+[ADR 0005](docs/adr/0005-vertical-slice-before-breadth.md) — and those are left unticked with a note
+saying what exists and what does not. [docs/SLICE_PLAN.md](docs/SLICE_PLAN.md) has the ordering.
+
 - [x] backend service skeleton
-- [ ] core database schema
-- [ ] problem package format
-- [ ] problem catalog API
+- [x] core database schema
+- [x] problem package format
+- [ ] problem catalog API — **partial**: `GET /api/v1/problems` and `GET /api/v1/problems/{slug}`
+      serve published versions, over the ingest that turns a validated package into a problem, a
+      published version and a bundle in object storage. Search, facets, tag and difficulty filters
+      and explicit version resolution are not built
 - [ ] workspace editor API
 - [ ] submission lifecycle
 - [ ] evaluation pipeline
 - [ ] validator plugin system
 - [ ] sandbox runner infrastructure
 - [ ] initial problem set
-- [ ] basic frontend UI
-- [ ] CI/CD pipeline
+- [ ] basic frontend UI — **partial**: a React + Vite + TypeScript shell in `frontend/` with routing
+      and the API client that owns the error envelope. The designed catalog, problem and workspace
+      screens are not built, and the app has no notion of a signed-in user
+- [ ] CI/CD pipeline — **partial**: the backend builds, tests and is checked for migration drift on
+      every push. The frontend job and any deployment pipeline are not built
 - [ ] observability and logging
 
 ---
