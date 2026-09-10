@@ -4,7 +4,7 @@
 what to build next, and how to verify it. Read it before touching anything; update it before
 finishing.
 
-- **Last updated:** 2026-09-08
+- **Last updated:** 2026-09-10
 - **Current phase:** Phase 1 (MVP) — see `docs/MVP_SCOPE.md`
 - **Current milestone:** the vertical slice — [`docs/SLICE_PLAN.md`](SLICE_PLAN.md), decided in
   [ADR 0005](adr/0005-vertical-slice-before-breadth.md). Phase 1 now ships in two stages; the slice
@@ -67,7 +67,7 @@ Decided in [ADR 0001](adr/0001-technology-stack.md).
 | API contract | RFC 9457 errors, offset pagination, FluentValidation ([ADR 0003](adr/0003-api-conventions.md)) |
 | Tests | xUnit v3, `Microsoft.AspNetCore.TestHost` |
 | Database | PostgreSQL 17, EF Core per module ([ADR 0004](adr/0004-persistence-and-migrations.md)) |
-| Frontend | React + Vite + TypeScript (**not started**) |
+| Frontend | React + Vite + TypeScript in `frontend/`, shell and API client only |
 
 Package versions live in `Directory.Packages.props`. The SDK is pinned in `global.json`.
 Warnings are errors, vulnerability warnings included — a red build on a newly disclosed CVE is
@@ -86,6 +86,9 @@ compose.yaml                  PostgreSQL and MinIO for local development
 scripts/                      dev-up, migration helpers, drift check
 content/
   problems/                   problem packages; the reference one is validated by tests
+frontend/                     React + Vite + TypeScript. src/api is the only code that knows the
+                              backend exists; src/hooks, src/components, src/pages and routes.tsx
+                              are the shell around it. Its own README covers running it
 src/
   Ritocode.Api/               composition root: pipeline, config, health, meta, module wiring
   Ritocode.DbMigrator/        applies each module's migrations; the host never migrates itself
@@ -128,6 +131,11 @@ docs/
 | [#8](https://github.com/shoraLBRT/ritocode/issues/8) Problem package manifest | Done | The format in [PROBLEM_PACKAGE_SPEC.md](PROBLEM_PACKAGE_SPEC.md) — `problem.yaml`, allowed paths, hints, limits, the validator pipeline and its canonical `validator_config` JSON — with a loader that reports every fault at once, and a reference package validated from the committed tree | `src/Modules/Ritocode.Modules.Problems/Packaging`, `content/problems/example-order-total`, `tests/Ritocode.Modules.Problems.Tests` |
 | [#5](https://github.com/shoraLBRT/ritocode/issues/5) Object storage layout and client | Partial | [STORAGE_LAYOUT.md](STORAGE_LAYOUT.md): three buckets as roles with configurable physical names, the `role/key` reference form stored in the three `*_reference` columns, object versus prefix references, and the keys for bundles, workspace snapshots and evaluation artifacts — and now the client that reads and writes them. `StorageRole`, `StorageReference` and `StorageKeys` make the layout executable; `IObjectStore` / `S3ObjectStore` put and get over the S3 API, registered from the composition root and tested against a real MinIO. Deletion, prefix listing and server-side copy stay out | `src/Ritocode.Shared/Storage`, `tests/Ritocode.TestSupport/MinioTestServer.cs`, `docs/STORAGE_LAYOUT.md` |
 | [#9](https://github.com/shoraLBRT/ritocode/issues/9) Problem catalog | Partial | `GET /api/v1/problems` and `GET /api/v1/problems/{slug}` over `Page<T>`, and the ingest behind them: a validated package becomes a `Problem`, a published `ProblemVersion` and a bundle in object storage. The catalog resolves a problem's highest **published** version and never a draft. `snapshot_reference` is now a typed `StorageReference` column. A development-only content seeder is the first caller of ingest | `src/Modules/Ritocode.Modules.Problems/Catalog`, `.../Ingest`, `src/Ritocode.Shared/Persistence/StorageReferenceConverter.cs` |
+| [#26](https://github.com/shoraLBRT/ritocode/issues/26) Frontend shell | Partial | React + Vite + TypeScript in `frontend/`. `ApiClient` is the only code that calls `fetch`, and `api/errors.ts` is the only code that reads the ADR 0003 envelope: a failure reaches a screen as an `ApiError` carrying the stable `code`, kept apart from a status with no envelope behind it and from a server that never answered. `useApiResource` reports one request as a discriminated union. Layout, routes, and the loading / error / empty panels, on 55 tests over a stubbed `fetch` | `frontend/` |
+
+The frontend now exists as a shell: it renders the layout, resolves its routes, and reads the
+catalog from a running host. It has no identity, no editor and no designed screens — those are
+stages 3 and 6.
 
 Nothing else from the backlog is implemented. Six of the seven modules own a schema and a
 `DbContext` and expose neither an endpoint nor a service — the boundary and the storage are in
@@ -139,8 +147,21 @@ and it is the first code that will read a bundle back.
 
 ### Deliberately deferred
 
-- **CI ([#31](https://github.com/shoraLBRT/ritocode/issues/31))** covers the backend only; the
-  frontend job lands with the frontend, so the issue stays open.
+- **CI ([#31](https://github.com/shoraLBRT/ritocode/issues/31))** still covers the backend only.
+  The frontend it was waiting for now exists and its checks are three npm scripts — `npm run build`,
+  `npm run lint`, `npm test` — so the job is the next box in the slice plan and nothing blocks it.
+  The issue stays open until then, and beyond it for the rest of the pipeline.
+- **The frontend has no protected routes and no notion of a signed-in user**, which is the half of
+  [#26](https://github.com/shoraLBRT/ritocode/issues/26) its acceptance criterion names. Nothing
+  issues an identity until [#6](https://github.com/shoraLBRT/ritocode/issues/6) in stage 3, so a
+  guard written now would guard against a session that does not exist and would be rewritten rather
+  than wired up. `ApiError.isUnauthenticated` exists so the 401 branch is not forgotten, and
+  `frontend/src/routes.tsx` says where the guard goes. The issue stays open.
+- **`ProblemsPage` and `ProblemDetailPage` are wiring, not screens.** They exist so the page
+  envelope, the query parameters and the error body are proved to survive the trip end to end, and
+  [#27](https://github.com/shoraLBRT/ritocode/issues/27) in stage 6 replaces both. The description
+  is rendered as text rather than Markdown for the same reason: choosing a renderer for content
+  someone else authored is a decision that belongs with the designed screen.
 - **The flow tests in [#37](https://github.com/shoraLBRT/ritocode/issues/37)** — auth, problems,
   workspace, submission — need endpoints that do not exist yet. The harness they will be written
   on does exist, which was the point of doing #37 first; the tests themselves arrive with the
@@ -194,26 +215,34 @@ and it is the first code that will read a bundle back.
 The slice plan is the ordered list now: **[`docs/SLICE_PLAN.md`](SLICE_PLAN.md)**. Take the first
 unticked box. The stages there are ordered so that each depends only on stages above it.
 
-**Stage 1 is complete**, and stage 2 is three boxes in: the storage key layout, the client that
-reads and writes those keys, and now the catalog and the ingest that fills it. The next boxes:
+**Stage 1 is complete**, and stage 2 is four boxes in: the storage key layout, the client that
+reads and writes those keys, the catalog and the ingest that fills it, and now the frontend shell
+that reads it. Two boxes are left in the stage:
 
-1. **[#42](https://github.com/shoraLBRT/ritocode/issues/42) (partial) — three problems**, which
-   cannot start until the language below is chosen. The machinery is now waiting for it: ingest
+1. **[#31](https://github.com/shoraLBRT/ritocode/issues/31) (partial) — frontend CI job.** The only
+   box in stage 2 that is neither blocked nor waiting on a decision, so it is the next one to take.
+   The frontend it was waiting for exists and its checks are three npm scripts; the job installs
+   Node, runs `npm ci`, then `npm run lint`, `npm run build` and `npm test` from `frontend/`.
+   Node 22.22 or newer — several dependencies require it, and the development machine is currently
+   on 22.17, which warns at install and works.
+2. **[#42](https://github.com/shoraLBRT/ritocode/issues/42) (partial) — three problems**, which
+   cannot start until the language below is chosen. The machinery is waiting for it: ingest
    publishes whatever packages are in the content directory, so the remaining work in #42 is
    authoring, not plumbing.
-2. **[#26](https://github.com/shoraLBRT/ritocode/issues/26) — frontend shell and API client**, and
-   then **[#31](https://github.com/shoraLBRT/ritocode/issues/31) (partial) — frontend CI job**.
-   Neither is blocked by the language decision, and the catalog they will call now exists.
 
-One decision falls due now and is the maintainer's, not a session's: **the language of the first
+One decision still falls due and is the maintainer's, not a session's: **the language of the first
 problems**, which [#42](https://github.com/shoraLBRT/ritocode/issues/42) cannot start without. It is
 the first entry under [Open questions](#open-questions). Nothing else in stage 2 is blocked by it —
-#26 and #31 can be taken first.
+#31 can be taken first, and #26's shell was.
 
 The three ADRs written so far are off this list and their obligations are in
 [Open questions](#open-questions) instead. Briefly: submission reports gain somewhere to carry a
 timeout or a resource exhaustion, #22 gains a runner registry, and #10 gains two lookup interfaces
 plus the three architecture-test assertions that keep them honest.
+
+[#26](https://github.com/shoraLBRT/ritocode/issues/26) is off this list and stays open: the shell
+and the API client landed, and the protected routes its acceptance criterion asks for wait for the
+identity seam in stage 3.
 
 [#37](https://github.com/shoraLBRT/ritocode/issues/37) is off this list: the harness landed, and
 the flow tests the issue also asks for arrive with the endpoints they exercise.
@@ -236,6 +265,42 @@ Decisions a future session will hit, and where in the slice each one comes due.
   JavaScript or TypeScript means a wider pool of testers. The tiebreaker is neither: pick the
   language in which you can author three honest tasks in two days, because a weak task proves
   nothing on a popular language and a strong one proves plenty on an unpopular one.
+- **The frontend duplicates the API's types by hand.** *Created by
+  [#26](https://github.com/shoraLBRT/ritocode/issues/26), settled for now.* `frontend/src/api/types.ts`
+  transcribes the C# records rather than generating from the OpenAPI document the API already
+  produces when `Api:EnableOpenApi` is on. The surface is two endpoints plus meta, and generating
+  would put a running backend on the critical path of a frontend build — including CI's, where the
+  frontend job in [#31](https://github.com/shoraLBRT/ritocode/issues/31) would then need a database
+  to typecheck. The cost is that a contract change is caught by a test rather than by the compiler:
+  `frontend/src/test/responses.ts` holds bodies copied from the verification table above, which is
+  the thread that breaks first. Worth reversing when the surface is big enough that transcribing it
+  is the slower half — the generator replaces that one file and nothing that imports it.
+- **Where the frontend gets a signed-in user.** *Created by
+  [#26](https://github.com/shoraLBRT/ritocode/issues/26), due in stage 3 with
+  [#6](https://github.com/shoraLBRT/ritocode/issues/6).* The shell has no route guard, because the
+  seam it would read does not exist yet. Two things the session that takes #6 inherits: `ApiClient`
+  sends no credential and is the single place one is added, and a 401 is already distinguished from
+  every other failure by `ApiError.isUnauthenticated`, so the branch exists and is unused rather
+  than missing. Whether the guard redirects or renders in place is a decision for #6 together with
+  what a session actually is — a redirect to a login route assumes there is one, and the seeded
+  development identity ADR 0005 allows has no login at all.
+- **A React 19 lint rule forbids `setState` in an effect body, and the ordinary fetch-in-effect
+  shape trips it.** *Created by [#26](https://github.com/shoraLBRT/ritocode/issues/26), settled.*
+  `useApiResource` does not switch itself to `loading` from inside its effect. Instead a settled
+  result records the deps it was issued for, and `loading` is derived during render by comparing
+  them — so the very first render after a dep change already reports `loading`. This started as a
+  way to satisfy `react-hooks/set-state-in-effect` and turned out to be the more correct shape: the
+  effect version leaves one committed frame showing the previous problem's data under the new
+  problem's url. `useApiResource.test.tsx` asserts the absence of that frame. Two nearby dead ends,
+  so the next person does not walk into them: `useMemo` for the same purpose is rejected by
+  `react-hooks/use-memo` when the dependency list is not a literal, and a ref compared during
+  render is rejected by `react-hooks/refs`.
+- **A hook wrapping `useEffect` cannot memoise its callback on the caller's deps.** *Created by
+  [#26](https://github.com/shoraLBRT/ritocode/issues/26), settled, and it cost a failing test to
+  find.* `useCallback(load, deps)` returns the *same* function when `load` is referentially stable,
+  whatever `deps` did — so a caller passing a stable function would silently never reload. It works
+  by accident for the usual inline arrow. `useApiResource` therefore holds the latest closure in a
+  ref refreshed by an effect, and lets `deps` alone decide when to run.
 - **Session tokens: JWT or opaque plus a server-side store?** *Due in stage two, invisible during
   the slice* — the identity seam hides it. Opaque tokens make revocation trivial, which matters
   once submissions can open real pull requests in Phase 3. Worth an ADR before #6 is completed, or
@@ -482,8 +547,45 @@ The host reads `Database:ConnectionString`; locally it comes from `Database__Con
 which `scripts/dev-up` prints the value for. The tests configure themselves from the container the
 harness starts, so they need no environment variable at all.
 
-Current baseline: **231 tests, all passing** — 110 shared, 91 problems, 25 API, 5 architecture.
-A session that leaves this number lower than it found it has broken something.
+### The frontend
+
+Run from `frontend/`. Node 22.22 or newer; `npm ci` once. None of these need a backend, a database
+or Docker — the tests stub `fetch`.
+
+```bash
+npm run lint
+```
+
+```bash
+npm run build
+```
+
+```bash
+npm test
+```
+
+To see it against a real host, start the API in Development as above and then:
+
+```bash
+npm run dev
+```
+
+The dev server binds port 5173 with `strictPort`, because that exact origin is the one
+`appsettings.Development.json` allows through CORS. Changing the port on either side without the
+other makes every request fail in the browser and succeed from `curl`.
+
+| Page | Expected |
+| --- | --- |
+| <http://localhost:5173/> | The layout, and the seven modules listed under **Backend** |
+| <http://localhost:5173/problems> | One row, `Untangle the order total calculator`, badged `medium` |
+| <http://localhost:5173/problems/example-order-total> | The title, the version and the description |
+| <http://localhost:5173/problems/no-such-problem> | "No such problem" — the `problem_not_found` branch, not the generic panel |
+| <http://localhost:5173/nowhere> | "Page not found" |
+| the same pages with the API stopped | The failure panel, saying the backend cannot be reached |
+
+Current baseline: **231 backend tests, all passing** — 110 shared, 91 problems, 25 API,
+5 architecture — and **55 frontend tests**, run separately by `npm test`. A session that leaves
+either number lower than it found it has broken something.
 
 Three of the four test assemblies now need a Docker daemon: the shared assembly starts MinIO, the
 API assembly starts PostgreSQL, and the Problems assembly starts both — its ingest and catalog

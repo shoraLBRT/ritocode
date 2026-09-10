@@ -8,8 +8,8 @@ Decided in [ADR 0005](adr/0005-vertical-slice-before-breadth.md), which also car
 reductions that are allowed and the list that are forbidden. **Read that ADR before ticking
 anything here.** This file tracks progress; it holds no decisions.
 
-- **Last updated:** 2026-09-08
-- **Progress:** 8 / 37
+- **Last updated:** 2026-09-10
+- **Progress:** 9 / 37
 - **Estimate:** 30–34 sessions, six to seven weeks at five sessions a week
 - **Then:** [stage two](#after-the-slice) — the rest of Phase 1
 
@@ -29,7 +29,7 @@ anything here.** This file tracks progress; it holds no decisions.
 | Stage | Sessions | Done |
 | --- | --- | --- |
 | [1 — Foundation](#stage-1--foundation) | 5 | 5 / 5 |
-| [2 — Content and catalog](#stage-2--content-and-catalog) | 5 | 3 / 6 |
+| [2 — Content and catalog](#stage-2--content-and-catalog) | 5 | 4 / 6 |
 | [3 — Identity and workspace](#stage-3--identity-and-workspace) | 6 | 0 / 7 |
 | [4 — Submission and queue](#stage-4--submission-and-queue) | 5 | 0 / 5 |
 | [5 — Execution](#stage-5--execution) | 7 | 0 / 8 |
@@ -132,9 +132,20 @@ started early so its CI job stops waiting.
   not ten, all in the language chosen in `PROJECT_STATE.md`. Three is the minimum that shows the
   verdict distinguishes a good solution from a bad one rather than being tuned to a single task.
   Each has a known-good and a known-bad solution committed as fixtures.
-- [ ] **[#26](https://github.com/shoraLBRT/ritocode/issues/26) — frontend shell and API client.**
-  React + Vite + TypeScript, the error envelope from [ADR 0003](adr/0003-api-conventions.md) handled
-  in one place, routing, layout.
+- [x] **[#26](https://github.com/shoraLBRT/ritocode/issues/26) (partial) — frontend shell and API
+  client.** React + Vite + TypeScript in `frontend/`, with the
+  [ADR 0003](adr/0003-api-conventions.md) error envelope read in exactly one place: nothing outside
+  `src/api` calls `fetch`, and every failure reaches a screen as an `ApiError` carrying the stable
+  `code` a client may branch on, separated from an HTTP status with no envelope behind it and from
+  a server that never answered. `useApiResource` is a discriminated union rather than
+  `{ data, loading, error }`, which has states that cannot happen. Layout, routing and the
+  loading / error / empty panels, on 55 tests that stub `fetch` — the whole route table mounts on a
+  memory router, so what is tested is this application rather than a second implementation of the
+  API. **Marked partial against the issue, which was not marked partial in this plan before and is
+  now**: its acceptance criterion is "an authenticated user can access protected pages", and
+  nothing issues an identity until [#6](https://github.com/shoraLBRT/ritocode/issues/6) in stage 3.
+  A guard written now would guard against a session that does not exist. `ApiError.isUnauthenticated`
+  and a note in `routes.tsx` mark where it goes.
 - [ ] **[#31](https://github.com/shoraLBRT/ritocode/issues/31) (partial) — frontend CI job.**
   Build, typecheck and lint the frontend. Closes the half of the issue that has been waiting for a
   frontend to exist; the issue stays open until the full pipeline is settled.

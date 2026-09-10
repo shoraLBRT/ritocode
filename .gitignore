@@ -64,3 +64,8 @@ nunit-*.xml
 
 # Claude Code local worktrees (the skills under .claude/skills are checked in)
 .claude/worktrees/
+
+# Frontend
+node_modules/
+frontend/dist/
+frontend/coverage/
