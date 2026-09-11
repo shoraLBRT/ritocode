@@ -6,9 +6,10 @@ into, not the product screens themselves.
 
 ## Running it
 
-Node 22.22 or newer. The backend has to be running for anything but the not-found page to have
-content; `docs/PROJECT_STATE.md` has the commands, and a Development host is the one that seeds a
-problem to browse.
+Node 22.22 or newer — that floor is `engines.node` in `package.json`, and `.nvmrc` pins the line
+CI and `nvm use` actually resolve to. The backend has to be running for anything but the not-found
+page to have content; `docs/PROJECT_STATE.md` has the commands, and a Development host is the one
+that seeds a problem to browse.
 
 ```bash
 npm install
@@ -32,6 +33,11 @@ build time and inlined, so a change needs a rebuild.
 | `npm run lint` | ESLint, type-aware rules included |
 | `npm test` | Vitest, once |
 | `npm run test:watch` | Vitest, watching |
+
+`.github/workflows/frontend-ci.yml` runs `npm ci` and then `lint`, `build` and `test` from this
+directory on every pull request. None of the three needs a backend, a database or Docker, so the
+job is the frontend's whole gate and running it here reproduces it — with one caveat worth knowing:
+CI resolves the Node line in `.nvmrc`, which may be newer than the machine you are on.
 
 ## How it is put together
 

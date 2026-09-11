@@ -4,7 +4,7 @@
 what to build next, and how to verify it. Read it before touching anything; update it before
 finishing.
 
-- **Last updated:** 2026-09-10
+- **Last updated:** 2026-09-11
 - **Current phase:** Phase 1 (MVP) — see `docs/MVP_SCOPE.md`
 - **Current milestone:** the vertical slice — [`docs/SLICE_PLAN.md`](SLICE_PLAN.md), decided in
   [ADR 0005](adr/0005-vertical-slice-before-breadth.md). Phase 1 now ships in two stages; the slice
@@ -132,6 +132,7 @@ docs/
 | [#5](https://github.com/shoraLBRT/ritocode/issues/5) Object storage layout and client | Partial | [STORAGE_LAYOUT.md](STORAGE_LAYOUT.md): three buckets as roles with configurable physical names, the `role/key` reference form stored in the three `*_reference` columns, object versus prefix references, and the keys for bundles, workspace snapshots and evaluation artifacts — and now the client that reads and writes them. `StorageRole`, `StorageReference` and `StorageKeys` make the layout executable; `IObjectStore` / `S3ObjectStore` put and get over the S3 API, registered from the composition root and tested against a real MinIO. Deletion, prefix listing and server-side copy stay out | `src/Ritocode.Shared/Storage`, `tests/Ritocode.TestSupport/MinioTestServer.cs`, `docs/STORAGE_LAYOUT.md` |
 | [#9](https://github.com/shoraLBRT/ritocode/issues/9) Problem catalog | Partial | `GET /api/v1/problems` and `GET /api/v1/problems/{slug}` over `Page<T>`, and the ingest behind them: a validated package becomes a `Problem`, a published `ProblemVersion` and a bundle in object storage. The catalog resolves a problem's highest **published** version and never a draft. `snapshot_reference` is now a typed `StorageReference` column. A development-only content seeder is the first caller of ingest | `src/Modules/Ritocode.Modules.Problems/Catalog`, `.../Ingest`, `src/Ritocode.Shared/Persistence/StorageReferenceConverter.cs` |
 | [#26](https://github.com/shoraLBRT/ritocode/issues/26) Frontend shell | Partial | React + Vite + TypeScript in `frontend/`. `ApiClient` is the only code that calls `fetch`, and `api/errors.ts` is the only code that reads the ADR 0003 envelope: a failure reaches a screen as an `ApiError` carrying the stable `code`, kept apart from a status with no envelope behind it and from a server that never answered. `useApiResource` reports one request as a discriminated union. Layout, routes, and the loading / error / empty panels, on 55 tests over a stubbed `fetch` | `frontend/` |
+| [#31](https://github.com/shoraLBRT/ritocode/issues/31) CI pipeline | Partial | `backend-ci.yml` (build and test, formatting, migrations and drift) and now `frontend-ci.yml`: `npm ci`, then lint, build — the typecheck rides on it — and the 55 tests, on the Node line `frontend/.nvmrc` pins. The frontend job needs no backend, no database and no Docker | `.github/workflows/` |
 
 The frontend now exists as a shell: it renders the layout, resolves its routes, and reads the
 catalog from a running host. It has no identity, no editor and no designed screens — those are
@@ -147,10 +148,14 @@ and it is the first code that will read a bundle back.
 
 ### Deliberately deferred
 
-- **CI ([#31](https://github.com/shoraLBRT/ritocode/issues/31))** still covers the backend only.
-  The frontend it was waiting for now exists and its checks are three npm scripts — `npm run build`,
-  `npm run lint`, `npm test` — so the job is the next box in the slice plan and nothing blocks it.
-  The issue stays open until then, and beyond it for the rest of the pipeline.
+- **CI ([#31](https://github.com/shoraLBRT/ritocode/issues/31)) now checks both halves and ships
+  nothing.** `frontend-ci.yml` closed the half that was waiting for a frontend to exist. What is
+  left is the other axis entirely: no job publishes a build artifact, builds a container image,
+  tags a release or deploys anything. None of that can be specified yet — the runner image is
+  [#22](https://github.com/shoraLBRT/ritocode/issues/22) in stage 5 and there is nothing to
+  release until the slice has a journey to release — so the issue stays open and unscheduled
+  rather than becoming the next box. A CI job invented against an imagined deployment would be
+  rewritten by the first real one.
 - **The frontend has no protected routes and no notion of a signed-in user**, which is the half of
   [#26](https://github.com/shoraLBRT/ritocode/issues/26) its acceptance criterion names. Nothing
   issues an identity until [#6](https://github.com/shoraLBRT/ritocode/issues/6) in stage 3, so a
@@ -215,25 +220,22 @@ and it is the first code that will read a bundle back.
 The slice plan is the ordered list now: **[`docs/SLICE_PLAN.md`](SLICE_PLAN.md)**. Take the first
 unticked box. The stages there are ordered so that each depends only on stages above it.
 
-**Stage 1 is complete**, and stage 2 is four boxes in: the storage key layout, the client that
-reads and writes those keys, the catalog and the ingest that fills it, and now the frontend shell
-that reads it. Two boxes are left in the stage:
+**Stage 1 is complete**, and stage 2 is five boxes in: the storage key layout, the client that
+reads and writes those keys, the catalog and the ingest that fills it, the frontend shell that
+reads it, and now the CI job that checks that shell. **One box is left in the stage, and it is
+blocked on a decision that is the maintainer's and not a session's:**
 
-1. **[#31](https://github.com/shoraLBRT/ritocode/issues/31) (partial) — frontend CI job.** The only
-   box in stage 2 that is neither blocked nor waiting on a decision, so it is the next one to take.
-   The frontend it was waiting for exists and its checks are three npm scripts; the job installs
-   Node, runs `npm ci`, then `npm run lint`, `npm run build` and `npm test` from `frontend/`.
-   Node 22.22 or newer — several dependencies require it, and the development machine is currently
-   on 22.17, which warns at install and works.
-2. **[#42](https://github.com/shoraLBRT/ritocode/issues/42) (partial) — three problems**, which
-   cannot start until the language below is chosen. The machinery is waiting for it: ingest
-   publishes whatever packages are in the content directory, so the remaining work in #42 is
-   authoring, not plumbing.
+1. **[#42](https://github.com/shoraLBRT/ritocode/issues/42) (partial) — three problems**, which
+   cannot start until **the language of the first problems** is chosen — the first entry under
+   [Open questions](#open-questions). The machinery is not what is waiting: ingest publishes
+   whatever packages sit in the content directory, so the remaining work in #42 is authoring. A
+   session arriving before that decision is made should say so and stop rather than pick the
+   language by writing a package in one.
 
-One decision still falls due and is the maintainer's, not a session's: **the language of the first
-problems**, which [#42](https://github.com/shoraLBRT/ritocode/issues/42) cannot start without. It is
-the first entry under [Open questions](#open-questions). Nothing else in stage 2 is blocked by it —
-#31 can be taken first, and #26's shell was.
+Everything else in stage 2 is done, so a session that finds the language still undecided has no
+unblocked box in this stage. Stage 3 is not the answer — it opens with the identity seam
+[#6](https://github.com/shoraLBRT/ritocode/issues/6), which the slice plan orders after stage 2 on
+purpose. Ask, rather than reordering the plan to stay busy.
 
 The three ADRs written so far are off this list and their obligations are in
 [Open questions](#open-questions) instead. Briefly: submission reports gain somewhere to carry a
@@ -301,6 +303,26 @@ Decisions a future session will hit, and where in the slice each one comes due.
   whatever `deps` did — so a caller passing a stable function would silently never reload. It works
   by accident for the usual inline arrow. `useApiResource` therefore holds the latest closure in a
   ref refreshed by an effect, and lets `deps` alone decide when to run.
+- **CI runs the frontend on a newer Node than the development machine.** *Created by
+  [#31](https://github.com/shoraLBRT/ritocode/issues/31), settled, and worth knowing before a
+  confusing red build.* There are two Node numbers and they are different on purpose.
+  `engines.node` in `frontend/package.json` is the **floor** — `>=22.22.0`, what the dependencies
+  themselves demand — and `frontend/.nvmrc` is the **line CI and `nvm use` resolve to**, currently
+  `22`, so both land on the newest 22 LTS. Pointing `setup-node` at `engines` instead was the
+  obvious single-source-of-truth move and is wrong: it resolves the `>=` range to the newest Node
+  in existence, so the next major release would redden a build nobody had touched. The live
+  consequence is that the development machine is on **22.17**, below the floor: `npm ci` warns
+  `EBADENGINE` and works, and "it passed locally" is therefore a slightly weaker statement than
+  "it passed in CI". Raising the machine past 22.22 removes the gap; until then, a frontend
+  failure that reproduces nowhere locally is worth checking the Node version for first.
+- **No workflow has a `paths:` filter, and that is a decision rather than an omission.** *Created
+  by [#31](https://github.com/shoraLBRT/ritocode/issues/31).* Filtering `frontend-ci.yml` to
+  `frontend/**` is the obvious saving and it breaks the moment either workflow becomes a required
+  check: a workflow skipped by a path filter reports **no status at all**, not a passing one, so a
+  PR that misses the filtered paths can never satisfy the requirement and sits pending forever.
+  The documented escape is a second, near-duplicate job that reports success for the skipped case,
+  which costs more than the runner minute it saves. Worth reopening only if the frontend job grows
+  slow enough to be felt.
 - **Session tokens: JWT or opaque plus a server-side store?** *Due in stage two, invisible during
   the slice* — the identity seam hides it. Opaque tokens make revocation trivial, which matters
   once submissions can open real pull requests in Phase 3. Worth an ADR before #6 is completed, or
@@ -563,6 +585,11 @@ npm run build
 ```bash
 npm test
 ```
+
+These three are exactly what `.github/workflows/frontend-ci.yml` runs, after `npm ci`, so the
+frontend's CI result is reproducible from this directory with no extra setup. Note the Node
+version gap under [Open questions](#open-questions): the job runs the newest 22 LTS, and the
+development machine is below the floor `engines.node` declares.
 
 To see it against a real host, start the API in Development as above and then:
 
