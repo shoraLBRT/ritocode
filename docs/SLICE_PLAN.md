@@ -8,8 +8,8 @@ Decided in [ADR 0005](adr/0005-vertical-slice-before-breadth.md), which also car
 reductions that are allowed and the list that are forbidden. **Read that ADR before ticking
 anything here.** This file tracks progress; it holds no decisions.
 
-- **Last updated:** 2026-09-10
-- **Progress:** 9 / 37
+- **Last updated:** 2026-09-11
+- **Progress:** 10 / 37
 - **Estimate:** 30–34 sessions, six to seven weeks at five sessions a week
 - **Then:** [stage two](#after-the-slice) — the rest of Phase 1
 
@@ -29,7 +29,7 @@ anything here.** This file tracks progress; it holds no decisions.
 | Stage | Sessions | Done |
 | --- | --- | --- |
 | [1 — Foundation](#stage-1--foundation) | 5 | 5 / 5 |
-| [2 — Content and catalog](#stage-2--content-and-catalog) | 5 | 4 / 6 |
+| [2 — Content and catalog](#stage-2--content-and-catalog) | 5 | 5 / 6 |
 | [3 — Identity and workspace](#stage-3--identity-and-workspace) | 6 | 0 / 7 |
 | [4 — Submission and queue](#stage-4--submission-and-queue) | 5 | 0 / 5 |
 | [5 — Execution](#stage-5--execution) | 7 | 0 / 8 |
@@ -129,9 +129,10 @@ started early so its CI job stops waiting.
   [#22](https://github.com/shoraLBRT/ritocode/issues/22) builds an image with a cache — see
   [PROJECT_STATE.md](PROJECT_STATE.md#open-questions).
 - [ ] **[#42](https://github.com/shoraLBRT/ritocode/issues/42) (partial) — three problems.** Three,
-  not ten, all in the language chosen in `PROJECT_STATE.md`. Three is the minimum that shows the
-  verdict distinguishes a good solution from a bad one rather than being tuned to a single task.
-  Each has a known-good and a known-bad solution committed as fixtures.
+  not ten, all in the language chosen in `PROJECT_STATE.md` — **C#**, decided 2026-09-11, so this
+  box is no longer blocked. Three is the minimum that shows the verdict distinguishes a good
+  solution from a bad one rather than being tuned to a single task. Each has a known-good and a
+  known-bad solution committed as fixtures.
 - [x] **[#26](https://github.com/shoraLBRT/ritocode/issues/26) (partial) — frontend shell and API
   client.** React + Vite + TypeScript in `frontend/`, with the
   [ADR 0003](adr/0003-api-conventions.md) error envelope read in exactly one place: nothing outside
@@ -146,9 +147,17 @@ started early so its CI job stops waiting.
   nothing issues an identity until [#6](https://github.com/shoraLBRT/ritocode/issues/6) in stage 3.
   A guard written now would guard against a session that does not exist. `ApiError.isUnauthenticated`
   and a note in `routes.tsx` mark where it goes.
-- [ ] **[#31](https://github.com/shoraLBRT/ritocode/issues/31) (partial) — frontend CI job.**
-  Build, typecheck and lint the frontend. Closes the half of the issue that has been waiting for a
-  frontend to exist; the issue stays open until the full pipeline is settled.
+- [x] **[#31](https://github.com/shoraLBRT/ritocode/issues/31) (partial) — frontend CI job.**
+  `.github/workflows/frontend-ci.yml`: `npm ci`, then lint, build — which is the typecheck, since
+  `npm run build` is `tsc --build` before `vite build` — and the 55 tests. It needs no backend, no
+  database and no Docker, so the frontend's whole gate is one job on a hosted runner. The Node
+  version is `.nvmrc` rather than the `engines.node` range, or `>=22.22.0` would resolve to the
+  newest Node in existence and the next major release would break a build nobody had touched; the
+  range stays as the floor. No `paths:` filter, deliberately, and the backend workflow has none
+  either: a skipped workflow reports no status at all, so a filtered job can never satisfy a
+  required check on a PR that misses its paths. The issue stays open for the rest of the
+  pipeline — nothing publishes an artifact, builds an image or deploys, and there is no release
+  job to hang those on until the slice has something to release.
 
 ## Stage 3 — Identity and workspace
 

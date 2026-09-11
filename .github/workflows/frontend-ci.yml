@@ -1,0 +1,61 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# No `paths:` filter, deliberately — the backend workflow has none either, so the two stay
+# consistent. A workflow skipped by a path filter reports no status at all rather than a passing
+# one, so the moment either of these becomes a required check, a PR that misses the filtered
+# paths can never satisfy it. A minute of a hosted runner is cheaper than that failure mode.
+
+jobs:
+  build-and-test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # Two different numbers, on purpose. `engines.node` in package.json is the floor — the
+      # oldest Node the dependencies tolerate, currently 22.22 — and `.nvmrc` is the line CI and
+      # a developer actually run, so `nvm use` and this job agree. Reading `engines` here
+      # instead would resolve the `>=` range to the newest Node in existence, and the next major
+      # release would break a build that nobody had touched.
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # `ci` and not `install`: it installs exactly the lockfile and fails if package.json and
+      # package-lock.json disagree, which is the check a CI run is for.
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      # `build` is `tsc --build --force && vite build`, so this is the typecheck as well as
+      # the bundle — a type error fails here rather than reaching a browser.
+      - name: Build
+        run: npm run build
+
+      # None of these need a backend, a database or Docker: the tests stub `fetch`.
+      - name: Test
+        run: npm test
