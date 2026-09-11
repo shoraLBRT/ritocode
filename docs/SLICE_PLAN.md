@@ -129,9 +129,10 @@ started early so its CI job stops waiting.
   [#22](https://github.com/shoraLBRT/ritocode/issues/22) builds an image with a cache — see
   [PROJECT_STATE.md](PROJECT_STATE.md#open-questions).
 - [ ] **[#42](https://github.com/shoraLBRT/ritocode/issues/42) (partial) — three problems.** Three,
-  not ten, all in the language chosen in `PROJECT_STATE.md`. Three is the minimum that shows the
-  verdict distinguishes a good solution from a bad one rather than being tuned to a single task.
-  Each has a known-good and a known-bad solution committed as fixtures.
+  not ten, all in the language chosen in `PROJECT_STATE.md` — **C#**, decided 2026-09-11, so this
+  box is no longer blocked. Three is the minimum that shows the verdict distinguishes a good
+  solution from a bad one rather than being tuned to a single task. Each has a known-good and a
+  known-bad solution committed as fixtures.
 - [x] **[#26](https://github.com/shoraLBRT/ritocode/issues/26) (partial) — frontend shell and API
   client.** React + Vite + TypeScript in `frontend/`, with the
   [ADR 0003](adr/0003-api-conventions.md) error envelope read in exactly one place: nothing outside

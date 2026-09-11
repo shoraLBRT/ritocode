@@ -225,17 +225,21 @@ reads and writes those keys, the catalog and the ingest that fills it, the front
 reads it, and now the CI job that checks that shell. **One box is left in the stage, and it is
 blocked on a decision that is the maintainer's and not a session's:**
 
-1. **[#42](https://github.com/shoraLBRT/ritocode/issues/42) (partial) — three problems**, which
-   cannot start until **the language of the first problems** is chosen — the first entry under
-   [Open questions](#open-questions). The machinery is not what is waiting: ingest publishes
-   whatever packages sit in the content directory, so the remaining work in #42 is authoring. A
-   session arriving before that decision is made should say so and stop rather than pick the
-   language by writing a package in one.
+1. **[#42](https://github.com/shoraLBRT/ritocode/issues/42) (partial) — three problems.** No
+   longer blocked: the language was the maintainer's call and it is **C#**, decided 2026-09-11 and
+   recorded as the first entry under [Open questions](#open-questions). The machinery is not what
+   was waiting — ingest publishes whatever packages sit in the content directory — so the whole of
+   the remaining work is authoring: three problems, each with a known-good and a known-bad solution
+   committed as fixtures, against
+   [PROBLEM_PACKAGE_SPEC.md](PROBLEM_PACKAGE_SPEC.md) and the reference package beside it.
 
-Everything else in stage 2 is done, so a session that finds the language still undecided has no
-unblocked box in this stage. Stage 3 is not the answer — it opens with the identity seam
-[#6](https://github.com/shoraLBRT/ritocode/issues/6), which the slice plan orders after stage 2 on
-purpose. Ask, rather than reordering the plan to stay busy.
+Two things the session that takes it should read first, because both bite during authoring rather
+than after. The seeder **publishes a slug's first version only and skips a slug that already has
+one**, so editing a package and restarting changes nothing, silently — that is the republishing
+question below, and #42 is the box where it stops being theoretical. And ingest does **not** check
+a package's dependencies against a runner image's offline cache, because neither side of the
+comparison exists yet, so a problem that needs a package outside the eventual cache will author
+cleanly here and fail at submission time in stage 5.
 
 The three ADRs written so far are off this list and their obligations are in
 [Open questions](#open-questions) instead. Briefly: submission reports gain somewhere to carry a
@@ -260,13 +264,20 @@ Phase 1 is [after the slice](SLICE_PLAN.md#after-the-slice).
 
 Decisions a future session will hit, and where in the slice each one comes due.
 
-- **Language of the first problems.** *Due in slice stage 2, and nothing else is blocked by it.*
-  Still undecided, and it is the maintainer's call. The reference package that ships with the
-  manifest format is C#, which decides nothing: `language` is a manifest field, and the runner
-  image registry it selects from belongs to [#22](https://github.com/shoraLBRT/ritocode/issues/22). C# means your own stack and the fastest validators;
-  JavaScript or TypeScript means a wider pool of testers. The tiebreaker is neither: pick the
-  language in which you can author three honest tasks in two days, because a weak task proves
-  nothing on a popular language and a strong one proves plenty on an unpopular one.
+- **Language of the first problems.** *Was due in slice stage 2 and blocked
+  [#42](https://github.com/shoraLBRT/ritocode/issues/42).* **Decided by the maintainer on
+  2026-09-11: C#.** The pool of testers is the thing being traded away, and the thing bought is
+  that every part of the evaluation path is one you can debug — `dotnet build` and `dotnet test`
+  are very nearly the compile and test validators themselves, the reference package already proved
+  both under the full ADR 0006 flag set in the sandbox spike, and the first runner image in
+  [#22](https://github.com/shoraLBRT/ritocode/issues/22) is a toolchain you already run. The
+  decision is narrow and reversible by addition: `language` is a manifest field, and a second
+  language is a row in the runner image registry rather than a change to anything above it — which
+  is what [#22](https://github.com/shoraLBRT/ritocode/issues/22)'s image matrix is, after the
+  slice. What it does **not** license is authoring three tasks that only differ in surface: the
+  point of three rather than one is showing the verdict separates a good solution from a bad one
+  rather than being tuned to a single task, so each needs a known-good and a known-bad fixture that
+  genuinely disagree.
 - **The frontend duplicates the API's types by hand.** *Created by
   [#26](https://github.com/shoraLBRT/ritocode/issues/26), settled for now.* `frontend/src/api/types.ts`
   transcribes the C# records rather than generating from the OpenAPI document the API already
