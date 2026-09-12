@@ -8,5 +8,5 @@ internal static class ExamplePackage
 {
     public const string Slug = "example-order-total";
 
-    public static string Directory => Path.Combine(AppContext.BaseDirectory, "content", "problems", Slug);
+    public static string Directory => ContentPackages.DirectoryFor(Slug);
 }

@@ -1,0 +1,51 @@
+schema_version: 1
+
+slug: split-the-invoice
+title: Split the invoice without losing a penny
+difficulty: easy
+language: csharp
+tags:
+  - refactoring
+  - code-quality
+  - decimal-arithmetic
+description: description.md
+
+hints:
+  - Split works in fractions of a cent and then rounds each share on its own. Nothing puts the rounded shares back together and compares them to the invoice.
+  - Doing the whole calculation in whole cents makes the leftover visible as a remainder, and a remainder has to go somewhere.
+  - The guard clauses, the special cases and the division are three separate jobs in one method. Naming them is most of the reading problem.
+
+workspace:
+  root: starter
+  editable:
+    - src/**/*.cs
+  readonly:
+    - tests/**
+    - "*.csproj"
+    - "*.md"
+
+limits:
+  max_files: 50
+  max_file_bytes: 65536
+  max_total_bytes: 1048576
+
+validators:
+  - id: compile
+    type: compile
+    weight: 30
+    required: true
+    timeout_seconds: 120
+    with:
+      command: [dotnet, build, --warnaserror]
+
+  - id: tests
+    type: test
+    weight: 70
+    required: true
+    timeout_seconds: 300
+    with:
+      command: [dotnet, test, --no-build]
+
+fixtures:
+  passing: fixtures/passing
+  failing: fixtures/failing

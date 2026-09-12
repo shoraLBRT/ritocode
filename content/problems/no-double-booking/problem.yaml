@@ -1,0 +1,51 @@
+schema_version: 1
+
+slug: no-double-booking
+title: Stop the double bookings
+difficulty: medium
+language: csharp
+tags:
+  - refactoring
+  - code-quality
+  - boundary-conditions
+description: description.md
+
+hints:
+  - Write the four comparisons out on paper for two slots that touch at one instant. Three of the branches answer that case, and they do not agree with each other.
+  - Two intervals overlap when each one starts before the other ends. One comparison pair replaces the whole chain, and it has no edge case to forget.
+  - Conflicts does two jobs - rejecting a slot that ends before it starts, and comparing slots - and the loop interleaves them. One of the tests is about what that interleaving costs.
+
+workspace:
+  root: starter
+  editable:
+    - src/**/*.cs
+  readonly:
+    - tests/**
+    - "*.csproj"
+    - "*.md"
+
+limits:
+  max_files: 50
+  max_file_bytes: 65536
+  max_total_bytes: 1048576
+
+validators:
+  - id: compile
+    type: compile
+    weight: 30
+    required: true
+    timeout_seconds: 120
+    with:
+      command: [dotnet, build, --warnaserror]
+
+  - id: tests
+    type: test
+    weight: 70
+    required: true
+    timeout_seconds: 300
+    with:
+      command: [dotnet, test, --no-build]
+
+fixtures:
+  passing: fixtures/passing
+  failing: fixtures/failing
