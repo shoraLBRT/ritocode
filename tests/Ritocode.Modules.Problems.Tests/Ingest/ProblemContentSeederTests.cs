@@ -39,13 +39,24 @@ public sealed class ProblemContentSeederTests(PostgresTestServer postgres, Minio
         await RunAsync(database, seedOnStartup: true);
 
         await using var context = database.CreateContext();
-        var problem = await context.Problems
+        var problems = await context.Problems
             .AsNoTracking()
-            .SingleAsync(p => p.Slug == ExamplePackage.Slug, TestContext.Current.CancellationToken);
+            .ToListAsync(TestContext.Current.CancellationToken);
 
-        Assert.True(await context.ProblemVersions
-            .AsNoTracking()
-            .AnyAsync(v => v.ProblemId == problem.Id && v.PublishedAt != null, TestContext.Current.CancellationToken));
+        // Every package, not the first one: since #42 the directory holds the three catalog problems
+        // as well as the reference package, and a seeder that stopped early would look like success.
+        Assert.Equal(ContentPackages.AllSlugs, [.. problems.Select(problem => problem.Slug).Order(StringComparer.Ordinal)]);
+
+        foreach (var problem in problems)
+        {
+            Assert.True(
+                await context.ProblemVersions
+                    .AsNoTracking()
+                    .AnyAsync(
+                        v => v.ProblemId == problem.Id && v.PublishedAt != null,
+                        TestContext.Current.CancellationToken),
+                $"{problem.Slug} has no published version.");
+        }
     }
 
     [Fact]
@@ -77,7 +88,8 @@ public sealed class ProblemContentSeederTests(PostgresTestServer postgres, Minio
 
         // A restart is not a revision. Without the skip, the catalog would report a version number
         // that counts how often the host was started.
-        Assert.Equal(1, Assert.Single(versions).Version);
+        Assert.Equal(ContentPackages.AllSlugs.Count, versions.Count);
+        Assert.All(versions, version => Assert.Equal(1, version.Version));
     }
 
     [Fact]

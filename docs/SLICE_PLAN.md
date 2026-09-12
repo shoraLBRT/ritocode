@@ -8,8 +8,8 @@ Decided in [ADR 0005](adr/0005-vertical-slice-before-breadth.md), which also car
 reductions that are allowed and the list that are forbidden. **Read that ADR before ticking
 anything here.** This file tracks progress; it holds no decisions.
 
-- **Last updated:** 2026-09-11
-- **Progress:** 10 / 37
+- **Last updated:** 2026-09-12
+- **Progress:** 11 / 37
 - **Estimate:** 30–34 sessions, six to seven weeks at five sessions a week
 - **Then:** [stage two](#after-the-slice) — the rest of Phase 1
 
@@ -29,7 +29,7 @@ anything here.** This file tracks progress; it holds no decisions.
 | Stage | Sessions | Done |
 | --- | --- | --- |
 | [1 — Foundation](#stage-1--foundation) | 5 | 5 / 5 |
-| [2 — Content and catalog](#stage-2--content-and-catalog) | 5 | 5 / 6 |
+| [2 — Content and catalog](#stage-2--content-and-catalog) | 5 | 6 / 6 |
 | [3 — Identity and workspace](#stage-3--identity-and-workspace) | 6 | 0 / 7 |
 | [4 — Submission and queue](#stage-4--submission-and-queue) | 5 | 0 / 5 |
 | [5 — Execution](#stage-5--execution) | 7 | 0 / 8 |
@@ -128,11 +128,23 @@ started early so its CI job stops waiting.
   deferred, and so does the ADR 0006 §3 dependency check, which has nothing to check against until
   [#22](https://github.com/shoraLBRT/ritocode/issues/22) builds an image with a cache — see
   [PROJECT_STATE.md](PROJECT_STATE.md#open-questions).
-- [ ] **[#42](https://github.com/shoraLBRT/ritocode/issues/42) (partial) — three problems.** Three,
-  not ten, all in the language chosen in `PROJECT_STATE.md` — **C#**, decided 2026-09-11, so this
-  box is no longer blocked. Three is the minimum that shows the verdict distinguishes a good
-  solution from a bad one rather than being tuned to a single task. Each has a known-good and a
-  known-bad solution committed as fixtures.
+- [x] **[#42](https://github.com/shoraLBRT/ritocode/issues/42) (partial) — three problems.** Three,
+  not ten, all in the language chosen in `PROJECT_STATE.md` — **C#**, decided 2026-09-11.
+  `split-the-invoice` (easy, decimal arithmetic), `no-double-booking` (medium, a boundary the
+  comparisons disagree about) and `respect-the-precedence` (hard, an evaluator that associates the
+  wrong way), each with a known-good and a known-bad fixture that genuinely disagree — the bad one is
+  the plausible near-miss, so a verdict that passes both is wrong about the verdict rather than about
+  the content. Three is the minimum that shows the verdict distinguishes a good answer from a bad one
+  rather than being tuned to a single task, which is also why the three are at three difficulties
+  over three unrelated trees.
+  **One thing authoring settled that the plan did not state**: the slice grades with `compile` and
+  `test` and nothing else, so a problem whose starter already passes its own tests would score an
+  untouched workspace 100. All three therefore start from code that fails at least one of its own
+  tests — the refactoring is what the prose asks for, the failing test is what can be checked, and
+  each `description.md` says so. See [Open questions](PROJECT_STATE.md#open-questions).
+  The issue stays open: the Phase 1 set is larger than three, though nothing written down says how
+  much larger, and a revision to any of these three still has no way of reaching the catalog. Both
+  are under [Open questions](PROJECT_STATE.md#open-questions).
 - [x] **[#26](https://github.com/shoraLBRT/ritocode/issues/26) (partial) — frontend shell and API
   client.** React + Vite + TypeScript in `frontend/`, with the
   [ADR 0003](adr/0003-api-conventions.md) error envelope read in exactly one place: nothing outside

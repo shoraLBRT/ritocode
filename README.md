@@ -61,12 +61,16 @@ saying what exists and what does not. [docs/SLICE_PLAN.md](docs/SLICE_PLAN.md) h
 - [ ] evaluation pipeline
 - [ ] validator plugin system
 - [ ] sandbox runner infrastructure
-- [ ] initial problem set
+- [ ] initial problem set — **partial**: three authored C# problems, one easy, one medium and one
+      hard, each shipping a known-good and a known-bad answer as fixtures. How large the full Phase 1
+      set should be is not decided yet, and a revision to a published problem has no way to reach the
+      catalog
 - [ ] basic frontend UI — **partial**: a React + Vite + TypeScript shell in `frontend/` with routing
       and the API client that owns the error envelope. The designed catalog, problem and workspace
       screens are not built, and the app has no notion of a signed-in user
 - [ ] CI/CD pipeline — **partial**: the backend builds, tests and is checked for migration drift on
-      every push. The frontend job and any deployment pipeline are not built
+      every push, and the frontend lints, builds and tests on its own job. No job publishes an
+      artifact, builds an image, tags a release or deploys anything
 - [ ] observability and logging
 
 ---

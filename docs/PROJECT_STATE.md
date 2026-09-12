@@ -4,7 +4,7 @@
 what to build next, and how to verify it. Read it before touching anything; update it before
 finishing.
 
-- **Last updated:** 2026-09-11
+- **Last updated:** 2026-09-12
 - **Current phase:** Phase 1 (MVP) — see `docs/MVP_SCOPE.md`
 - **Current milestone:** the vertical slice — [`docs/SLICE_PLAN.md`](SLICE_PLAN.md), decided in
   [ADR 0005](adr/0005-vertical-slice-before-breadth.md). Phase 1 now ships in two stages; the slice
@@ -85,7 +85,8 @@ Directory.Packages.props      central package versions
 compose.yaml                  PostgreSQL and MinIO for local development
 scripts/                      dev-up, migration helpers, drift check
 content/
-  problems/                   problem packages; the reference one is validated by tests
+  problems/                   problem packages: three authored C# problems and the format's
+                              reference package, all validated from the committed tree by tests
 frontend/                     React + Vite + TypeScript. src/api is the only code that knows the
                               backend exists; src/hooks, src/components, src/pages and routes.tsx
                               are the shell around it. Its own README covers running it
@@ -133,10 +134,12 @@ docs/
 | [#9](https://github.com/shoraLBRT/ritocode/issues/9) Problem catalog | Partial | `GET /api/v1/problems` and `GET /api/v1/problems/{slug}` over `Page<T>`, and the ingest behind them: a validated package becomes a `Problem`, a published `ProblemVersion` and a bundle in object storage. The catalog resolves a problem's highest **published** version and never a draft. `snapshot_reference` is now a typed `StorageReference` column. A development-only content seeder is the first caller of ingest | `src/Modules/Ritocode.Modules.Problems/Catalog`, `.../Ingest`, `src/Ritocode.Shared/Persistence/StorageReferenceConverter.cs` |
 | [#26](https://github.com/shoraLBRT/ritocode/issues/26) Frontend shell | Partial | React + Vite + TypeScript in `frontend/`. `ApiClient` is the only code that calls `fetch`, and `api/errors.ts` is the only code that reads the ADR 0003 envelope: a failure reaches a screen as an `ApiError` carrying the stable `code`, kept apart from a status with no envelope behind it and from a server that never answered. `useApiResource` reports one request as a discriminated union. Layout, routes, and the loading / error / empty panels, on 55 tests over a stubbed `fetch` | `frontend/` |
 | [#31](https://github.com/shoraLBRT/ritocode/issues/31) CI pipeline | Partial | `backend-ci.yml` (build and test, formatting, migrations and drift) and now `frontend-ci.yml`: `npm ci`, then lint, build — the typecheck rides on it — and the 55 tests, on the Node line `frontend/.nvmrc` pins. The frontend job needs no backend, no database and no Docker | `.github/workflows/` |
+| [#42](https://github.com/shoraLBRT/ritocode/issues/42) Initial problem set | Partial | Three authored C# problems — `split-the-invoice` (easy), `no-double-booking` (medium), `respect-the-precedence` (hard) — at three difficulties over three unrelated trees, each with a known-good and a known-bad fixture that disagree on behaviour the package's own tests pin. The catalog has content that is not the format's reference fixture for the first time | `content/problems/`, `tests/Ritocode.Modules.Problems.Tests/CatalogPackageTests.cs` |
 
 The frontend now exists as a shell: it renders the layout, resolves its routes, and reads the
 catalog from a running host. It has no identity, no editor and no designed screens — those are
-stages 3 and 6.
+stages 3 and 6. It now lists four problems against a development host, and the descriptions arrive
+as text rather than rendered Markdown, which is [#27](https://github.com/shoraLBRT/ritocode/issues/27).
 
 Nothing else from the backlog is implemented. Six of the seven modules own a schema and a
 `DbContext` and expose neither an endpoint nor a service — the boundary and the storage are in
@@ -148,6 +151,22 @@ and it is the first code that will read a bundle back.
 
 ### Deliberately deferred
 
+- **The problem set ([#42](https://github.com/shoraLBRT/ritocode/issues/42)) is three problems, and
+  three is what the slice needs rather than what Phase 1 needs.** What the three buy is the thing
+  the slice has to demonstrate: a verdict that separates a good answer from a bad one on unrelated
+  tasks rather than on one. What is left is volume — and nobody has written down how much volume, see
+  [Open questions](#open-questions) — plus the two things authoring walked into and could not finish
+  here. **A revision to any of these three cannot reach the catalog**: the seeder publishes a slug's
+  first version and skips a slug that already has one, so editing a package changes nothing,
+  silently. And **nothing in this repository executes a fixture.** All nine combinations were run by
+  hand while authoring — each starter fails, each known-good answer passes, each known-bad one fails,
+  on `dotnet build --warnaserror` and `dotnet test` in a scratch directory — and the counts are in the
+  pull request. That is evidence, not a guard. An author may run a package by hand; the **platform**
+  may not run one outside a sandbox runner, which is the first row of ADR 0005's forbidden list — so
+  the repeatable form of this check is stage 5's, not a test added here.
+  `CatalogPackageTests` goes as far as reading files can — both fixtures exist, differ from each
+  other, and each changes the starter tree — and
+  [#38](https://github.com/shoraLBRT/ritocode/issues/38) is where they actually get run.
 - **CI ([#31](https://github.com/shoraLBRT/ritocode/issues/31)) now checks both halves and ships
   nothing.** `frontend-ci.yml` closed the half that was waiting for a frontend to exist. What is
   left is the other axis entirely: no job publishes a build artifact, builds a container image,
@@ -220,26 +239,27 @@ and it is the first code that will read a bundle back.
 The slice plan is the ordered list now: **[`docs/SLICE_PLAN.md`](SLICE_PLAN.md)**. Take the first
 unticked box. The stages there are ordered so that each depends only on stages above it.
 
-**Stage 1 is complete**, and stage 2 is five boxes in: the storage key layout, the client that
-reads and writes those keys, the catalog and the ingest that fills it, the frontend shell that
-reads it, and now the CI job that checks that shell. **One box is left in the stage, and it is
-blocked on a decision that is the maintainer's and not a session's:**
+**Stages 1 and 2 are complete.** Stage 2 ended with content: the storage key layout, the client that
+reads and writes those keys, the catalog and the ingest that fills it, the frontend shell that reads
+it, the CI job that checks that shell, and now three authored problems for the catalog to serve.
+**Stage 3 is next, and its first box is:**
 
-1. **[#42](https://github.com/shoraLBRT/ritocode/issues/42) (partial) — three problems.** No
-   longer blocked: the language was the maintainer's call and it is **C#**, decided 2026-09-11 and
-   recorded as the first entry under [Open questions](#open-questions). The machinery is not what
-   was waiting — ingest publishes whatever packages sit in the content directory — so the whole of
-   the remaining work is authoring: three problems, each with a known-good and a known-bad solution
-   committed as fixtures, against
-   [PROBLEM_PACKAGE_SPEC.md](PROBLEM_PACKAGE_SPEC.md) and the reference package beside it.
+1. **[#6](https://github.com/shoraLBRT/ritocode/issues/6) (partial) — the identity seam.**
+   `ICurrentUser`, authentication middleware, and a seeded development identity behind it. Login,
+   session issuance and `/me` are stage two and stay out; what this box owes the rest of the slice is
+   the seam itself, because `workspaces.user_id` and `submissions.user_id` are `IsRequired()` and
+   every endpoint from here on takes its user from the seam rather than from the request — the second
+   row of ADR 0005's forbidden list. It is takeable as it stands: the one decision nearby that is not
+   a session's, **JWT or opaque session tokens**, is due in stage two and the seam is what hides it,
+   so #6 does not need it answered. Two things it inherits from the frontend, both under
+   [Open questions](#open-questions): `ApiClient` sends no credential and is the single place one is
+   added, and a 401 already has its own branch in `ApiError.isUnauthenticated`, unused rather than
+   missing. Whether the route guard redirects or renders in place is part of this box, and it depends
+   on what a session is — a seeded identity has no login to redirect to.
 
-Two things the session that takes it should read first, because both bite during authoring rather
-than after. The seeder **publishes a slug's first version only and skips a slug that already has
-one**, so editing a package and restarting changes nothing, silently — that is the republishing
-question below, and #42 is the box where it stops being theoretical. And ingest does **not** check
-a package's dependencies against a runner image's offline cache, because neither side of the
-comparison exists yet, so a problem that needs a package outside the eventual cache will author
-cleanly here and fail at submission time in stage 5.
+Then the cross-module contract, which ships the three architecture-test assertions in ADR 0007 §7 in
+its own PR, and then [#10](https://github.com/shoraLBRT/ritocode/issues/10) — the first code that
+reads a problem bundle back out of object storage.
 
 The three ADRs written so far are off this list and their obligations are in
 [Open questions](#open-questions) instead. Briefly: submission reports gain somewhere to carry a
@@ -255,7 +275,9 @@ the flow tests the issue also asks for arrive with the endpoints they exercise.
 [#8](https://github.com/shoraLBRT/ritocode/issues/8) is off it because it is done.
 
 [#9](https://github.com/shoraLBRT/ritocode/issues/9) is off this list and stays open: the catalog
-reads, and search, facets, filters and explicit version resolution are stage two. The rest of
+reads, and search, facets, filters and explicit version resolution are stage two.
+[#42](https://github.com/shoraLBRT/ritocode/issues/42) is off it and stays open too: the three
+problems the slice needs exist, and volume, republishing and the dependency check do not. The rest of
 Phase 1 is [after the slice](SLICE_PLAN.md#after-the-slice).
 
 ---
@@ -264,9 +286,32 @@ Phase 1 is [after the slice](SLICE_PLAN.md#after-the-slice).
 
 Decisions a future session will hit, and where in the slice each one comes due.
 
+- **What a verdict of `compile` plus `test` can actually grade.** *Found while authoring
+  [#42](https://github.com/shoraLBRT/ritocode/issues/42); relaxes in stage two.* The slice grades a
+  submission with two validators and nothing else, and both of them measure behaviour. A pure
+  refactoring task — tangled code whose tests already pass, which is the shape of the reference
+  package — therefore scores an **untouched workspace** 100, and scores a beautiful answer the same.
+  That is not a content flaw; it is what this validator set can see. So the three problems of #42 each
+  start from code that **fails at least one of its own tests**: the prose asks for the refactoring,
+  the failing test is the part that can be checked, and every `description.md` says which is which
+  under *What is graded* — the spec's "honest about scope" rule applied to the grader rather than to
+  the task. The rule to carry: **until a validator grades quality, a problem whose starter passes is
+  not a problem.** What changes it is the lint and patch-scope validators in
+  [#19](https://github.com/shoraLBRT/ritocode/issues/19), after the slice; pure refactoring tasks
+  become authorable in the same breath, and this constraint can be dropped from `content/README.md`.
+  The slice review should also look at the other end of it: three tasks that all hide a defect is a
+  product that reads as bug-hunting, and the product claim is about improving code.
+- **How many problems Phase 1 needs.** *Created by
+  [#42](https://github.com/shoraLBRT/ritocode/issues/42), due at the slice review.* Three is what the
+  slice argues for and is written down in `SLICE_PLAN.md`; the size of the Phase 1 set is written
+  nowhere — not in the issue, not in `MVP_SCOPE.md`. It is not a blocker, because volume is additive
+  and each package is independent, but it is the sort of number that gets invented by whoever next
+  opens #42 unless the maintainer says it. Worth answering with the test result in hand rather than
+  before: how many tasks someone works through before they stop is a thing the slice is being put in
+  front of people to find out.
 - **Language of the first problems.** *Was due in slice stage 2 and blocked
-  [#42](https://github.com/shoraLBRT/ritocode/issues/42).* **Decided by the maintainer on
-  2026-09-11: C#.** The pool of testers is the thing being traded away, and the thing bought is
+  [#42](https://github.com/shoraLBRT/ritocode/issues/42); now spent.* **Decided by the maintainer on
+  2026-09-11: C#**, and the three problems of #42 are written in it. The pool of testers is the thing being traded away, and the thing bought is
   that every part of the evaluation path is one you can debug — `dotnet build` and `dotnet test`
   are very nearly the compile and test validators themselves, the reference package already proved
   both under the full ADR 0006 flag set in the sandbox spike, and the first runner image in
@@ -395,16 +440,21 @@ Decisions a future session will hit, and where in the slice each one comes due.
   indexing [ADR 0004](adr/0004-persistence-and-migrations.md) chose `jsonb` for; it is not worth
   reopening until something needs the bytes.
 - **How a revised problem gets republished.** *Created by
-  [#9](https://github.com/shoraLBRT/ritocode/issues/9), due in stage 2 with
-  [#42](https://github.com/shoraLBRT/ritocode/issues/42).* Ingest adds a version every time it is
-  called and never replaces one, which is right — a published version is what a workspace was
-  created from. The seeder therefore has to decide when *not* to call it, and its rule is the
-  crudest one that is safe: skip a slug that already has a published version. The consequence is
-  that editing a package and restarting changes nothing, silently, and there is no other way to
-  publish revision 2. #42 is where that starts to hurt, and the answer is probably a content
-  digest on `problem_versions` so the seeder can tell "already published" from "published, but not
-  this content" — which is a column, and therefore a migration, and therefore a decision rather
-  than a detail.
+  [#9](https://github.com/shoraLBRT/ritocode/issues/9); was due with
+  [#42](https://github.com/shoraLBRT/ritocode/issues/42) and is now live rather than theoretical.*
+  Ingest adds a version every time it is called and never replaces one, which is right — a published
+  version is what a workspace was created from. The seeder therefore has to decide when *not* to call
+  it, and its rule is the crudest one that is safe: skip a slug that already has a published version.
+  #42 did not hit this, because three new slugs are three first versions. **The next edit to any of
+  them does**: a development database that has published `split-the-invoice` at version 1 will ignore
+  every later change to that package, with no error and no log line saying the content moved. Anyone
+  authoring against a host they have already run has to clear the problem's rows first, and nothing in
+  the product does that — `docker compose down -v` is the blunt version and deletes the bundles too.
+  The answer is probably a content digest on `problem_versions` so the seeder can tell
+  "already published" from "published, but not this content" — which is a column, therefore a
+  migration, therefore a decision rather than a detail. Note the constraint from the `validator_config`
+  entry above: such a digest is computed from `ToJson()` before the write, never read back from the
+  `jsonb` column.
 - **What the API says beyond the error body and the page envelope.** *Settled by
   [#9](https://github.com/shoraLBRT/ritocode/issues/9), the first module endpoints.* Enums are
   serialised as camelCase names host-wide, not ordinals — a number would make every client depend
@@ -569,12 +619,18 @@ warning naming the absolute path it tried, not a silent empty catalog.
 
 | Request | Expected |
 | --- | --- |
-| `GET /api/v1/problems` | `200`, `totalItems: 1`, one item with `slug: "example-order-total"`, `difficulty: "medium"`, `version: 1` |
-| `GET /api/v1/problems/example-order-total` | `200`, the same fields plus `description` and a `problemVersionId` |
+| `GET /api/v1/problems` | `200`, `totalItems: 4`, all at `version: 1` — `split-the-invoice` (`easy`), `respect-the-precedence` (`hard`), `no-double-booking` (`medium`) and `example-order-total` (`medium`), newest first |
+| `GET /api/v1/problems/split-the-invoice` | `200`, the same fields plus `description` and a `problemVersionId` |
 
-Seeding needs the MinIO from `dev-up`, and the reference package is the only content there is until
-[#42](https://github.com/shoraLBRT/ritocode/issues/42) — it is a fixture that a development host
-also publishes so there is something to browse, not the Phase 1 problem set.
+Seeding needs the MinIO from `dev-up`. Four packages rather than the three of
+[#42](https://github.com/shoraLBRT/ritocode/issues/42): the fourth is `example-order-total`, the
+format's reference fixture, which lives in the same directory and is therefore published too — see
+[`content/README.md`](../content/README.md).
+
+**If the catalog does not match this table, check whether the database already had these slugs.** The
+seeder publishes a slug's first version and skips a slug that already has one, so an edited package is
+ignored in silence — the republishing entry under [Open questions](#open-questions) has the detail and
+the only way out is to clear the rows.
 
 The host reads `Database:ConnectionString`; locally it comes from `Database__ConnectionString`,
 which `scripts/dev-up` prints the value for. The tests configure themselves from the container the
@@ -615,15 +671,20 @@ other makes every request fail in the browser and succeed from `curl`.
 | Page | Expected |
 | --- | --- |
 | <http://localhost:5173/> | The layout, and the seven modules listed under **Backend** |
-| <http://localhost:5173/problems> | One row, `Untangle the order total calculator`, badged `medium` |
-| <http://localhost:5173/problems/example-order-total> | The title, the version and the description |
+| <http://localhost:5173/problems> | Four rows — `Split the invoice without losing a penny` (`Easy`), `Respect the precedence` (`Hard`), `Stop the double bookings` (`Medium`), `Untangle the order total calculator` (`Medium`) — each with its tags, and `Page 1 of 1` |
+| <http://localhost:5173/problems/respect-the-precedence> | The title, the version and the description — as Markdown source, not rendered, which is [#27](https://github.com/shoraLBRT/ritocode/issues/27) |
 | <http://localhost:5173/problems/no-such-problem> | "No such problem" — the `problem_not_found` branch, not the generic panel |
 | <http://localhost:5173/nowhere> | "Page not found" |
 | the same pages with the API stopped | The failure panel, saying the backend cannot be reached |
 
-Current baseline: **231 backend tests, all passing** — 110 shared, 91 problems, 25 API,
+Current baseline: **249 backend tests, all passing** — 110 shared, 109 problems, 25 API,
 5 architecture — and **55 frontend tests**, run separately by `npm test`. A session that leaves
 either number lower than it found it has broken something.
+
+The problems assembly rose from 91 to 109 with the content of
+[#42](https://github.com/shoraLBRT/ritocode/issues/42): `CatalogPackageTests` checks each committed
+package as it ships, and most of its cases are theories over the content directory, so a fourth
+catalog problem adds tests without anyone writing one.
 
 Three of the four test assemblies now need a Docker daemon: the shared assembly starts MinIO, the
 API assembly starts PostgreSQL, and the Problems assembly starts both — its ingest and catalog

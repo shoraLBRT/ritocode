@@ -1,0 +1,52 @@
+schema_version: 1
+
+slug: respect-the-precedence
+title: Respect the precedence
+difficulty: hard
+language: csharp
+tags:
+  - refactoring
+  - code-quality
+  - parsing
+description: description.md
+
+hints:
+  - Work 10 - 3 - 2 through Sum by hand and say which subtraction happens first. The two operators that do not care about the order are the two that look fine.
+  - Sum and Product are the same method with two characters changed. That is why the defect appears twice, and why fixing it in one place is not enough.
+  - A loop gathers operators left to right; recursing on the right-hand side gathers them right to left. Only one of those is how arithmetic is read.
+  - Whitespace is skipped at six places and a number is recognised at one. Moving the cursor behind something that can be asked for a character is what makes the grammar readable.
+
+workspace:
+  root: starter
+  editable:
+    - src/**/*.cs
+  readonly:
+    - tests/**
+    - "*.csproj"
+    - "*.md"
+
+limits:
+  max_files: 50
+  max_file_bytes: 65536
+  max_total_bytes: 1048576
+
+validators:
+  - id: compile
+    type: compile
+    weight: 30
+    required: true
+    timeout_seconds: 120
+    with:
+      command: [dotnet, build, --warnaserror]
+
+  - id: tests
+    type: test
+    weight: 70
+    required: true
+    timeout_seconds: 300
+    with:
+      command: [dotnet, test, --no-build]
+
+fixtures:
+  passing: fixtures/passing
+  failing: fixtures/failing
