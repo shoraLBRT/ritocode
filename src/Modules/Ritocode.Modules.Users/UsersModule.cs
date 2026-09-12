@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Ritocode.Modules.Users.Identity;
 using Ritocode.Modules.Users.Persistence;
 using Ritocode.Shared.Modules;
 using Ritocode.Shared.Persistence;
@@ -11,7 +12,8 @@ namespace Ritocode.Modules.Users;
 /// User accounts, profiles and account-level settings.
 /// </summary>
 /// <remarks>
-/// Owns the <c>users</c> schema. No endpoints yet — those arrive with issue #25.
+/// Owns the <c>users</c> schema, and with it the row behind the seeded development identity the
+/// Auth module's scheme asserts. No endpoints yet — those arrive with issue #25.
 /// </remarks>
 public sealed class UsersModule : IModule
 {
@@ -21,7 +23,12 @@ public sealed class UsersModule : IModule
 
     public void RegisterServices(IServiceCollection services, IConfiguration configuration)
     {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configuration);
+
         services.AddModuleDbContext<UsersDbContext>(configuration, UsersDbContext.SchemaName);
+
+        services.AddHostedService<DevelopmentIdentitySeeder>();
     }
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints)
