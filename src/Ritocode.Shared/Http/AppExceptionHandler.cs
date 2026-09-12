@@ -37,21 +37,7 @@ public sealed partial class AppExceptionHandler(ILogger<AppExceptionHandler> log
             LogExpectedFailure(logger, error.Code, method, path);
         }
 
-        var problem = ApiProblem.Create(error, httpContext);
-
-        httpContext.Response.StatusCode = problem.Status ?? StatusCodes.Status500InternalServerError;
-
-        // UseExceptionHandler clears the response before re-executing, which drops the correlation
-        // header the middleware set. Re-apply it: a 500 is exactly when the caller needs it most.
-        httpContext.Response.Headers[RequestId.HeaderName] = (string)problem.Extensions["requestId"]!;
-
-        // The content type is passed to the writer rather than assigned beforehand, because
-        // WriteAsJsonAsync overwrites Response.ContentType with application/json otherwise.
-        await httpContext.Response.WriteAsJsonAsync(
-            problem,
-            options: null,
-            contentType: "application/problem+json",
-            cancellationToken);
+        await ApiProblem.WriteAsync(httpContext, error, cancellationToken);
 
         return true;
     }

@@ -44,6 +44,34 @@ public static class ApiProblem
         return problem;
     }
 
+    /// <summary>
+    /// Writes the unified error body directly to the response, for the places that have no
+    /// <see cref="IResult"/> to return: the exception handler, and an authentication handler's
+    /// challenge.
+    /// </summary>
+    /// <remarks>
+    /// The correlation header is re-applied rather than assumed. <c>UseExceptionHandler</c> clears
+    /// the response before re-executing, which drops the header the middleware set, and a 401 or a
+    /// 500 is exactly when the caller needs it most. The content type is passed to the writer
+    /// instead of being assigned first, because <c>WriteAsJsonAsync</c> overwrites
+    /// <c>Response.ContentType</c> otherwise.
+    /// </remarks>
+    public static async Task WriteAsync(HttpContext context, AppError error, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        var problem = Create(error, context);
+
+        context.Response.StatusCode = problem.Status ?? StatusCodes.Status500InternalServerError;
+        context.Response.Headers[RequestId.HeaderName] = (string)problem.Extensions["requestId"]!;
+
+        await context.Response.WriteAsJsonAsync(
+            problem,
+            options: null,
+            contentType: "application/problem+json",
+            cancellationToken);
+    }
+
     /// <summary>Result helper for endpoints that return an <see cref="AppError"/> instead of throwing.</summary>
     public static IResult ToResult(AppError error, HttpContext context)
     {

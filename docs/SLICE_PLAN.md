@@ -9,7 +9,7 @@ reductions that are allowed and the list that are forbidden. **Read that ADR bef
 anything here.** This file tracks progress; it holds no decisions.
 
 - **Last updated:** 2026-09-12
-- **Progress:** 11 / 37
+- **Progress:** 12 / 37
 - **Estimate:** 30–34 sessions, six to seven weeks at five sessions a week
 - **Then:** [stage two](#after-the-slice) — the rest of Phase 1
 
@@ -30,7 +30,7 @@ anything here.** This file tracks progress; it holds no decisions.
 | --- | --- | --- |
 | [1 — Foundation](#stage-1--foundation) | 5 | 5 / 5 |
 | [2 — Content and catalog](#stage-2--content-and-catalog) | 5 | 6 / 6 |
-| [3 — Identity and workspace](#stage-3--identity-and-workspace) | 6 | 0 / 7 |
+| [3 — Identity and workspace](#stage-3--identity-and-workspace) | 6 | 1 / 7 |
 | [4 — Submission and queue](#stage-4--submission-and-queue) | 5 | 0 / 5 |
 | [5 — Execution](#stage-5--execution) | 7 | 0 / 8 |
 | [6 — Product face](#stage-6--product-face) | 6 | 0 / 6 |
@@ -176,11 +176,22 @@ started early so its CI job stops waiting.
 Editing existing code is the product. This is also where the module boundary gets exercised for the
 first time.
 
-- [ ] **[#6](https://github.com/shoraLBRT/ritocode/issues/6) (partial) — identity seam.**
-  `ICurrentUser`, authentication middleware, and a seeded development identity behind it.
-  `workspaces.user_id` and `submissions.user_id` are `IsRequired()`, so a user is not optional.
-  Endpoints take the user from the seam and never from the request — see the forbidden list in
-  ADR 0005. Login, session issuance and `/me` land in stage two.
+- [x] **[#6](https://github.com/shoraLBRT/ritocode/issues/6) (partial) — identity seam.**
+  `ICurrentUser` in `Ritocode.Shared/Identity`, one value wide; a real authentication scheme owned
+  by the Auth module; and the seeded development identity behind it, whose row the Users module
+  keeps — the first rows that module has ever written. Shaped by
+  [ADR 0008](adr/0008-authentication-seam.md), which is **Proposed** and needs the maintainer.
+  The host is now **authenticated by default and anonymous by exception**: a fallback policy
+  protects any endpoint that states nothing, so the workspace and submission endpoints of the next
+  boxes are protected by omission rather than open by it, and the four endpoints that must stay open
+  are pinned by tests against a host with no identity. A challenge answers in the ADR 0003 error
+  body rather than an empty 401, which gives `ApiError.isUnauthenticated` a real producer.
+  **One decision the plan left to this box**: the frontend route guard **renders in place rather
+  than redirecting** — with a seeded identity there is no signed-out state in the browser and no
+  login to redirect to — and it is therefore not written yet. Login, session issuance and `/me` stay
+  in stage two as planned; `/me` turns out not to depend on the token-format decision, which is the
+  one thing a stage-two session should not assume. See
+  [Open questions](PROJECT_STATE.md#open-questions).
 - [ ] **Cross-module contract in `Ritocode.Shared`.** Per
   [ADR 0007](adr/0007-cross-module-contract-form.md): the Workspaces module asks whether a user and
   a problem version exist before creating a row.

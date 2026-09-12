@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Ritocode.Shared.Errors;
 using Ritocode.Shared.Http;
@@ -62,5 +63,27 @@ public sealed class ApiProblemTests
         var problem = ApiProblem.Create(AppError.Unauthenticated(), context);
 
         Assert.Equal("trace-9", problem.Extensions["requestId"]);
+    }
+
+    [Fact]
+    public async Task WriteAsync_EmitsTheProblemBodyWithItsStatusContentTypeAndCorrelationHeader()
+    {
+        // The path taken by the places that have no IResult to return: the exception handler, and an
+        // authentication handler answering a challenge. They must produce the same body an endpoint
+        // would, or a 401 becomes the one response shape a client cannot parse.
+        var context = ContextWith("/api/v1/workspaces", "req-7");
+        using var body = new MemoryStream();
+        context.Response.Body = body;
+
+        await ApiProblem.WriteAsync(context, AppError.Unauthenticated(), TestContext.Current.CancellationToken);
+
+        Assert.Equal(401, context.Response.StatusCode);
+        Assert.Equal("application/problem+json", context.Response.ContentType);
+        Assert.Equal("req-7", context.Response.Headers[RequestId.HeaderName]);
+
+        using var document = JsonDocument.Parse(body.ToArray());
+        Assert.Equal("unauthenticated", document.RootElement.GetProperty("code").GetString());
+        Assert.Equal("req-7", document.RootElement.GetProperty("requestId").GetString());
+        Assert.Equal("/api/v1/workspaces", document.RootElement.GetProperty("instance").GetString());
     }
 }

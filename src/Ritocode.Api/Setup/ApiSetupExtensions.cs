@@ -1,9 +1,11 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
 using Ritocode.Api.Configuration;
 using Ritocode.Api.Endpoints;
 using Ritocode.Shared.Http;
+using Ritocode.Shared.Identity;
 using Ritocode.Shared.Modules;
 using Ritocode.Shared.Storage;
 
@@ -47,6 +49,20 @@ public static class ApiSetupExtensions
         // an object.
         builder.Services.AddObjectStorage(builder.Configuration);
 
+        // The identity seam is host infrastructure like storage: ICurrentUser is what every
+        // endpoint takes its user from, and the development identity settings below are read by two
+        // modules that may not reference each other. What authenticates a request is the Auth
+        // module's business and is registered there.
+        builder.Services.AddRitocodeIdentity(builder.Configuration);
+
+        // Authenticated by default, anonymous by exception. A fallback policy applies to every
+        // endpoint that states no authorisation requirement of its own, so a workspace or
+        // submission endpoint added later is protected because nobody remembered to protect it —
+        // which is the failure mode worth designing against. Endpoints meant to stay open say
+        // AllowAnonymous where they are mapped, and every one that exists today already does.
+        builder.Services.AddAuthorizationBuilder()
+            .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
+
         // Validators are registered by the module that owns the request type, inside
         // IModule.RegisterServices. WithValidation<T>() resolves IValidator<T> from the container,
         // so no assembly scanning is needed here.
@@ -88,11 +104,19 @@ public static class ApiSetupExtensions
             app.UseCors(CorsPolicyName);
         }
 
+        // Added explicitly rather than left to WebApplication's automatic insertion, so the order
+        // is readable here: after CORS, because a rejected preflight must not depend on a
+        // credential, and before any endpoint runs.
+        app.UseAuthentication();
+        app.UseAuthorization();
+
         app.MapHealthEndpoints();
 
         if (options.EnableOpenApi)
         {
-            app.MapOpenApi();
+            // The document describes the API; reading it is not a protected action, and the
+            // fallback policy would otherwise put a 401 in front of it.
+            app.MapOpenApi().AllowAnonymous();
         }
 
         var api = app.MapGroup(options.BasePath);

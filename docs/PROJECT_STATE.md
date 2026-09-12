@@ -95,9 +95,13 @@ src/
   Ritocode.DbMigrator/        applies each module's migrations; the host never migrates itself
   Ritocode.Shared/            errors, Result<T>, paging, IModule, correlation, persistence base
                               Storage/ holds the object storage client and the key layout as code
+                              Identity/ holds the identity seam: ICurrentUser, the claim it reads
+                              and the development identity settings two modules share
   Modules/Ritocode.Modules.*  one project per module: domain, DbContext, migrations
                               Problems also owns Packaging/ (the problem package format),
                               Ingest/ (package -> published version + bundle) and Catalog/
+                              Auth owns the authentication scheme; Users owns the row behind the
+                              development identity that scheme asserts
 tests/
   Ritocode.TestSupport/         integration test harnesses: a PostgreSQL container per test
                                 assembly with a migrated database per test class, and a MinIO
@@ -135,15 +139,18 @@ docs/
 | [#26](https://github.com/shoraLBRT/ritocode/issues/26) Frontend shell | Partial | React + Vite + TypeScript in `frontend/`. `ApiClient` is the only code that calls `fetch`, and `api/errors.ts` is the only code that reads the ADR 0003 envelope: a failure reaches a screen as an `ApiError` carrying the stable `code`, kept apart from a status with no envelope behind it and from a server that never answered. `useApiResource` reports one request as a discriminated union. Layout, routes, and the loading / error / empty panels, on 55 tests over a stubbed `fetch` | `frontend/` |
 | [#31](https://github.com/shoraLBRT/ritocode/issues/31) CI pipeline | Partial | `backend-ci.yml` (build and test, formatting, migrations and drift) and now `frontend-ci.yml`: `npm ci`, then lint, build — the typecheck rides on it — and the 55 tests, on the Node line `frontend/.nvmrc` pins. The frontend job needs no backend, no database and no Docker | `.github/workflows/` |
 | [#42](https://github.com/shoraLBRT/ritocode/issues/42) Initial problem set | Partial | Three authored C# problems — `split-the-invoice` (easy), `no-double-booking` (medium), `respect-the-precedence` (hard) — at three difficulties over three unrelated trees, each with a known-good and a known-bad fixture that disagree on behaviour the package's own tests pin. The catalog has content that is not the format's reference fixture for the first time | `content/problems/`, `tests/Ritocode.Modules.Problems.Tests/CatalogPackageTests.cs` |
+| [#6](https://github.com/shoraLBRT/ritocode/issues/6) Authentication | Partial | The identity seam from [ADR 0008](adr/0008-authentication-seam.md), which is **Proposed** and needs the maintainer. `ICurrentUser` is one value wide and lives with the host infrastructure in `Shared/Identity`; the Auth module owns a real authentication scheme, so stage two swaps a handler rather than unpicking a mechanism; the Users module keeps the row the seeded identity names, which is the first row that module has written. The host is authenticated by default and anonymous by exception — a fallback policy protects any endpoint that states nothing — and a rejected request answers in the ADR 0003 error body rather than an empty 401. Login, session issuance and `/me` stay out | `src/Ritocode.Shared/Identity`, `src/Modules/Ritocode.Modules.Auth/Identity`, `src/Modules/Ritocode.Modules.Users/Identity`, `docs/adr/0008-authentication-seam.md` |
 
 The frontend now exists as a shell: it renders the layout, resolves its routes, and reads the
 catalog from a running host. It has no identity, no editor and no designed screens — those are
 stages 3 and 6. It now lists four problems against a development host, and the descriptions arrive
 as text rather than rendered Markdown, which is [#27](https://github.com/shoraLBRT/ritocode/issues/27).
 
-Nothing else from the backlog is implemented. Six of the seven modules own a schema and a
+Nothing else from the backlog is implemented. Five of the seven modules own a schema and a
 `DbContext` and expose neither an endpoint nor a service — the boundary and the storage are in
-place, the behaviour is not. **Problems is the exception and the first module that is actually
+place, the behaviour is not. Two are now awake in part: **Auth** owns the authentication scheme and
+no endpoints, and **Users** writes exactly one row — the development identity's — and reads none.
+**Problems is still the only module that is fully
 alive**: it reads and writes its own schema, serves two endpoints, and is the first caller of
 `IObjectStore`. Everything downstream of it is still empty — nothing creates a workspace from a
 published version yet, which is [#10](https://github.com/shoraLBRT/ritocode/issues/10) in stage 3,
@@ -175,12 +182,16 @@ and it is the first code that will read a bundle back.
   release until the slice has a journey to release — so the issue stays open and unscheduled
   rather than becoming the next box. A CI job invented against an imagined deployment would be
   rewritten by the first real one.
-- **The frontend has no protected routes and no notion of a signed-in user**, which is the half of
-  [#26](https://github.com/shoraLBRT/ritocode/issues/26) its acceptance criterion names. Nothing
-  issues an identity until [#6](https://github.com/shoraLBRT/ritocode/issues/6) in stage 3, so a
-  guard written now would guard against a session that does not exist and would be rewritten rather
-  than wired up. `ApiError.isUnauthenticated` exists so the 401 branch is not forgotten, and
-  `frontend/src/routes.tsx` says where the guard goes. The issue stays open.
+- **The frontend still has no protected routes, and now for a settled reason rather than a waiting
+  one.** [#26](https://github.com/shoraLBRT/ritocode/issues/26)'s acceptance criterion names them,
+  and [ADR 0008](adr/0008-authentication-seam.md) §6 answers the question that blocked them: with a
+  seeded development identity **every request is authenticated and there is no signed-out state in
+  the browser**, so the guard **renders in place rather than redirecting** — there is no login to
+  redirect to — and there is nothing yet for it to guard against. `ApiClient` still sends no
+  credential, correctly: the handler asks for none. What changed is that
+  `ApiError.isUnauthenticated` now has a real producer — a protected endpoint answers
+  `code: "unauthenticated"` in the ADR 0003 body — so the branch is reachable the moment the
+  development identity is switched off. The guard itself lands with the session that issues one.
 - **`ProblemsPage` and `ProblemDetailPage` are wiring, not screens.** They exist so the page
   envelope, the query parameters and the error body are proved to survive the trip end to end, and
   [#27](https://github.com/shoraLBRT/ritocode/issues/27) in stage 6 replaces both. The description
@@ -207,12 +218,26 @@ and it is the first code that will read a bundle back.
   not a revision. Editing a package and wanting the new revision published is a real need with no
   answer yet, and the real content pipeline is
   [#42](https://github.com/shoraLBRT/ritocode/issues/42).
-- **Only the Problems module writes rows.** The other six own migrated tables that nothing reads or
-  writes. The next to change is Workspaces, in
+- **Only Problems and Users write rows**, and Users writes exactly one: the development identity's,
+  on startup, and never again — the seeder finds the row on a restart rather than adding a second.
+  Nothing reads `users.users` yet; the first reader is `IUserLookup` in the next box. The other five
+  own migrated tables that nothing touches, and the next to change is Workspaces, in
   [#10](https://github.com/shoraLBRT/ritocode/issues/10).
-- **No authentication.** Endpoints are anonymous. `AllowAnonymous()` on health and meta is
-  deliberate so they keep working once authentication is switched on in
-  [#6](https://github.com/shoraLBRT/ritocode/issues/6).
+- **Authentication is a seam, not a feature.** The host authenticates — a real scheme, a fallback
+  policy, a 401 in the unified error body — and the only identity it can assert is the seeded
+  development one that ADR 0005 allows in place of a login. Enabled, it authenticates **every**
+  request as one fixed user and checks no credential; it is off by default and logs a warning naming
+  the environment when it is on outside Development. What is missing is the half
+  [#6](https://github.com/shoraLBRT/ritocode/issues/6) names and stage two owns: a login endpoint,
+  session issuance, and `/me`. `/me` is the cheapest of the three and, unlike the other two, does
+  **not** depend on the token-format decision — see [Open questions](#open-questions).
+  `AllowAnonymous()` on health, meta and the catalog is now load-bearing rather than anticipatory,
+  and pinned by tests against a host with no identity.
+- **Authorisation is only "is authenticated".** Nothing checks that a resource belongs to its
+  caller, because nothing owns a resource yet. That is
+  [#35](https://github.com/shoraLBRT/ritocode/issues/35) in stage 3, and ADR 0005 is explicit that
+  it is not hardening to be deferred — without it the identity seam is decorative. It ships with the
+  endpoints it guards, not after them.
 - **The object storage client puts and gets, and does nothing else.**
   [#5](https://github.com/shoraLBRT/ritocode/issues/5) stays open for the three operations left out,
   each because its first real caller decides its shape:
@@ -239,27 +264,21 @@ and it is the first code that will read a bundle back.
 The slice plan is the ordered list now: **[`docs/SLICE_PLAN.md`](SLICE_PLAN.md)**. Take the first
 unticked box. The stages there are ordered so that each depends only on stages above it.
 
-**Stages 1 and 2 are complete.** Stage 2 ended with content: the storage key layout, the client that
-reads and writes those keys, the catalog and the ingest that fills it, the frontend shell that reads
-it, the CI job that checks that shell, and now three authored problems for the catalog to serve.
-**Stage 3 is next, and its first box is:**
+**Stages 1 and 2 are complete, and stage 3 has started** with the identity seam. What that box left
+in place for everything after it: every endpoint takes its user from `ICurrentUser`, and one that
+says nothing about authorisation is protected rather than open. **The next box is:**
 
-1. **[#6](https://github.com/shoraLBRT/ritocode/issues/6) (partial) — the identity seam.**
-   `ICurrentUser`, authentication middleware, and a seeded development identity behind it. Login,
-   session issuance and `/me` are stage two and stay out; what this box owes the rest of the slice is
-   the seam itself, because `workspaces.user_id` and `submissions.user_id` are `IsRequired()` and
-   every endpoint from here on takes its user from the seam rather than from the request — the second
-   row of ADR 0005's forbidden list. It is takeable as it stands: the one decision nearby that is not
-   a session's, **JWT or opaque session tokens**, is due in stage two and the seam is what hides it,
-   so #6 does not need it answered. Two things it inherits from the frontend, both under
-   [Open questions](#open-questions): `ApiClient` sends no credential and is the single place one is
-   added, and a 401 already has its own branch in `ApiError.isUnauthenticated`, unused rather than
-   missing. Whether the route guard redirects or renders in place is part of this box, and it depends
-   on what a session is — a seeded identity has no login to redirect to.
+1. **Cross-module contract in `Ritocode.Shared`.** Per
+   [ADR 0007](adr/0007-cross-module-contract-form.md): `IUserLookup` and `IProblemVersionLookup`,
+   thin and read-only, each returning the row's summary or `null`. The three architecture-test
+   assertions in ADR 0007 §7 ship **in that PR**, not after — assertion 3 is what turns a missing DI
+   registration back into a test failure instead of a startup failure. Two things it now inherits:
+   the development identity's row is the first user `IUserLookup` can be pointed at, and
+   `Shared/Identity` is deliberately **not** under `Shared/Contracts` — `ICurrentUser` is ambient
+   request state with no owning module, so assertion 3 must not sweep it up.
 
-Then the cross-module contract, which ships the three architecture-test assertions in ADR 0007 §7 in
-its own PR, and then [#10](https://github.com/shoraLBRT/ritocode/issues/10) — the first code that
-reads a problem bundle back out of object storage.
+Then [#10](https://github.com/shoraLBRT/ritocode/issues/10) — the first code that reads a problem
+bundle back out of object storage, and the first endpoint the fallback policy actually protects.
 
 The three ADRs written so far are off this list and their obligations are in
 [Open questions](#open-questions) instead. Briefly: submission reports gain somewhere to carry a
@@ -267,8 +286,11 @@ timeout or a resource exhaustion, #22 gains a runner registry, and #10 gains two
 plus the three architecture-test assertions that keep them honest.
 
 [#26](https://github.com/shoraLBRT/ritocode/issues/26) is off this list and stays open: the shell
-and the API client landed, and the protected routes its acceptance criterion asks for wait for the
-identity seam in stage 3.
+and the API client landed, and the protected routes its acceptance criterion asks for now have their
+answer rather than their blocker — the guard renders in place and waits for a session to guard
+against, per [ADR 0008](adr/0008-authentication-seam.md) §6.
+[#6](https://github.com/shoraLBRT/ritocode/issues/6) is off it and stays open too: the seam landed,
+and the login, session issuance and `/me` its acceptance criteria name did not.
 
 [#37](https://github.com/shoraLBRT/ritocode/issues/37) is off this list: the harness landed, and
 the flow tests the issue also asks for arrive with the endpoints they exercise.
@@ -334,14 +356,16 @@ Decisions a future session will hit, and where in the slice each one comes due.
   the thread that breaks first. Worth reversing when the surface is big enough that transcribing it
   is the slower half — the generator replaces that one file and nothing that imports it.
 - **Where the frontend gets a signed-in user.** *Created by
-  [#26](https://github.com/shoraLBRT/ritocode/issues/26), due in stage 3 with
-  [#6](https://github.com/shoraLBRT/ritocode/issues/6).* The shell has no route guard, because the
-  seam it would read does not exist yet. Two things the session that takes #6 inherits: `ApiClient`
-  sends no credential and is the single place one is added, and a 401 is already distinguished from
-  every other failure by `ApiError.isUnauthenticated`, so the branch exists and is unused rather
-  than missing. Whether the guard redirects or renders in place is a decision for #6 together with
-  what a session actually is — a redirect to a login route assumes there is one, and the seeded
-  development identity ADR 0005 allows has no login at all.
+  [#26](https://github.com/shoraLBRT/ritocode/issues/26), answered by
+  [#6](https://github.com/shoraLBRT/ritocode/issues/6) and
+  [ADR 0008](adr/0008-authentication-seam.md) §6; the code lands with a real session.* The guard
+  **renders in place rather than redirecting**, because a redirect assumes a login route and the
+  seeded identity has none. It is not written yet for the reason that settles the shape: with the
+  development identity enabled every request is authenticated, so there is no signed-out state for a
+  guard to detect. `ApiClient` still sends no credential, and that is correct rather than
+  outstanding — the handler asks for none, and `ApiClient` stays the single place one is added.
+  `ApiError.isUnauthenticated` now has a real producer and is reachable the moment the development
+  identity is off, which is what a stage-two session will find when it writes the guard.
 - **A React 19 lint rule forbids `setState` in an effect body, and the ordinary fetch-in-effect
   shape trips it.** *Created by [#26](https://github.com/shoraLBRT/ritocode/issues/26), settled.*
   `useApiResource` does not switch itself to `loading` from inside its effect. Instead a settled
@@ -379,10 +403,27 @@ Decisions a future session will hit, and where in the slice each one comes due.
   The documented escape is a second, near-duplicate job that reports success for the skipped case,
   which costs more than the runner minute it saves. Worth reopening only if the frontend job grows
   slow enough to be felt.
-- **Session tokens: JWT or opaque plus a server-side store?** *Due in stage two, invisible during
-  the slice* — the identity seam hides it. Opaque tokens make revocation trivial, which matters
-  once submissions can open real pull requests in Phase 3. Worth an ADR before #6 is completed, or
-  the choice gets made by whoever writes the endpoint.
+- **Session tokens: JWT or opaque plus a server-side store?** *Due in stage two, and now measurably
+  invisible during the slice* — the seam in [ADR 0008](adr/0008-authentication-seam.md) hides it, and
+  nothing built on top of it names a token. Opaque tokens make revocation trivial, which matters once
+  submissions can open real pull requests in Phase 3. Still worth an ADR before #6 is completed, or
+  the choice gets made by whoever writes the endpoint. **The maintainer's call.**
+- **`/me` is the cheapest half of [#6](https://github.com/shoraLBRT/ritocode/issues/6) left, and it
+  is not blocked by the question above.** *Found while building the seam; deferred to stage two by
+  the plan.* `SLICE_PLAN.md` groups `/me` with login and session issuance, which genuinely wait for
+  the token decision — `/me` does not: it reads `ICurrentUser` and returns the row `IUserLookup` will
+  already fetch from the next box. It stayed out because the plan said so and nothing in the slice
+  needs it, not because it is hard. The cost of it being out is small but real: **no endpoint in the
+  running host requires authentication yet**, so the fallback policy and the 401 body are exercised
+  only by tests over a probe endpoint until
+  [#10](https://github.com/shoraLBRT/ritocode/issues/10) lands the first protected product endpoint.
+- **The development identity is not refused outside Development.** *Decided in
+  [ADR 0008](adr/0008-authentication-seam.md); revisit when a real session provider lands.* Enabled,
+  it authenticates every request as one fixed user with no credential — which is precisely what
+  ADR 0005 wants when the slice goes in front of people on a deployed host that has no login, and an
+  authentication bypass in every other reading. It is off by default and logs a warning naming the
+  environment. Once a real provider exists the argument for tolerating it evaporates, and refusing to
+  start becomes the right answer; nothing will prompt that change except this entry.
 - **Sandbox runner host.** *Slice answer settled and now measured, production answer deferred.*
   [ADR 0005](adr/0005-vertical-slice-before-breadth.md) fixes `docker run` with limits for the
   slice, the spike confirmed every flag in that list holds while both of the reference package's
@@ -604,8 +645,19 @@ With the host running, these are the current smoke checks:
 | `GET /api/v1/problems/no-such-problem` | `404`, `code: "problem_not_found"` |
 | any response | carries an `X-Request-Id` header |
 
+Every endpoint above says `AllowAnonymous()`, which is now load-bearing: the host protects anything
+that does not. **No endpoint in the running host requires authentication yet** — the first is
+[#10](https://github.com/shoraLBRT/ritocode/issues/10)'s — so the seam is observed in the log and in
+the database rather than over HTTP:
+
+| Where | Expected |
+| --- | --- |
+| the startup log, in Production | no development identity line at all — it is off outside `appsettings.Development.json` |
+| the startup log, in Development | `Seeded the development identity as user 0199aa00-…-000000000001 (developer)`, then `already exists as user …` on every later start |
+| `select count(*) from users.users` after two Development starts | `1` — the identifier is configuration, not generated, so a restart is not a second user |
+
 The command above runs without a launch profile, so the host starts in **Production** — content
-seeding is off there and `items` is empty. To see the catalog with content in it, start the host in
+seeding is off there, `items` is empty, and so is the development identity. To see the catalog with content in it, start the host in
 Development instead, which turns seeding on and publishes the packages under `content/problems`:
 
 ```bash
@@ -677,9 +729,15 @@ other makes every request fail in the browser and succeed from `curl`.
 | <http://localhost:5173/nowhere> | "Page not found" |
 | the same pages with the API stopped | The failure panel, saying the backend cannot be reached |
 
-Current baseline: **249 backend tests, all passing** — 110 shared, 109 problems, 25 API,
+Current baseline: **275 backend tests, all passing** — 125 shared, 109 problems, 36 API,
 5 architecture — and **55 frontend tests**, run separately by `npm test`. A session that leaves
 either number lower than it found it has broken something.
+
+The shared assembly rose from 110 to 125 and the API assembly from 25 to 36 with the identity seam
+of [#6](https://github.com/shoraLBRT/ritocode/issues/6). The API assembly now boots **two** hosts: the
+usual one, and `AnonymousTestApi` with the development identity switched off. That second host is
+where everything about the authorisation policy is actually proved — with an identity enabled every
+request passes, and a lost `AllowAnonymous` looks exactly like a correct host.
 
 The problems assembly rose from 91 to 109 with the content of
 [#42](https://github.com/shoraLBRT/ritocode/issues/42): `CatalogPackageTests` checks each committed
