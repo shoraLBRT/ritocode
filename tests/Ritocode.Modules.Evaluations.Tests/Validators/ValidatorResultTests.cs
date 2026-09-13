@@ -79,6 +79,26 @@ public sealed class ValidatorResultTests
     }
 
     [Fact]
+    public void NotRunnable_HasNoRunOutcome_AndSaysWhy()
+    {
+        var result = ValidatorResult.NotRunnable(Build.Step(id: "lint", type: "lint"), "No validator answers the type 'lint'.");
+
+        Assert.Equal(ValidatorOutcome.NotRunnable, result.Outcome);
+        Assert.Null(result.RunOutcome);
+        Assert.Empty(result.Checks);
+        Assert.Equal("No validator answers the type 'lint'.", result.Summary);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void NotRunnable_WithoutAReason_IsRefused(string summary)
+    {
+        // A content fault nobody can read is a report that blames the attempt by default.
+        Assert.Throws<ArgumentException>(() => ValidatorResult.NotRunnable(Build.Step(), summary));
+    }
+
+    [Fact]
     public void Skipped_HasNoRunOutcome_NoChecks_AndNoSummary()
     {
         var result = ValidatorResult.Skipped(Build.Step(id: "unit-tests", type: "test"));

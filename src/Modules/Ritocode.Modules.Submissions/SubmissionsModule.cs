@@ -36,7 +36,7 @@ public sealed class SubmissionsModule : IModule
         services.AddScoped<ISubmissionLifecycle, SubmissionLifecycle>();
         services.AddScoped<IValidator<SubmitRequest>, SubmitRequestValidator>();
 
-        // The queue (#15, ADR 0009). No hosted loop drains it yet: that arrives with the evaluator in #17.
+        // The queue (#15, ADR 0009). No hosted loop drains it yet: that arrives with the runner in stage 5.
         services.AddOptions<SubmissionQueueOptions>()
             .Bind(configuration.GetSection(SubmissionQueueOptions.SectionName))
             .ValidateDataAnnotations()

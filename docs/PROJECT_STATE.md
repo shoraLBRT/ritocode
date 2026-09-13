@@ -175,6 +175,7 @@ docs/
 | [#36](https://github.com/shoraLBRT/ritocode/issues/36) Workspace file handling and sandbox boundaries | Partial | The half a save needs, shipped in the same PR as #12. A path from a request is refused, never normalised, before anything is looked up — the #11 rule, now in front of a write. A save can only replace a file the snapshot already holds and the version lists as editable, so it can neither leave the tree nor add a link: the snapshot is rewritten as regular files only, and a snapshot holding anything else fails the save instead of being saved back clean. `max_file_bytes` is checked on the UTF-8 bytes (`400`, `errors.content`), `max_total_bytes` and `max_files` on the tree as it would be written (`409 workspace_limit_exceeded`), and text with no UTF-8 form is refused rather than stored as a replacement character | `src/Modules/Ritocode.Modules.Workspaces/Files/WorkspaceFiles.cs`, `src/Modules/Ritocode.Modules.Workspaces/Files/SnapshotArchive.cs` |
 | [#14](https://github.com/shoraLBRT/ritocode/issues/14) Submission lifecycle and attempt history | Done | `POST /api/v1/submissions` queues an attempt at a workspace the caller owns — 201 and a `Location` — `GET /api/v1/submissions/{id}` reads it back, and `GET /api/v1/submissions` is the caller's history, newest first, in the page envelope, optionally at one `workspaceId`; another user's workspace or attempt answers exactly like a missing one. Submitting freezes the workspace tree by a **server-side copy** into `evaluation-artifacts`, written before the row commits and referenced by the new `submissions.input_reference`, so a save afterwards never changes what is graded. The transitions are `Submission.Start`, `Complete(score, at)` and `Fail(at)`, and every transition they allow is one `ck_submissions_completed_at_matches_status` accepts. `IObjectStore` gained `CopyAsync`, and Workspaces answers a fourth contract, `IOwnedWorkspaceLookup`, which takes the owner. Nothing runs an attempt yet — that is #15. The frontend API client gained `submitWorkspace`, `getSubmission` and `listSubmissions` | `src/Modules/Ritocode.Modules.Submissions`, `src/Ritocode.Shared/Contracts/Workspaces`, `src/Modules/Ritocode.Modules.Workspaces/Contracts/OwnedWorkspaceLookup.cs`, `tests/Ritocode.Modules.Submissions.Tests`, `tests/Ritocode.Api.Tests/Endpoints/SubmissionEndpointsTests.cs` |
 | [#15](https://github.com/shoraLBRT/ritocode/issues/15) Queue and worker | Partial | The queue half, placed by [ADR 0009](adr/0009-evaluation-is-a-command-submissions-issues.md): the `submissions` table drained by the module that owns it. `ISubmissionDispatcher.ClaimNextAsync` takes the oldest `Queued` attempt — or a `Running` one whose claim is older than `Submissions:Queue:ClaimTimeout` — with `FOR UPDATE SKIP LOCKED`, and starts or reclaims it in one short transaction; `CompleteAsync` and `FailAsync` record only on the claim that still holds the attempt. The claim's identity is the new `submissions.started_at`, set by `Submission.Start(at)`, moved by `Reclaim(at)`, and held to its status by `ck_submissions_started_at_matches_status`. Concurrent claims never hand out an attempt twice, tested with twelve claimers against a real PostgreSQL. No loop drains the queue yet — that lands with the evaluator in #17 | `src/Modules/Ritocode.Modules.Submissions/Queue`, `tests/Ritocode.Modules.Submissions.Tests/Queue/SubmissionDispatcherTests.cs` |
+| [#17](https://github.com/shoraLBRT/ritocode/issues/17) Evaluation orchestrator | Partial | `EvaluationPipeline` in the Evaluations module runs a pipeline's steps in order through `ISandboxRunner` — declared here, implemented by #21 — and the plugin registry. A step that could not complete or could not be run stops it and the attempt did not run to the end; a failed required step stops it and the attempt did; every step after a stop is `Skipped`. A plugin whose report does not match the step or the run fails the evaluation. A step with no plugin or an unplannable `with` is the new `notRunnable` outcome, with a reason. **Deliberately unregistered**, decided with the maintainer: it cannot run before the runner exists, so the `ISubmissionEvaluator` contract and the hosted loop move to #21's box | `src/Modules/Ritocode.Modules.Evaluations/Pipeline`, `src/Modules/Ritocode.Modules.Evaluations/Sandbox/ISandboxRunner.cs`, `tests/Ritocode.Modules.Evaluations.Tests/Pipeline` |
 | [#18](https://github.com/shoraLBRT/ritocode/issues/18) Validator plugin interface | Partial | `IValidatorPlugin` in the Evaluations module: `Plan` reads what to run from a step's `with`, `InterpretAsync` turns the runner's observation into a verdict, and a plugin never starts a process. `SandboxRunResult` is ADR 0006 §5's shape, declared ahead of #21. `ValidatorResult` is built only by `Judged`, `NotCompleted` and `Skipped`, so a run that did not complete is never a pass or a fail, and its checks are a sorted, duplicate-free projection. `ValidatorResults.ToJson` is the canonical `validator_results` JSON — the result schema — with nothing in it that differs between two runs. The registry maps a type to a plugin ordinally and refuses a duplicate or unnameable type. No plugin is registered yet, and the issue's three validators are two in the slice | `src/Modules/Ritocode.Modules.Evaluations/Validators`, `src/Modules/Ritocode.Modules.Evaluations/Sandbox`, `tests/Ritocode.Modules.Evaluations.Tests` |
 | [#35](https://github.com/shoraLBRT/ritocode/issues/35) Backend security baseline | Partial | The ownership guard, as a rule rather than a habit. Every workspace endpoint already found its row with the owner inside the query; `OwnershipRuleTests` now fails when code in the Workspaces or Submissions module reaches an entity either context maps anywhere but an allowance that says where and why — `OwnedWorkspaces`, and the creation in `WorkspaceLifecycle.OpenAsync`. Submissions has no allowance, so its first endpoint meets the rule before it exists. The rule reads compiled IL, with the async state machines and lambda closures attributed to the method that was written, and is proved against six shapes of unguarded read. Rate limiting and input hardening stay out | `tests/Ritocode.Architecture.Tests/OwnershipRuleTests.cs`, `tests/Ritocode.Architecture.Tests/MethodBodyReferences.cs`, `src/Modules/Ritocode.Modules.Workspaces/Persistence/OwnedWorkspaces.cs` |
 
@@ -185,7 +186,7 @@ as text rather than rendered Markdown, which is [#27](https://github.com/shoraLB
 
 Nothing else from the backlog is implemented. Progress still exposes neither an endpoint nor a
 service. **Evaluations** now registers one — the validator plugin registry, empty until #19 — and owns
-no schema, per ADR 0009. **Submissions is the third module that is alive**: it
+no schema, per ADR 0009. Its pipeline exists and is tested, and is unregistered until the runner. **Submissions is the third module that is alive**: it
 writes its own schema and the frozen input trees in `evaluation-artifacts`, serves three protected
 endpoints, and consumes `IUserLookup` and `IOwnedWorkspaceLookup` — but every attempt it creates stays
 `Queued`, because nothing drains the queue until #15. **Auth** owns the authentication
@@ -263,6 +264,19 @@ read back, its files listed, read and — the editable ones — saved, and submi
   and moves its `updated_at` on every save that changes a file; Submissions writes a `Queued` row per
   attempt and nothing else — the transitions exist on the entity and have no caller until #15 and #17.
   Auth owns a migrated table that nothing touches, and so does Submissions' `submission_reports`.
+- **The pipeline runs steps, and is handed everything it runs on.**
+  [#17](https://github.com/shoraLBRT/ritocode/issues/17) stays open for the three things an evaluation
+  needs before `EvaluationPipeline.RunAsync` can be called for real, each waiting for a shape it has to
+  meet. **Materialising the frozen tree** — download `submissions.input_reference`, unpack it into the
+  directory the runner mounts read-only, as regular files under confined paths — waits for the runner of
+  [#21](https://github.com/shoraLBRT/ritocode/issues/21) to fix where that directory lives. **The limits
+  of [#36](https://github.com/shoraLBRT/ritocode/issues/36) applied to that tree** happen in the same
+  unpacking, which is why they wait with it; `IWorkspaceAllowanceLookup` asks the identical question
+  a save asks, so it can be reused. **Reading the pipeline** — a version's `validator_config` as
+  `ValidatorStepDefinition`s — needs a read contract answered by Problems, and the runner image a
+  version's `language` selects needs the registry of [#22](https://github.com/shoraLBRT/ritocode/issues/22),
+  so the two are worth one contract rather than two. None of this is registered: the pipeline, the
+  `ISubmissionEvaluator` contract of ADR 0009 and the hosted loop all move to #21's box.
 - **The validator interface exists, and no validator does.**
   [#18](https://github.com/shoraLBRT/ritocode/issues/18) stays open for three things. **Its acceptance
   criterion is three validators on the interface**; the slice builds compile and test in
@@ -276,10 +290,11 @@ read back, its files listed, read and — the editable ones — saved, and submi
   TRX from the output directory, and nothing does until #19.
 - **The queue can be claimed and recorded on, and nothing drains it.**
   [#15](https://github.com/shoraLBRT/ritocode/issues/15) stays open for three things, each owned
-  elsewhere on purpose. **The hosted loop** — claim, evaluate, record — lands with
-  [#17](https://github.com/shoraLBRT/ritocode/issues/17), because ADR 0009 puts the evaluator behind a
-  contract that cannot be registered before its implementation exists, and a loop that claimed without
-  one would strand every attempt in `Running`. **The report** is written in the same transaction as the
+  elsewhere on purpose. **The hosted loop** — claim, evaluate, record — lands with the runner, in
+  [#21](https://github.com/shoraLBRT/ritocode/issues/21)'s box, where the maintainer moved it from #17
+  on 2026-09-13: ADR 0009 puts the evaluator behind a contract that cannot be registered before
+  something can run a step, and a loop that claimed without one would strand every attempt in
+  `Running`. **The report** is written in the same transaction as the
   result, and its shape is [#18](https://github.com/shoraLBRT/ritocode/issues/18)'s, so `CompleteAsync`
   records a score and no report yet. **The cap on concurrent evaluations** is
   [#35](https://github.com/shoraLBRT/ritocode/issues/35)'s rate-limit box, and the drain is where it
@@ -384,28 +399,24 @@ that says nothing about authorisation is protected rather than open, a module th
 module's facts asks through a contract in `Shared/Contracts`, a workspace exists as a row and a
 snapshot, every path that reaches a workspace passes one rule, every save of a workspace holds its
 row's lock, and a user's rows in Workspaces or Submissions are reached only where the owner is in the
-query — `OwnershipRuleTests` fails otherwise. **Stage 4 is three boxes of five in**: a workspace can
+query — `OwnershipRuleTests` fails otherwise. **Stage 4 is four boxes of five in**: a workspace can
 be submitted, which freezes its tree and queues an attempt the caller can read back and list; the
 queue can be claimed without handing an attempt out twice, with a result recorded only on the claim
-that still holds it; and a validator has an interface, a result schema and a registry to be found in.
-**The next box is:**
+that still holds it; a validator has an interface, a result schema and a registry; and the pipeline
+that runs a version's validators step by step exists and is tested — unwired until the runner, as the
+maintainer decided. **The next box is:**
 
-1. **[#17](https://github.com/shoraLBRT/ritocode/issues/17) (partial) — orchestrator.** Sequential
-   validator execution and status transitions; no retries, priorities, cancellation or parallelism.
-   Shaped by [ADR 0009](adr/0009-evaluation-is-a-command-submissions-issues.md): `ISubmissionEvaluator`
-   lands here with its implementation in Evaluations, and so does the hosted loop in Submissions that
-   claims, evaluates and records. **It has an ordering problem to settle before it starts, and it is
-   likely the maintainer's.** The plan puts #17 in stage 4, but everything an evaluation needs to
-   *run* — the sandbox runner (#21), the runner image (#22) and the compile and test validators (#19) —
-   is stage 5. So the orchestrator can be written and tested against `ISandboxRunner` and a test plugin,
-   but in the host there is nothing to run a step with. A loop enabled in that state claims attempts
-   and must fail every one of them, and a loop left disabled is a switch — the thing the ownership entry
-   below warns gets flipped. The candidates are: ship the orchestrator in stage 4 with no loop, and move
-   the loop into stage 5 with the runner; move #17 after #21 in the plan; or ship the loop and fail
-   attempts honestly as `Failed` with a `notCompleted` report until stage 5. The first changes what
-   ADR 0009's consequences say lands with #17; the second reorders the slice; the third puts attempts
-   that could never have passed in front of a tester. Whichever it is, the rule that holds is ADR 0005's
-   first forbidden row: no stand-in that grades.
+1. **[#35](https://github.com/shoraLBRT/ritocode/issues/35) (partial) — submission rate limit.** A cap
+   on how many submissions one user may make in a window, refused as `429` in the ADR 0003 body —
+   `RateLimited` is already in `ErrorType`. The box's other half, the cap on evaluations running at
+   once, is no longer here: it belongs in the hosted loop, which moved to #21's box with the maintainer
+   on 2026-09-13. Two things to settle inside the box. **The limiter's form**: ASP.NET Core's
+   rate-limiting middleware partitioned by `ICurrentUser` is the obvious one and is in memory — it forgets
+   on restart and counts per API instance — while a count over `submissions (user_id, created_at DESC)`,
+   an index that already exists, survives both and costs one query per submit; stage two's worker
+   extraction and any second API instance favour the second. **The default numbers**, which belong in
+   options validated at startup with the reason written beside them. Only `POST /api/v1/submissions` is
+   limited; reads are not.
 
 The ADRs written so far are off this list and their obligations are in
 [Open questions](#open-questions) instead. The newest,
@@ -809,6 +820,19 @@ Decisions a future session will hit, and where in the slice each one comes due.
   refuses a user-initiated transaction that is not wrapped in one. A retry after a put that landed
   and a commit that failed answers `412` for a save that is in fact stored — rare, and seen by a
   person as a reload, not as a lost change.
+- **When the evaluation path is wired.** *Decided by the maintainer on 2026-09-13, while taking
+  [#17](https://github.com/shoraLBRT/ritocode/issues/17).* In slice stage 5, with the runner. Stage 4 builds
+  the orchestration — `EvaluationPipeline`, tested over a scripted `ISandboxRunner` — and registers none of
+  it, because nothing in the host can run a step before #21. The alternatives were moving #17 after #21 in
+  the plan, which left stage 4 without an orchestrator, and enabling the loop at once and failing every
+  attempt as `notCompleted` until stage 5, which puts attempts that could never have passed in front of a
+  tester. Two consequences to carry. **[ADR 0009](adr/0009-evaluation-is-a-command-submissions-issues.md)'s
+  consequences say the loop and `ISubmissionEvaluator` land with #17**; the ADR is append-only and was not
+  edited, and the decision here moves only *when* they land — every rule the ADR states still holds. And
+  **the contract cannot arrive before the runner either**: ADR 0007 §7 requires a contract to be registered
+  exactly once from the moment it exists, and the host validates its container on build in Development,
+  so an evaluator depending on an unregistered `ISandboxRunner` would stop the host starting. That is why
+  the pipeline is a class in Evaluations today and the contract that wraps it is #21's.
 - **What a validator reports, and what it does not.** *Settled by
   [#18](https://github.com/shoraLBRT/ritocode/issues/18).* A validator reports what happened in its own
   step — `passed`, `failed`, `notCompleted` or `skipped`, the runner's outcome, a one-line summary and
@@ -1088,10 +1112,18 @@ other makes every request fail in the browser and succeed from `curl`.
 | <http://localhost:5173/nowhere> | "Page not found" |
 | the same pages with the API stopped | The failure panel, saying the backend cannot be reached |
 
-Current baseline: **564 backend tests, all passing** — 129 shared, 120 problems, 97 API,
-112 workspaces, 52 submissions, 41 evaluations, 13 architecture — and **68 frontend tests**, run
+Current baseline: **581 backend tests, all passing** — 129 shared, 120 problems, 97 API,
+112 workspaces, 52 submissions, 58 evaluations, 13 architecture — and **68 frontend tests**, run
 separately by `npm test`. A session that leaves either number lower than it found it has broken
 something.
+
+The evaluations assembly rose from 41 to 58 with the orchestration of
+[#17](https://github.com/shoraLBRT/ritocode/issues/17). `EvaluationPipelineTests` runs the pipeline over a
+runner that replays scripted observations and records every request, so "nothing in the pipeline starts a
+process" is asserted rather than trusted: an unknown type and an unplannable `with` send the runner
+nothing at all. The same input evaluated twice, over runs that differ in duration and raw output, is
+asserted to produce byte-identical `validator_results` — the determinism claim at the orchestrator, ahead
+of [#38](https://github.com/shoraLBRT/ritocode/issues/38)'s version of it against a real sandbox.
 
 The new evaluations assembly arrived at 41 and the API assembly rose from 96 to 97 with the validator
 plugin interface of [#18](https://github.com/shoraLBRT/ritocode/issues/18). The evaluations assembly

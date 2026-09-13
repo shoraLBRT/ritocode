@@ -12,8 +12,9 @@ namespace Ritocode.Modules.Evaluations;
 /// <remarks>
 /// Owns no schema: per ADR 0009 it answers one command — evaluate this input — and the Submissions
 /// module records the outcome. The validator plugin interface, its result schema and the registry exist
-/// (#18); no plugin is registered until the compile and test validators of #19, and the orchestrator
-/// and its contract arrive with #17, the verdict rules with #20.
+/// (#18), and so does the pipeline that runs a version's validators step by step (#17) — deliberately
+/// unregistered until the sandbox runner of #21 exists to run a step with. No plugin is registered
+/// until the compile and test validators of #19; the verdict rules arrive with #20.
 /// </remarks>
 public sealed class EvaluationsModule : IModule
 {

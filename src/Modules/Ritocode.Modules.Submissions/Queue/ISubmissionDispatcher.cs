@@ -13,9 +13,9 @@ namespace Ritocode.Modules.Submissions.Queue;
 /// holds a row or a connection across an evaluation.
 /// </para>
 /// <para>
-/// Nothing calls it yet. The loop that claims, evaluates and records arrives with #17, together with
-/// the evaluator a claimed attempt needs — a loop before it would leave every attempt it claimed
-/// <c>Running</c> with nobody to finish it. A broker would be another implementation of this
+/// Nothing calls it yet. The loop that claims, evaluates and records arrives in slice stage 5 with the
+/// sandbox runner (#21), together with the evaluator a claimed attempt needs — a loop before it would
+/// leave every attempt it claimed <c>Running</c> with nobody to finish it. A broker would be another implementation of this
 /// interface, not a change to anything that calls it.
 /// </para>
 /// <para>
