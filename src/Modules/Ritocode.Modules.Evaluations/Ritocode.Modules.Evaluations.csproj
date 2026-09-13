@@ -10,4 +10,8 @@
     <ProjectReference Include="../../Ritocode.Shared/Ritocode.Shared.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Ritocode.Modules.Evaluations.Tests" />
+  </ItemGroup>
+
 </Project>

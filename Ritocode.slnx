@@ -16,6 +16,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/Ritocode.Api.Tests/Ritocode.Api.Tests.csproj" />
     <Project Path="tests/Ritocode.Architecture.Tests/Ritocode.Architecture.Tests.csproj" />
+    <Project Path="tests/Ritocode.Modules.Evaluations.Tests/Ritocode.Modules.Evaluations.Tests.csproj" />
     <Project Path="tests/Ritocode.Modules.Problems.Tests/Ritocode.Modules.Problems.Tests.csproj" />
     <Project Path="tests/Ritocode.Modules.Submissions.Tests/Ritocode.Modules.Submissions.Tests.csproj" />
     <Project Path="tests/Ritocode.Modules.Workspaces.Tests/Ritocode.Modules.Workspaces.Tests.csproj" />
