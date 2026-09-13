@@ -177,7 +177,7 @@ docs/
 | [#15](https://github.com/shoraLBRT/ritocode/issues/15) Queue and worker | Partial | The queue half, placed by [ADR 0009](adr/0009-evaluation-is-a-command-submissions-issues.md): the `submissions` table drained by the module that owns it. `ISubmissionDispatcher.ClaimNextAsync` takes the oldest `Queued` attempt — or a `Running` one whose claim is older than `Submissions:Queue:ClaimTimeout` — with `FOR UPDATE SKIP LOCKED`, and starts or reclaims it in one short transaction; `CompleteAsync` and `FailAsync` record only on the claim that still holds the attempt. The claim's identity is the new `submissions.started_at`, set by `Submission.Start(at)`, moved by `Reclaim(at)`, and held to its status by `ck_submissions_started_at_matches_status`. Concurrent claims never hand out an attempt twice, tested with twelve claimers against a real PostgreSQL. No loop drains the queue yet — that lands with the evaluator in #17 | `src/Modules/Ritocode.Modules.Submissions/Queue`, `tests/Ritocode.Modules.Submissions.Tests/Queue/SubmissionDispatcherTests.cs` |
 | [#17](https://github.com/shoraLBRT/ritocode/issues/17) Evaluation orchestrator | Partial | `EvaluationPipeline` in the Evaluations module runs a pipeline's steps in order through `ISandboxRunner` — declared here, implemented by #21 — and the plugin registry. A step that could not complete or could not be run stops it and the attempt did not run to the end; a failed required step stops it and the attempt did; every step after a stop is `Skipped`. A plugin whose report does not match the step or the run fails the evaluation. A step with no plugin or an unplannable `with` is the new `notRunnable` outcome, with a reason. **Deliberately unregistered**, decided with the maintainer: it cannot run before the runner exists, so the `ISubmissionEvaluator` contract and the hosted loop move to #21's box | `src/Modules/Ritocode.Modules.Evaluations/Pipeline`, `src/Modules/Ritocode.Modules.Evaluations/Sandbox/ISandboxRunner.cs`, `tests/Ritocode.Modules.Evaluations.Tests/Pipeline` |
 | [#18](https://github.com/shoraLBRT/ritocode/issues/18) Validator plugin interface | Partial | `IValidatorPlugin` in the Evaluations module: `Plan` reads what to run from a step's `with`, `InterpretAsync` turns the runner's observation into a verdict, and a plugin never starts a process. `SandboxRunResult` is ADR 0006 §5's shape, declared ahead of #21. `ValidatorResult` is built only by `Judged`, `NotCompleted` and `Skipped`, so a run that did not complete is never a pass or a fail, and its checks are a sorted, duplicate-free projection. `ValidatorResults.ToJson` is the canonical `validator_results` JSON — the result schema — with nothing in it that differs between two runs. The registry maps a type to a plugin ordinally and refuses a duplicate or unnameable type. No plugin is registered yet, and the issue's three validators are two in the slice | `src/Modules/Ritocode.Modules.Evaluations/Validators`, `src/Modules/Ritocode.Modules.Evaluations/Sandbox`, `tests/Ritocode.Modules.Evaluations.Tests` |
-| [#35](https://github.com/shoraLBRT/ritocode/issues/35) Backend security baseline | Partial | The ownership guard, as a rule rather than a habit. Every workspace endpoint already found its row with the owner inside the query; `OwnershipRuleTests` now fails when code in the Workspaces or Submissions module reaches an entity either context maps anywhere but an allowance that says where and why — `OwnedWorkspaces`, and the creation in `WorkspaceLifecycle.OpenAsync`. Submissions has no allowance, so its first endpoint meets the rule before it exists. The rule reads compiled IL, with the async state machines and lambda closures attributed to the method that was written, and is proved against six shapes of unguarded read. Rate limiting and input hardening stay out | `tests/Ritocode.Architecture.Tests/OwnershipRuleTests.cs`, `tests/Ritocode.Architecture.Tests/MethodBodyReferences.cs`, `src/Modules/Ritocode.Modules.Workspaces/Persistence/OwnedWorkspaces.cs` |
+| [#35](https://github.com/shoraLBRT/ritocode/issues/35) Backend security baseline | Partial | The ownership guard, as a rule rather than a habit. Every workspace endpoint already found its row with the owner inside the query; `OwnershipRuleTests` now fails when code in the Workspaces or Submissions module reaches an entity either context maps anywhere but an allowance that says where and why — `OwnedWorkspaces`, and the creation in `WorkspaceLifecycle.OpenAsync`. Submissions has no allowance, so its first endpoint meets the rule before it exists. The rule reads compiled IL, with the async state machines and lambda closures attributed to the method that was written, and is proved against six shapes of unguarded read. Since then, a per-user cap on submitting: `POST /api/v1/submissions` counts the caller's attempts inside `Submissions:RateLimit:Window` over the existing `(user_id, created_at DESC)` index and refuses the one past `MaxSubmissions` — ten in ten minutes by default — as `429 submission_rate_limited`, before anything is copied. The cap on concurrent evaluations and input hardening stay out | `tests/Ritocode.Architecture.Tests/OwnershipRuleTests.cs`, `tests/Ritocode.Architecture.Tests/MethodBodyReferences.cs`, `src/Modules/Ritocode.Modules.Workspaces/Persistence/OwnedWorkspaces.cs` |
 
 The frontend now exists as a shell: it renders the layout, resolves its routes, and reads the
 catalog from a running host. It has no identity, no editor and no designed screens — those are
@@ -351,13 +351,14 @@ read back, its files listed, read and — the editable ones — saved, and submi
   **not** depend on the token-format decision — see [Open questions](#open-questions).
   `AllowAnonymous()` on health, meta and the catalog is now load-bearing rather than anticipatory,
   and pinned by tests against a host with no identity.
-- **Ownership is a rule for reads of a user's rows, and the rest of
+- **Ownership is a rule for reads of a user's rows, submitting is capped, and the rest of
   [#35](https://github.com/shoraLBRT/ritocode/issues/35) is not started.** The three reads find a
   workspace through `OwnedWorkspaces.FindOwnedAsync` and a save through `FindOwnedForUpdateAsync`, both
   with the owner inside the query, and `OwnershipRuleTests` fails on any other way into the
-  Workspaces or Submissions sets. What the issue still holds: the **submission rate limit**, which is
-  its own box in stage 4, and the **input hardening** — a request body cap, security headers, a CORS
-  policy for anything but development — which is after the slice. Two edges the rule does not see, on
+  Workspaces or Submissions sets; `POST /api/v1/submissions` refuses the attempt past the per-user cap.
+  What the issue still holds: the **cap on concurrent evaluations**, which belongs in the hosted loop
+  and moved to #21's box with it, and the **input hardening** — a request body cap, security headers, a
+  CORS policy for anything but development — which is after the slice. Two edges the rule does not see, on
   purpose: the non-generic `DbContext.Find(Type, …)` and SQL passed as a string to `ExecuteSql`;
   neither is a way anyone reads a row by accident. And it guards **modules**, not endpoints: a
   Submissions endpoint that asked Workspaces for another user's workspace through a contract would
@@ -399,24 +400,26 @@ that says nothing about authorisation is protected rather than open, a module th
 module's facts asks through a contract in `Shared/Contracts`, a workspace exists as a row and a
 snapshot, every path that reaches a workspace passes one rule, every save of a workspace holds its
 row's lock, and a user's rows in Workspaces or Submissions are reached only where the owner is in the
-query — `OwnershipRuleTests` fails otherwise. **Stage 4 is four boxes of five in**: a workspace can
-be submitted, which freezes its tree and queues an attempt the caller can read back and list; the
-queue can be claimed without handing an attempt out twice, with a result recorded only on the claim
+query — `OwnershipRuleTests` fails otherwise. **Stage 4 is complete**: a workspace can be submitted,
+which freezes its tree and queues an attempt the caller can read back and list, under a per-user cap;
+the queue can be claimed without handing an attempt out twice, with a result recorded only on the claim
 that still holds it; a validator has an interface, a result schema and a registry; and the pipeline
-that runs a version's validators step by step exists and is tested — unwired until the runner, as the
-maintainer decided. **The next box is:**
+that runs a version's validators step by step exists and is tested — unwired until stage 5, as the
+maintainer decided. **The next box is stage 5's first:**
 
-1. **[#35](https://github.com/shoraLBRT/ritocode/issues/35) (partial) — submission rate limit.** A cap
-   on how many submissions one user may make in a window, refused as `429` in the ADR 0003 body —
-   `RateLimited` is already in `ErrorType`. The box's other half, the cap on evaluations running at
-   once, is no longer here: it belongs in the hosted loop, which moved to #21's box with the maintainer
-   on 2026-09-13. Two things to settle inside the box. **The limiter's form**: ASP.NET Core's
-   rate-limiting middleware partitioned by `ICurrentUser` is the obvious one and is in memory — it forgets
-   on restart and counts per API instance — while a count over `submissions (user_id, created_at DESC)`,
-   an index that already exists, survives both and costs one query per submit; stage two's worker
-   extraction and any second API instance favour the second. **The default numbers**, which belong in
-   options validated at startup with the reason written beside them. Only `POST /api/v1/submissions` is
-   limited; reads are not.
+1. **[#21](https://github.com/shoraLBRT/ritocode/issues/21) (partial) — sandbox runner.** Per
+   [ADR 0006](adr/0006-sandbox-execution-model.md): `docker run` with network disabled, cpu, memory and
+   pid limits, a read-only root, a non-root user, a hard timeout owned by the caller, and artifacts
+   captured — the implementation of the `ISandboxRunner` that #17 declared, reporting the four outcomes of
+   §5. The spike in `spikes/sandbox-execution/` is the working reference for every flag. **One question
+   to settle with the maintainer before it starts**, the same one #17 raised one stage on. The plan now
+   says this box also wires the evaluation path — `EvaluationPipeline`, the `ISubmissionEvaluator` contract
+   and the hosted loop — because nothing could run a step before a runner exists. But a runner alone
+   still cannot grade: the loop also needs the image (#22), the compile and test validators (#19) and a
+   score to record (#20), all later in this stage. So the wiring either lands here and fails every attempt
+   `notRunnable` until #19 — the outcome the maintainer ruled out for #17 — or moves to the last of those
+   boxes. The runner itself does not depend on the answer: it is tested against a real Docker daemon, which
+   the test suite already needs, and needs no registration to be proved.
 
 The ADRs written so far are off this list and their obligations are in
 [Open questions](#open-questions) instead. The newest,
@@ -820,6 +823,19 @@ Decisions a future session will hit, and where in the slice each one comes due.
   refuses a user-initiated transaction that is not wrapped in one. A retry after a put that landed
   and a commit that failed answers `412` for a save that is in fact stored — rare, and seen by a
   person as a reload, not as a lost change.
+- **How many submissions a person may make.** *Created by
+  [#35](https://github.com/shoraLBRT/ritocode/issues/35); due at the slice review.* Ten in any ten
+  minutes, by default, from `Submissions:RateLimit`. The number was chosen before anyone has used the
+  slice: it lets a person submit after every change while working a task, and holds a runaway client to
+  one attempt a minute sustained, against the ~8.5 s an evaluation took in the sandbox spike. It is
+  configuration, so changing it is a deployment setting rather than a change — but like the size of the
+  problem set, it is the kind of number that gets kept because nobody said otherwise. Worth looking at
+  with the test's data: how often people actually submit, and whether anyone met the cap. Two edges to
+  carry. **The count is over rows, and a concurrent burst passes the cap** by the size of the burst —
+  accepted, because the cap stops sustained load rather than counting exactly. And **there is no
+  `Retry-After` header**: ADR 0003 names no response header, and the frontend screen of
+  [#29](https://github.com/shoraLBRT/ritocode/issues/29) is the first client that could use one, so it
+  decides the shape.
 - **When the evaluation path is wired.** *Decided by the maintainer on 2026-09-13, while taking
   [#17](https://github.com/shoraLBRT/ritocode/issues/17).* In slice stage 5, with the runner. Stage 4 builds
   the orchestration — `EvaluationPipeline`, tested over a scripted `ISandboxRunner` — and registers none of
@@ -1112,10 +1128,20 @@ other makes every request fail in the browser and succeed from `curl`.
 | <http://localhost:5173/nowhere> | "Page not found" |
 | the same pages with the API stopped | The failure panel, saying the backend cannot be reached |
 
-Current baseline: **581 backend tests, all passing** — 129 shared, 120 problems, 97 API,
-112 workspaces, 52 submissions, 58 evaluations, 13 architecture — and **68 frontend tests**, run
+Current baseline: **591 backend tests, all passing** — 129 shared, 120 problems, 98 API,
+112 workspaces, 61 submissions, 58 evaluations, 13 architecture — and **68 frontend tests**, run
 separately by `npm test`. A session that leaves either number lower than it found it has broken
 something.
+
+The submissions assembly rose from 52 to 61 and the API assembly from 97 to 98 with the submission cap
+of [#35](https://github.com/shoraLBRT/ritocode/issues/35). The lifecycle tests pin the window's boundary
+— an attempt stops counting exactly when the window has passed — and that the cap is per person across
+workspaces; the options tests need no database. The API assembly's one runs on `RateLimitedWorkspaceApi`,
+a fixture of its own with a cap of two, because every request in a host is the same identity and a class
+sharing the default cap would answer depending on which test ran first. **If the full suite fails at once
+across assemblies with `DockerApiException` or Npgsql `EndOfStreamException`, check whether the compose
+containers just restarted** — on 2026-09-14 Docker Desktop restarted its engine twice mid-run, and a
+third run with nothing else in flight passed.
 
 The evaluations assembly rose from 41 to 58 with the orchestration of
 [#17](https://github.com/shoraLBRT/ritocode/issues/17). `EvaluationPipelineTests` runs the pipeline over a

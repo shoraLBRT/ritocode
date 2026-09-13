@@ -17,8 +17,16 @@ namespace Ritocode.Api.Tests.Infrastructure;
 /// development identity, and opening a version it already has a workspace on answers 200 instead of
 /// 201, so a shared version would make each test's answer depend on which ran first.
 /// </remarks>
-public sealed class WorkspaceApi(PostgresTestServer postgres, MinioTestServer minio) : IAsyncLifetime
+/// <para>
+/// Every request is the one development identity, so every fixture of this kind shares one submission
+/// cap per host. The default cap is ten attempts in ten minutes; a class that submits more than that
+/// needs a fixture of its own, as <see cref="RateLimitedWorkspaceApi"/> is for the cap itself.
+/// </para>
+public class WorkspaceApi(PostgresTestServer postgres, MinioTestServer minio) : IAsyncLifetime
 {
+    /// <summary>Configuration this fixture's host starts with on top of the test defaults.</summary>
+    protected virtual IReadOnlyDictionary<string, string?>? Settings => null;
+
     /// <summary>The committed package every version here is published from.</summary>
     public const string Slug = "split-the-invoice";
 
@@ -38,7 +46,7 @@ public sealed class WorkspaceApi(PostgresTestServer postgres, MinioTestServer mi
         var connectionString = await postgres.CreateDatabaseAsync(nameof(WorkspaceApi), cancellationToken);
         var storage = await minio.CreateBucketsAsync(nameof(WorkspaceApi), cancellationToken);
 
-        _host = await TestApiHost.StartAsync(connectionString, developmentIdentityEnabled: true, storage);
+        _host = await TestApiHost.StartAsync(connectionString, developmentIdentityEnabled: true, storage, Settings);
 
         var loaded = ProblemPackageLoader.Load(Path.Combine(AppContext.BaseDirectory, "content", "problems", Slug));
         Assert.True(loaded.IsSuccess, loaded.IsSuccess ? string.Empty : loaded.Error.Message);
@@ -51,6 +59,8 @@ public sealed class WorkspaceApi(PostgresTestServer postgres, MinioTestServer mi
         {
             await _host.DisposeAsync();
         }
+
+        GC.SuppressFinalize(this);
     }
 
     /// <summary>Publishes the package again, through real ingest, as a version nobody has opened.</summary>

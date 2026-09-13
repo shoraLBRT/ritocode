@@ -36,6 +36,12 @@ public sealed class SubmissionsModule : IModule
         services.AddScoped<ISubmissionLifecycle, SubmissionLifecycle>();
         services.AddScoped<IValidator<SubmitRequest>, SubmitRequestValidator>();
 
+        // The per-user cap on submitting (#35).
+        services.AddOptions<SubmissionRateLimitOptions>()
+            .Bind(configuration.GetSection(SubmissionRateLimitOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
         // The queue (#15, ADR 0009). No hosted loop drains it yet: that arrives with the runner in stage 5.
         services.AddOptions<SubmissionQueueOptions>()
             .Bind(configuration.GetSection(SubmissionQueueOptions.SectionName))

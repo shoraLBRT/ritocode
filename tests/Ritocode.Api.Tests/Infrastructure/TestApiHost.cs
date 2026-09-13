@@ -44,10 +44,12 @@ internal sealed class TestApiHost : IAsyncDisposable
     /// objects. Left null, the host keeps the configured default and contacts no store unless a test
     /// makes it.
     /// </param>
+    /// <param name="settings">Configuration a fixture varies on top of the defaults below, such as a smaller cap.</param>
     public static async Task<TestApiHost> StartAsync(
         string connectionString,
         bool developmentIdentityEnabled,
-        ObjectStorageOptions? storage = null)
+        ObjectStorageOptions? storage = null,
+        IReadOnlyDictionary<string, string?>? settings = null)
     {
         var builder = WebApplication.CreateBuilder();
         builder.Environment.EnvironmentName = Environments.Development;
@@ -85,6 +87,11 @@ internal sealed class TestApiHost : IAsyncDisposable
                 [$"{section}:{nameof(ObjectStorageOptions.WorkspaceSnapshotsBucket)}"] = storage.WorkspaceSnapshotsBucket,
                 [$"{section}:{nameof(ObjectStorageOptions.EvaluationArtifactsBucket)}"] = storage.EvaluationArtifactsBucket,
             });
+        }
+
+        if (settings is not null)
+        {
+            builder.Configuration.AddInMemoryCollection(settings);
         }
 
         builder.AddRitocodeApi();

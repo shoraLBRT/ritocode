@@ -1,4 +1,6 @@
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Ritocode.Modules.Submissions.Domain;
 using Ritocode.Modules.Submissions.Persistence;
 using Ritocode.Shared.Contracts.Users;
@@ -17,8 +19,9 @@ namespace Ritocode.Modules.Submissions.Lifecycle;
 /// </para>
 /// <para>
 /// A workspace may have any number of attempts, queued at once or not, and each freezes its own tree.
-/// How many a person may make, and how many may run, is the rate limit of #35 — a separate box, and a
-/// separate reason to refuse — not a rule about the workspace.
+/// What a person may not do is make more than <see cref="SubmissionRateLimitOptions.MaxSubmissions"/>
+/// of them inside the window — a rule about the person, counted across all their workspaces, not about
+/// any one workspace.
 /// </para>
 /// </remarks>
 public sealed class SubmissionLifecycle(
@@ -26,6 +29,7 @@ public sealed class SubmissionLifecycle(
     IUserLookup users,
     IOwnedWorkspaceLookup workspaces,
     IObjectStore objectStore,
+    IOptions<SubmissionRateLimitOptions> rateLimit,
     TimeProvider timeProvider) : ISubmissionLifecycle
 {
     /// <summary>Stable code clients branch on, per ADR 0003.</summary>
@@ -37,6 +41,11 @@ public sealed class SubmissionLifecycle(
     /// branches on one meaning whichever endpoint it asked.
     /// </summary>
     public const string WorkspaceNotFoundCode = "workspace_not_found";
+
+    /// <summary>Stable code clients branch on, per ADR 0003.</summary>
+    public const string RateLimitedCode = "submission_rate_limited";
+
+    private readonly SubmissionRateLimitOptions _rateLimit = rateLimit.Value;
 
     public async Task<Result<SubmissionDetail>> SubmitAsync(
         Guid userId,
@@ -50,6 +59,26 @@ public sealed class SubmissionLifecycle(
             return AppError.Unauthenticated(message: "The authenticated identity does not name a user.");
         }
 
+        var now = timeProvider.GetUtcNow();
+
+        // Before the workspace is looked up and before anything is copied, so a refused attempt costs one
+        // count over the (user_id, created_at DESC) index and nothing in the store. Counted over the rows,
+        // not in memory, so a restart or a second API instance does not reset it. A burst of concurrent
+        // requests can each see room and together pass the cap by the size of the burst; the cap exists to
+        // stop sustained load on the runner, not to be an exact count, so that race is accepted.
+        var windowStart = now - _rateLimit.Window;
+        var recent = await context.OwnedBy(userId)
+            .CountAsync(submission => submission.CreatedAt > windowStart, cancellationToken);
+
+        if (recent >= _rateLimit.MaxSubmissions)
+        {
+            return AppError.RateLimited(
+                RateLimitedCode,
+                string.Create(
+                    CultureInfo.InvariantCulture,
+                    $"At most {_rateLimit.MaxSubmissions} submissions can be made in any {_rateLimit.Window:c}. Try again later."));
+        }
+
         // The owner is inside the question, so another user's workspace is not a row this module ever
         // holds — the same absent answer as a workspace that does not exist.
         var workspace = await workspaces.FindAsync(userId, workspaceId, cancellationToken);
@@ -59,7 +88,7 @@ public sealed class SubmissionLifecycle(
             return AppError.NotFound(WorkspaceNotFoundCode, "No such workspace.");
         }
 
-        var submission = Submission.Create(workspace.Id, userId, timeProvider.GetUtcNow());
+        var submission = Submission.Create(workspace.Id, userId, now);
 
         // Frozen before the row that points at it commits — ingest's ordering, for ingest's reason: a
         // failure in between leaves an object nothing references, keyed by an id nothing will produce

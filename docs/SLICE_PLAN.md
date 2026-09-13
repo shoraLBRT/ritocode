@@ -9,7 +9,7 @@ reductions that are allowed and the list that are forbidden. **Read that ADR bef
 anything here.** This file tracks progress; it holds no decisions.
 
 - **Last updated:** 2026-09-13
-- **Progress:** 22 / 37
+- **Progress:** 23 / 37
 - **Estimate:** 30–34 sessions, six to seven weeks at five sessions a week
 - **Then:** [stage two](#after-the-slice) — the rest of Phase 1
 
@@ -31,7 +31,7 @@ anything here.** This file tracks progress; it holds no decisions.
 | [1 — Foundation](#stage-1--foundation) | 5 | 5 / 5 |
 | [2 — Content and catalog](#stage-2--content-and-catalog) | 5 | 6 / 6 |
 | [3 — Identity and workspace](#stage-3--identity-and-workspace) | 6 | 7 / 7 |
-| [4 — Submission and queue](#stage-4--submission-and-queue) | 5 | 4 / 5 |
+| [4 — Submission and queue](#stage-4--submission-and-queue) | 5 | 5 / 5 |
 | [5 — Execution](#stage-5--execution) | 7 | 0 / 8 |
 | [6 — Product face](#stage-6--product-face) | 6 | 0 / 6 |
 
@@ -402,13 +402,24 @@ The button exists and the state machine is real, but nothing runs yet.
   content and not the attempt, and the report should say so. The issue stays open for materialising the
   frozen tree into a workspace mount, the limits of #36 applied to it, and reading the pipeline from the
   problem version — each needs the runner or its registry to have a shape to meet.
-- [ ] **[#35](https://github.com/shoraLBRT/ritocode/issues/35) (partial) — submission rate limit.**
+- [x] **[#35](https://github.com/shoraLBRT/ritocode/issues/35) (partial) — submission rate limit.**
   A cap on submissions per user per window, plus a cap on how many evaluations run at once. A
   submission starts a container: without a limit, one impatient tester — or one loop in a browser
   tab — is a denial of service against your own test, and an open invitation to use the runner as
   free compute. `RateLimited` is already in `ErrorType` and maps to 429.
   **The concurrency half moved with the loop on 2026-09-13**: a cap on evaluations running at once
   belongs in the hosted loop, which is now #21's, so this box is the per-user cap on submitting.
+  **What landed**: `POST /api/v1/submissions` counts the caller's attempts inside
+  `Submissions:RateLimit:Window` and refuses the one past `MaxSubmissions` — ten in ten minutes by
+  default, validated at startup — as `429 submission_rate_limited` in the ADR 0003 body, before the
+  workspace is looked up or anything is copied. Across all of the caller's workspaces, since the rule is
+  about the person. `AppError.RateLimited` is new. **One decision the plan did not state**: *the count is
+  over the rows, not in memory* — one query on the `(user_id, created_at DESC)` index that already
+  existed, which survives a restart and a second API instance where the rate-limiting middleware would
+  not, at the price of a burst of concurrent submits passing the cap by the size of the burst. No
+  `Retry-After` header: ADR 0003 names no response header, and the first client that needs one decides
+  its shape. The default numbers are a guess before anyone has used the slice — see
+  [Open questions](PROJECT_STATE.md#open-questions).
 
 ## Stage 5 — Execution
 
@@ -424,6 +435,10 @@ forbidden list.
   [ADR 0009](adr/0009-evaluation-is-a-command-submissions-issues.md) declared and answered, and the
   hosted loop in Submissions that claims, evaluates and records — with the cap on concurrent
   evaluations from #35 inside it.
+  **To settle before this box starts**: a runner alone still cannot grade an attempt — the loop also
+  needs the image (#22), the compile and test validators (#19) and a score to record (#20), all later in
+  this stage — so whether the wiring lands here or with the last of those is the same question the
+  maintainer answered for #17, one stage on. See [PROJECT_STATE.md](PROJECT_STATE.md#next-up).
 - [ ] **[#22](https://github.com/shoraLBRT/ritocode/issues/22) (partial) — one runner image**, for
   the chosen language. The image matrix is stage two.
 - [ ] **[#19](https://github.com/shoraLBRT/ritocode/issues/19) (partial) — compile validator.**
