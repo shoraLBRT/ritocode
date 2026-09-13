@@ -8,8 +8,8 @@ Decided in [ADR 0005](adr/0005-vertical-slice-before-breadth.md), which also car
 reductions that are allowed and the list that are forbidden. **Read that ADR before ticking
 anything here.** This file tracks progress; it holds no decisions.
 
-- **Last updated:** 2026-09-12
-- **Progress:** 12 / 37
+- **Last updated:** 2026-09-13
+- **Progress:** 13 / 37
 - **Estimate:** 30–34 sessions, six to seven weeks at five sessions a week
 - **Then:** [stage two](#after-the-slice) — the rest of Phase 1
 
@@ -30,7 +30,7 @@ anything here.** This file tracks progress; it holds no decisions.
 | --- | --- | --- |
 | [1 — Foundation](#stage-1--foundation) | 5 | 5 / 5 |
 | [2 — Content and catalog](#stage-2--content-and-catalog) | 5 | 6 / 6 |
-| [3 — Identity and workspace](#stage-3--identity-and-workspace) | 6 | 1 / 7 |
+| [3 — Identity and workspace](#stage-3--identity-and-workspace) | 6 | 2 / 7 |
 | [4 — Submission and queue](#stage-4--submission-and-queue) | 5 | 0 / 5 |
 | [5 — Execution](#stage-5--execution) | 7 | 0 / 8 |
 | [6 — Product face](#stage-6--product-face) | 6 | 0 / 6 |
@@ -192,14 +192,26 @@ first time.
   in stage two as planned; `/me` turns out not to depend on the token-format decision, which is the
   one thing a stage-two session should not assume. See
   [Open questions](PROJECT_STATE.md#open-questions).
-- [ ] **Cross-module contract in `Ritocode.Shared`.** Per
+- [x] **Cross-module contract in `Ritocode.Shared`.** Per
   [ADR 0007](adr/0007-cross-module-contract-form.md): the Workspaces module asks whether a user and
   a problem version exist before creating a row.
   [ADR 0004](adr/0004-persistence-and-migrations.md) requires this — there is no foreign key across
-  schemas to do it for us. Two interfaces, `IUserLookup` and `IProblemVersionLookup`, returning the
-  row's summary or `null`. The three architecture-test assertions in ADR 0007 §7 ship **in this
-  PR**, not after: assertion 3 is what turns a missing DI registration back into a test failure
-  instead of a startup failure.
+  schemas to do it for us. `IUserLookup` and `IProblemVersionLookup` in `Shared/Contracts`, each
+  answering `FindAsync(id, ct)` with a flat `sealed record` or `null`, implemented `internal` by the
+  module that owns the row and registered in that module's `RegisterServices`. The three ADR 0007 §7
+  assertions shipped with them, in `CrossModuleContractTests`, plus a fourth that fails if the
+  contract namespace moves and leaves the other three passing over nothing. Assertion 3 reads the
+  host's real composition and requires the implementation to live in the module the contract's
+  namespace names — **stricter than the ADR's wording**, which only asks for *a* module, and the
+  executable form of its §5. Proved to bite: with `IUserLookup`'s registration removed it fails with
+  `IUserLookup is registered 0 times`.
+  **One field beyond the ADR's illustrative record**: `ProblemVersionSummary` carries
+  `SnapshotReference`, because #10 materialises the bundle and
+  [STORAGE_LAYOUT.md](STORAGE_LAYOUT.md) forbids rebuilding a key from an id. The lookup reports a
+  draft as a draft — `PublishedAt` is `null` — and reports the version asked for rather than the
+  problem's latest; whether a workspace may open on a draft is #10's rule, not Problems'. No batch
+  method: nothing lists yet, and ADR 0007 §6 adds one with the first consumer that does. Closes no
+  issue, as planned.
 - [ ] **[#10](https://github.com/shoraLBRT/ritocode/issues/10) — create workspace from a problem
   version.** Materialises the bundle into a workspace snapshot. Never from a problem, always from a
   version.

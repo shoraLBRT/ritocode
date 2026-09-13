@@ -4,7 +4,7 @@
 what to build next, and how to verify it. Read it before touching anything; update it before
 finishing.
 
-- **Last updated:** 2026-09-12
+- **Last updated:** 2026-09-13
 - **Current phase:** Phase 1 (MVP) — see `docs/MVP_SCOPE.md`
 - **Current milestone:** the vertical slice — [`docs/SLICE_PLAN.md`](SLICE_PLAN.md), decided in
   [ADR 0005](adr/0005-vertical-slice-before-breadth.md). Phase 1 now ships in two stages; the slice
@@ -97,18 +97,22 @@ src/
                               Storage/ holds the object storage client and the key layout as code
                               Identity/ holds the identity seam: ICurrentUser, the claim it reads
                               and the development identity settings two modules share
+                              Contracts/ holds the cross-module contracts of ADR 0007, namespaced
+                              by the module that answers them: Users/IUserLookup and
+                              Problems/IProblemVersionLookup, with their summary records
   Modules/Ritocode.Modules.*  one project per module: domain, DbContext, migrations
                               Problems also owns Packaging/ (the problem package format),
                               Ingest/ (package -> published version + bundle) and Catalog/
                               Auth owns the authentication scheme; Users owns the row behind the
                               development identity that scheme asserts
+                              Contracts/ in a module is its implementation of a Shared contract
 tests/
   Ritocode.TestSupport/         integration test harnesses: a PostgreSQL container per test
                                 assembly with a migrated database per test class, and a MinIO
                                 container with a bucket set per test class
   Ritocode.Shared.Tests/        the shared primitives, and the storage client against a real MinIO
   Ritocode.Api.Tests/           in-memory host tests over the real composition root
-  Ritocode.Architecture.Tests/  module boundary rules, executable
+  Ritocode.Architecture.Tests/  module boundary rules and the ADR 0007 contract rules, executable
   Ritocode.Modules.Problems.Tests/  the problem package format, the reference package, and
                                     ingest against a real PostgreSQL and MinIO
 spikes/
@@ -149,7 +153,8 @@ as text rather than rendered Markdown, which is [#27](https://github.com/shoraLB
 Nothing else from the backlog is implemented. Five of the seven modules own a schema and a
 `DbContext` and expose neither an endpoint nor a service — the boundary and the storage are in
 place, the behaviour is not. Two are now awake in part: **Auth** owns the authentication scheme and
-no endpoints, and **Users** writes exactly one row — the development identity's — and reads none.
+no endpoints, and **Users** writes exactly one row — the development identity's — and answers
+`IUserLookup`, which nothing calls yet.
 **Problems is still the only module that is fully
 alive**: it reads and writes its own schema, serves two endpoints, and is the first caller of
 `IObjectStore`. Everything downstream of it is still empty — nothing creates a workspace from a
@@ -220,9 +225,14 @@ and it is the first code that will read a bundle back.
   [#42](https://github.com/shoraLBRT/ritocode/issues/42).
 - **Only Problems and Users write rows**, and Users writes exactly one: the development identity's,
   on startup, and never again — the seeder finds the row on a restart rather than adding a second.
-  Nothing reads `users.users` yet; the first reader is `IUserLookup` in the next box. The other five
-  own migrated tables that nothing touches, and the next to change is Workspaces, in
-  [#10](https://github.com/shoraLBRT/ritocode/issues/10).
+  `IUserLookup` now reads `users.users` and `IProblemVersionLookup` reads `problem_versions`, and
+  neither has a caller outside tests: the first is
+  [#10](https://github.com/shoraLBRT/ritocode/issues/10). The other five modules own migrated tables
+  that nothing touches, and the next to change is Workspaces, in that same issue.
+- **The contracts have single-id methods only.** ADR 0007 §6 names `FindManyAsync` as the answer to
+  an N+1 and keeps the single-id method beside it. No consumer lists anything yet, so the batch form
+  waits for the first one that does — most likely a submission history screen in stage 6 — rather
+  than being guessed at here.
 - **Authentication is a seam, not a feature.** The host authenticates — a real scheme, a fallback
   policy, a 401 in the unified error body — and the only identity it can assert is the seeded
   development one that ADR 0005 allows in place of a login. Enabled, it authenticates **every**
@@ -255,7 +265,10 @@ and it is the first code that will read a bundle back.
   it waits for the first endpoint that cannot serve a request without an object.
 - **Cross-module references carry no foreign key**, by design — see
   [ADR 0004](adr/0004-persistence-and-migrations.md). Whichever module creates such a row is
-  responsible for validating the reference first.
+  responsible for validating the reference first, and now has the contracts to do it with for the
+  two Workspaces references. The other three in [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) —
+  `linked_accounts.user_id`, and `submissions.workspace_id` and `.user_id` — get theirs when their
+  writers arrive; `submissions.user_id` can reuse `IUserLookup` only if it asks the identical question.
 
 ---
 
@@ -264,26 +277,26 @@ and it is the first code that will read a bundle back.
 The slice plan is the ordered list now: **[`docs/SLICE_PLAN.md`](SLICE_PLAN.md)**. Take the first
 unticked box. The stages there are ordered so that each depends only on stages above it.
 
-**Stages 1 and 2 are complete, and stage 3 has started** with the identity seam. What that box left
-in place for everything after it: every endpoint takes its user from `ICurrentUser`, and one that
-says nothing about authorisation is protected rather than open. **The next box is:**
+**Stages 1 and 2 are complete, and stage 3 is two boxes in**: the identity seam, and the
+cross-module contracts. What those left in place for everything after them: every endpoint takes
+its user from `ICurrentUser`, one that says nothing about authorisation is protected rather than
+open, and a module that stores a reference into another module's schema validates it through a
+contract in `Shared/Contracts` whose shape `CrossModuleContractTests` enforces. **The next box is:**
 
-1. **Cross-module contract in `Ritocode.Shared`.** Per
-   [ADR 0007](adr/0007-cross-module-contract-form.md): `IUserLookup` and `IProblemVersionLookup`,
-   thin and read-only, each returning the row's summary or `null`. The three architecture-test
-   assertions in ADR 0007 §7 ship **in that PR**, not after — assertion 3 is what turns a missing DI
-   registration back into a test failure instead of a startup failure. Two things it now inherits:
-   the development identity's row is the first user `IUserLookup` can be pointed at, and
-   `Shared/Identity` is deliberately **not** under `Shared/Contracts` — `ICurrentUser` is ambient
-   request state with no owning module, so assertion 3 must not sweep it up.
-
-Then [#10](https://github.com/shoraLBRT/ritocode/issues/10) — the first code that reads a problem
-bundle back out of object storage, and the first endpoint the fallback policy actually protects.
+1. **[#10](https://github.com/shoraLBRT/ritocode/issues/10) — create workspace from a problem
+   version.** The first consumer of both contracts, the first code that reads a problem bundle back
+   out of object storage, and the first endpoint the fallback policy actually protects. What it
+   inherits: `IProblemVersionLookup` hands over `SnapshotReference`, so the bundle key is read from
+   the row rather than rebuilt; a draft comes back with `PublishedAt` null, and **refusing it is
+   #10's rule to write and test** under an error code Workspaces chooses; the seeded development
+   identity is a user `IUserLookup` finds. `workspaces.snapshot_reference` is still a `string` and is
+   meant to become a `StorageReference` with its first writer — [#12](https://github.com/shoraLBRT/ritocode/issues/12)
+   per the open question, though #10 writes it first.
 
 The three ADRs written so far are off this list and their obligations are in
 [Open questions](#open-questions) instead. Briefly: submission reports gain somewhere to carry a
-timeout or a resource exhaustion, #22 gains a runner registry, and #10 gains two lookup interfaces
-plus the three architecture-test assertions that keep them honest.
+timeout or a resource exhaustion, and #22 gains a runner registry. ADR 0007's obligation — two lookup
+interfaces and the assertions that keep them honest — is now met.
 
 [#26](https://github.com/shoraLBRT/ritocode/issues/26) is off this list and stays open: the shell
 and the API client landed, and the protected routes its acceptance criterion asks for now have their
@@ -411,8 +424,12 @@ Decisions a future session will hit, and where in the slice each one comes due.
 - **`/me` is the cheapest half of [#6](https://github.com/shoraLBRT/ritocode/issues/6) left, and it
   is not blocked by the question above.** *Found while building the seam; deferred to stage two by
   the plan.* `SLICE_PLAN.md` groups `/me` with login and session issuance, which genuinely wait for
-  the token decision — `/me` does not: it reads `ICurrentUser` and returns the row `IUserLookup` will
-  already fetch from the next box. It stayed out because the plan said so and nothing in the slice
+  the token decision — `/me` does not: it reads `ICurrentUser` and returns a user row. One
+  correction to what this entry used to say: it does **not** simply reuse `IUserLookup`. That
+  contract answers "does this user exist" with an id and a username; `/me` wants an email and more,
+  and ADR 0007 §1 gives a different question its own interface rather than a wider one. `/me` is
+  also inside the Users module's own boundary if Users serves it, in which case it needs no contract
+  at all. It stayed out because the plan said so and nothing in the slice
   needs it, not because it is hard. The cost of it being out is small but real: **no endpoint in the
   running host requires authentication yet**, so the fallback policy and the 401 body are exercised
   only by tests over a probe endpoint until
@@ -572,8 +589,8 @@ Decisions a future session will hit, and where in the slice each one comes due.
   trigger or a check constraint actually did cannot see it inside a transaction the harness rolls
   back. Consequence: `dotnet test` now needs a Docker daemon, and no longer needs `dev-up`.
 - **Who validates cross-module references, and how?** *Settled by
-  [ADR 0007](adr/0007-cross-module-contract-form.md), due in stage 3 with
-  [#10](https://github.com/shoraLBRT/ritocode/issues/10).*
+  [ADR 0007](adr/0007-cross-module-contract-form.md); the first two contracts exist, and their first
+  caller is [#10](https://github.com/shoraLBRT/ritocode/issues/10).*
   [ADR 0004](adr/0004-persistence-and-migrations.md) says the module creating the row does; ADR 0002
   said the contract lives in `Ritocode.Shared`; ADR 0007 fixes its shape. Thin read-interfaces, one
   per consumer need, taken as constructor parameters — so a cross-module dependency is visible in a
@@ -585,7 +602,16 @@ Decisions a future session will hit, and where in the slice each one comes due.
   referential integrity on purpose; a per-row call in a list endpoint is an N+1, and the fix is a
   batch method on the contract, never a cross-schema join; and routing through an interface turns a
   missing DI registration into a startup failure, which is what ADR 0007 §7's third assertion exists
-  to move back into `dotnet test`.
+  to move back into `dotnet test`. **Two things building the first contracts settled that the ADR
+  left open.** A summary record may carry more than the ADR's illustrative fields when the consumer
+  needs them — `ProblemVersionSummary.SnapshotReference` exists because a consumer outside Problems
+  could otherwise only reach the bundle by rebuilding its key, which
+  [STORAGE_LAYOUT.md](STORAGE_LAYOUT.md) forbids; the discipline that stops this becoming a shared
+  entity is that each added field names the consumer need it serves. And the contract's owner is
+  enforced, not just its existence: `CrossModuleContractTests` requires `Contracts.Users.*` to be
+  implemented in `Ritocode.Modules.Users`, so a contract declared directly under
+  `Ritocode.Shared.Contracts` with no owner segment fails. Implementations are `internal` and
+  registered by implementation type, never by factory — a factory hides the type the test reads.
 - **How does one module *change* another's state?** *Open, and outside the slice.* ADR 0007 is
   read-only by decision, so there is no mechanism and no need for one yet. The first real case is
   user deletion in [#43](https://github.com/shoraLBRT/ritocode/issues/43), which
@@ -729,9 +755,16 @@ other makes every request fail in the browser and succeed from `curl`.
 | <http://localhost:5173/nowhere> | "Page not found" |
 | the same pages with the API stopped | The failure panel, saying the backend cannot be reached |
 
-Current baseline: **275 backend tests, all passing** — 125 shared, 109 problems, 36 API,
-5 architecture — and **55 frontend tests**, run separately by `npm test`. A session that leaves
+Current baseline: **285 backend tests, all passing** — 125 shared, 113 problems, 39 API,
+9 architecture — and **55 frontend tests**, run separately by `npm test`. A session that leaves
 either number lower than it found it has broken something.
+
+The architecture assembly rose from 5 to 9, the problems assembly from 109 to 113 and the API
+assembly from 36 to 39 with the cross-module contracts. The architecture tests compose the host's
+real service collection to check registrations and never build a provider, so they still need no
+Docker; resolving a contract for real — lifetimes, dependencies, the query — is the API assembly's
+`ContractResolutionTests`, which is where a registration that compiles and cannot be constructed
+shows up.
 
 The shared assembly rose from 110 to 125 and the API assembly from 25 to 36 with the identity seam
 of [#6](https://github.com/shoraLBRT/ritocode/issues/6). The API assembly now boots **two** hosts: the

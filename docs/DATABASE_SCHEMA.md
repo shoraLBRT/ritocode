@@ -132,6 +132,10 @@ references are:
 | `submissions.submissions.workspace_id` | `workspaces.workspaces.id` | Submissions module on create |
 | `submissions.submissions.user_id` | `users.users.id` | Submissions module on create |
 
+"Validated by" means through a contract in `Ritocode.Shared/Contracts`, never by opening the owning
+module's `DbContext` — [ADR 0007](adr/0007-cross-module-contract-form.md). `IUserLookup` and
+`IProblemVersionLookup` exist; the rest arrive with the module that writes the column.
+
 What this costs, and what pays for it:
 
 - Orphan rows become possible if a delete races a write. Cleanup is

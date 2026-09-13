@@ -4,8 +4,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Ritocode.Modules.Problems.Catalog;
+using Ritocode.Modules.Problems.Contracts;
 using Ritocode.Modules.Problems.Ingest;
 using Ritocode.Modules.Problems.Persistence;
+using Ritocode.Shared.Contracts.Problems;
 using Ritocode.Shared.Modules;
 using Ritocode.Shared.Persistence;
 
@@ -39,6 +41,9 @@ public sealed class ProblemsModule : IModule
 
         services.AddScoped<IProblemCatalog, ProblemCatalog>();
         services.AddScoped<IProblemIngest, ProblemIngestService>();
+
+        // The contract other modules read a problem version through (ADR 0007).
+        services.AddScoped<IProblemVersionLookup, ProblemVersionLookup>();
 
         // TryAdd: the clock is host infrastructure that any module may want, and the first module
         // to ask for it should not be the one that decides nobody else may register it.

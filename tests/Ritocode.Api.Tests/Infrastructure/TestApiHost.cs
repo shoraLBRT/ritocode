@@ -35,6 +35,9 @@ internal sealed class TestApiHost : IAsyncDisposable
 
     public HttpClient Client { get; }
 
+    /// <summary>The composed container, for tests that resolve a service the way an endpoint would.</summary>
+    public IServiceProvider Services => _app.Services;
+
     public static async Task<TestApiHost> StartAsync(string connectionString, bool developmentIdentityEnabled)
     {
         var builder = WebApplication.CreateBuilder();
