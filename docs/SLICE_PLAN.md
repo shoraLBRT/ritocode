@@ -9,7 +9,7 @@ reductions that are allowed and the list that are forbidden. **Read that ADR bef
 anything here.** This file tracks progress; it holds no decisions.
 
 - **Last updated:** 2026-09-13
-- **Progress:** 17 / 37
+- **Progress:** 18 / 37
 - **Estimate:** 30–34 sessions, six to seven weeks at five sessions a week
 - **Then:** [stage two](#after-the-slice) — the rest of Phase 1
 
@@ -30,7 +30,7 @@ anything here.** This file tracks progress; it holds no decisions.
 | --- | --- | --- |
 | [1 — Foundation](#stage-1--foundation) | 5 | 5 / 5 |
 | [2 — Content and catalog](#stage-2--content-and-catalog) | 5 | 6 / 6 |
-| [3 — Identity and workspace](#stage-3--identity-and-workspace) | 6 | 6 / 7 |
+| [3 — Identity and workspace](#stage-3--identity-and-workspace) | 6 | 7 / 7 |
 | [4 — Submission and queue](#stage-4--submission-and-queue) | 5 | 0 / 5 |
 | [5 — Execution](#stage-5--execution) | 7 | 0 / 8 |
 | [6 — Product face](#stage-6--product-face) | 6 | 0 / 6 |
@@ -283,12 +283,26 @@ first time.
   the limits applied again to a submitted tree, which arrives with
   [#14](https://github.com/shoraLBRT/ritocode/issues/14); a request-body cap below the server's
   default; and a rule that a starter file is UTF-8, which belongs to the package loader.
-- [ ] **[#35](https://github.com/shoraLBRT/ritocode/issues/35) (partial) — ownership guards.**
+- [x] **[#35](https://github.com/shoraLBRT/ritocode/issues/35) (partial) — ownership guards.**
   Every workspace and submission endpoint checks that the resource belongs to the caller, returning
   404 rather than 403 per [ADR 0003](adr/0003-api-conventions.md). Without this the identity seam
   is decorative: `user_id` comes from `ICurrentUser` exactly as the ADR requires, and anyone can
   still read and write anyone else's workspace by id. Not hardening — the authorisation half of
   having authentication at all.
+  **What landed**: the five workspace endpoints already checked, each through a lookup with the owner
+  inside the query and each tested against another user's workspace; this box made that a **rule**.
+  `OwnershipRuleTests` reads the IL of the Workspaces and Submissions modules and fails when any code
+  there reaches an entity either context maps — the set property, `Set<T>`, `Find<T>`, `Add<T>`,
+  `Entry<T>`, `Database.SqlQuery<T>` — outside an allowance that names where and why. Two allowances
+  exist: `OwnedWorkspaces`, and the creation in `WorkspaceLifecycle.OpenAsync`. Submissions has none,
+  so its first endpoint in [#14](https://github.com/shoraLBRT/ritocode/issues/14) meets the rule
+  before it can be written without it. `FindOwnedAsync` now takes the context rather than a query, so
+  no caller holds the set at all. **One decision the plan left to this box**: a test rather than an EF
+  global query filter keyed on `ICurrentUser`, because the queue worker of
+  [#15](https://github.com/shoraLBRT/ritocode/issues/15) serves no user and every test writing another
+  user's row would have to switch the filter off. The reader is proved against a fixture of six ways
+  into a set, and against a real violation added to the module and removed. The issue stays open for
+  the submission rate limit — its own box in stage 4 — and the input hardening after the slice.
 
 ## Stage 4 — Submission and queue
 

@@ -4,6 +4,12 @@ using Ritocode.Modules.Workspaces.Domain;
 namespace Ritocode.Modules.Workspaces.Persistence;
 
 /// <summary>How every read in this module finds a workspace: by id and by owner, in one query.</summary>
+/// <remarks>
+/// Both lookups take the context rather than a query over it, so a caller never holds the workspace
+/// set and cannot compose a lookup of its own onto it. This class and the creation in
+/// <c>WorkspaceLifecycle.OpenAsync</c> are the only code in the module allowed to reach that set;
+/// <c>OwnershipRuleTests</c> in the architecture tests fails on any other.
+/// </remarks>
 internal static class OwnedWorkspaces
 {
     /// <summary>
@@ -16,11 +22,11 @@ internal static class OwnedWorkspaces
     /// and a 403 would confirm the id exists (ADR 0003).
     /// </remarks>
     public static Task<Workspace?> FindOwnedAsync(
-        this IQueryable<Workspace> workspaces,
+        this WorkspacesDbContext context,
         Guid userId,
         Guid workspaceId,
         CancellationToken cancellationToken) =>
-        workspaces
+        context.Workspaces
             .AsNoTracking()
             .FirstOrDefaultAsync(
                 candidate => candidate.Id == workspaceId && candidate.UserId == userId,

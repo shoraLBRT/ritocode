@@ -97,7 +97,7 @@ public sealed class WorkspaceLifecycle(
         Guid workspaceId,
         CancellationToken cancellationToken = default)
     {
-        var workspace = await context.Workspaces.FindOwnedAsync(userId, workspaceId, cancellationToken);
+        var workspace = await context.FindOwnedAsync(userId, workspaceId, cancellationToken);
 
         return workspace is null ? WorkspaceNotFound() : Detail(workspace);
     }

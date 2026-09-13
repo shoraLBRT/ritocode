@@ -118,7 +118,9 @@ tests/
                                 container with a bucket set per test class
   Ritocode.Shared.Tests/        the shared primitives, and the storage client against a real MinIO
   Ritocode.Api.Tests/           in-memory host tests over the real composition root
-  Ritocode.Architecture.Tests/  module boundary rules and the ADR 0007 contract rules, executable
+  Ritocode.Architecture.Tests/  module boundary rules, the ADR 0007 contract rules, and the ownership
+                                rule — a user's rows reached only where the owner is in the query,
+                                read from the modules' IL — executable
   Ritocode.Modules.Problems.Tests/  the problem package format, the reference package, and
                                     ingest against a real PostgreSQL and MinIO
   Ritocode.Modules.Workspaces.Tests/  the starter tree a bundle becomes, the path rule and the
@@ -158,6 +160,7 @@ docs/
 | [#11](https://github.com/shoraLBRT/ritocode/issues/11) Workspace file tree and file read | Done | `GET /api/v1/workspaces/{id}/files` answers every file with its size in bytes, ordered by path, as one object rather than a page; `GET /api/v1/workspaces/{id}/files/content?path=` answers one file as UTF-8 text, byte-order mark and line endings intact. The path is a query value so it reaches the API verbatim, and a path that could leave the tree is refused as `400` on `errors.path` before anything is looked up — never normalised. A path the tree does not hold is `workspace_file_not_found`, a file that is not UTF-8 is `409 workspace_file_not_text`, and another user's workspace is `workspace_not_found` on both. `WorkspacePath` is the one path rule, shared with the starter tree; `SnapshotArchive` reads a snapshot back as untrusted; `OwnedWorkspaces.FindOwnedAsync` is the owner-in-the-query lookup all three workspace reads now share. The frontend API client can open a workspace, list its files and read one | `src/Modules/Ritocode.Modules.Workspaces/Files`, `tests/Ritocode.Modules.Workspaces.Tests/Files`, `tests/Ritocode.Api.Tests/Endpoints/WorkspaceFileEndpointsTests.cs`, `frontend/src/api/endpoints.ts` |
 | [#12](https://github.com/shoraLBRT/ritocode/issues/12) Workspace file write and draft persistence | Done | `PUT /api/v1/workspaces/{id}/files/content?path=` replaces an editable file's text, addressed exactly as a read is, and answers its new `sizeBytes` and `revision`; the next read — and the next open of the same version — returns the change. **Revision protection** is a per-file content hash: a read reports `revision`, the SHA-256 of the file's bytes, a save must send it back as `baseRevision`, and a file that moved on since answers `412 workspace_file_changed` rather than being overwritten. Saves to one workspace are serialised by a `FOR UPDATE` lock on its row, held from before the snapshot is read until `updated_at` commits, so two saves — even of different files — cannot drop each other's change. What a version allows reaches Workspaces through a third contract, `IWorkspaceAllowanceLookup`: ingest now stores `problem_versions.editable_files`, the manifest globs resolved against the starter tree, and the three limits. A file the version does not list is `403 workspace_file_read_only`, the tree marks each file `editable`, and saving exactly what is stored writes nothing. The frontend API client gained `saveWorkspaceFile` | `src/Modules/Ritocode.Modules.Workspaces/Files`, `src/Ritocode.Shared/Contracts/Problems/IWorkspaceAllowanceLookup.cs`, `src/Modules/Ritocode.Modules.Problems/Contracts/WorkspaceAllowanceLookup.cs`, `tests/Ritocode.Modules.Workspaces.Tests/Files/WorkspaceFileWriteTests.cs`, `tests/Ritocode.Api.Tests/Endpoints/WorkspaceFileWriteEndpointsTests.cs` |
 | [#36](https://github.com/shoraLBRT/ritocode/issues/36) Workspace file handling and sandbox boundaries | Partial | The half a save needs, shipped in the same PR as #12. A path from a request is refused, never normalised, before anything is looked up — the #11 rule, now in front of a write. A save can only replace a file the snapshot already holds and the version lists as editable, so it can neither leave the tree nor add a link: the snapshot is rewritten as regular files only, and a snapshot holding anything else fails the save instead of being saved back clean. `max_file_bytes` is checked on the UTF-8 bytes (`400`, `errors.content`), `max_total_bytes` and `max_files` on the tree as it would be written (`409 workspace_limit_exceeded`), and text with no UTF-8 form is refused rather than stored as a replacement character | `src/Modules/Ritocode.Modules.Workspaces/Files/WorkspaceFiles.cs`, `src/Modules/Ritocode.Modules.Workspaces/Files/SnapshotArchive.cs` |
+| [#35](https://github.com/shoraLBRT/ritocode/issues/35) Backend security baseline | Partial | The ownership guard, as a rule rather than a habit. Every workspace endpoint already found its row with the owner inside the query; `OwnershipRuleTests` now fails when code in the Workspaces or Submissions module reaches an entity either context maps anywhere but an allowance that says where and why — `OwnedWorkspaces`, and the creation in `WorkspaceLifecycle.OpenAsync`. Submissions has no allowance, so its first endpoint meets the rule before it exists. The rule reads compiled IL, with the async state machines and lambda closures attributed to the method that was written, and is proved against six shapes of unguarded read. Rate limiting and input hardening stay out | `tests/Ritocode.Architecture.Tests/OwnershipRuleTests.cs`, `tests/Ritocode.Architecture.Tests/MethodBodyReferences.cs`, `src/Modules/Ritocode.Modules.Workspaces/Persistence/OwnedWorkspaces.cs` |
 
 The frontend now exists as a shell: it renders the layout, resolves its routes, and reads the
 catalog from a running host. It has no identity, no editor and no designed screens — those are
@@ -279,15 +282,17 @@ stage 4.
   **not** depend on the token-format decision — see [Open questions](#open-questions).
   `AllowAnonymous()` on health, meta and the catalog is now load-bearing rather than anticipatory,
   and pinned by tests against a host with no identity.
-- **Ownership is checked wherever a workspace is read or saved, through two lookups, and is not yet
-  a rule.** The three reads — the workspace, its tree, one file — find the row through
-  `OwnedWorkspaces.FindOwnedAsync`, and a save through its locking twin `FindOwnedForUpdateAsync`.
-  Both put the owner inside the query, so another user's workspace is the same absent row as a
-  missing one and the store is never asked for its snapshot. ADR 0005 forbids serving one without
-  that check, so none of them could wait. What is still
-  [#35](https://github.com/shoraLBRT/ritocode/issues/35)'s box — now the next one — is making it a
-  rule rather than two helpers each endpoint remembers to call: nothing yet fails when a new
-  workspace or submission endpoint reads its row some other way.
+- **Ownership is a rule for reads of a user's rows, and the rest of
+  [#35](https://github.com/shoraLBRT/ritocode/issues/35) is not started.** The three reads find a
+  workspace through `OwnedWorkspaces.FindOwnedAsync` and a save through `FindOwnedForUpdateAsync`, both
+  with the owner inside the query, and `OwnershipRuleTests` fails on any other way into the
+  Workspaces or Submissions sets. What the issue still holds: the **submission rate limit**, which is
+  its own box in stage 4, and the **input hardening** — a request body cap, security headers, a CORS
+  policy for anything but development — which is after the slice. Two edges the rule does not see, on
+  purpose: the non-generic `DbContext.Find(Type, …)` and SQL passed as a string to `ExecuteSql`;
+  neither is a way anyone reads a row by accident. And it guards **modules**, not endpoints: a
+  Submissions endpoint that asked Workspaces for another user's workspace through a contract would
+  pass it, which is why a contract answering a workspace would have to take the owner too.
 - **The object storage client puts and gets, and does nothing else.**
   [#5](https://github.com/shoraLBRT/ritocode/issues/5) stays open for the three operations left out,
   each because its first real caller decides its shape:
@@ -317,26 +322,26 @@ stage 4.
 The slice plan is the ordered list now: **[`docs/SLICE_PLAN.md`](SLICE_PLAN.md)**. Take the first
 unticked box. The stages there are ordered so that each depends only on stages above it.
 
-**Stages 1 and 2 are complete, and stage 3 is six boxes of seven in**: the identity seam, the
-cross-module contracts, opening a workspace, reading its files, and saving them within the version's
-limits. What those left in place for everything after them: every endpoint takes its user from
-`ICurrentUser`, one that says nothing about authorisation is protected rather than open, a module
-that needs another module's facts asks through a contract in `Shared/Contracts`, a workspace exists
-as a row and a snapshot, every path that reaches a workspace passes one rule, and every save of a
-workspace holds its row's lock. **The next box is:**
+**Stages 1, 2 and 3 are complete**: the identity seam, the cross-module contracts, opening a
+workspace, reading its files, saving them within the version's limits, and the ownership rule. What
+those left in place for everything after them: every endpoint takes its user from `ICurrentUser`, one
+that says nothing about authorisation is protected rather than open, a module that needs another
+module's facts asks through a contract in `Shared/Contracts`, a workspace exists as a row and a
+snapshot, every path that reaches a workspace passes one rule, every save of a workspace holds its
+row's lock, and a user's rows in Workspaces or Submissions are reached only where the owner is in the
+query — `OwnershipRuleTests` fails otherwise. **The next box is stage 4's first:**
 
-1. **[#35](https://github.com/shoraLBRT/ritocode/issues/35) (partial) — ownership guards.** Every
-   workspace and submission endpoint checks that the resource belongs to the caller, answering 404
-   rather than 403. Every workspace endpoint that exists already does — all five, through
-   `OwnedWorkspaces.FindOwnedAsync` or `FindOwnedForUpdateAsync`, each tested against another user's
-   workspace — so what the box actually has to add is the **rule**: something that fails when a new
-   endpoint reads a `Workspace` without the owner in the query. What it has to **decide** is the
-   form. An architecture or source test that allows `WorkspacesDbContext.Workspaces` only inside
-   `OwnedWorkspaces` and `WorkspaceLifecycle.OpenAsync` — which already queries by owner and version —
-   is cheap and says exactly what it checks. An EF global query filter keyed on the current user is
-   automatic, and puts `ICurrentUser` inside a `DbContext`, where the tests that write another user's
-   row directly would have to switch it off. Submissions has no endpoint yet, so its half is a rule
-   written ahead of its first caller.
+1. **[#14](https://github.com/shoraLBRT/ritocode/issues/14) — submission lifecycle and attempt
+   history.** `Queued` → `Running` → `Completed` / `Failed`, with
+   `ck_submissions_completed_at_matches_status` holding. The first Submissions endpoint, and the first
+   code to meet the ownership rule with no allowance to lean on: its lookups need the owner inside the
+   query, in a Submissions twin of `OwnedWorkspaces`, and an allowance for anything that honestly does
+   not — the worker of #15 is the first. Two entries under [Open questions](#open-questions) are due
+   with it: **the evaluated tree has nowhere to be recorded**, which asks for a reference column on
+   `submissions` while the table is empty, and **where a report carries a timeout or a resource
+   exhaustion**. The freeze at enqueue is the first caller of the server-side copy
+   [#5](https://github.com/shoraLBRT/ritocode/issues/5) deferred, and the submitted tree is where
+   [#36](https://github.com/shoraLBRT/ritocode/issues/36)'s limits apply a second time.
 
 The three ADRs written so far are off this list and their obligations are in
 [Open questions](#open-questions) instead. Briefly: submission reports gain somewhere to carry a
@@ -719,6 +724,25 @@ Decisions a future session will hit, and where in the slice each one comes due.
   refuses a user-initiated transaction that is not wrapped in one. A retry after a put that landed
   and a commit that failed answers `412` for a save that is in fact stored — rare, and seen by a
   person as a reload, not as a lost change.
+- **How ownership is enforced.** *Settled by
+  [#35](https://github.com/shoraLBRT/ritocode/issues/35).* By an architecture test over compiled IL,
+  not by an EF global query filter. `OwnershipRuleTests` guards every entity `WorkspacesDbContext` and
+  `SubmissionsDbContext` map — read from the model EF builds, so an entity with no set property is
+  guarded too — and fails on any member that reaches one outside an allowance carrying its reason. A
+  query filter keyed on `ICurrentUser` would be automatic, and would put the current user inside a
+  `DbContext`: the queue worker of [#15](https://github.com/shoraLBRT/ritocode/issues/15) serves no user,
+  and every test that writes another user's row directly would need `IgnoreQueryFilters`, so the
+  switch-off would exist in exactly the places a mistake is most expensive. The test says what it
+  checks, and an allowance is a line a reviewer reads. Three things to carry. **A new owned lookup
+  lives beside its module's `Owned*` class**, which is allowed whole; anything else gets its own
+  allowance naming the method — `EveryAllowance_StillReachesAUsersRows` fails on one left behind by a
+  rename. **The reader has to keep seeing**: `TheReader_SeesEveryShapeOfReachingAUsersRows` runs it
+  over `UnguardedReads`, six never-called methods covering a set property, `Set<T>`, `Find<T>`, an async
+  state machine, a lambda closure and `SqlQuery<T>`, so a compiler change that moves bodies somewhere
+  new fails there rather than silently passing the module code. And **it guards modules, not
+  endpoints**: nothing stops a contract from answering another user's row to a caller in another
+  module — a contract that answers a workspace has to take the owner, which is ADR 0007's facts rule
+  applied to ownership.
 - **How a workspace file is addressed.** *Settled by
   [#11](https://github.com/shoraLBRT/ritocode/issues/11); #12 inherits it.* As a query value —
   `GET /api/v1/workspaces/{id}/files/content?path=src/App.cs` — and not as the rest of the URL path.
@@ -951,9 +975,17 @@ other makes every request fail in the browser and succeed from `curl`.
 | <http://localhost:5173/nowhere> | "Page not found" |
 | the same pages with the API stopped | The failure panel, saying the backend cannot be reached |
 
-Current baseline: **444 backend tests, all passing** — 125 shared, 120 problems, 80 API,
-110 workspaces, 9 architecture — and **63 frontend tests**, run separately by `npm test`. A session
+Current baseline: **448 backend tests, all passing** — 125 shared, 120 problems, 80 API,
+110 workspaces, 13 architecture — and **63 frontend tests**, run separately by `npm test`. A session
 that leaves either number lower than it found it has broken something.
+
+The architecture assembly rose from 9 to 13 with the ownership rule of
+[#35](https://github.com/shoraLBRT/ritocode/issues/35), and still needs no Docker: it builds the two
+contexts' models with no connection and reads IL. The count matters less than the shape. One test is
+the rule, one guards it against being vacuous, one against a stale allowance, and one proves the reader
+against `UnguardedReads` — without that last one, a reader that stopped seeing anything would pass the
+rule exactly as clean code does. The rule was also run once against a real violation added to the
+Workspaces module, where it failed naming the method and the member, before that file was removed.
 
 The workspaces assembly rose from 71 to 110, the API assembly from 65 to 80, the problems assembly
 from 113 to 120 and the frontend from 61 to 63 with [#12](https://github.com/shoraLBRT/ritocode/issues/12)
