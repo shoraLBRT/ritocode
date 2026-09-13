@@ -19,8 +19,9 @@ public interface ISubmissionLifecycle
     /// </summary>
     /// <returns>
     /// The queued attempt. Fails with <see cref="SubmissionLifecycle.WorkspaceNotFoundCode"/> for a
-    /// workspace that does not exist or belongs to someone else, and as unauthenticated when
-    /// <paramref name="userId"/> names no user.
+    /// workspace that does not exist or belongs to someone else, with
+    /// <see cref="SubmissionLifecycle.RateLimitedCode"/> when the user has already made as many attempts
+    /// as the window allows, and as unauthenticated when <paramref name="userId"/> names no user.
     /// </returns>
     Task<Result<SubmissionDetail>> SubmitAsync(Guid userId, Guid workspaceId, CancellationToken cancellationToken = default);
 

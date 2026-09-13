@@ -1,5 +1,6 @@
 using System.Text;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Ritocode.Modules.Submissions.Domain;
 using Ritocode.Modules.Submissions.Lifecycle;
 using Ritocode.Modules.Submissions.Persistence;
@@ -200,6 +201,73 @@ public sealed class SubmissionLifecycleTests(PostgresTestServer postgres, MinioT
         Assert.Equal(2, page.PageNumber);
     }
 
+    private static readonly SubmissionRateLimitOptions TwoInTenMinutes = new()
+    {
+        MaxSubmissions = 2,
+        Window = TimeSpan.FromMinutes(10),
+    };
+
+    [Fact]
+    public async Task AtTheCap_TheNextAttemptIsRefused_AndNothingIsQueued()
+    {
+        var scenario = await ArrangeAsync();
+
+        await SubmitAsync(scenario, scenario.User.Id, scenario.Workspace.Id, Noon, TwoInTenMinutes);
+        await SubmitAsync(scenario, scenario.User.Id, scenario.Workspace.Id, Noon.AddMinutes(1), TwoInTenMinutes);
+
+        var refused = await SubmitAsync(scenario, scenario.User.Id, scenario.Workspace.Id, Noon.AddMinutes(2), TwoInTenMinutes);
+
+        AssertFailure(refused, ErrorType.RateLimited, SubmissionLifecycle.RateLimitedCode);
+        Assert.Equal(2, await CountRowsAsync(scenario));
+    }
+
+    [Fact]
+    public async Task AnAttemptStopsCounting_TheMomentTheWindowHasPassed()
+    {
+        var scenario = await ArrangeAsync();
+
+        await SubmitAsync(scenario, scenario.User.Id, scenario.Workspace.Id, Noon, TwoInTenMinutes);
+        await SubmitAsync(scenario, scenario.User.Id, scenario.Workspace.Id, Noon.AddMinutes(1), TwoInTenMinutes);
+
+        // Exactly ten minutes after the first, it has left the window; the second has not.
+        var third = await SubmitAsync(scenario, scenario.User.Id, scenario.Workspace.Id, Noon.AddMinutes(10), TwoInTenMinutes);
+        var fourth = await SubmitAsync(scenario, scenario.User.Id, scenario.Workspace.Id, Noon.AddMinutes(10), TwoInTenMinutes);
+
+        Assert.True(third.IsSuccess);
+        AssertFailure(fourth, ErrorType.RateLimited, SubmissionLifecycle.RateLimitedCode);
+        Assert.Equal(3, await CountRowsAsync(scenario));
+    }
+
+    [Fact]
+    public async Task TheCapCountsAttemptsAcrossEveryWorkspaceOfTheCaller()
+    {
+        // A rule about the person: moving to another workspace is not a way around it.
+        var scenario = await ArrangeAsync();
+        var another = await AddWorkspaceAsync(scenario.Workspaces, scenario.User.Id, "another tree");
+
+        await SubmitAsync(scenario, scenario.User.Id, scenario.Workspace.Id, Noon, TwoInTenMinutes);
+        await SubmitAsync(scenario, scenario.User.Id, scenario.Workspace.Id, Noon.AddMinutes(1), TwoInTenMinutes);
+
+        var elsewhere = await SubmitAsync(scenario, scenario.User.Id, another.Id, Noon.AddMinutes(2), TwoInTenMinutes);
+
+        AssertFailure(elsewhere, ErrorType.RateLimited, SubmissionLifecycle.RateLimitedCode);
+    }
+
+    [Fact]
+    public async Task AnotherUsersAttempts_DoNotCountAgainstTheCaller()
+    {
+        var scenario = await ArrangeAsync();
+
+        for (var i = 0; i < 3; i++)
+        {
+            await AddRowAsync(scenario, Submission.Create(Guid.CreateVersion7(), Guid.CreateVersion7(), Noon));
+        }
+
+        var mine = await SubmitAsync(scenario, scenario.User.Id, scenario.Workspace.Id, Noon.AddMinutes(1), TwoInTenMinutes);
+
+        Assert.True(mine.IsSuccess);
+    }
+
     private sealed record Scenario(
         SubmissionsDatabase Database,
         UserSummary User,
@@ -232,11 +300,16 @@ public sealed class SubmissionLifecycleTests(PostgresTestServer postgres, MinioT
         return workspace;
     }
 
-    private async Task<Result<SubmissionDetail>> SubmitAsync(Scenario scenario, Guid userId, Guid workspaceId, DateTimeOffset? at = null)
+    private async Task<Result<SubmissionDetail>> SubmitAsync(
+        Scenario scenario,
+        Guid userId,
+        Guid workspaceId,
+        DateTimeOffset? at = null,
+        SubmissionRateLimitOptions? rateLimit = null)
     {
         await using var context = scenario.Database.CreateContext();
 
-        return await Lifecycle(scenario, context, at).SubmitAsync(userId, workspaceId, Token);
+        return await Lifecycle(scenario, context, at, rateLimit).SubmitAsync(userId, workspaceId, Token);
     }
 
     private async Task<Page<SubmissionDetail>> ListAsync(Scenario scenario, Guid? workspaceId, PageRequest request)
@@ -246,8 +319,18 @@ public sealed class SubmissionLifecycleTests(PostgresTestServer postgres, MinioT
         return await Lifecycle(scenario, context).ListAsync(scenario.User.Id, workspaceId, request, Token);
     }
 
-    private SubmissionLifecycle Lifecycle(Scenario scenario, SubmissionsDbContext context, DateTimeOffset? at = null) =>
-        new(context, scenario.Users, scenario.Workspaces, _store, new FixedClock(at ?? Noon));
+    private SubmissionLifecycle Lifecycle(
+        Scenario scenario,
+        SubmissionsDbContext context,
+        DateTimeOffset? at = null,
+        SubmissionRateLimitOptions? rateLimit = null) =>
+        new(
+            context,
+            scenario.Users,
+            scenario.Workspaces,
+            _store,
+            Options.Create(rateLimit ?? new SubmissionRateLimitOptions()),
+            new FixedClock(at ?? Noon));
 
     private static async Task<Submission> AddRowAsync(Scenario scenario, Submission submission)
     {

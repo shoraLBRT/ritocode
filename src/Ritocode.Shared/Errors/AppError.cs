@@ -29,6 +29,9 @@ public sealed record AppError(
     public static AppError PreconditionFailed(string code, string message) =>
         new(ErrorType.PreconditionFailed, code, message);
 
+    public static AppError RateLimited(string code, string message) =>
+        new(ErrorType.RateLimited, code, message);
+
     public static AppError Unauthenticated(string code = "unauthenticated", string message = "Authentication is required.") =>
         new(ErrorType.Unauthenticated, code, message);
 }
