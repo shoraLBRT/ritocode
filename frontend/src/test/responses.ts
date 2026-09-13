@@ -77,3 +77,23 @@ export const exampleProblemDetail = {
   ...exampleProblem,
   description: '# Order total\n\nImprove the calculation.',
 };
+
+export const exampleWorkspace = {
+  id: '0199a1d2-0000-7000-8000-000000000010',
+  problemVersionId: exampleProblem.problemVersionId,
+  createdAt: '2026-09-13T12:00:00Z',
+  updatedAt: '2026-09-13T12:00:00Z',
+};
+
+export const exampleFileTree = {
+  files: [
+    { path: 'Orders.csproj', sizeBytes: 11 },
+    { path: 'src/OrderTotal.cs', sizeBytes: 19 },
+  ],
+};
+
+export const exampleFile = {
+  path: 'src/OrderTotal.cs',
+  sizeBytes: 19,
+  content: 'namespace Orders;\r\n',
+};

@@ -146,8 +146,18 @@ public sealed class AnonymousRequestTests(AnonymousTestApi api) : IClassFixture<
             new Uri($"/api/v1/workspaces/{Guid.CreateVersion7()}", UriKind.Relative),
             TestContext.Current.CancellationToken);
 
+        var tree = await api.Client.GetAsync(
+            new Uri($"/api/v1/workspaces/{Guid.CreateVersion7()}/files", UriKind.Relative),
+            TestContext.Current.CancellationToken);
+
+        var file = await api.Client.GetAsync(
+            new Uri($"/api/v1/workspaces/{Guid.CreateVersion7()}/files/content?path=src%2FApp.cs", UriKind.Relative),
+            TestContext.Current.CancellationToken);
+
         Assert.Equal(HttpStatusCode.Unauthorized, open.StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, read.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, tree.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, file.StatusCode);
     }
 
     [Fact]

@@ -9,7 +9,7 @@ reductions that are allowed and the list that are forbidden. **Read that ADR bef
 anything here.** This file tracks progress; it holds no decisions.
 
 - **Last updated:** 2026-09-13
-- **Progress:** 14 / 37
+- **Progress:** 15 / 37
 - **Estimate:** 30–34 sessions, six to seven weeks at five sessions a week
 - **Then:** [stage two](#after-the-slice) — the rest of Phase 1
 
@@ -30,7 +30,7 @@ anything here.** This file tracks progress; it holds no decisions.
 | --- | --- | --- |
 | [1 — Foundation](#stage-1--foundation) | 5 | 5 / 5 |
 | [2 — Content and catalog](#stage-2--content-and-catalog) | 5 | 6 / 6 |
-| [3 — Identity and workspace](#stage-3--identity-and-workspace) | 6 | 3 / 7 |
+| [3 — Identity and workspace](#stage-3--identity-and-workspace) | 6 | 4 / 7 |
 | [4 — Submission and queue](#stage-4--submission-and-queue) | 5 | 0 / 5 |
 | [5 — Execution](#stage-5--execution) | 7 | 0 / 8 |
 | [6 — Product face](#stage-6--product-face) | 6 | 0 / 6 |
@@ -233,7 +233,26 @@ first time.
   migration, whose default is the format's own default root for rows ingested before it.
   `workspaces.snapshot_reference` became a typed `StorageReference` with its first writer, no
   migration needed. See [Open questions](PROJECT_STATE.md#open-questions).
-- [ ] **[#11](https://github.com/shoraLBRT/ritocode/issues/11) — file tree and file read.**
+- [x] **[#11](https://github.com/shoraLBRT/ritocode/issues/11) — file tree and file read.**
+  `GET /api/v1/workspaces/{id}/files` answers the whole tree — every file with its size in bytes,
+  ordered by path — and `GET /api/v1/workspaces/{id}/files/content?path=` answers one file as text.
+  Both read the snapshot through the reference the row stores, with the owner inside the query, and
+  answer another user's workspace as `workspace_not_found` without asking the store for anything.
+  **Three decisions the plan did not state.** *The path is a query value, not URL segments*: the
+  server removes `.` and `..` segments from a request path before routing, so a path carried there
+  is not the path the client sent, and the refusal of `../problem.yaml` could only be trusted, never
+  observed. As a query value it arrives verbatim and is refused by name — `400`, `errors.path` —
+  before the database or the store is asked; #12 writes to the same address. *A file is text or it
+  is refused*: nothing in the package format promises UTF-8, and a lenient decode hands an editor a
+  file that saves back as different bytes, so a file that is not UTF-8 answers
+  `409 workspace_file_not_text`, while a byte-order mark and line endings survive the read. And *the
+  tree is not a `Page<T>`*: an editor cannot use half a file list, and a package's limits bound it
+  at 2000 entries. One path rule, `WorkspacePath`, now serves the starter tree, the snapshot reader
+  and the request, so [#36](https://github.com/shoraLBRT/ritocode/issues/36) extends a rule rather
+  than writing a second one. The tree does not say which files are editable — that is the workspace
+  policy question #12 has to answer, see [Open questions](PROJECT_STATE.md#open-questions). The
+  frontend API client gained `openWorkspace`, `getWorkspace`, `listWorkspaceFiles` and
+  `getWorkspaceFile`; the screen that uses them is [#28](https://github.com/shoraLBRT/ritocode/issues/28).
 - [ ] **[#12](https://github.com/shoraLBRT/ritocode/issues/12) — file write and draft persistence.**
 - [ ] **[#36](https://github.com/shoraLBRT/ritocode/issues/36) (partial) — path and size limits.**
   Path normalisation, no escaping the workspace root, no symlink traversal, limits on file size and

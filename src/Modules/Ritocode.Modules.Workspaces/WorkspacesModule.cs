@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Ritocode.Modules.Workspaces.Files;
 using Ritocode.Modules.Workspaces.Lifecycle;
 using Ritocode.Modules.Workspaces.Persistence;
 using Ritocode.Shared.Modules;
@@ -16,8 +17,8 @@ namespace Ritocode.Modules.Workspaces;
 /// </summary>
 /// <remarks>
 /// Owns the <c>workspaces</c> schema and the <c>workspace-snapshots</c> objects its rows point at.
-/// Opening a workspace and reading it back exist (#10); the file tree, file writes and resets arrive
-/// with #11 to #13, and cleanup with #43.
+/// Opening a workspace and reading it back exist (#10), and so do listing its files and reading one
+/// (#11); file writes and resets arrive with #12 and #13, and cleanup with #43.
 /// </remarks>
 public sealed class WorkspacesModule : IModule
 {
@@ -33,6 +34,7 @@ public sealed class WorkspacesModule : IModule
         services.AddModuleDbContext<WorkspacesDbContext>(configuration, WorkspacesDbContext.SchemaName);
 
         services.AddScoped<IWorkspaceLifecycle, WorkspaceLifecycle>();
+        services.AddScoped<IWorkspaceFiles, WorkspaceFiles>();
         services.AddScoped<IValidator<OpenWorkspaceRequest>, OpenWorkspaceRequestValidator>();
 
         // TryAdd, as Problems does: the clock is host infrastructure, and whichever module registers
@@ -44,6 +46,8 @@ public sealed class WorkspacesModule : IModule
     {
         ArgumentNullException.ThrowIfNull(endpoints);
 
-        endpoints.MapGroup(RoutePrefix).MapWorkspaceEndpoints();
+        endpoints.MapGroup(RoutePrefix)
+            .MapWorkspaceEndpoints()
+            .MapWorkspaceFileEndpoints();
     }
 }
