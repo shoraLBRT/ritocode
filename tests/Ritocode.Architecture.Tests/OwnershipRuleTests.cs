@@ -2,6 +2,7 @@ using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Ritocode.Modules.Submissions.Domain;
+using Ritocode.Modules.Submissions.Lifecycle;
 using Ritocode.Modules.Submissions.Persistence;
 using Ritocode.Modules.Workspaces.Domain;
 using Ritocode.Modules.Workspaces.Lifecycle;
@@ -50,6 +51,14 @@ public sealed class OwnershipRuleTests
             typeof(WorkspaceLifecycle).FullName!,
             nameof(WorkspaceLifecycle.OpenAsync),
             "Finds the caller's workspace by owner and version, and adds the row it creates for that owner."),
+        new(
+            "Ritocode.Modules.Submissions.Persistence.OwnedSubmissions",
+            Method: null,
+            "Every lookup there takes the owner and puts it inside the query."),
+        new(
+            typeof(SubmissionLifecycle).FullName!,
+            nameof(SubmissionLifecycle.SubmitAsync),
+            "Adds the row it creates for its caller, on a workspace IOwnedWorkspaceLookup found by that same owner."),
     ];
 
     private static readonly HashSet<Type> GuardedEntities = [.. OwnedContexts.SelectMany(EntitiesMappedBy)];

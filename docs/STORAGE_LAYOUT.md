@@ -14,12 +14,14 @@ layout is a data migration rather than an edit, and
 the only description of.
 
 - Defined by [#5](https://github.com/shoraLBRT/ritocode/issues/5) *(partial)*, and implemented by
-  `IObjectStore` in `src/Ritocode.Shared/Storage`. Put and get only — the client cannot delete or
-  list, and does not copy server-side.
-- **Two of the three buckets are written today**: problem bundles by ingest
-  ([#9](https://github.com/shoraLBRT/ritocode/issues/9)), and workspace snapshots by workspace
+  `IObjectStore` in `src/Ritocode.Shared/Storage`. Put, get and server-side copy — the client cannot
+  delete or list.
+- **All three buckets are written today**: problem bundles by ingest
+  ([#9](https://github.com/shoraLBRT/ritocode/issues/9)), workspace snapshots by workspace
   creation ([#10](https://github.com/shoraLBRT/ritocode/issues/10)), which is also the first code
-  that reads a bundle back. Evaluation artifacts stay empty until stages 4 and 5.
+  that reads a bundle back, and evaluation artifacts — so far only the frozen input tree — by
+  submission ([#14](https://github.com/shoraLBRT/ritocode/issues/14)). What a run produces arrives in
+  stage 5.
   `problem_versions.snapshot_reference` and `workspaces.snapshot_reference` are both typed as a
   `StorageReference` through an EF value converter rather than held as free text — see
   [PROJECT_STATE.md](PROJECT_STATE.md#open-questions); `submission_reports.logs_reference` keeps its
@@ -108,7 +110,7 @@ evaluation-artifacts/
 | `problem-bundles/problem-versions/{id}/bundle.tar.gz` | `problem_versions.snapshot_reference` | Write once |
 | `workspace-snapshots/workspaces/{id}/tree.tar.gz` | `workspaces.snapshot_reference` | Overwritten on every save |
 | `evaluation-artifacts/submissions/{id}/` | `submission_reports.logs_reference` | Prefix; the objects beneath it are write-once |
-| `evaluation-artifacts/submissions/{id}/input/tree.tar.gz` | Nowhere — derived from the submission id | Write once |
+| `evaluation-artifacts/submissions/{id}/input/tree.tar.gz` | `submissions.input_reference` | Write once |
 
 The entity segment (`problem-versions/`, `workspaces/`, `submissions/`) is one segment of apparent
 redundancy against the bucket role. It is kept so that a listing says what it is holding, and so a
@@ -128,10 +130,13 @@ submission produces the same result* false at the storage layer, underneath anyt
 [ADR 0006](adr/0006-sandbox-execution-model.md) can guarantee, and the one test written to protect
 that claim is where it would surface.
 
-This is the only key not stored in a column: `submissions` has no reference column, so the key is
-derived from the submission id instead. It is the single exception to rule 3 below, and a cheap one
-to remove — [#14](https://github.com/shoraLBRT/ritocode/issues/14) can add the column when it builds
-the lifecycle, and should if this layout ever moves.
+The copy is made when the submission is created, by [#14](https://github.com/shoraLBRT/ritocode/issues/14),
+with `IObjectStore.CopyAsync` — a server-side copy, so the tree never passes through the API process —
+and before the row naming it commits. Its reference is stored in `submissions.input_reference`, which
+#14 added while the table was still empty, so this key is no longer the exception to rule 3 below it
+used to be: every key the platform reads back is read from a column. The copy takes no lock on the
+workspace. A put is atomic, so a copy running beside a save reads the tree before it or after it,
+never half of one.
 
 ## Rules a key obeys
 

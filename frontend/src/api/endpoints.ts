@@ -6,6 +6,8 @@ import type {
   Page,
   PageQuery,
   SavedWorkspaceFile,
+  Submission,
+  SubmissionQuery,
   Workspace,
   WorkspaceFile,
   WorkspaceFileTree,
@@ -120,6 +122,40 @@ export function saveWorkspaceFile(
     method: 'PUT',
     query: { path },
     body: { content, baseRevision },
+    ...(signal ? { signal } : {}),
+  });
+}
+
+/**
+ * `POST /submissions` — queues an attempt at a workspace, frozen as its tree is at this moment; a save
+ * afterwards does not change what is graded. Every call is a new attempt (201), so it is not safe to
+ * repeat the way opening a workspace is.
+ *
+ * Fails with `code: "workspace_not_found"` for a workspace the caller does not own.
+ */
+export function submitWorkspace(client: ApiClient, workspaceId: string, signal?: AbortSignal): Promise<Submission> {
+  return client.request<Submission>('/submissions', {
+    method: 'POST',
+    body: { workspaceId },
+    ...(signal ? { signal } : {}),
+  });
+}
+
+/** `GET /submissions/{id}` — fails with `code: "submission_not_found"` for anything the caller does not own. */
+export function getSubmission(client: ApiClient, submissionId: string, signal?: AbortSignal): Promise<Submission> {
+  return client.request<Submission>(`/submissions/${encodeURIComponent(submissionId)}`, {
+    ...(signal ? { signal } : {}),
+  });
+}
+
+/** `GET /submissions` — the caller's attempts, newest first, optionally at one workspace, in the page envelope. */
+export function listSubmissions(
+  client: ApiClient,
+  query: SubmissionQuery = {},
+  signal?: AbortSignal,
+): Promise<Page<Submission>> {
+  return client.request<Page<Submission>>('/submissions', {
+    query: { workspaceId: query.workspaceId, page: query.page, pageSize: query.pageSize },
     ...(signal ? { signal } : {}),
   });
 }

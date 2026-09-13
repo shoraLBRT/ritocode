@@ -131,6 +131,9 @@ Fields:
 - user_id — denormalised from the workspace so attempt history is a single-table query
 - status
 - score — null until the pipeline completes, otherwise 0–100
+- input_reference — storage reference of the **frozen copy** of the workspace tree the attempt is
+  graded against, copied server-side when the submission is created and never the live snapshot;
+  see [STORAGE_LAYOUT.md](STORAGE_LAYOUT.md). Typed as `StorageReference`, required, no default
 - created_at
 - completed_at — set exactly when status becomes terminal
 
@@ -141,7 +144,17 @@ Status values:
 - `Completed` — the pipeline ran to completion; the verdict is the score and the report
 - `Failed` — the pipeline could not run to completion; infrastructure, not a wrong answer
 
-`Completed` and `Failed` are terminal.
+`Completed` and `Failed` are terminal. The transitions are methods on the entity rather than status
+assignments — `Start`, `Complete(score, at)` and `Fail(at)` — so the completion time moves with the
+status: `Queued` → `Running` → `Completed`, and `Failed` from `Queued` or `Running`, since an attempt
+whose input cannot be evaluated at all fails without ever starting. Anything else throws. A
+completion time before the attempt was made is recorded as the time it was made.
+
+A submission is made only against a workspace **the caller owns**; another user's workspace is
+answered exactly like a missing one. A workspace may have any number of attempts, queued at once or
+not, and each freezes its own tree — a save after submitting never changes what is graded. How many
+attempts a person may make is the rate limit of [#35](https://github.com/shoraLBRT/ritocode/issues/35),
+not a rule about the workspace. An attempt is read and listed only by its owner, newest first.
 
 ## SubmissionReport
 

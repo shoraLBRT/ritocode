@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Ritocode.Api.Tests.Infrastructure;
 using Ritocode.Shared.Contracts.Problems;
 using Ritocode.Shared.Contracts.Users;
+using Ritocode.Shared.Contracts.Workspaces;
 using Ritocode.Shared.Identity;
 
 namespace Ritocode.Api.Tests.Contracts;
@@ -67,5 +68,16 @@ public sealed class ContractResolutionTests(TestApi api) : IClassFixture<TestApi
         var allowance = await lookup.FindAsync(Guid.CreateVersion7(), TestContext.Current.CancellationToken);
 
         Assert.Null(allowance);
+    }
+
+    [Fact]
+    public async Task OwnedWorkspaceLookup_ResolvesAndAnswersNullForAWorkspaceWithNoRow()
+    {
+        await using var scope = api.Services.CreateAsyncScope();
+        var lookup = scope.ServiceProvider.GetRequiredService<IOwnedWorkspaceLookup>();
+
+        var workspace = await lookup.FindAsync(SeededIdentity.UserId, Guid.CreateVersion7(), TestContext.Current.CancellationToken);
+
+        Assert.Null(workspace);
     }
 }

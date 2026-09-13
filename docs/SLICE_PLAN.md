@@ -9,7 +9,7 @@ reductions that are allowed and the list that are forbidden. **Read that ADR bef
 anything here.** This file tracks progress; it holds no decisions.
 
 - **Last updated:** 2026-09-13
-- **Progress:** 18 / 37
+- **Progress:** 19 / 37
 - **Estimate:** 30–34 sessions, six to seven weeks at five sessions a week
 - **Then:** [stage two](#after-the-slice) — the rest of Phase 1
 
@@ -31,7 +31,7 @@ anything here.** This file tracks progress; it holds no decisions.
 | [1 — Foundation](#stage-1--foundation) | 5 | 5 / 5 |
 | [2 — Content and catalog](#stage-2--content-and-catalog) | 5 | 6 / 6 |
 | [3 — Identity and workspace](#stage-3--identity-and-workspace) | 6 | 7 / 7 |
-| [4 — Submission and queue](#stage-4--submission-and-queue) | 5 | 0 / 5 |
+| [4 — Submission and queue](#stage-4--submission-and-queue) | 5 | 1 / 5 |
 | [5 — Execution](#stage-5--execution) | 7 | 0 / 8 |
 | [6 — Product face](#stage-6--product-face) | 6 | 0 / 6 |
 
@@ -308,9 +308,28 @@ first time.
 
 The button exists and the state machine is real, but nothing runs yet.
 
-- [ ] **[#14](https://github.com/shoraLBRT/ritocode/issues/14) — submission lifecycle and attempt
+- [x] **[#14](https://github.com/shoraLBRT/ritocode/issues/14) — submission lifecycle and attempt
   history.** `Queued` → `Running` → `Completed` / `Failed`, with
   `ck_submissions_completed_at_matches_status` holding.
+  `POST /api/v1/submissions` queues an attempt at a workspace the caller owns and answers 201 with a
+  `Location`; `GET /api/v1/submissions/{id}` reads one back and `GET /api/v1/submissions` is the
+  caller's history, newest first, in the page envelope, optionally at one `workspaceId`. The
+  transitions are methods on `Submission` — `Start`, `Complete(score, at)`, `Fail(at)` — so the
+  completion time cannot move without the status, and tests prove each transition the entity allows
+  is one the constraint accepts and each row that breaks it is refused. Nothing runs an attempt yet:
+  every submission stays `Queued` until [#15](https://github.com/shoraLBRT/ritocode/issues/15).
+  **Three decisions the plan did not state.** *The tree is frozen at submit, into a column*: the
+  workspace snapshot is copied server-side to `evaluation-artifacts/submissions/{id}/input/tree.tar.gz`
+  before the row commits — the first caller of a copy on `IObjectStore`, deferred with
+  [#5](https://github.com/shoraLBRT/ritocode/issues/5) until now — and its reference is stored in
+  `submissions.input_reference`, added while the table was empty, so the one key
+  [STORAGE_LAYOUT.md](STORAGE_LAYOUT.md) derived from an id is now read back like every other.
+  *The workspace is asked for with its owner*: a fourth contract, `IOwnedWorkspaceLookup`, takes the
+  user as well as the id, so another user's workspace is refused as `workspace_not_found` without the
+  ownership check ever leaving the Workspaces module. And *a workspace may have any number of
+  attempts*: each freezes its own tree, and how many a person may make is the rate limit box below,
+  not a rule about the workspace. The limits of [#36](https://github.com/shoraLBRT/ritocode/issues/36)
+  are **not** checked again on the frozen tree — see [PROJECT_STATE.md](PROJECT_STATE.md#deliberately-deferred).
 - [ ] **[#15](https://github.com/shoraLBRT/ritocode/issues/15) (partial) — queue and worker.**
   A PostgreSQL table drained with `SKIP LOCKED`, and a hosted service in the API process. The
   partial index `(status, created_at) WHERE status IN ('Queued','Running')` is already in the

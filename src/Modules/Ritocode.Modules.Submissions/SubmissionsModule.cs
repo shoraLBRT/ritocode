@@ -1,6 +1,10 @@
+using FluentValidation;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Ritocode.Modules.Submissions.Lifecycle;
 using Ritocode.Modules.Submissions.Persistence;
 using Ritocode.Shared.Modules;
 using Ritocode.Shared.Persistence;
@@ -11,7 +15,9 @@ namespace Ritocode.Modules.Submissions;
 /// Submission lifecycle, attempt history and report retrieval.
 /// </summary>
 /// <remarks>
-/// Owns the <c>submissions</c> schema. No endpoints yet — those arrive with issues #14, #15 and #16.
+/// Owns the <c>submissions</c> schema and the frozen input trees under
+/// <c>evaluation-artifacts/submissions/</c>. Submitting a workspace, reading an attempt and the attempt
+/// history exist (#14); the queue worker arrives with #15 and the report with #16.
 /// </remarks>
 public sealed class SubmissionsModule : IModule
 {
@@ -21,11 +27,23 @@ public sealed class SubmissionsModule : IModule
 
     public void RegisterServices(IServiceCollection services, IConfiguration configuration)
     {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configuration);
+
         services.AddModuleDbContext<SubmissionsDbContext>(configuration, SubmissionsDbContext.SchemaName);
+
+        services.AddScoped<ISubmissionLifecycle, SubmissionLifecycle>();
+        services.AddScoped<IValidator<SubmitRequest>, SubmitRequestValidator>();
+
+        // TryAdd, as the other modules do: the clock is host infrastructure.
+        services.TryAddSingleton(TimeProvider.System);
     }
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints)
     {
-        // Intentionally empty: this module exposes no endpoints yet.
+        ArgumentNullException.ThrowIfNull(endpoints);
+
+        endpoints.MapGroup(RoutePrefix)
+            .MapSubmissionEndpoints();
     }
 }

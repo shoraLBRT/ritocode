@@ -18,7 +18,7 @@ public sealed class S3ObjectStore(IAmazonS3 client, IOptions<ObjectStorageOption
     {
         ArgumentNullException.ThrowIfNull(reference);
         ArgumentNullException.ThrowIfNull(content);
-        RequireObjectReference(reference);
+        RequireObjectReference(reference, nameof(reference));
 
         if (!content.CanSeek)
         {
@@ -54,7 +54,7 @@ public sealed class S3ObjectStore(IAmazonS3 client, IOptions<ObjectStorageOption
     {
         ArgumentNullException.ThrowIfNull(reference);
         ArgumentNullException.ThrowIfNull(destination);
-        RequireObjectReference(reference);
+        RequireObjectReference(reference, nameof(reference));
 
         var request = new GetObjectRequest
         {
@@ -83,13 +83,50 @@ public sealed class S3ObjectStore(IAmazonS3 client, IOptions<ObjectStorageOption
         }
     }
 
-    private static void RequireObjectReference(StorageReference reference)
+    public async Task<bool> CopyAsync(
+        StorageReference source,
+        StorageReference destination,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(destination);
+        RequireObjectReference(source, nameof(source));
+        RequireObjectReference(destination, nameof(destination));
+
+        // Across buckets as readily as within one: a submission copies from workspace-snapshots into
+        // evaluation-artifacts. A single CopyObject is limited to 5 GiB, far above any tree a package's
+        // limits allow.
+        var request = new CopyObjectRequest
+        {
+            SourceBucket = _options.BucketFor(source.Role),
+            SourceKey = source.Key,
+            DestinationBucket = _options.BucketFor(destination.Role),
+            DestinationKey = destination.Key,
+        };
+
+        try
+        {
+            await client.CopyObjectAsync(request, cancellationToken);
+            return true;
+        }
+        catch (AmazonS3Exception exception) when (exception.StatusCode == HttpStatusCode.NotFound)
+        {
+            // As for a read: the source is missing, and the caller owning the row decides what that means.
+            return false;
+        }
+        catch (AmazonS3Exception exception)
+        {
+            throw Failure(source, $"copy to '{destination}'", exception);
+        }
+    }
+
+    private static void RequireObjectReference(StorageReference reference, string parameterName)
     {
         if (reference.IsPrefix)
         {
             throw new ArgumentException(
                 $"'{reference}' is a prefix reference and names no single object.",
-                nameof(reference));
+                parameterName);
         }
     }
 

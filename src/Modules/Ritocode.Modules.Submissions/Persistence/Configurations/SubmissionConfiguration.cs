@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Ritocode.Modules.Submissions.Domain;
 using Ritocode.Shared.Persistence;
+using Ritocode.Shared.Storage;
 
 namespace Ritocode.Modules.Submissions.Persistence.Configurations;
 
@@ -33,6 +34,14 @@ internal sealed class SubmissionConfiguration : IEntityTypeConfiguration<Submiss
         builder.Property(s => s.WorkspaceId).IsRequired();
         builder.Property(s => s.UserId).IsRequired();
         builder.Property(s => s.Status).HasConversion<string>().HasMaxLength(32).IsRequired();
+
+        // Where the frozen input tree is, stored rather than derived from the id, so the layout can
+        // move without stranding a row (docs/STORAGE_LAYOUT.md rule 3). Typed, as the other two
+        // reference columns are.
+        builder.Property(s => s.InputReference)
+            .HasConversion<StorageReferenceConverter>()
+            .HasMaxLength(StorageReference.MaxLength).IsRequired();
+
         builder.Property(s => s.CreatedAt).IsRequired();
 
         // Attempt history for a user, newest first.
