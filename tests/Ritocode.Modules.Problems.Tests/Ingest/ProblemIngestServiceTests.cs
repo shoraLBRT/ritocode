@@ -52,7 +52,14 @@ public sealed class ProblemIngestServiceTests(PostgresTestServer postgres, Minio
         // docs/STORAGE_LAYOUT.md rule 3 — not a key rebuilt from the id at read time.
         using var bundle = new MemoryStream();
         Assert.True(await _objectStore.GetAsync(version.SnapshotReference, bundle, TestContext.Current.CancellationToken));
-        Assert.Contains("problem.yaml", await EntryNamesAsync(bundle), StringComparer.Ordinal);
+
+        var entries = await EntryNamesAsync(bundle);
+        Assert.Contains("problem.yaml", entries, StringComparer.Ordinal);
+
+        // The stored root is the directory a reader outside this module finds the starter tree
+        // under, so it has to name a real directory of this very bundle.
+        Assert.Equal(WorkspaceSpec.DefaultRoot, version.WorkspaceRoot);
+        Assert.Contains(entries, entry => entry.StartsWith(version.WorkspaceRoot + "/", StringComparison.Ordinal));
     }
 
     [Fact]

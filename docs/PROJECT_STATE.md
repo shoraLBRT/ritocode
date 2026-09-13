@@ -105,6 +105,8 @@ src/
                               Ingest/ (package -> published version + bundle) and Catalog/
                               Auth owns the authentication scheme; Users owns the row behind the
                               development identity that scheme asserts
+                              Workspaces owns Lifecycle/: opening a workspace on a published
+                              version, reading it back, and StarterTree — what a bundle becomes
                               Contracts/ in a module is its implementation of a Shared contract
 tests/
   Ritocode.TestSupport/         integration test harnesses: a PostgreSQL container per test
@@ -115,6 +117,8 @@ tests/
   Ritocode.Architecture.Tests/  module boundary rules and the ADR 0007 contract rules, executable
   Ritocode.Modules.Problems.Tests/  the problem package format, the reference package, and
                                     ingest against a real PostgreSQL and MinIO
+  Ritocode.Modules.Workspaces.Tests/  the starter tree a bundle becomes, and the workspace
+                                      lifecycle against a real PostgreSQL and MinIO
 spikes/
   sandbox-execution/          time-boxed experiment behind ADR 0006, with the script that repeats it
 docs/
@@ -144,22 +148,22 @@ docs/
 | [#31](https://github.com/shoraLBRT/ritocode/issues/31) CI pipeline | Partial | `backend-ci.yml` (build and test, formatting, migrations and drift) and now `frontend-ci.yml`: `npm ci`, then lint, build — the typecheck rides on it — and the 55 tests, on the Node line `frontend/.nvmrc` pins. The frontend job needs no backend, no database and no Docker | `.github/workflows/` |
 | [#42](https://github.com/shoraLBRT/ritocode/issues/42) Initial problem set | Partial | Three authored C# problems — `split-the-invoice` (easy), `no-double-booking` (medium), `respect-the-precedence` (hard) — at three difficulties over three unrelated trees, each with a known-good and a known-bad fixture that disagree on behaviour the package's own tests pin. The catalog has content that is not the format's reference fixture for the first time | `content/problems/`, `tests/Ritocode.Modules.Problems.Tests/CatalogPackageTests.cs` |
 | [#6](https://github.com/shoraLBRT/ritocode/issues/6) Authentication | Partial | The identity seam from [ADR 0008](adr/0008-authentication-seam.md), which is **Proposed** and needs the maintainer. `ICurrentUser` is one value wide and lives with the host infrastructure in `Shared/Identity`; the Auth module owns a real authentication scheme, so stage two swaps a handler rather than unpicking a mechanism; the Users module keeps the row the seeded identity names, which is the first row that module has written. The host is authenticated by default and anonymous by exception — a fallback policy protects any endpoint that states nothing — and a rejected request answers in the ADR 0003 error body rather than an empty 401. Login, session issuance and `/me` stay out | `src/Ritocode.Shared/Identity`, `src/Modules/Ritocode.Modules.Auth/Identity`, `src/Modules/Ritocode.Modules.Users/Identity`, `docs/adr/0008-authentication-seam.md` |
+| [#10](https://github.com/shoraLBRT/ritocode/issues/10) Create workspace from problem version | Done | `POST /api/v1/workspaces` opens the caller's workspace on a **published** version — 201 and a `Location` when it is new, 200 with the same workspace when the caller already has one on that version — and `GET /api/v1/workspaces/{id}` reads it back, answering another user's workspace as `workspace_not_found`. The first caller of both ADR 0007 contracts and the first code to read a bundle back: the starter tree under the version's `workspace_root`, re-rooted and regular files only, becomes the workspace snapshot. The owner comes from `ICurrentUser` and never the body. `problem_versions.workspace_root` is new, and `workspaces.snapshot_reference` is now a typed `StorageReference` | `src/Modules/Ritocode.Modules.Workspaces/Lifecycle`, `tests/Ritocode.Modules.Workspaces.Tests`, `tests/Ritocode.Api.Tests/Endpoints/WorkspaceEndpointsTests.cs` |
 
 The frontend now exists as a shell: it renders the layout, resolves its routes, and reads the
 catalog from a running host. It has no identity, no editor and no designed screens — those are
 stages 3 and 6. It now lists four problems against a development host, and the descriptions arrive
 as text rather than rendered Markdown, which is [#27](https://github.com/shoraLBRT/ritocode/issues/27).
 
-Nothing else from the backlog is implemented. Five of the seven modules own a schema and a
-`DbContext` and expose neither an endpoint nor a service — the boundary and the storage are in
-place, the behaviour is not. Two are now awake in part: **Auth** owns the authentication scheme and
-no endpoints, and **Users** writes exactly one row — the development identity's — and answers
-`IUserLookup`, which nothing calls yet.
-**Problems is still the only module that is fully
-alive**: it reads and writes its own schema, serves two endpoints, and is the first caller of
-`IObjectStore`. Everything downstream of it is still empty — nothing creates a workspace from a
-published version yet, which is [#10](https://github.com/shoraLBRT/ritocode/issues/10) in stage 3,
-and it is the first code that will read a bundle back.
+Nothing else from the backlog is implemented. Three of the seven modules — Submissions, Evaluations
+and Progress — still expose neither an endpoint nor a service. **Auth** owns the authentication
+scheme and no endpoints, and **Users** writes exactly one row — the development identity's — and
+answers `IUserLookup`. **Problems** reads and writes its own schema, serves the catalog, and answers
+`IProblemVersionLookup`. **Workspaces is now the second module that is fully alive**: it writes its
+own schema and the `workspace-snapshots` bucket, serves two protected endpoints, and is the first
+consumer of both cross-module contracts. A workspace can be opened and read back; its files cannot
+yet be listed, read or written, which is [#11](https://github.com/shoraLBRT/ritocode/issues/11) and
+[#12](https://github.com/shoraLBRT/ritocode/issues/12).
 
 ### Deliberately deferred
 
@@ -203,9 +207,9 @@ and it is the first code that will read a bundle back.
   is rendered as text rather than Markdown for the same reason: choosing a renderer for content
   someone else authored is a decision that belongs with the designed screen.
 - **The flow tests in [#37](https://github.com/shoraLBRT/ritocode/issues/37)** — auth, problems,
-  workspace, submission — need endpoints that do not exist yet. The harness they will be written
-  on does exist, which was the point of doing #37 first; the tests themselves arrive with the
-  features, in slice stages 2 to 4, and the issue stays open until then.
+  workspace, submission — arrive with the endpoints they exercise. Problems and the opening of a
+  workspace now have theirs, over real PostgreSQL and MinIO; the file operations and submission do
+  not exist yet, and the issue stays open until they do.
 - **The catalog reads; nothing else about a problem is exposed.**
   [#9](https://github.com/shoraLBRT/ritocode/issues/9) stays open for search, facets, tag and
   difficulty filters, and explicit version resolution — a client can list published problems and
@@ -223,12 +227,17 @@ and it is the first code that will read a bundle back.
   not a revision. Editing a package and wanting the new revision published is a real need with no
   answer yet, and the real content pipeline is
   [#42](https://github.com/shoraLBRT/ritocode/issues/42).
-- **Only Problems and Users write rows**, and Users writes exactly one: the development identity's,
-  on startup, and never again — the seeder finds the row on a restart rather than adding a second.
-  `IUserLookup` now reads `users.users` and `IProblemVersionLookup` reads `problem_versions`, and
-  neither has a caller outside tests: the first is
-  [#10](https://github.com/shoraLBRT/ritocode/issues/10). The other five modules own migrated tables
-  that nothing touches, and the next to change is Workspaces, in that same issue.
+- **Only Problems, Users and Workspaces write rows**, and Users writes exactly one: the development
+  identity's, on startup, and never again. Workspaces writes a row per opened workspace and nothing
+  after that — `updated_at` does not move until [#12](https://github.com/shoraLBRT/ritocode/issues/12)
+  writes a file. Auth and Submissions own migrated tables that nothing touches.
+- **A workspace can be opened and read back, and its files cannot be reached.** The snapshot exists
+  in object storage from the moment the workspace does, and nothing serves it: listing the tree and
+  reading a file are [#11](https://github.com/shoraLBRT/ritocode/issues/11), writing one is
+  [#12](https://github.com/shoraLBRT/ritocode/issues/12). There is no endpoint listing a user's
+  workspaces either — "continue where you left off" has its index and no reader, and the client that
+  needs one is the stage 6 editor. A frontend screen for any of this is
+  [#28](https://github.com/shoraLBRT/ritocode/issues/28).
 - **The contracts have single-id methods only.** ADR 0007 §6 names `FindManyAsync` as the answer to
   an N+1 and keeps the single-id method beside it. No consumer lists anything yet, so the batch form
   waits for the first one that does — most likely a submission history screen in stage 6 — rather
@@ -243,11 +252,14 @@ and it is the first code that will read a bundle back.
   **not** depend on the token-format decision — see [Open questions](#open-questions).
   `AllowAnonymous()` on health, meta and the catalog is now load-bearing rather than anticipatory,
   and pinned by tests against a host with no identity.
-- **Authorisation is only "is authenticated".** Nothing checks that a resource belongs to its
-  caller, because nothing owns a resource yet. That is
-  [#35](https://github.com/shoraLBRT/ritocode/issues/35) in stage 3, and ADR 0005 is explicit that
-  it is not hardening to be deferred — without it the identity seam is decorative. It ships with the
-  endpoints it guards, not after them.
+- **Ownership is checked where a resource is read, and nowhere systematically yet.** The first
+  owned resource exists, and `GET /api/v1/workspaces/{id}` puts the owner inside the query, so
+  another user's workspace is the same absent row as a missing one — ADR 0005 forbids serving one
+  without that check, so it could not wait. What is still
+  [#35](https://github.com/shoraLBRT/ritocode/issues/35)'s box in stage 3 is making that the rule
+  for every workspace and submission endpoint rather than a property each one remembers, which
+  matters from [#11](https://github.com/shoraLBRT/ritocode/issues/11) on, when a workspace id
+  arrives in every file path.
 - **The object storage client puts and gets, and does nothing else.**
   [#5](https://github.com/shoraLBRT/ritocode/issues/5) stays open for the three operations left out,
   each because its first real caller decides its shape:
@@ -256,8 +268,8 @@ and it is the first code that will read a bundle back.
   [#43](https://github.com/shoraLBRT/ritocode/issues/43);
   **server-side copy**, which [STORAGE_LAYOUT.md](STORAGE_LAYOUT.md) requires at enqueue to freeze
   the workspace tree, arrives with [#14](https://github.com/shoraLBRT/ritocode/issues/14). Put and
-  get now have a real caller: ingest writes problem bundles, and nothing reads one back until
-  [#10](https://github.com/shoraLBRT/ritocode/issues/10) materialises a workspace from one.
+  get both have real callers: ingest writes problem bundles, and opening a workspace reads one back
+  and writes the workspace's first snapshot.
 - **Object storage has no readiness check.** `AddObjectStorage` registers a client that contacts
   nothing at startup, so `/health/ready` still reports one check per module schema and no more.
   Adding a storage check would make `dotnet test` and a bare `dotnet run` require MinIO — the
@@ -265,8 +277,8 @@ and it is the first code that will read a bundle back.
   it waits for the first endpoint that cannot serve a request without an object.
 - **Cross-module references carry no foreign key**, by design — see
   [ADR 0004](adr/0004-persistence-and-migrations.md). Whichever module creates such a row is
-  responsible for validating the reference first, and now has the contracts to do it with for the
-  two Workspaces references. The other three in [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) —
+  responsible for validating the reference first, and the two Workspaces references are now
+  validated on create through the contracts. The other three in [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) —
   `linked_accounts.user_id`, and `submissions.workspace_id` and `.user_id` — get theirs when their
   writers arrive; `submissions.user_id` can reuse `IUserLookup` only if it asks the identical question.
 
@@ -277,21 +289,22 @@ and it is the first code that will read a bundle back.
 The slice plan is the ordered list now: **[`docs/SLICE_PLAN.md`](SLICE_PLAN.md)**. Take the first
 unticked box. The stages there are ordered so that each depends only on stages above it.
 
-**Stages 1 and 2 are complete, and stage 3 is two boxes in**: the identity seam, and the
-cross-module contracts. What those left in place for everything after them: every endpoint takes
-its user from `ICurrentUser`, one that says nothing about authorisation is protected rather than
-open, and a module that stores a reference into another module's schema validates it through a
-contract in `Shared/Contracts` whose shape `CrossModuleContractTests` enforces. **The next box is:**
+**Stages 1 and 2 are complete, and stage 3 is three boxes in**: the identity seam, the
+cross-module contracts, and opening a workspace. What those left in place for everything after them:
+every endpoint takes its user from `ICurrentUser`, one that says nothing about authorisation is
+protected rather than open, a module that stores a reference into another module's schema validates
+it through a contract in `Shared/Contracts`, and a workspace exists as a row and a snapshot.
+**The next box is:**
 
-1. **[#10](https://github.com/shoraLBRT/ritocode/issues/10) — create workspace from a problem
-   version.** The first consumer of both contracts, the first code that reads a problem bundle back
-   out of object storage, and the first endpoint the fallback policy actually protects. What it
-   inherits: `IProblemVersionLookup` hands over `SnapshotReference`, so the bundle key is read from
-   the row rather than rebuilt; a draft comes back with `PublishedAt` null, and **refusing it is
-   #10's rule to write and test** under an error code Workspaces chooses; the seeded development
-   identity is a user `IUserLookup` finds. `workspaces.snapshot_reference` is still a `string` and is
-   meant to become a `StorageReference` with its first writer — [#12](https://github.com/shoraLBRT/ritocode/issues/12)
-   per the open question, though #10 writes it first.
+1. **[#11](https://github.com/shoraLBRT/ritocode/issues/11) — file tree and file read.** What it
+   inherits: the tree is a gzipped tar at the reference `workspaces.snapshot_reference` stores —
+   read it from the row, never from `StorageKeys` — whose entry names are already workspace-relative
+   paths, regular files only, no directory entries. `WorkspaceLifecycle.GetAsync` is the ownership
+   pattern to reuse: owner inside the query, `workspace_not_found` for anything the caller does not
+   own, and an id that is not a GUID answered the same way rather than by a route constraint. What
+   it does **not** inherit is the editable / readonly split: nothing Workspaces can reach knows which
+   file is which, and #11 may want to show it — see the workspace policy entry under
+   [Open questions](#open-questions) before inventing a way.
 
 The three ADRs written so far are off this list and their obligations are in
 [Open questions](#open-questions) instead. Briefly: submission reports gain somewhere to carry a
@@ -430,10 +443,9 @@ Decisions a future session will hit, and where in the slice each one comes due.
   and ADR 0007 §1 gives a different question its own interface rather than a wider one. `/me` is
   also inside the Users module's own boundary if Users serves it, in which case it needs no contract
   at all. It stayed out because the plan said so and nothing in the slice
-  needs it, not because it is hard. The cost of it being out is small but real: **no endpoint in the
-  running host requires authentication yet**, so the fallback policy and the 401 body are exercised
-  only by tests over a probe endpoint until
-  [#10](https://github.com/shoraLBRT/ritocode/issues/10) lands the first protected product endpoint.
+  needs it, not because it is hard. Its absence no longer leaves the fallback policy exercised only
+  by a probe: the workspace endpoints of [#10](https://github.com/shoraLBRT/ritocode/issues/10) are
+  protected product endpoints, and their refusal of an anonymous caller is tested.
 - **The development identity is not refused outside Development.** *Decided in
   [ADR 0008](adr/0008-authentication-seam.md); revisit when a real session provider lands.* Enabled,
   it authenticates every request as one fixed user with no credential — which is precisely what
@@ -551,18 +563,17 @@ Decisions a future session will hit, and where in the slice each one comes due.
   their tests failed when the container was killed.
 - **How the reference form is enforced at the database.** *Settled by
   [#9](https://github.com/shoraLBRT/ritocode/issues/9), which wrote the first reference; adopted
-  for one column of three.* An EF value converter, `StorageReferenceConverter` in
+  for two columns of three.* An EF value converter, `StorageReferenceConverter` in
   `Ritocode.Shared.Persistence`. The property is typed as `StorageReference`, so no code path can
   put an arbitrary string in the column, and a value this build cannot resolve throws where it is
   read rather than reaching a caller that assumed it parsed. A check constraint on the role prefix
   was the alternative and buys little the converter does not: the writes it would catch are the
-  ones the converter makes unexpressible. **`workspaces.snapshot_reference` and
-  `submission_reports.logs_reference` are still `string`.** Converting them was left to their first
-  writers — [#12](https://github.com/shoraLBRT/ritocode/issues/12) and
-  [#23](https://github.com/shoraLBRT/ritocode/issues/23) — rather than done speculatively here, and
-  both tables are empty, so it stays a two-line change until they are not. Adopting it needs no
-  migration: the store type and width are unchanged, and `has-pending-model-changes` reported no
-  drift.
+  ones the converter makes unexpressible. **`workspaces.snapshot_reference` converted with its first
+  writer**, [#10](https://github.com/shoraLBRT/ritocode/issues/10) — earlier than the #12 this entry
+  used to name, because #10 turned out to write it first — with no migration and no drift, since the
+  store type and width are unchanged. **`submission_reports.logs_reference` is still `string`** and
+  converts with its first writer, [#23](https://github.com/shoraLBRT/ritocode/issues/23), while its
+  table is empty and the change is two lines.
 - **Who creates the buckets in a deployment?** *Created by the storage client, due before anything
   is deployed.* `compose.yaml` creates the three local buckets with `mc mb` and `MinioTestServer`
   creates a set per test class, so both environments that exist today are covered by accident of
@@ -589,8 +600,8 @@ Decisions a future session will hit, and where in the slice each one comes due.
   trigger or a check constraint actually did cannot see it inside a transaction the harness rolls
   back. Consequence: `dotnet test` now needs a Docker daemon, and no longer needs `dev-up`.
 - **Who validates cross-module references, and how?** *Settled by
-  [ADR 0007](adr/0007-cross-module-contract-form.md); the first two contracts exist, and their first
-  caller is [#10](https://github.com/shoraLBRT/ritocode/issues/10).*
+  [ADR 0007](adr/0007-cross-module-contract-form.md); the first two contracts exist, and
+  [#10](https://github.com/shoraLBRT/ritocode/issues/10) is their first caller.*
   [ADR 0004](adr/0004-persistence-and-migrations.md) says the module creating the row does; ADR 0002
   said the contract lives in `Ritocode.Shared`; ADR 0007 fixes its shape. Thin read-interfaces, one
   per consumer need, taken as constructor parameters — so a cross-module dependency is visible in a
@@ -612,6 +623,44 @@ Decisions a future session will hit, and where in the slice each one comes due.
   implemented in `Ritocode.Modules.Users`, so a contract declared directly under
   `Ritocode.Shared.Contracts` with no owner segment fails. Implementations are `internal` and
   registered by implementation type, never by factory — a factory hides the type the test reads.
+- **Where Workspaces learns a version's workspace policy.** *Created by
+  [#10](https://github.com/shoraLBRT/ritocode/issues/10); comes due with
+  [#12](https://github.com/shoraLBRT/ritocode/issues/12) and
+  [#36](https://github.com/shoraLBRT/ritocode/issues/36).* A bundle keeps the package layout, and
+  which of its directories is the starter tree is written in the manifest — a format that belongs to
+  Problems and that Workspaces may not parse. #10 answered the one fact it needed the cheapest safe
+  way: ingest stores the manifest's `workspace.root` as `problem_versions.workspace_root`, and
+  `ProblemVersionSummary` carries it. One migration, whose default for rows ingested before it is
+  the format's own default root — which every package so far declares, and which the development
+  database was checked against. **The rest of the manifest's workspace section is still out of
+  reach**: the `editable` / `readonly` split #12 must enforce on a write, and the `limits` #36 must
+  enforce on size and count. The same pattern extends — more columns, or one
+  `workspace_config jsonb` beside `validator_config` that would also absorb `workspace_root` — and
+  two alternatives are worth not rediscovering: parsing `problem.yaml` in Workspaces copies the
+  format across a module boundary, and a contract that reads the bundle puts an object-store
+  download behind every file write. One thing to weigh when #12 picks: storing the loader's resolved
+  file lists (`EditableFiles`, `ReadonlyFiles`) rather than the globs keeps glob matching — which is
+  also format knowledge — inside Problems. Whatever it is, the contract gains fields named for the
+  consumer need, per ADR 0007.
+- **One workspace per user per version, and nothing enforces it.** *Created by
+  [#10](https://github.com/shoraLBRT/ritocode/issues/10); revisit with
+  [#13](https://github.com/shoraLBRT/ritocode/issues/13).* Opening a version the caller already has
+  a workspace on returns that workspace — 200, not 201 — because the draft a person left is what
+  "open" has to find, and there is no endpoint yet that lists workspaces to find it any other way.
+  The index on `(user_id, problem_version_id)` is not unique, so two concurrent first opens can both
+  create a row and a snapshot; a later open returns the most recently written, and the other is an
+  orphan with an object behind it. That costs storage rather than work, and nothing in the slice
+  races itself. A unique index would make it a rule, and is a migration plus a decision about reset:
+  whether #13 replaces a tree in place — which a unique index suits — or starts a fresh workspace,
+  which it forbids. Worth deciding there, against the real case.
+- **A timestamp returned from memory has to match the one read back.** *Found by
+  [#10](https://github.com/shoraLBRT/ritocode/issues/10), settled.* .NET keeps 100-nanosecond ticks
+  and `timestamptz` keeps microseconds, so a create response built from the new entity reported a
+  `createdAt` that no later read of the same workspace would ever return — caught by the test that
+  follows the `Location`, where two values that print identically compared unequal.
+  `Workspace.Create` now truncates to the microsecond. `ProblemVersion.Create` does not, and does not
+  need to yet, because nothing answers with a version it just built; the next endpoint that answers a
+  create with the entity in hand needs the same truncation, or the same test.
 - **How does one module *change* another's state?** *Open, and outside the slice.* ADR 0007 is
   read-only by decision, so there is no mechanism and no need for one yet. The first real case is
   user deletion in [#43](https://github.com/shoraLBRT/ritocode/issues/43), which
@@ -671,10 +720,15 @@ With the host running, these are the current smoke checks:
 | `GET /api/v1/problems/no-such-problem` | `404`, `code: "problem_not_found"` |
 | any response | carries an `X-Request-Id` header |
 
-Every endpoint above says `AllowAnonymous()`, which is now load-bearing: the host protects anything
-that does not. **No endpoint in the running host requires authentication yet** — the first is
-[#10](https://github.com/shoraLBRT/ritocode/issues/10)'s — so the seam is observed in the log and in
-the database rather than over HTTP:
+Every endpoint above says `AllowAnonymous()`, which is load-bearing: the host protects anything that
+does not. The workspace endpoints say nothing, and in Production — development identity off — they
+refuse:
+
+| Request | Expected |
+| --- | --- |
+| `POST /api/v1/workspaces` with `{"problemVersionId":"<any id>"}` | `401`, `application/problem+json`, `code: "unauthenticated"` |
+
+The seam itself is observed in the log and in the database:
 
 | Where | Expected |
 | --- | --- |
@@ -699,6 +753,16 @@ warning naming the absolute path it tried, not a silent empty catalog.
 | --- | --- |
 | `GET /api/v1/problems` | `200`, `totalItems: 4`, all at `version: 1` — `split-the-invoice` (`easy`), `respect-the-precedence` (`hard`), `no-double-booking` (`medium`) and `example-order-total` (`medium`), newest first |
 | `GET /api/v1/problems/split-the-invoice` | `200`, the same fields plus `description` and a `problemVersionId` |
+| `POST /api/v1/workspaces` with `{"problemVersionId":"<that id>"}` | `201`, a `Location` ending `/api/v1/workspaces/{id}`, and `id`, `problemVersionId`, `createdAt`, `updatedAt` |
+| the same `POST` again | `200`, the same body — one workspace per user per version |
+| `GET` the `Location` | `200`, the same body |
+| `GET /api/v1/workspaces/not-a-workspace` | `404`, `code: "workspace_not_found"` |
+| `POST /api/v1/workspaces` with `{}` | `400`, `code: "validation_failed"`, `errors.problemVersionId` present |
+
+Opening a workspace needs the MinIO from `dev-up` for the same reason seeding does: it reads the
+version's bundle and writes `workspace-snapshots/workspaces/{id}/tree.tar.gz`. A second `POST` on the
+same database answers `200` for as long as the database lives, so the `201` is seen once per version
+per database.
 
 Seeding needs the MinIO from `dev-up`. Four packages rather than the three of
 [#42](https://github.com/shoraLBRT/ritocode/issues/42): the fourth is `example-order-total`, the
@@ -755,9 +819,16 @@ other makes every request fail in the browser and succeed from `curl`.
 | <http://localhost:5173/nowhere> | "Page not found" |
 | the same pages with the API stopped | The failure panel, saying the backend cannot be reached |
 
-Current baseline: **285 backend tests, all passing** — 125 shared, 113 problems, 39 API,
-9 architecture — and **55 frontend tests**, run separately by `npm test`. A session that leaves
-either number lower than it found it has broken something.
+Current baseline: **325 backend tests, all passing** — 125 shared, 113 problems, 50 API,
+28 workspaces, 9 architecture — and **55 frontend tests**, run separately by `npm test`. A session
+that leaves either number lower than it found it has broken something.
+
+The API assembly rose from 39 to 50 and the new workspaces assembly arrived at 28 with
+[#10](https://github.com/shoraLBRT/ritocode/issues/10). The API assembly now starts MinIO as well as
+PostgreSQL, but only for `WorkspaceApi`, which ingests a committed package for real — the content
+tree is copied into its output for that. `WorkspaceApi` publishes a fresh version per test rather
+than one per class: every request there is the same identity, and a version it already opened
+answers 200 instead of 201.
 
 The architecture assembly rose from 5 to 9, the problems assembly from 109 to 113 and the API
 assembly from 36 to 39 with the cross-module contracts. The architecture tests compose the host's
@@ -777,6 +848,7 @@ The problems assembly rose from 91 to 109 with the content of
 package as it ships, and most of its cases are theories over the content directory, so a fourth
 catalog problem adds tests without anyone writing one.
 
-Three of the four test assemblies now need a Docker daemon: the shared assembly starts MinIO, the
-API assembly starts PostgreSQL, and the Problems assembly starts both — its ingest and catalog
-tests write rows and objects for real. Only `Ritocode.Architecture.Tests` runs without one.
+Four of the five test assemblies now need a Docker daemon: the shared assembly starts MinIO, and
+the API, Problems and Workspaces assemblies start both — each writes rows and objects for real. Only
+`Ritocode.Architecture.Tests` runs without one, and inside the others the format, starter tree and
+domain tests start no container.

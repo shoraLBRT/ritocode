@@ -58,7 +58,12 @@ public sealed class ProblemIngestService(
             .MaxAsync(version => (int?)version.Version, cancellationToken)
             .ConfigureAwait(false);
 
-        var problemVersion = ProblemVersion.Create(problem.Id, (previous ?? 0) + 1, package.ValidatorConfigJson, now);
+        var problemVersion = ProblemVersion.Create(
+            problem.Id,
+            (previous ?? 0) + 1,
+            package.ValidatorConfigJson,
+            manifest.Workspace.Root,
+            now);
         problemVersion.Publish(now);
 
         // The bundle is written before the row that points at it commits. The failure this ordering

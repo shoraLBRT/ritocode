@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Ritocode.Modules.Workspaces.Domain;
+using Ritocode.Shared.Persistence;
+using Ritocode.Shared.Storage;
 
 namespace Ritocode.Modules.Workspaces.Persistence.Configurations;
 
@@ -18,8 +20,12 @@ internal sealed class WorkspaceConfiguration : IEntityTypeConfiguration<Workspac
 
         builder.Property(w => w.UserId).IsRequired();
         builder.Property(w => w.ProblemVersionId).IsRequired();
+        // Typed, as problem_versions.snapshot_reference already is: the column can only hold the
+        // role/key form of docs/STORAGE_LAYOUT.md. Same store type and width as before, so adopting
+        // the converter needs no migration.
         builder.Property(w => w.SnapshotReference)
-            .HasMaxLength(Workspace.SnapshotReferenceMaxLength).IsRequired();
+            .HasConversion<StorageReferenceConverter>()
+            .HasMaxLength(StorageReference.MaxLength).IsRequired();
         builder.Property(w => w.CreatedAt).IsRequired();
         builder.Property(w => w.UpdatedAt).IsRequired();
 

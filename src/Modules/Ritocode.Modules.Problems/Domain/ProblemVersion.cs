@@ -29,6 +29,14 @@ public sealed class ProblemVersion
     /// </summary>
     public string ValidatorConfig { get; set; } = "{}";
 
+    /// <summary>
+    /// The manifest's <c>workspace.root</c>, with no trailing slash: the directory inside the bundle
+    /// whose files are the starter tree. Stored rather than re-read from the bundle's manifest
+    /// because a workspace is materialised outside this module, and the manifest format is this
+    /// module's to parse — see docs/STORAGE_LAYOUT.md.
+    /// </summary>
+    public string WorkspaceRoot { get; set; } = Packaging.WorkspaceSpec.DefaultRoot;
+
     public DateTimeOffset CreatedAt { get; set; }
 
     /// <summary>Null while the version is a draft. The catalog only ever resolves published versions.</summary>
@@ -45,8 +53,11 @@ public sealed class ProblemVersion
         Guid problemId,
         int version,
         string validatorConfig,
+        string workspaceRoot,
         DateTimeOffset createdAt)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(workspaceRoot);
+
         var id = Guid.CreateVersion7();
 
         return new ProblemVersion
@@ -56,6 +67,7 @@ public sealed class ProblemVersion
             Version = version,
             SnapshotReference = StorageKeys.ProblemBundle(id),
             ValidatorConfig = validatorConfig,
+            WorkspaceRoot = workspaceRoot.TrimEnd('/'),
             CreatedAt = createdAt.ToUniversalTime(),
             PublishedAt = null,
         };

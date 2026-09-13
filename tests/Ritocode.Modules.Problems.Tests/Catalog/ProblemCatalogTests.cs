@@ -188,14 +188,14 @@ public sealed class ProblemCatalogTests(PostgresTestServer postgres)
 
             for (var published = 0; published < seed.PublishedVersions; published++)
             {
-                var row = ProblemVersion.Create(problem.Id, ++version, "{}", Noon);
+                var row = ProblemVersion.Create(problem.Id, ++version, "{}", "starter", Noon);
                 row.Publish(Noon);
                 context.ProblemVersions.Add(row);
             }
 
             for (var draft = 0; draft < seed.DraftVersions; draft++)
             {
-                context.ProblemVersions.Add(ProblemVersion.Create(problem.Id, ++version, "{}", Noon));
+                context.ProblemVersions.Add(ProblemVersion.Create(problem.Id, ++version, "{}", "starter", Noon));
             }
         }
 

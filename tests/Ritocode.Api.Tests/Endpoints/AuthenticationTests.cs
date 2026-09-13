@@ -133,6 +133,24 @@ public sealed class AnonymousRequestTests(AnonymousTestApi api) : IClassFixture<
     }
 
     [Fact]
+    public async Task TheWorkspaceEndpoints_RefuseACallerWithNoIdentity()
+    {
+        // The first product endpoints that say nothing about authorisation. They are closed because
+        // the fallback policy is, and this is where that stops being a claim about a probe endpoint.
+        var open = await api.Client.PostAsJsonAsync(
+            new Uri("/api/v1/workspaces", UriKind.Relative),
+            new { problemVersionId = Guid.CreateVersion7() },
+            TestContext.Current.CancellationToken);
+
+        var read = await api.Client.GetAsync(
+            new Uri($"/api/v1/workspaces/{Guid.CreateVersion7()}", UriKind.Relative),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, open.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, read.StatusCode);
+    }
+
+    [Fact]
     public async Task NoUserRow_IsSeededWhenTheDevelopmentIdentityIsOff()
     {
         await using var connection = new NpgsqlConnection(api.ConnectionString);

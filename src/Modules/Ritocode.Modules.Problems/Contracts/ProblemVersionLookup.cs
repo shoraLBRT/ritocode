@@ -24,6 +24,7 @@ internal sealed class ProblemVersionLookup(ProblemsDbContext context) : IProblem
                 version.Problem!.Slug,
                 version.Version,
                 version.PublishedAt,
-                version.SnapshotReference))
+                version.SnapshotReference,
+                version.WorkspaceRoot))
             .FirstOrDefaultAsync(cancellationToken);
 }

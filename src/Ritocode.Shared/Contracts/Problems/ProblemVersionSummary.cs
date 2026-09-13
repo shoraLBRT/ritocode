@@ -17,10 +17,17 @@ namespace Ritocode.Shared.Contracts.Problems;
 /// rebuilt from an identifier — which a consumer outside the Problems module could only do by
 /// rebuilding it.
 /// </param>
+/// <param name="WorkspaceRoot">
+/// The bundle directory whose files are the starter tree, bundle-relative with no trailing slash.
+/// Carried for the same consumer: the bundle keeps the package's own layout, so without this a
+/// module outside Problems could only find the starter tree by parsing the manifest — a format that
+/// belongs to Problems.
+/// </param>
 public sealed record ProblemVersionSummary(
     Guid Id,
     Guid ProblemId,
     string Slug,
     int Version,
     DateTimeOffset? PublishedAt,
-    StorageReference SnapshotReference);
+    StorageReference SnapshotReference,
+    string WorkspaceRoot);

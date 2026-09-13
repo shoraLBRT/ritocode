@@ -67,6 +67,9 @@ Fields:
 - validator_config — validator pipeline configuration; the canonical JSON projection of a problem
   package's `validators` list, defined in
   [PROBLEM_PACKAGE_SPEC.md](PROBLEM_PACKAGE_SPEC.md#validator_config)
+- workspace_root — the package's `workspace.root` with no trailing slash: the directory inside the
+  bundle whose files are the starter tree. Stored so a workspace can be materialised by a module that
+  may not parse the manifest format, and handed to it by `IProblemVersionLookup`
 - created_at
 - published_at — null while the version is a draft
 
@@ -89,9 +92,19 @@ Fields:
 - user_id
 - problem_version_id
 - snapshot_reference — storage reference of the current working tree, overwritten on every save;
-  see [STORAGE_LAYOUT.md](STORAGE_LAYOUT.md)
+  see [STORAGE_LAYOUT.md](STORAGE_LAYOUT.md). Typed as `StorageReference`, as the problem version's is.
+  Written first at creation, holding the version's starter tree re-rooted so its paths are the paths
+  a user sees
 - created_at
 - updated_at — last write, and never earlier than created_at
+
+A workspace is opened on a **published** version only; a draft is answered as if it did not exist.
+A user has **one workspace per version**: opening a version they already have a workspace on returns
+that workspace rather than creating an empty second one. The schema does not enforce this — two
+concurrent first opens can both create, and a later open returns the most recently written.
+
+A workspace is read only by its owner. Another user's workspace is answered exactly like a missing
+one, with a 404, so the API never confirms that an id exists.
 
 ## Submission
 

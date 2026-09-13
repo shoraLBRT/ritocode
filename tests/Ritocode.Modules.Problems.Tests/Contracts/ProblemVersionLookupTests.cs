@@ -32,6 +32,9 @@ public sealed class ProblemVersionLookupTests(PostgresTestServer postgres)
 
         // Read back from the column, and still the key the layout gives this version's bundle.
         Assert.Equal(StorageKeys.ProblemBundle(version.Id), summary.SnapshotReference);
+
+        // Where the starter tree sits inside that bundle, normalised to carry no trailing slash.
+        Assert.Equal("tree", summary.WorkspaceRoot);
     }
 
     [Fact]
@@ -95,7 +98,9 @@ public sealed class ProblemVersionLookupTests(PostgresTestServer postgres)
 
         for (var number = 1; number <= publishedVersions + draftVersions; number++)
         {
-            var version = ProblemVersion.Create(problem.Id, number, "{}", Noon);
+            // Not the manifest default, and written with the trailing slash a manifest may carry, so
+            // the assertion reads the stored value rather than a default that happens to agree.
+            var version = ProblemVersion.Create(problem.Id, number, "{}", "tree/", Noon);
 
             if (number <= publishedVersions)
             {

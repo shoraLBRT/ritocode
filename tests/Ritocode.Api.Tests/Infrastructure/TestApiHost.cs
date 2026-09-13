@@ -9,6 +9,7 @@ using Ritocode.Api.Setup;
 using Ritocode.Modules.Problems.Ingest;
 using Ritocode.Shared.Errors;
 using Ritocode.Shared.Identity;
+using Ritocode.Shared.Storage;
 using Ritocode.Shared.Validation;
 
 namespace Ritocode.Api.Tests.Infrastructure;
@@ -38,7 +39,15 @@ internal sealed class TestApiHost : IAsyncDisposable
     /// <summary>The composed container, for tests that resolve a service the way an endpoint would.</summary>
     public IServiceProvider Services => _app.Services;
 
-    public static async Task<TestApiHost> StartAsync(string connectionString, bool developmentIdentityEnabled)
+    /// <param name="storage">
+    /// Buckets from <see cref="Ritocode.TestSupport.MinioTestServer"/> for a host that reads or writes
+    /// objects. Left null, the host keeps the configured default and contacts no store unless a test
+    /// makes it.
+    /// </param>
+    public static async Task<TestApiHost> StartAsync(
+        string connectionString,
+        bool developmentIdentityEnabled,
+        ObjectStorageOptions? storage = null)
     {
         var builder = WebApplication.CreateBuilder();
         builder.Environment.EnvironmentName = Environments.Development;
@@ -62,6 +71,21 @@ internal sealed class TestApiHost : IAsyncDisposable
             // than inherit it.
             [$"{DevelopmentIdentityOptions.SectionName}:Enabled"] = developmentIdentityEnabled ? "true" : "false",
         });
+
+        if (storage is not null)
+        {
+            var section = ObjectStorageOptions.SectionName;
+
+            builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                [$"{section}:{nameof(ObjectStorageOptions.ServiceUrl)}"] = storage.ServiceUrl,
+                [$"{section}:{nameof(ObjectStorageOptions.AccessKey)}"] = storage.AccessKey,
+                [$"{section}:{nameof(ObjectStorageOptions.SecretKey)}"] = storage.SecretKey,
+                [$"{section}:{nameof(ObjectStorageOptions.ProblemBundlesBucket)}"] = storage.ProblemBundlesBucket,
+                [$"{section}:{nameof(ObjectStorageOptions.WorkspaceSnapshotsBucket)}"] = storage.WorkspaceSnapshotsBucket,
+                [$"{section}:{nameof(ObjectStorageOptions.EvaluationArtifactsBucket)}"] = storage.EvaluationArtifactsBucket,
+            });
+        }
 
         builder.AddRitocodeApi();
         builder.Services.AddScoped<IValidator<EchoRequest>, EchoRequestValidator>();

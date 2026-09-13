@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Ritocode.Modules.Problems.Persistence;
@@ -11,9 +12,11 @@ using Ritocode.Modules.Problems.Persistence;
 namespace Ritocode.Modules.Problems.Persistence.Migrations
 {
     [DbContext(typeof(ProblemsDbContext))]
-    partial class ProblemsDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260913001758_AddProblemVersionWorkspaceRoot")]
+    partial class AddProblemVersionWorkspaceRoot
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

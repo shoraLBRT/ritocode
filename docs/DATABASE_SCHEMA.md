@@ -65,6 +65,7 @@ erDiagram
         int version "UK with problem_id, check: >= 1"
         text snapshot_reference
         jsonb validator_config
+        text workspace_root "bundle directory of the starter tree"
         timestamptz created_at
         timestamptz published_at "null while draft"
     }

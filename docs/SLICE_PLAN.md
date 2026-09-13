@@ -9,7 +9,7 @@ reductions that are allowed and the list that are forbidden. **Read that ADR bef
 anything here.** This file tracks progress; it holds no decisions.
 
 - **Last updated:** 2026-09-13
-- **Progress:** 13 / 37
+- **Progress:** 14 / 37
 - **Estimate:** 30–34 sessions, six to seven weeks at five sessions a week
 - **Then:** [stage two](#after-the-slice) — the rest of Phase 1
 
@@ -30,7 +30,7 @@ anything here.** This file tracks progress; it holds no decisions.
 | --- | --- | --- |
 | [1 — Foundation](#stage-1--foundation) | 5 | 5 / 5 |
 | [2 — Content and catalog](#stage-2--content-and-catalog) | 5 | 6 / 6 |
-| [3 — Identity and workspace](#stage-3--identity-and-workspace) | 6 | 2 / 7 |
+| [3 — Identity and workspace](#stage-3--identity-and-workspace) | 6 | 3 / 7 |
 | [4 — Submission and queue](#stage-4--submission-and-queue) | 5 | 0 / 5 |
 | [5 — Execution](#stage-5--execution) | 7 | 0 / 8 |
 | [6 — Product face](#stage-6--product-face) | 6 | 0 / 6 |
@@ -212,9 +212,27 @@ first time.
   problem's latest; whether a workspace may open on a draft is #10's rule, not Problems'. No batch
   method: nothing lists yet, and ADR 0007 §6 adds one with the first consumer that does. Closes no
   issue, as planned.
-- [ ] **[#10](https://github.com/shoraLBRT/ritocode/issues/10) — create workspace from a problem
-  version.** Materialises the bundle into a workspace snapshot. Never from a problem, always from a
-  version.
+- [x] **[#10](https://github.com/shoraLBRT/ritocode/issues/10) — create workspace from a problem
+  version.** `POST /api/v1/workspaces` with a `problemVersionId`, and `GET /api/v1/workspaces/{id}`
+  to open it again — the first product endpoints the fallback policy protects, and the first caller
+  of both ADR 0007 contracts. Materialises the bundle into a workspace snapshot, read from the
+  reference the version's row stores: only the files under the workspace root, re-rooted, regular
+  files only, and a link or a path that could leave the tree fails the creation rather than being
+  normalised. Never from a problem, always from a version — and only a **published** one: a draft is
+  refused as `problem_version_not_found`, indistinguishable from a version that does not exist.
+  The owner is `ICurrentUser`, never the body, and a `userId` sent anyway is ignored and tested as
+  ignored; reading another user's workspace answers `workspace_not_found`, with the owner inside the
+  query rather than checked after it.
+  **Two decisions the plan did not state.** *One workspace per user per version*: opening a version
+  already open answers 200 with that workspace instead of 201 with an empty second one, because the
+  draft a person left is what "open" has to find — not enforced by the schema, and a concurrent first
+  open can create two, which costs a row rather than work. And *where the starter tree is*: the
+  bundle keeps the package layout, and the manifest that says which directory is the starter tree is
+  a format Workspaces may not parse — so ingest now stores `problem_versions.workspace_root`, and
+  `ProblemVersionSummary` carries it, the second field that contract gained for this consumer. One
+  migration, whose default is the format's own default root for rows ingested before it.
+  `workspaces.snapshot_reference` became a typed `StorageReference` with its first writer, no
+  migration needed. See [Open questions](PROJECT_STATE.md#open-questions).
 - [ ] **[#11](https://github.com/shoraLBRT/ritocode/issues/11) — file tree and file read.**
 - [ ] **[#12](https://github.com/shoraLBRT/ritocode/issues/12) — file write and draft persistence.**
 - [ ] **[#36](https://github.com/shoraLBRT/ritocode/issues/36) (partial) — path and size limits.**
