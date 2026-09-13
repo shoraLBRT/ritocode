@@ -32,10 +32,18 @@ internal sealed class WorkspacesDatabase
             .Options);
 }
 
-/// <summary>One entry of a hand-built bundle.</summary>
-internal sealed record BundleEntry(string Name, TarEntryType Type, string? Content = null, string? LinkName = null)
+/// <summary>One entry of a hand-built bundle or snapshot.</summary>
+internal sealed record BundleEntry(
+    string Name,
+    TarEntryType Type,
+    string? Content = null,
+    string? LinkName = null,
+    byte[]? Bytes = null)
 {
     public static BundleEntry File(string name, string content) => new(name, TarEntryType.RegularFile, content);
+
+    /// <summary>A file whose bytes are given exactly, for content that is not — or not only — text.</summary>
+    public static BundleEntry Binary(string name, byte[] bytes) => new(name, TarEntryType.RegularFile, Bytes: bytes);
 
     public static BundleEntry Directory(string name) => new(name, TarEntryType.Directory);
 
@@ -77,9 +85,11 @@ internal static class Archives
             {
                 var tarEntry = new PaxTarEntry(entry.Type, entry.Name);
 
-                if (entry.Content is not null)
+                var data = entry.Bytes ?? (entry.Content is null ? null : Encoding.UTF8.GetBytes(entry.Content));
+
+                if (data is not null)
                 {
-                    tarEntry.DataStream = new MemoryStream(Encoding.UTF8.GetBytes(entry.Content));
+                    tarEntry.DataStream = new MemoryStream(data);
                 }
 
                 if (entry.LinkName is not null)
@@ -140,10 +150,15 @@ internal sealed class StubProblemVersionLookup(params ProblemVersionSummary[] ve
         Task.FromResult(versions.FirstOrDefault(version => version.Id == id));
 }
 
-/// <summary>A real store that also counts puts, so a test can assert that nothing was written.</summary>
+/// <summary>
+/// A real store that also counts puts and gets, so a test can assert that nothing was written — or
+/// that nothing was read.
+/// </summary>
 internal sealed class CountingObjectStore(IObjectStore inner) : IObjectStore
 {
     public int Puts { get; private set; }
+
+    public int Gets { get; private set; }
 
     public Task PutAsync(StorageReference reference, Stream content, CancellationToken cancellationToken = default)
     {
@@ -151,8 +166,11 @@ internal sealed class CountingObjectStore(IObjectStore inner) : IObjectStore
         return inner.PutAsync(reference, content, cancellationToken);
     }
 
-    public Task<bool> GetAsync(StorageReference reference, Stream destination, CancellationToken cancellationToken = default) =>
-        inner.GetAsync(reference, destination, cancellationToken);
+    public Task<bool> GetAsync(StorageReference reference, Stream destination, CancellationToken cancellationToken = default)
+    {
+        Gets++;
+        return inner.GetAsync(reference, destination, cancellationToken);
+    }
 }
 
 /// <summary>A clock that does not move, so a stored timestamp is an assertion and not a range.</summary>

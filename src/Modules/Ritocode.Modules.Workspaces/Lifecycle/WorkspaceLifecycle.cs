@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Ritocode.Modules.Workspaces.Domain;
+using Ritocode.Modules.Workspaces.Files;
 using Ritocode.Modules.Workspaces.Persistence;
 using Ritocode.Shared.Contracts.Problems;
 using Ritocode.Shared.Contracts.Users;
@@ -96,14 +97,7 @@ public sealed class WorkspaceLifecycle(
         Guid workspaceId,
         CancellationToken cancellationToken = default)
     {
-        // Ownership is part of the query rather than a check after it. Another user's workspace and a
-        // missing one are then the same absent row, so they cannot drift into answering differently —
-        // and a 403 would confirm the id exists (ADR 0003).
-        var workspace = await context.Workspaces
-            .AsNoTracking()
-            .FirstOrDefaultAsync(
-                candidate => candidate.Id == workspaceId && candidate.UserId == userId,
-                cancellationToken);
+        var workspace = await context.Workspaces.FindOwnedAsync(userId, workspaceId, cancellationToken);
 
         return workspace is null ? WorkspaceNotFound() : Detail(workspace);
     }
@@ -124,7 +118,7 @@ public sealed class WorkspaceLifecycle(
         StorageReference snapshot,
         CancellationToken cancellationToken)
     {
-        await using var bundle = TemporaryFile();
+        await using var bundle = ScratchFile.Create();
 
         if (!await objectStore.GetAsync(version.SnapshotReference, bundle, cancellationToken))
         {
@@ -136,26 +130,10 @@ public sealed class WorkspaceLifecycle(
 
         bundle.Position = 0;
 
-        await using var tree = TemporaryFile();
+        await using var tree = ScratchFile.Create();
         await StarterTree.WriteAsync(bundle, version.WorkspaceRoot, tree, cancellationToken);
         tree.Position = 0;
 
         await objectStore.PutAsync(snapshot, tree, cancellationToken);
     }
-
-    /// <summary>
-    /// A file rather than memory, as ingest does: a put is signed over a known length, and a package's
-    /// limits allow a workspace of up to 100 MiB. DeleteOnClose is what leaves nothing behind when
-    /// materialising fails.
-    /// </summary>
-    private static FileStream TemporaryFile() =>
-        new(
-            Path.Combine(Path.GetTempPath(), Path.GetRandomFileName()),
-            new FileStreamOptions
-            {
-                Mode = FileMode.CreateNew,
-                Access = FileAccess.ReadWrite,
-                Share = FileShare.None,
-                Options = FileOptions.DeleteOnClose | FileOptions.Asynchronous,
-            });
 }

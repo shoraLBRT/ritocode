@@ -1,5 +1,6 @@
 using System.Formats.Tar;
 using System.IO.Compression;
+using Ritocode.Modules.Workspaces.Files;
 
 namespace Ritocode.Modules.Workspaces.Lifecycle;
 
@@ -43,7 +44,7 @@ internal static class StarterTree
         ArgumentNullException.ThrowIfNull(bundle);
         ArgumentNullException.ThrowIfNull(destination);
 
-        if (!IsConfinedPath(workspaceRoot))
+        if (!WorkspacePath.IsConfined(workspaceRoot))
         {
             throw new ArgumentException(
                 $"'{workspaceRoot}' is not a bundle-relative directory.",
@@ -81,7 +82,7 @@ internal static class StarterTree
                         $"Bundle entry '{entry.Name}' is a {entry.EntryType}; a workspace holds regular files only.");
                 }
 
-                if (!IsConfinedPath(path))
+                if (!WorkspacePath.IsConfined(path))
                 {
                     throw new InvalidDataException(
                         $"Bundle entry '{entry.Name}' does not stay inside the workspace root.");
@@ -111,29 +112,5 @@ internal static class StarterTree
         }
 
         return written;
-    }
-
-    /// <summary>
-    /// A relative, forward-slashed path that cannot leave the directory it is resolved against: no
-    /// leading slash, no backslash, and no empty, <c>.</c> or <c>..</c> segment.
-    /// </summary>
-    private static bool IsConfinedPath(string? path)
-    {
-        if (string.IsNullOrEmpty(path)
-            || path[0] == '/'
-            || path.AsSpan().IndexOfAny('\\', '\0') >= 0)
-        {
-            return false;
-        }
-
-        foreach (var segment in path.Split('/'))
-        {
-            if (segment is "" or "." or "..")
-            {
-                return false;
-            }
-        }
-
-        return true;
     }
 }

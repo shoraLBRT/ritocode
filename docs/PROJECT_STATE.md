@@ -106,7 +106,9 @@ src/
                               Auth owns the authentication scheme; Users owns the row behind the
                               development identity that scheme asserts
                               Workspaces owns Lifecycle/: opening a workspace on a published
-                              version, reading it back, and StarterTree — what a bundle becomes
+                              version, reading it back, and StarterTree — what a bundle becomes —
+                              and Files/: the file tree and file read, WorkspacePath (the one path
+                              rule) and SnapshotArchive (a snapshot read back as untrusted)
                               Contracts/ in a module is its implementation of a Shared contract
 tests/
   Ritocode.TestSupport/         integration test harnesses: a PostgreSQL container per test
@@ -117,8 +119,9 @@ tests/
   Ritocode.Architecture.Tests/  module boundary rules and the ADR 0007 contract rules, executable
   Ritocode.Modules.Problems.Tests/  the problem package format, the reference package, and
                                     ingest against a real PostgreSQL and MinIO
-  Ritocode.Modules.Workspaces.Tests/  the starter tree a bundle becomes, and the workspace
-                                      lifecycle against a real PostgreSQL and MinIO
+  Ritocode.Modules.Workspaces.Tests/  the starter tree a bundle becomes, the path rule and the
+                                      snapshot reader, and the workspace lifecycle and file reads
+                                      against a real PostgreSQL and MinIO
 spikes/
   sandbox-execution/          time-boxed experiment behind ADR 0006, with the script that repeats it
 docs/
@@ -145,10 +148,11 @@ docs/
 | [#5](https://github.com/shoraLBRT/ritocode/issues/5) Object storage layout and client | Partial | [STORAGE_LAYOUT.md](STORAGE_LAYOUT.md): three buckets as roles with configurable physical names, the `role/key` reference form stored in the three `*_reference` columns, object versus prefix references, and the keys for bundles, workspace snapshots and evaluation artifacts — and now the client that reads and writes them. `StorageRole`, `StorageReference` and `StorageKeys` make the layout executable; `IObjectStore` / `S3ObjectStore` put and get over the S3 API, registered from the composition root and tested against a real MinIO. Deletion, prefix listing and server-side copy stay out | `src/Ritocode.Shared/Storage`, `tests/Ritocode.TestSupport/MinioTestServer.cs`, `docs/STORAGE_LAYOUT.md` |
 | [#9](https://github.com/shoraLBRT/ritocode/issues/9) Problem catalog | Partial | `GET /api/v1/problems` and `GET /api/v1/problems/{slug}` over `Page<T>`, and the ingest behind them: a validated package becomes a `Problem`, a published `ProblemVersion` and a bundle in object storage. The catalog resolves a problem's highest **published** version and never a draft. `snapshot_reference` is now a typed `StorageReference` column. A development-only content seeder is the first caller of ingest | `src/Modules/Ritocode.Modules.Problems/Catalog`, `.../Ingest`, `src/Ritocode.Shared/Persistence/StorageReferenceConverter.cs` |
 | [#26](https://github.com/shoraLBRT/ritocode/issues/26) Frontend shell | Partial | React + Vite + TypeScript in `frontend/`. `ApiClient` is the only code that calls `fetch`, and `api/errors.ts` is the only code that reads the ADR 0003 envelope: a failure reaches a screen as an `ApiError` carrying the stable `code`, kept apart from a status with no envelope behind it and from a server that never answered. `useApiResource` reports one request as a discriminated union. Layout, routes, and the loading / error / empty panels, on 55 tests over a stubbed `fetch` | `frontend/` |
-| [#31](https://github.com/shoraLBRT/ritocode/issues/31) CI pipeline | Partial | `backend-ci.yml` (build and test, formatting, migrations and drift) and now `frontend-ci.yml`: `npm ci`, then lint, build — the typecheck rides on it — and the 55 tests, on the Node line `frontend/.nvmrc` pins. The frontend job needs no backend, no database and no Docker | `.github/workflows/` |
+| [#31](https://github.com/shoraLBRT/ritocode/issues/31) CI pipeline | Partial | `backend-ci.yml` (build and test, formatting, migrations and drift) and now `frontend-ci.yml`: `npm ci`, then lint, build — the typecheck rides on it — and the frontend tests, on the Node line `frontend/.nvmrc` pins. The frontend job needs no backend, no database and no Docker | `.github/workflows/` |
 | [#42](https://github.com/shoraLBRT/ritocode/issues/42) Initial problem set | Partial | Three authored C# problems — `split-the-invoice` (easy), `no-double-booking` (medium), `respect-the-precedence` (hard) — at three difficulties over three unrelated trees, each with a known-good and a known-bad fixture that disagree on behaviour the package's own tests pin. The catalog has content that is not the format's reference fixture for the first time | `content/problems/`, `tests/Ritocode.Modules.Problems.Tests/CatalogPackageTests.cs` |
 | [#6](https://github.com/shoraLBRT/ritocode/issues/6) Authentication | Partial | The identity seam from [ADR 0008](adr/0008-authentication-seam.md), which is **Proposed** and needs the maintainer. `ICurrentUser` is one value wide and lives with the host infrastructure in `Shared/Identity`; the Auth module owns a real authentication scheme, so stage two swaps a handler rather than unpicking a mechanism; the Users module keeps the row the seeded identity names, which is the first row that module has written. The host is authenticated by default and anonymous by exception — a fallback policy protects any endpoint that states nothing — and a rejected request answers in the ADR 0003 error body rather than an empty 401. Login, session issuance and `/me` stay out | `src/Ritocode.Shared/Identity`, `src/Modules/Ritocode.Modules.Auth/Identity`, `src/Modules/Ritocode.Modules.Users/Identity`, `docs/adr/0008-authentication-seam.md` |
 | [#10](https://github.com/shoraLBRT/ritocode/issues/10) Create workspace from problem version | Done | `POST /api/v1/workspaces` opens the caller's workspace on a **published** version — 201 and a `Location` when it is new, 200 with the same workspace when the caller already has one on that version — and `GET /api/v1/workspaces/{id}` reads it back, answering another user's workspace as `workspace_not_found`. The first caller of both ADR 0007 contracts and the first code to read a bundle back: the starter tree under the version's `workspace_root`, re-rooted and regular files only, becomes the workspace snapshot. The owner comes from `ICurrentUser` and never the body. `problem_versions.workspace_root` is new, and `workspaces.snapshot_reference` is now a typed `StorageReference` | `src/Modules/Ritocode.Modules.Workspaces/Lifecycle`, `tests/Ritocode.Modules.Workspaces.Tests`, `tests/Ritocode.Api.Tests/Endpoints/WorkspaceEndpointsTests.cs` |
+| [#11](https://github.com/shoraLBRT/ritocode/issues/11) Workspace file tree and file read | Done | `GET /api/v1/workspaces/{id}/files` answers every file with its size in bytes, ordered by path, as one object rather than a page; `GET /api/v1/workspaces/{id}/files/content?path=` answers one file as UTF-8 text, byte-order mark and line endings intact. The path is a query value so it reaches the API verbatim, and a path that could leave the tree is refused as `400` on `errors.path` before anything is looked up — never normalised. A path the tree does not hold is `workspace_file_not_found`, a file that is not UTF-8 is `409 workspace_file_not_text`, and another user's workspace is `workspace_not_found` on both. `WorkspacePath` is the one path rule, shared with the starter tree; `SnapshotArchive` reads a snapshot back as untrusted; `OwnedWorkspaces.FindOwnedAsync` is the owner-in-the-query lookup all three workspace reads now share. The frontend API client can open a workspace, list its files and read one | `src/Modules/Ritocode.Modules.Workspaces/Files`, `tests/Ritocode.Modules.Workspaces.Tests/Files`, `tests/Ritocode.Api.Tests/Endpoints/WorkspaceFileEndpointsTests.cs`, `frontend/src/api/endpoints.ts` |
 
 The frontend now exists as a shell: it renders the layout, resolves its routes, and reads the
 catalog from a running host. It has no identity, no editor and no designed screens — those are
@@ -159,10 +163,10 @@ Nothing else from the backlog is implemented. Three of the seven modules — Sub
 and Progress — still expose neither an endpoint nor a service. **Auth** owns the authentication
 scheme and no endpoints, and **Users** writes exactly one row — the development identity's — and
 answers `IUserLookup`. **Problems** reads and writes its own schema, serves the catalog, and answers
-`IProblemVersionLookup`. **Workspaces is now the second module that is fully alive**: it writes its
-own schema and the `workspace-snapshots` bucket, serves two protected endpoints, and is the first
-consumer of both cross-module contracts. A workspace can be opened and read back; its files cannot
-yet be listed, read or written, which is [#11](https://github.com/shoraLBRT/ritocode/issues/11) and
+`IProblemVersionLookup`. **Workspaces is the second module that is fully alive**: it writes its
+own schema and the `workspace-snapshots` bucket, serves four protected endpoints, and is the first
+consumer of both cross-module contracts. A workspace can be opened and read back, and its files can
+be listed and read; they cannot yet be written, which is
 [#12](https://github.com/shoraLBRT/ritocode/issues/12).
 
 ### Deliberately deferred
@@ -231,12 +235,18 @@ yet be listed, read or written, which is [#11](https://github.com/shoraLBRT/rito
   identity's, on startup, and never again. Workspaces writes a row per opened workspace and nothing
   after that — `updated_at` does not move until [#12](https://github.com/shoraLBRT/ritocode/issues/12)
   writes a file. Auth and Submissions own migrated tables that nothing touches.
-- **A workspace can be opened and read back, and its files cannot be reached.** The snapshot exists
-  in object storage from the moment the workspace does, and nothing serves it: listing the tree and
-  reading a file are [#11](https://github.com/shoraLBRT/ritocode/issues/11), writing one is
-  [#12](https://github.com/shoraLBRT/ritocode/issues/12). There is no endpoint listing a user's
-  workspaces either — "continue where you left off" has its index and no reader, and the client that
-  needs one is the stage 6 editor. A frontend screen for any of this is
+- **A workspace's files can be listed and read, and not written.** Writing one is
+  [#12](https://github.com/shoraLBRT/ritocode/issues/12), together with the limits of
+  [#36](https://github.com/shoraLBRT/ritocode/issues/36). Three things
+  [#11](https://github.com/shoraLBRT/ritocode/issues/11) left out on purpose. **The tree does not say
+  which files are editable**, because nothing Workspaces can reach knows — that is the workspace
+  policy entry under [Open questions](#open-questions), and #12 has to answer it anyway to refuse a
+  write, so the flag arrives with the answer rather than ahead of it. **Every list and every read
+  downloads the whole snapshot** — the right cost for the kilobyte trees the slice's packages make,
+  and not for the 100 MiB a package's limits permit; see [Open questions](#open-questions). And
+  **there is no endpoint listing a user's workspaces** — "continue where you left off" has its index
+  and no reader, and the client that needs one is the stage 6 editor. The frontend API client has a
+  function for each of the four workspace endpoints and no screen uses them yet; that screen is
   [#28](https://github.com/shoraLBRT/ritocode/issues/28).
 - **The contracts have single-id methods only.** ADR 0007 §6 names `FindManyAsync` as the answer to
   an N+1 and keeps the single-id method beside it. No consumer lists anything yet, so the batch form
@@ -252,14 +262,14 @@ yet be listed, read or written, which is [#11](https://github.com/shoraLBRT/rito
   **not** depend on the token-format decision — see [Open questions](#open-questions).
   `AllowAnonymous()` on health, meta and the catalog is now load-bearing rather than anticipatory,
   and pinned by tests against a host with no identity.
-- **Ownership is checked where a resource is read, and nowhere systematically yet.** The first
-  owned resource exists, and `GET /api/v1/workspaces/{id}` puts the owner inside the query, so
-  another user's workspace is the same absent row as a missing one — ADR 0005 forbids serving one
-  without that check, so it could not wait. What is still
-  [#35](https://github.com/shoraLBRT/ritocode/issues/35)'s box in stage 3 is making that the rule
-  for every workspace and submission endpoint rather than a property each one remembers, which
-  matters from [#11](https://github.com/shoraLBRT/ritocode/issues/11) on, when a workspace id
-  arrives in every file path.
+- **Ownership is checked where a resource is read, through one lookup, and is not yet a rule.**
+  All three workspace reads — the workspace, its tree, one file — find the row through
+  `OwnedWorkspaces.FindOwnedAsync`, which puts the owner inside the query, so another user's
+  workspace is the same absent row as a missing one and the store is never asked for its snapshot.
+  ADR 0005 forbids serving one without that check, so none of them could wait. What is still
+  [#35](https://github.com/shoraLBRT/ritocode/issues/35)'s box in stage 3 is making it a rule rather
+  than a helper each endpoint remembers to call: nothing yet fails when a new workspace or submission
+  endpoint reads its row some other way, and #12's writes are the next place that could happen.
 - **The object storage client puts and gets, and does nothing else.**
   [#5](https://github.com/shoraLBRT/ritocode/issues/5) stays open for the three operations left out,
   each because its first real caller decides its shape:
@@ -289,22 +299,25 @@ yet be listed, read or written, which is [#11](https://github.com/shoraLBRT/rito
 The slice plan is the ordered list now: **[`docs/SLICE_PLAN.md`](SLICE_PLAN.md)**. Take the first
 unticked box. The stages there are ordered so that each depends only on stages above it.
 
-**Stages 1 and 2 are complete, and stage 3 is three boxes in**: the identity seam, the
-cross-module contracts, and opening a workspace. What those left in place for everything after them:
-every endpoint takes its user from `ICurrentUser`, one that says nothing about authorisation is
-protected rather than open, a module that stores a reference into another module's schema validates
-it through a contract in `Shared/Contracts`, and a workspace exists as a row and a snapshot.
-**The next box is:**
+**Stages 1 and 2 are complete, and stage 3 is four boxes in**: the identity seam, the
+cross-module contracts, opening a workspace, and reading its files. What those left in place for
+everything after them: every endpoint takes its user from `ICurrentUser`, one that says nothing about
+authorisation is protected rather than open, a module that stores a reference into another module's
+schema validates it through a contract in `Shared/Contracts`, a workspace exists as a row and a
+snapshot, and every path that reaches a workspace passes one rule. **The next box is:**
 
-1. **[#11](https://github.com/shoraLBRT/ritocode/issues/11) — file tree and file read.** What it
-   inherits: the tree is a gzipped tar at the reference `workspaces.snapshot_reference` stores —
-   read it from the row, never from `StorageKeys` — whose entry names are already workspace-relative
-   paths, regular files only, no directory entries. `WorkspaceLifecycle.GetAsync` is the ownership
-   pattern to reuse: owner inside the query, `workspace_not_found` for anything the caller does not
-   own, and an id that is not a GUID answered the same way rather than by a route constraint. What
-   it does **not** inherit is the editable / readonly split: nothing Workspaces can reach knows which
-   file is which, and #11 may want to show it — see the workspace policy entry under
-   [Open questions](#open-questions) before inventing a way.
+1. **[#12](https://github.com/shoraLBRT/ritocode/issues/12) — file write and draft persistence,
+   shipped in the same PR as [#36](https://github.com/shoraLBRT/ritocode/issues/36) (partial) — path
+   and size limits.** The plan is explicit that the second is not a follow-up. What it inherits from
+   #11: the address a write belongs at is beside the read — `files/content?path=` — for the reason
+   `WorkspaceFileEndpoints` gives; `WorkspacePath` is the rule to extend, not to copy; `SnapshotArchive`
+   reads the tree a save rewrites; `OwnedWorkspaces.FindOwnedAsync` finds the row. And the text
+   contract: a read hands out UTF-8 with any byte-order mark still in the string, so a write that
+   encodes the string exactly as it arrives — no preamble added, none stripped — puts back the bytes
+   that were read. What it has to **decide**, and cannot inherit: which files are editable and what
+   the limits are — the workspace policy entry under [Open questions](#open-questions) is due now —
+   and what "revision protection" in the issue's scope means. `ErrorType.PreconditionFailed` already
+   maps to 412 and has never been produced.
 
 The three ADRs written so far are off this list and their obligations are in
 [Open questions](#open-questions) instead. Briefly: submission reports gain somewhere to carry a
@@ -641,7 +654,48 @@ Decisions a future session will hit, and where in the slice each one comes due.
   download behind every file write. One thing to weigh when #12 picks: storing the loader's resolved
   file lists (`EditableFiles`, `ReadonlyFiles`) rather than the globs keeps glob matching — which is
   also format knowledge — inside Problems. Whatever it is, the contract gains fields named for the
-  consumer need, per ADR 0007.
+  consumer need, per ADR 0007. [#11](https://github.com/shoraLBRT/ritocode/issues/11) shipped the
+  file tree **without** an `editable` flag rather than inventing a source for one; when #12 settles
+  this, the flag on `WorkspaceFileEntry` is the natural second consumer of the same answer.
+- **How a workspace file is addressed.** *Settled by
+  [#11](https://github.com/shoraLBRT/ritocode/issues/11); #12 inherits it.* As a query value —
+  `GET /api/v1/workspaces/{id}/files/content?path=src/App.cs` — and not as the rest of the URL path.
+  Kestrel decodes a request path and removes its `.` and `..` segments **before routing**, and
+  `HttpClient` normalises them before sending, so `files/../problem.yaml` never reaches a handler as
+  written: it becomes some other route. That is safe, and it means the refusal ADR 0005 demands can
+  be trusted but never observed — no test can send the path to the rule. A query value arrives
+  verbatim, is refused by name as `errors.path`, and needs no per-segment escaping in a client. The
+  cost is a URL that reads less like a file system; `/files` for the tree and `/files/content` for a
+  file keeps one shape per route rather than letting `?path=` switch `/files` between two bodies.
+- **Workspace files are text, and nothing guarantees it.** *Created by
+  [#11](https://github.com/shoraLBRT/ritocode/issues/11); worth settling with
+  [#36](https://github.com/shoraLBRT/ritocode/issues/36) or the next package authored.* A file is
+  served as a JSON string, so its bytes must be UTF-8, and one that is not answers
+  `409 workspace_file_not_text` rather than being decoded leniently into something that saves back
+  as different bytes. Every committed starter file is ASCII today. But
+  [PROBLEM_PACKAGE_SPEC.md](PROBLEM_PACKAGE_SPEC.md) requires UTF-8 of the manifest and the
+  description and says nothing about the workspace tree, so a package with a binary or Latin-1 file
+  loads, ingests and publishes, and then shows its user a file they cannot open. The failure belongs
+  at authoring: a validation rule "every file under the workspace root is UTF-8" in the spec and the
+  loader, which is Problems' change, not Workspaces'. The alternative — serving bytes and letting the
+  editor cope — gives up the JSON payload rule of ADR 0003 for files no problem in the slice has.
+- **Every file read downloads the whole snapshot.** *Created by
+  [#11](https://github.com/shoraLBRT/ritocode/issues/11); revisit when a tree gets large or reads
+  get frequent.* Listing the tree and reading one file each fetch the gzipped tar and scan it. For
+  the slice's packages that is a few kilobytes and cheaper than any cache would be to keep correct
+  once #12 writes. The package limits, though, allow `max_total_bytes` up to 100 MiB, and an editor
+  opening ten files would fetch that ten times. The two options worth weighing when it matters: a
+  per-workspace cache keyed by the snapshot's version, invalidated by the save that replaces it; or
+  a manifest object beside the tar holding paths and sizes, which makes listing cheap and leaves
+  reads as they are. Neither changes the endpoints.
+- **The file tree is one object, not a `Page<T>`.** *Settled by
+  [#11](https://github.com/shoraLBRT/ritocode/issues/11).* ADR 0003 says a collection endpoint answers
+  in the page envelope and never as a bare array. The tree is neither: it is `{ "files": [...] }`,
+  whole. An editor cannot use half a file list, a page boundary in a tree has no meaning to a person,
+  and a package's limits bound the tree at 2000 entries. The reading of the ADR that makes this
+  consistent is that the tree is one resource with a list inside it, not a collection of resources.
+  If a second endpoint needs the same reading, it belongs in ADR 0003 alongside the enum and ordering
+  notes below.
 - **One workspace per user per version, and nothing enforces it.** *Created by
   [#10](https://github.com/shoraLBRT/ritocode/issues/10); revisit with
   [#13](https://github.com/shoraLBRT/ritocode/issues/13).* Opening a version the caller already has
@@ -758,6 +812,10 @@ warning naming the absolute path it tried, not a silent empty catalog.
 | `GET` the `Location` | `200`, the same body |
 | `GET /api/v1/workspaces/not-a-workspace` | `404`, `code: "workspace_not_found"` |
 | `POST /api/v1/workspaces` with `{}` | `400`, `code: "validation_failed"`, `errors.problemVersionId` present |
+| `GET /api/v1/workspaces/{id}/files` on that workspace | `200`, `files` holding four entries in this order — `Billing.csproj`, `README.md`, `src/InvoiceSplitter.cs`, `tests/InvoiceSplitterTests.cs` — each with a `sizeBytes`, and no `problem.yaml` |
+| `GET /api/v1/workspaces/{id}/files/content?path=src/InvoiceSplitter.cs` | `200`, `path`, `sizeBytes` and the file's text in `content` |
+| the same with `?path=problem.yaml` | `404`, `code: "workspace_file_not_found"` — the manifest is in the bundle, not the workspace |
+| the same with `?path=../problem.yaml` | `400`, `code: "validation_failed"`, `errors.path` present |
 
 Opening a workspace needs the MinIO from `dev-up` for the same reason seeding does: it reads the
 version's bundle and writes `workspace-snapshots/workspaces/{id}/tree.tar.gz`. A second `POST` on the
@@ -819,9 +877,17 @@ other makes every request fail in the browser and succeed from `curl`.
 | <http://localhost:5173/nowhere> | "Page not found" |
 | the same pages with the API stopped | The failure panel, saying the backend cannot be reached |
 
-Current baseline: **325 backend tests, all passing** — 125 shared, 113 problems, 50 API,
-28 workspaces, 9 architecture — and **55 frontend tests**, run separately by `npm test`. A session
+Current baseline: **383 backend tests, all passing** — 125 shared, 113 problems, 65 API,
+71 workspaces, 9 architecture — and **61 frontend tests**, run separately by `npm test`. A session
 that leaves either number lower than it found it has broken something.
+
+The workspaces assembly rose from 28 to 71, the API assembly from 50 to 65 and the frontend from 55
+to 61 with [#11](https://github.com/shoraLBRT/ritocode/issues/11). Most of the workspaces rise is
+theories: `WorkspacePathTests` and `SnapshotArchiveTests` start no container, and
+`WorkspaceFilesTests` writes each workspace's row and snapshot directly, so a snapshot can hold bytes
+no starter tree would — a byte-order mark, a PNG. The API assembly's file tests compare what a client
+reads against the committed package on disk, and the refusal of a path such as `../problem.yaml` is
+asserted over HTTP, which is only possible because the path is a query value.
 
 The API assembly rose from 39 to 50 and the new workspaces assembly arrived at 28 with
 [#10](https://github.com/shoraLBRT/ritocode/issues/10). The API assembly now starts MinIO as well as
