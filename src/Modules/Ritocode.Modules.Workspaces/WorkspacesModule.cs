@@ -4,9 +4,11 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Ritocode.Modules.Workspaces.Contracts;
 using Ritocode.Modules.Workspaces.Files;
 using Ritocode.Modules.Workspaces.Lifecycle;
 using Ritocode.Modules.Workspaces.Persistence;
+using Ritocode.Shared.Contracts.Workspaces;
 using Ritocode.Shared.Modules;
 using Ritocode.Shared.Persistence;
 
@@ -38,6 +40,9 @@ public sealed class WorkspacesModule : IModule
         services.AddScoped<IWorkspaceFiles, WorkspaceFiles>();
         services.AddScoped<IValidator<OpenWorkspaceRequest>, OpenWorkspaceRequestValidator>();
         services.AddScoped<IValidator<WriteWorkspaceFileRequest>, WriteWorkspaceFileRequestValidator>();
+
+        // The contract this module answers (ADR 0007 §5): a submission asks for its caller's workspace.
+        services.AddScoped<IOwnedWorkspaceLookup, OwnedWorkspaceLookup>();
 
         // TryAdd, as Problems does: the clock is host infrastructure, and whichever module registers
         // it first must not stop another from asking for it.

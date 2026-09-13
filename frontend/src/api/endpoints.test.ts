@@ -2,13 +2,16 @@ import { describe, expect, it, vi } from 'vitest';
 import { ApiClient } from './client';
 import {
   getProblem,
+  getSubmission,
   getWorkspace,
   getWorkspaceFile,
   listModules,
   listProblems,
+  listSubmissions,
   listWorkspaceFiles,
   openWorkspace,
   saveWorkspaceFile,
+  submitWorkspace,
 } from './endpoints';
 import {
   exampleFile,
@@ -16,6 +19,7 @@ import {
   exampleProblem,
   exampleProblemDetail,
   exampleSavedFile,
+  exampleSubmission,
   exampleWorkspace,
   jsonResponse,
   pageOf,
@@ -160,5 +164,57 @@ describe('workspace endpoints', () => {
     await expect(
       saveWorkspaceFile(client, exampleWorkspace.id, exampleFile.path, 'namespace Orders;\r\n', exampleFile.revision),
     ).rejects.toMatchObject({ status: 412, code: 'workspace_file_changed' });
+  });
+});
+
+describe('submission endpoints', () => {
+  it('submits a workspace by posting its id, and nothing about the user', async () => {
+    const { client, fetchStub } = stub(jsonResponse(exampleSubmission, 201));
+
+    const submission = await submitWorkspace(client, exampleWorkspace.id);
+
+    const [url, init] = fetchStub.mock.calls[0] ?? [];
+    expect(url).toBe('http://api.test/api/v1/submissions');
+    expect(init?.method).toBe('POST');
+    expect(init?.body).toBe(JSON.stringify({ workspaceId: exampleWorkspace.id }));
+    expect(submission).toEqual(exampleSubmission);
+  });
+
+  it('reads an attempt back by its id', async () => {
+    const { client, fetchStub } = stub(jsonResponse(exampleSubmission));
+
+    const submission = await getSubmission(client, exampleSubmission.id);
+
+    expect(fetchStub.mock.calls[0]?.[0]).toBe(`http://api.test/api/v1/submissions/${exampleSubmission.id}`);
+    expect(submission.status).toBe('queued');
+    expect(submission.score).toBeNull();
+  });
+
+  it('lists the attempts at one workspace, paged', async () => {
+    const { client, fetchStub } = stub(jsonResponse(pageOf([exampleSubmission])));
+
+    const page = await listSubmissions(client, { workspaceId: exampleWorkspace.id, page: 2, pageSize: 5 });
+
+    expect(fetchStub.mock.calls[0]?.[0]).toBe(
+      `http://api.test/api/v1/submissions?workspaceId=${exampleWorkspace.id}&page=2&pageSize=5`,
+    );
+    expect(page.items).toEqual([exampleSubmission]);
+  });
+
+  it('lists every attempt when no workspace is named', async () => {
+    const { client, fetchStub } = stub(jsonResponse(pageOf([])));
+
+    await listSubmissions(client);
+
+    expect(fetchStub.mock.calls[0]?.[0]).toBe('http://api.test/api/v1/submissions');
+  });
+
+  it("surfaces a workspace the caller does not own as workspace_not_found", async () => {
+    const { client } = stub(problemResponse(404, 'workspace_not_found', 'No such workspace.'));
+
+    await expect(submitWorkspace(client, exampleWorkspace.id)).rejects.toMatchObject({
+      status: 404,
+      code: 'workspace_not_found',
+    });
   });
 });

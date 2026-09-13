@@ -10,4 +10,13 @@
     <ProjectReference Include="../../Ritocode.Shared/Ritocode.Shared.csproj" />
   </ItemGroup>
 
+  <!-- Request validation, per ADR 0003: WithValidation<T>() resolves the IValidator<T> registered here. -->
+  <ItemGroup>
+    <PackageReference Include="FluentValidation" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Ritocode.Modules.Submissions.Tests" />
+  </ItemGroup>
+
 </Project>

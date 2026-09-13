@@ -100,6 +100,16 @@ export const exampleFile = {
   revision: '498c35adbbf811ffe6bbb1cb0d84989baa8a7cea44e2426c6ddbd2997c9bdaf5',
 };
 
+/** A queued attempt at {@link exampleWorkspace}, as `POST /submissions` answers it. */
+export const exampleSubmission = {
+  id: '0199a1d2-0000-7000-8000-000000000020',
+  workspaceId: exampleWorkspace.id,
+  status: 'queued' as const,
+  score: null,
+  createdAt: '2026-09-13T12:05:00Z',
+  completedAt: null,
+};
+
 /** What saving `namespace Orders.Totals;\r\n` over {@link exampleFile} answers — real size, real hash. */
 export const exampleSavedFile = {
   path: exampleFile.path,

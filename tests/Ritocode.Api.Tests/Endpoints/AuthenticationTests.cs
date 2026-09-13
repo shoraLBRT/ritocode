@@ -169,6 +169,28 @@ public sealed class AnonymousRequestTests(AnonymousTestApi api) : IClassFixture<
     }
 
     [Fact]
+    public async Task TheSubmissionEndpoints_RefuseACallerWithNoIdentity()
+    {
+        // A body the validation filter would accept, so a 401 is the policy and not a 400 that ran first.
+        var submit = await api.Client.PostAsJsonAsync(
+            new Uri("/api/v1/submissions", UriKind.Relative),
+            new { workspaceId = Guid.CreateVersion7() },
+            TestContext.Current.CancellationToken);
+
+        var history = await api.Client.GetAsync(
+            new Uri("/api/v1/submissions", UriKind.Relative),
+            TestContext.Current.CancellationToken);
+
+        var read = await api.Client.GetAsync(
+            new Uri($"/api/v1/submissions/{Guid.CreateVersion7()}", UriKind.Relative),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, submit.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, history.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, read.StatusCode);
+    }
+
+    [Fact]
     public async Task NoUserRow_IsSeededWhenTheDevelopmentIdentityIsOff()
     {
         await using var connection = new NpgsqlConnection(api.ConnectionString);

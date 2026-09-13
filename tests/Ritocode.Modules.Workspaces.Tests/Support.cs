@@ -185,6 +185,10 @@ internal sealed class CountingObjectStore(IObjectStore inner) : IObjectStore
         Gets++;
         return inner.GetAsync(reference, destination, cancellationToken);
     }
+
+    // Nothing in this module copies; a copy is not counted as a put or a get, so it cannot hide one.
+    public Task<bool> CopyAsync(StorageReference source, StorageReference destination, CancellationToken cancellationToken = default) =>
+        inner.CopyAsync(source, destination, cancellationToken);
 }
 
 /// <summary>A clock that does not move, so a stored timestamp is an assertion and not a range.</summary>

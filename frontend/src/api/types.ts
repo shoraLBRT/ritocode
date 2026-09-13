@@ -99,3 +99,26 @@ export interface SavedWorkspaceFile {
   readonly sizeBytes: number;
   readonly revision: string;
 }
+
+/**
+ * Where an attempt is in its lifecycle. `completed` and `failed` are terminal; `failed` means the
+ * pipeline could not run to the end — infrastructure, not a wrong answer, which is a score.
+ */
+export type SubmissionStatus = 'queued' | 'running' | 'completed' | 'failed';
+
+/** One attempt at a workspace, graded against the tree as it was when it was submitted. */
+export interface Submission {
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly status: SubmissionStatus;
+  /** 0-100 once `completed`; null before, and null for a `failed` attempt. */
+  readonly score: number | null;
+  readonly createdAt: string;
+  /** Set exactly when the status is terminal. */
+  readonly completedAt: string | null;
+}
+
+/** Paging inputs plus an optional workspace, for the attempt history. */
+export interface SubmissionQuery extends PageQuery {
+  readonly workspaceId?: string;
+}

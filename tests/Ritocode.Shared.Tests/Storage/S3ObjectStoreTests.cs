@@ -177,6 +177,54 @@ public sealed class S3ObjectStoreTests(MinioTestServer minio) : IAsyncLifetime
             () => store.PutAsync(StorageKeys.ProblemBundle(Guid.NewGuid()), new MemoryStream(Bytes("x")), Token));
     }
 
+    [Fact]
+    public async Task Copy_WritesTheSameBytesUnderAnotherRole_AndReportsTheSourceFound()
+    {
+        // The submission freeze: workspace-snapshots into evaluation-artifacts, two buckets.
+        var source = StorageKeys.WorkspaceSnapshot(Guid.NewGuid());
+        var destination = StorageKeys.SubmissionInputTree(Guid.NewGuid());
+        await _store.PutAsync(source, new MemoryStream(Bytes("the tree as submitted")), Token);
+
+        Assert.True(await _store.CopyAsync(source, destination, Token));
+
+        Assert.Equal(Bytes("the tree as submitted"), await ReadAsync(destination));
+    }
+
+    [Fact]
+    public async Task ACopy_IsNotAPointer_SoAPutToTheSourceLeavesItAlone()
+    {
+        var source = StorageKeys.WorkspaceSnapshot(Guid.NewGuid());
+        var destination = StorageKeys.SubmissionInputTree(Guid.NewGuid());
+        await _store.PutAsync(source, new MemoryStream(Bytes("before the save")), Token);
+        await _store.CopyAsync(source, destination, Token);
+
+        await _store.PutAsync(source, new MemoryStream(Bytes("after the save")), Token);
+
+        Assert.Equal(Bytes("before the save"), await ReadAsync(destination));
+        Assert.Equal(Bytes("after the save"), await ReadAsync(source));
+    }
+
+    [Fact]
+    public async Task Copy_OfAnObjectThatWasNeverWritten_ReportsAbsence_AndWritesNothing()
+    {
+        var destination = StorageKeys.SubmissionInputTree(Guid.NewGuid());
+
+        Assert.False(await _store.CopyAsync(StorageKeys.WorkspaceSnapshot(Guid.NewGuid()), destination, Token));
+
+        using var probe = new MemoryStream();
+        Assert.False(await _store.GetAsync(destination, probe, Token));
+    }
+
+    [Fact]
+    public async Task Copy_RefusesAPrefixReferenceOnEitherSide()
+    {
+        var prefix = StorageKeys.SubmissionArtifacts(Guid.NewGuid());
+        var single = StorageKeys.SubmissionInputTree(Guid.NewGuid());
+
+        await Assert.ThrowsAsync<ArgumentException>(() => _store.CopyAsync(prefix, single, Token));
+        await Assert.ThrowsAsync<ArgumentException>(() => _store.CopyAsync(single, prefix, Token));
+    }
+
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
     private static byte[] Bytes(string value) => Encoding.UTF8.GetBytes(value);

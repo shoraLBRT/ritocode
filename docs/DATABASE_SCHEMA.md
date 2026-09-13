@@ -89,6 +89,7 @@ erDiagram
         uuid user_id "no FK, indexed"
         text status "check: enum"
         int score "check: null or 0-100"
+        text input_reference "frozen workspace tree"
         timestamptz created_at
         timestamptz completed_at "check: set iff terminal"
     }
@@ -119,9 +120,11 @@ enum column carries a check constraint listing the allowed values. Text alone wo
 **JSON** columns are `jsonb`, not `text`: PostgreSQL validates them on write, and they can be
 queried directly when diagnosing an evaluation.
 
-**Storage references** — `problem_versions.snapshot_reference`, `workspaces.snapshot_reference` and
-`submission_reports.logs_reference` — are `varchar(512)` holding a storage role and an object key,
-never a URL. The form and the key layout are fixed in [STORAGE_LAYOUT.md](STORAGE_LAYOUT.md).
+**Storage references** — `problem_versions.snapshot_reference`, `workspaces.snapshot_reference`,
+`submissions.input_reference` and `submission_reports.logs_reference` — are `varchar(512)` holding a
+storage role and an object key, never a URL. The form and the key layout are fixed in
+[STORAGE_LAYOUT.md](STORAGE_LAYOUT.md). `input_reference` is required and has no default: an attempt
+with no frozen tree could never be evaluated.
 
 ## Cross-module references
 
@@ -138,8 +141,12 @@ references are:
 | `submissions.submissions.user_id` | `users.users.id` | Submissions module on create |
 
 "Validated by" means through a contract in `Ritocode.Shared/Contracts`, never by opening the owning
-module's `DbContext` — [ADR 0007](adr/0007-cross-module-contract-form.md). `IUserLookup` and
-`IProblemVersionLookup` exist; the rest arrive with the module that writes the column.
+module's `DbContext` — [ADR 0007](adr/0007-cross-module-contract-form.md). `IUserLookup`,
+`IProblemVersionLookup` and `IOwnedWorkspaceLookup` exist, so four of the five are validated;
+`linked_accounts.user_id` arrives with the Auth module's first writer. `submissions.user_id` reuses
+`IUserLookup`, which asks the identical question, and `submissions.workspace_id` is validated by
+`IOwnedWorkspaceLookup`, which takes the owner as well as the id: a workspace that exists but is
+someone else's is refused exactly as a missing one is.
 `IWorkspaceAllowanceLookup` is a third contract that validates no reference: it hands Workspaces a
 version's `editable_files` and limits, which a save is checked against.
 

@@ -18,8 +18,8 @@ namespace Ritocode.Shared.Storage;
 /// Rule 3 is what these methods are <em>not</em> for: a row that already stores a reference is read
 /// back from that reference, never recomputed here. Rebuilding a key in order to find an existing
 /// object is what would make this file load-bearing forever and the layout impossible to change.
-/// The one exception the layout allows is
-/// <see cref="SubmissionInputTree(Guid)"/>, whose key has no column to be stored in.
+/// There is no exception left: <see cref="SubmissionInputTree(Guid)"/> was one until
+/// <c>submissions.input_reference</c> gave its key a column (#14).
 /// </para>
 /// </remarks>
 public static partial class StorageKeys

@@ -1,11 +1,11 @@
 namespace Ritocode.Shared.Storage;
 
 /// <summary>
-/// Put and get against object storage, addressed by the references of docs/STORAGE_LAYOUT.md.
+/// Put, get and copy against object storage, addressed by the references of docs/STORAGE_LAYOUT.md.
 /// </summary>
 /// <remarks>
 /// <para>
-/// Deliberately two methods. Deletion is a third piece, deferred with issue #43 along with
+/// Deliberately three methods. Deletion is a fourth piece, deferred with issue #43 along with
 /// retention — every object written today is written forever, which is a known hole rather than an
 /// oversight. Listing a prefix is what deleting one needs and arrives with it.
 /// </para>
@@ -42,4 +42,19 @@ public interface IObjectStore
     /// </returns>
     /// <exception cref="ObjectStoreException">The store rejected or could not serve the request.</exception>
     Task<bool> GetAsync(StorageReference reference, Stream destination, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Copies the object <paramref name="source"/> names to <paramref name="destination"/> inside the
+    /// store, replacing whatever was there, without the bytes passing through this process.
+    /// </summary>
+    /// <remarks>
+    /// The copy is a new object, not a pointer: a later put to <paramref name="source"/> leaves it as it
+    /// was. That is the whole reason a submission freezes its input tree with one (docs/STORAGE_LAYOUT.md).
+    /// </remarks>
+    /// <returns>
+    /// <see langword="false"/> when no object exists at <paramref name="source"/>, having written
+    /// nothing — for the reason <see cref="GetAsync"/> gives.
+    /// </returns>
+    /// <exception cref="ObjectStoreException">The store rejected or could not serve the request.</exception>
+    Task<bool> CopyAsync(StorageReference source, StorageReference destination, CancellationToken cancellationToken = default);
 }
