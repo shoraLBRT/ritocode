@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Ritocode.Modules.Submissions.Persistence;
@@ -11,9 +12,11 @@ using Ritocode.Modules.Submissions.Persistence;
 namespace Ritocode.Modules.Submissions.Persistence.Migrations
 {
     [DbContext(typeof(SubmissionsDbContext))]
-    partial class SubmissionsDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260913191722_AddSubmissionStartedAt")]
+    partial class AddSubmissionStartedAt
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

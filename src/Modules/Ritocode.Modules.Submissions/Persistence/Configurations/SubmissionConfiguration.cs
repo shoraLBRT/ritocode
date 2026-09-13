@@ -26,6 +26,14 @@ internal sealed class SubmissionConfiguration : IEntityTypeConfiguration<Submiss
             table.HasCheckConstraint(
                 "ck_submissions_completed_at_matches_status",
                 "(status IN ('Completed', 'Failed')) = (completed_at IS NOT NULL)");
+
+            // A queued attempt has never been claimed; a running or completed one has been. A failed one
+            // may have failed in the queue or during a run, so it may be either. The claim time is what
+            // the queue's recording guard compares, so a row without one where a claim must exist would
+            // be an attempt no worker could ever finish.
+            table.HasCheckConstraint(
+                "ck_submissions_started_at_matches_status",
+                "status = 'Failed' OR ((status = 'Queued') = (started_at IS NULL))");
         });
 
         builder.HasKey(s => s.Id);

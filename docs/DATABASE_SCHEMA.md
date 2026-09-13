@@ -91,6 +91,7 @@ erDiagram
         int score "check: null or 0-100"
         text input_reference "frozen workspace tree"
         timestamptz created_at
+        timestamptz started_at "check: null iff queued, unless failed"
         timestamptz completed_at "check: set iff terminal"
     }
 
@@ -173,6 +174,7 @@ rules rot, so they live in the schema:
 | `ck_workspaces_updated_not_before_created` | `updated_at >= created_at` |
 | `ck_submissions_score_range` | `score` is null or between 0 and 100 |
 | `ck_submissions_completed_at_matches_status` | `completed_at` is set exactly when status is terminal |
+| `ck_submissions_started_at_matches_status` | `started_at` is null when queued and set when running or completed; a failed attempt may have either, since it may have failed in the queue |
 | `ck_*_<enum column>` | the column holds a value from its enum |
 
 ## Indexes that exist for a specific query
@@ -185,7 +187,7 @@ Beyond primary keys and uniqueness:
 | `problem_versions (problem_id, published_at)` partial | resolving the current version of a problem; drafts are never resolved, so they are excluded |
 | `workspaces (user_id, updated_at DESC)` | "continue where you left off" |
 | `submissions (user_id, created_at DESC)` | attempt history, newest first |
-| `submissions (status, created_at)` partial | the queue drain; stays the size of the backlog rather than of all history |
+| `submissions (status, created_at)` partial | the queue drain — `ISubmissionDispatcher.ClaimNextAsync`, which names the statuses as literals so the planner can match the partial predicate; stays the size of the backlog rather than of all history |
 
 ## Working with the schema
 

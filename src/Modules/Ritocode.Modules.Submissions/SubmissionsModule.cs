@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Ritocode.Modules.Submissions.Lifecycle;
 using Ritocode.Modules.Submissions.Persistence;
+using Ritocode.Modules.Submissions.Queue;
 using Ritocode.Shared.Modules;
 using Ritocode.Shared.Persistence;
 
@@ -34,6 +35,14 @@ public sealed class SubmissionsModule : IModule
 
         services.AddScoped<ISubmissionLifecycle, SubmissionLifecycle>();
         services.AddScoped<IValidator<SubmitRequest>, SubmitRequestValidator>();
+
+        // The queue (#15, ADR 0009). No hosted loop drains it yet: that arrives with the evaluator in #17.
+        services.AddOptions<SubmissionQueueOptions>()
+            .Bind(configuration.GetSection(SubmissionQueueOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        services.AddScoped<ISubmissionDispatcher, SubmissionDispatcher>();
 
         // TryAdd, as the other modules do: the clock is host infrastructure.
         services.TryAddSingleton(TimeProvider.System);

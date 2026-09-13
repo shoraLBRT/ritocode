@@ -113,7 +113,9 @@ src/
                               (the one path rule), SnapshotArchive (a snapshot read back as
                               untrusted, and rewritten one file at a time) and FileRevision
                               Submissions owns Lifecycle/: submitting a workspace, which freezes
-                              its tree by server-side copy, reading an attempt and the history
+                              its tree by server-side copy, reading an attempt and the history —
+                              and Queue/: claiming attempts with SKIP LOCKED and recording a
+                              result only on the claim that still holds the attempt
                               Contracts/ in a module is its implementation of a Shared contract
 tests/
   Ritocode.TestSupport/         integration test harnesses: a PostgreSQL container per test
@@ -167,6 +169,7 @@ docs/
 | [#12](https://github.com/shoraLBRT/ritocode/issues/12) Workspace file write and draft persistence | Done | `PUT /api/v1/workspaces/{id}/files/content?path=` replaces an editable file's text, addressed exactly as a read is, and answers its new `sizeBytes` and `revision`; the next read — and the next open of the same version — returns the change. **Revision protection** is a per-file content hash: a read reports `revision`, the SHA-256 of the file's bytes, a save must send it back as `baseRevision`, and a file that moved on since answers `412 workspace_file_changed` rather than being overwritten. Saves to one workspace are serialised by a `FOR UPDATE` lock on its row, held from before the snapshot is read until `updated_at` commits, so two saves — even of different files — cannot drop each other's change. What a version allows reaches Workspaces through a third contract, `IWorkspaceAllowanceLookup`: ingest now stores `problem_versions.editable_files`, the manifest globs resolved against the starter tree, and the three limits. A file the version does not list is `403 workspace_file_read_only`, the tree marks each file `editable`, and saving exactly what is stored writes nothing. The frontend API client gained `saveWorkspaceFile` | `src/Modules/Ritocode.Modules.Workspaces/Files`, `src/Ritocode.Shared/Contracts/Problems/IWorkspaceAllowanceLookup.cs`, `src/Modules/Ritocode.Modules.Problems/Contracts/WorkspaceAllowanceLookup.cs`, `tests/Ritocode.Modules.Workspaces.Tests/Files/WorkspaceFileWriteTests.cs`, `tests/Ritocode.Api.Tests/Endpoints/WorkspaceFileWriteEndpointsTests.cs` |
 | [#36](https://github.com/shoraLBRT/ritocode/issues/36) Workspace file handling and sandbox boundaries | Partial | The half a save needs, shipped in the same PR as #12. A path from a request is refused, never normalised, before anything is looked up — the #11 rule, now in front of a write. A save can only replace a file the snapshot already holds and the version lists as editable, so it can neither leave the tree nor add a link: the snapshot is rewritten as regular files only, and a snapshot holding anything else fails the save instead of being saved back clean. `max_file_bytes` is checked on the UTF-8 bytes (`400`, `errors.content`), `max_total_bytes` and `max_files` on the tree as it would be written (`409 workspace_limit_exceeded`), and text with no UTF-8 form is refused rather than stored as a replacement character | `src/Modules/Ritocode.Modules.Workspaces/Files/WorkspaceFiles.cs`, `src/Modules/Ritocode.Modules.Workspaces/Files/SnapshotArchive.cs` |
 | [#14](https://github.com/shoraLBRT/ritocode/issues/14) Submission lifecycle and attempt history | Done | `POST /api/v1/submissions` queues an attempt at a workspace the caller owns — 201 and a `Location` — `GET /api/v1/submissions/{id}` reads it back, and `GET /api/v1/submissions` is the caller's history, newest first, in the page envelope, optionally at one `workspaceId`; another user's workspace or attempt answers exactly like a missing one. Submitting freezes the workspace tree by a **server-side copy** into `evaluation-artifacts`, written before the row commits and referenced by the new `submissions.input_reference`, so a save afterwards never changes what is graded. The transitions are `Submission.Start`, `Complete(score, at)` and `Fail(at)`, and every transition they allow is one `ck_submissions_completed_at_matches_status` accepts. `IObjectStore` gained `CopyAsync`, and Workspaces answers a fourth contract, `IOwnedWorkspaceLookup`, which takes the owner. Nothing runs an attempt yet — that is #15. The frontend API client gained `submitWorkspace`, `getSubmission` and `listSubmissions` | `src/Modules/Ritocode.Modules.Submissions`, `src/Ritocode.Shared/Contracts/Workspaces`, `src/Modules/Ritocode.Modules.Workspaces/Contracts/OwnedWorkspaceLookup.cs`, `tests/Ritocode.Modules.Submissions.Tests`, `tests/Ritocode.Api.Tests/Endpoints/SubmissionEndpointsTests.cs` |
+| [#15](https://github.com/shoraLBRT/ritocode/issues/15) Queue and worker | Partial | The queue half, placed by [ADR 0009](adr/0009-evaluation-is-a-command-submissions-issues.md): the `submissions` table drained by the module that owns it. `ISubmissionDispatcher.ClaimNextAsync` takes the oldest `Queued` attempt — or a `Running` one whose claim is older than `Submissions:Queue:ClaimTimeout` — with `FOR UPDATE SKIP LOCKED`, and starts or reclaims it in one short transaction; `CompleteAsync` and `FailAsync` record only on the claim that still holds the attempt. The claim's identity is the new `submissions.started_at`, set by `Submission.Start(at)`, moved by `Reclaim(at)`, and held to its status by `ck_submissions_started_at_matches_status`. Concurrent claims never hand out an attempt twice, tested with twelve claimers against a real PostgreSQL. No loop drains the queue yet — that lands with the evaluator in #17 | `src/Modules/Ritocode.Modules.Submissions/Queue`, `tests/Ritocode.Modules.Submissions.Tests/Queue/SubmissionDispatcherTests.cs` |
 | [#35](https://github.com/shoraLBRT/ritocode/issues/35) Backend security baseline | Partial | The ownership guard, as a rule rather than a habit. Every workspace endpoint already found its row with the owner inside the query; `OwnershipRuleTests` now fails when code in the Workspaces or Submissions module reaches an entity either context maps anywhere but an allowance that says where and why — `OwnedWorkspaces`, and the creation in `WorkspaceLifecycle.OpenAsync`. Submissions has no allowance, so its first endpoint meets the rule before it exists. The rule reads compiled IL, with the async state machines and lambda closures attributed to the method that was written, and is proved against six shapes of unguarded read. Rate limiting and input hardening stay out | `tests/Ritocode.Architecture.Tests/OwnershipRuleTests.cs`, `tests/Ritocode.Architecture.Tests/MethodBodyReferences.cs`, `src/Modules/Ritocode.Modules.Workspaces/Persistence/OwnedWorkspaces.cs` |
 
 The frontend now exists as a shell: it renders the layout, resolves its routes, and reads the
@@ -253,6 +256,19 @@ read back, its files listed, read and — the editable ones — saved, and submi
   and moves its `updated_at` on every save that changes a file; Submissions writes a `Queued` row per
   attempt and nothing else — the transitions exist on the entity and have no caller until #15 and #17.
   Auth owns a migrated table that nothing touches, and so does Submissions' `submission_reports`.
+- **The queue can be claimed and recorded on, and nothing drains it.**
+  [#15](https://github.com/shoraLBRT/ritocode/issues/15) stays open for three things, each owned
+  elsewhere on purpose. **The hosted loop** — claim, evaluate, record — lands with
+  [#17](https://github.com/shoraLBRT/ritocode/issues/17), because ADR 0009 puts the evaluator behind a
+  contract that cannot be registered before its implementation exists, and a loop that claimed without
+  one would strand every attempt in `Running`. **The report** is written in the same transaction as the
+  result, and its shape is [#18](https://github.com/shoraLBRT/ritocode/issues/18)'s, so `CompleteAsync`
+  records a score and no report yet. **The cap on concurrent evaluations** is
+  [#35](https://github.com/shoraLBRT/ritocode/issues/35)'s rate-limit box, and the drain is where it
+  goes. One edge to carry: a claim times out after `Submissions:Queue:ClaimTimeout`, 15 minutes by
+  default, and has to outlast the longest evaluation #17's deadline allows — a shorter one costs a
+  second evaluation of the same input, never a wrong verdict, because the first worker's result is
+  refused.
 - **A submitted tree is frozen and not checked again.** The package spec says the limits of
   [#36](https://github.com/shoraLBRT/ritocode/issues/36) apply to a submitted tree, and
   [#14](https://github.com/shoraLBRT/ritocode/issues/14) does not apply them. The reason is where the
@@ -350,24 +366,26 @@ that says nothing about authorisation is protected rather than open, a module th
 module's facts asks through a contract in `Shared/Contracts`, a workspace exists as a row and a
 snapshot, every path that reaches a workspace passes one rule, every save of a workspace holds its
 row's lock, and a user's rows in Workspaces or Submissions are reached only where the owner is in the
-query — `OwnershipRuleTests` fails otherwise. **Stage 4 is one box of five in**: a workspace can be
+query — `OwnershipRuleTests` fails otherwise. **Stage 4 is two boxes of five in**: a workspace can be
 submitted, which freezes its tree into a column-referenced copy and queues an attempt the caller can
-read back and list. **The next box is:**
+read back and list; and the queue can be claimed without handing an attempt out twice, with a result
+recorded only on the claim that still holds it. **The next box is:**
 
-1. **[#15](https://github.com/shoraLBRT/ritocode/issues/15) (partial) — queue and worker.** Shaped by
-   [ADR 0009](adr/0009-evaluation-is-a-command-submissions-issues.md), decided with the maintainer
-   before any of it was written: **the Submissions module drains its own table** and records every
-   state change, and Evaluations is reached through one command contract, `ISubmissionEvaluator`, that
-   writes no other module's rows. So #15 is Submissions-internal: the claim — `FOR UPDATE SKIP LOCKED`
-   over the partial index `(status, created_at) WHERE status IN ('Queued','Running')`, then
-   `Submission.Start`, in one short transaction — the guard that records a result only on the attempt
-   still claimed, and the rule for an attempt left `Running` by a process that died, which ADR 0009
-   §3.3 makes safe to evaluate again. The drain is the first code in Submissions that reads by status
-   rather than by owner, so it gets an allowance in `OwnershipRuleTests` that says why. **What #15 must
-   not do**: start a loop that claims attempts. `ISubmissionEvaluator` arrives with its implementation
-   in #17 — ADR 0007 §7 requires a contract to be registered exactly once — and a claimed attempt
-   nothing can evaluate would sit `Running` forever, while a stand-in that grades is ADR 0005's first
-   forbidden row.
+1. **[#18](https://github.com/shoraLBRT/ritocode/issues/18) — validator plugin interface.** What makes
+   "two validators instead of four" an addition later rather than a rewrite, so it comes before any
+   validator is written. It lives in the Evaluations module, behind
+   [ADR 0009](adr/0009-evaluation-is-a-command-submissions-issues.md)'s `ISubmissionEvaluator`, and it
+   has to answer two things later boxes inherit. **The result schema** — what a validator reports, per
+   validator, and therefore the JSON `submission_reports.validator_results` holds, including the
+   runner's `TimedOut`, `ResourceExhausted` and `Crashed` outcomes ADR 0009 §4 says a report keeps. And
+   **how a validator is found** — the issue says a registry; the manifest's `validator_config` already
+   names each validator by `type`, so the registry maps a type to a plugin, and an unknown type is a
+   fact about content that ingest could refuse. The issue's acceptance criterion asks for three
+   validators on the interface; the slice builds two in stage 5, so the box is an interface with its
+   tests and the third validator is stage two's, which is worth saying in the PR. Two constraints it
+   must not break: a validator never executes user code itself — it describes a run the sandbox runner
+   of #21 performs (ADR 0006) — and a score derives from the normalised projection, never from a raw
+   artifact (ADR 0006 §6).
 
 The ADRs written so far are off this list and their obligations are in
 [Open questions](#open-questions) instead. The newest,
@@ -1036,9 +1054,19 @@ other makes every request fail in the browser and succeed from `curl`.
 | <http://localhost:5173/nowhere> | "Page not found" |
 | the same pages with the API stopped | The failure panel, saying the backend cannot be reached |
 
-Current baseline: **500 backend tests, all passing** — 129 shared, 120 problems, 94 API,
-112 workspaces, 32 submissions, 13 architecture — and **68 frontend tests**, run separately by
+Current baseline: **522 backend tests, all passing** — 129 shared, 120 problems, 96 API,
+112 workspaces, 52 submissions, 13 architecture — and **68 frontend tests**, run separately by
 `npm test`. A session that leaves either number lower than it found it has broken something.
+
+The submissions assembly rose from 32 to 52 and the API assembly from 94 to 96 with the queue of
+[#15](https://github.com/shoraLBRT/ritocode/issues/15). `SubmissionDispatcherTests` runs against a real
+PostgreSQL because both of the things worth testing there are properties of the database rather than
+of the code: twelve concurrent claimers over six attempts must hand each out exactly once, and a row
+another transaction holds locked must be passed over rather than waited on. The schema tests now cover
+the claim-time constraint as well, each case breaking exactly one rule so the constraint named is the
+cause. The API assembly's two are `SubmissionDispatcherCompositionTests`, which resolve the dispatcher
+from the real host — nothing in the host calls it before #17, so a registration that cannot be
+constructed would otherwise first fail inside the worker loop.
 
 The new submissions assembly arrived at 32, the API assembly rose from 80 to 94, the shared assembly
 from 125 to 129, the workspaces assembly from 110 to 112 and the frontend from 63 to 68 with

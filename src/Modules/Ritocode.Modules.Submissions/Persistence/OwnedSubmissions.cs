@@ -7,10 +7,10 @@ namespace Ritocode.Modules.Submissions.Persistence;
 /// <remarks>
 /// The Submissions twin of the Workspaces module's <c>OwnedWorkspaces</c>, for the same reason: another
 /// user's submission and a missing one are the same absent row, so they cannot drift into answering
-/// differently, and a 403 would confirm the id exists (ADR 0003). This class and the creation in
-/// <c>SubmissionLifecycle.SubmitAsync</c> are the only code in the module allowed to reach the
-/// submission set; <c>OwnershipRuleTests</c> fails on any other. The queue worker of #15 reads by status
-/// and serves no user, so it will need an allowance of its own that says so.
+/// differently, and a 403 would confirm the id exists (ADR 0003). This class, the creation in
+/// <c>SubmissionLifecycle.SubmitAsync</c> and the queue are the only code in the module allowed to
+/// reach the submission set; <c>OwnershipRuleTests</c> fails on any other. The queue reads by status and
+/// serves no user, and its allowance says so.
 /// </remarks>
 internal static class OwnedSubmissions
 {
