@@ -151,6 +151,20 @@ internal sealed class StubProblemVersionLookup(params ProblemVersionSummary[] ve
 }
 
 /// <summary>
+/// The Problems allowance contract answered from a fixed list. See <see cref="StubUserLookup"/>.
+/// </summary>
+/// <remarks>Filled as a test creates workspaces, since each is opened on a version of its own.</remarks>
+internal sealed class StubWorkspaceAllowanceLookup : IWorkspaceAllowanceLookup
+{
+    private readonly List<WorkspaceAllowance> _allowances = [];
+
+    public void Add(WorkspaceAllowance allowance) => _allowances.Add(allowance);
+
+    public Task<WorkspaceAllowance?> FindAsync(Guid problemVersionId, CancellationToken cancellationToken) =>
+        Task.FromResult(_allowances.FirstOrDefault(allowance => allowance.ProblemVersionId == problemVersionId));
+}
+
+/// <summary>
 /// A real store that also counts puts and gets, so a test can assert that nothing was written — or
 /// that nothing was read.
 /// </summary>

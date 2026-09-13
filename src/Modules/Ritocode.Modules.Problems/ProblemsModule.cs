@@ -42,8 +42,9 @@ public sealed class ProblemsModule : IModule
         services.AddScoped<IProblemCatalog, ProblemCatalog>();
         services.AddScoped<IProblemIngest, ProblemIngestService>();
 
-        // The contract other modules read a problem version through (ADR 0007).
+        // The contracts other modules read a problem version through (ADR 0007).
         services.AddScoped<IProblemVersionLookup, ProblemVersionLookup>();
+        services.AddScoped<IWorkspaceAllowanceLookup, WorkspaceAllowanceLookup>();
 
         // TryAdd: the clock is host infrastructure that any module may want, and the first module
         // to ask for it should not be the one that decides nobody else may register it.

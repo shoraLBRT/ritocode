@@ -64,6 +64,7 @@ public sealed class ProblemIngestService(
             package.ValidatorConfigJson,
             manifest.Workspace.Root,
             now);
+        problemVersion.DeclareWorkspace(package.EditableFiles, manifest.Limits);
         problemVersion.Publish(now);
 
         // The bundle is written before the row that points at it commits. The failure this ordering

@@ -87,8 +87,8 @@ export const exampleWorkspace = {
 
 export const exampleFileTree = {
   files: [
-    { path: 'Orders.csproj', sizeBytes: 11 },
-    { path: 'src/OrderTotal.cs', sizeBytes: 19 },
+    { path: 'Orders.csproj', sizeBytes: 11, editable: false },
+    { path: 'src/OrderTotal.cs', sizeBytes: 19, editable: true },
   ],
 };
 
@@ -96,4 +96,13 @@ export const exampleFile = {
   path: 'src/OrderTotal.cs',
   sizeBytes: 19,
   content: 'namespace Orders;\r\n',
+  // The real SHA-256 of the content above, so the fixture is a response the API could have sent.
+  revision: '498c35adbbf811ffe6bbb1cb0d84989baa8a7cea44e2426c6ddbd2997c9bdaf5',
+};
+
+/** What saving `namespace Orders.Totals;\r\n` over {@link exampleFile} answers — real size, real hash. */
+export const exampleSavedFile = {
+  path: exampleFile.path,
+  sizeBytes: 26,
+  revision: '7eb7beab0db5783fa2f33437547ed1083e2f50d564c0b8267930009516855d4a',
 };

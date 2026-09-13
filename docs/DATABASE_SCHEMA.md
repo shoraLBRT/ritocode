@@ -66,6 +66,10 @@ erDiagram
         text snapshot_reference
         jsonb validator_config
         text workspace_root "bundle directory of the starter tree"
+        text_array editable_files "resolved from the manifest globs"
+        int max_files "check: limits valid"
+        int max_file_bytes "check: limits valid"
+        int max_total_bytes "check: limits valid"
         timestamptz created_at
         timestamptz published_at "null while draft"
     }
@@ -136,6 +140,8 @@ references are:
 "Validated by" means through a contract in `Ritocode.Shared/Contracts`, never by opening the owning
 module's `DbContext` — [ADR 0007](adr/0007-cross-module-contract-form.md). `IUserLookup` and
 `IProblemVersionLookup` exist; the rest arrive with the module that writes the column.
+`IWorkspaceAllowanceLookup` is a third contract that validates no reference: it hands Workspaces a
+version's `editable_files` and limits, which a save is checked against.
 
 What this costs, and what pays for it:
 
@@ -156,6 +162,7 @@ rules rot, so they live in the schema:
 | --- | --- |
 | `ck_users_xp_not_negative` | `xp >= 0` |
 | `ck_problem_versions_version_positive` | `version >= 1` |
+| `ck_problem_versions_limits_valid` | `max_files >= 1`, `max_file_bytes >= 1`, and `max_total_bytes >= max_file_bytes` — the format's own rule |
 | `ck_workspaces_updated_not_before_created` | `updated_at >= created_at` |
 | `ck_submissions_score_range` | `score` is null or between 0 and 100 |
 | `ck_submissions_completed_at_matches_status` | `completed_at` is set exactly when status is terminal |

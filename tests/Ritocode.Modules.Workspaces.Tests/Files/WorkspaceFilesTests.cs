@@ -2,6 +2,7 @@ using System.Text;
 using Ritocode.Modules.Workspaces.Domain;
 using Ritocode.Modules.Workspaces.Files;
 using Ritocode.Modules.Workspaces.Lifecycle;
+using Ritocode.Shared.Contracts.Problems;
 using Ritocode.Shared.Errors;
 using Ritocode.TestSupport;
 
@@ -16,7 +17,10 @@ public sealed class WorkspaceFilesTests(PostgresTestServer postgres, MinioTestSe
 {
     private static readonly DateTimeOffset Noon = new(2026, 9, 13, 12, 0, 0, TimeSpan.Zero);
 
+    private static readonly string[] DefaultEditable = ["src/App.cs", "src/InvoiceSplitter.cs"];
+
     private readonly Guid _owner = Guid.CreateVersion7();
+    private readonly StubWorkspaceAllowanceLookup _allowances = new();
 
     private CountingObjectStore _store = null!;
     private WorkspacesDatabase _database = null!;
@@ -31,7 +35,7 @@ public sealed class WorkspaceFilesTests(PostgresTestServer postgres, MinioTestSe
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     [Fact]
-    public async Task List_ReturnsEveryFile_WithItsSizeInBytes_OrderedByPath()
+    public async Task List_ReturnsEveryFile_WithItsSizeInBytes_AndWhetherItMayBeSaved_OrderedByPath()
     {
         var workspace = await WorkspaceHoldingAsync(
             _owner,
@@ -44,15 +48,26 @@ public sealed class WorkspaceFilesTests(PostgresTestServer postgres, MinioTestSe
         Assert.True(result.IsSuccess);
         Assert.Equal(
             [
-                new WorkspaceFileEntry("Billing.csproj", 11),
-                new WorkspaceFileEntry("src/InvoiceSplitter.cs", 12),
-                new WorkspaceFileEntry("tests/InvoiceSplitterTests.cs", 11),
+                new WorkspaceFileEntry("Billing.csproj", 11, Editable: false),
+                new WorkspaceFileEntry("src/InvoiceSplitter.cs", 12, Editable: true),
+                new WorkspaceFileEntry("tests/InvoiceSplitterTests.cs", 11, Editable: false),
             ],
             result.Value.Files);
     }
 
     [Fact]
-    public async Task Read_ReturnsTheText_ExactlyAsStored()
+    public async Task List_OnAVersionThatRecordedNoEditableFiles_MarksNothingEditable()
+    {
+        // What a version ingested before the allowance was recorded reads as: nothing may be saved.
+        var workspace = await WorkspaceAsync(_owner, editable: [], BundleEntry.File("src/App.cs", "app"));
+
+        var result = await ListAsync(_owner, workspace.Id);
+
+        Assert.False(Assert.Single(result.Value.Files).Editable);
+    }
+
+    [Fact]
+    public async Task Read_ReturnsTheText_ExactlyAsStored_WithTheRevisionOfItsBytes()
     {
         // A byte-order mark, CRLF endings and a non-ASCII character: each is a way for a read to hand
         // an editor text that saves back as different bytes than it was opened from.
@@ -64,8 +79,9 @@ public sealed class WorkspaceFilesTests(PostgresTestServer postgres, MinioTestSe
         Assert.True(result.IsSuccess);
         Assert.Equal("src/InvoiceSplitter.cs", result.Value.Path);
         Assert.Equal(bytes.LongLength, result.Value.SizeBytes);
-        Assert.Equal("\uFEFFnamespace Billing; // Übertrag\r\n", result.Value.Content);
+        Assert.Equal("﻿namespace Billing; // Übertrag\r\n", result.Value.Content);
         Assert.Equal(bytes, Encoding.UTF8.GetBytes(result.Value.Content));
+        Assert.Equal(FileRevision.Of(bytes), result.Value.Revision);
     }
 
     [Fact]
@@ -162,9 +178,28 @@ public sealed class WorkspaceFilesTests(PostgresTestServer postgres, MinioTestSe
         await Assert.ThrowsAsync<InvalidOperationException>(() => ReadAsync(_owner, workspace.Id, "src/App.cs"));
     }
 
-    private async Task<Workspace> WorkspaceHoldingAsync(Guid owner, params BundleEntry[] files)
+    [Fact]
+    public async Task List_OnAWorkspaceWhoseVersionIsGone_FailsLoudly()
+    {
+        // Nothing deletes a version, so a workspace outliving one is a broken store as well. Answering
+        // every file as read-only instead would look like a problem nobody can solve.
+        var workspace = await WorkspaceAsync(_owner, editable: null, BundleEntry.File("src/App.cs", "app"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => ListAsync(_owner, workspace.Id));
+    }
+
+    private Task<Workspace> WorkspaceHoldingAsync(Guid owner, params BundleEntry[] files) =>
+        WorkspaceAsync(owner, DefaultEditable, files);
+
+    /// <param name="editable">The version's editable files, or <see langword="null"/> for a version that does not exist.</param>
+    private async Task<Workspace> WorkspaceAsync(Guid owner, string[]? editable, params BundleEntry[] files)
     {
         var workspace = Workspace.Create(owner, Guid.CreateVersion7(), Noon);
+
+        if (editable is not null)
+        {
+            _allowances.Add(new WorkspaceAllowance(workspace.ProblemVersionId, editable, 50, 65_536, 1_048_576));
+        }
 
         using (var snapshot = Archives.Build(files))
         {
@@ -186,15 +221,18 @@ public sealed class WorkspaceFilesTests(PostgresTestServer postgres, MinioTestSe
     {
         await using var context = _database.CreateContext();
 
-        return await new WorkspaceFiles(context, _store).ListAsync(userId, workspaceId, TestContext.Current.CancellationToken);
+        return await Files(context).ListAsync(userId, workspaceId, TestContext.Current.CancellationToken);
     }
 
     private async Task<Result<WorkspaceFile>> ReadAsync(Guid userId, Guid workspaceId, string? path)
     {
         await using var context = _database.CreateContext();
 
-        return await new WorkspaceFiles(context, _store).ReadAsync(userId, workspaceId, path, TestContext.Current.CancellationToken);
+        return await Files(context).ReadAsync(userId, workspaceId, path, TestContext.Current.CancellationToken);
     }
+
+    private WorkspaceFiles Files(Persistence.WorkspacesDbContext context) =>
+        new(context, _allowances, _store, new FixedClock(Noon));
 
     private static void AssertFailure<T>(Result<T> result, ErrorType type, string code)
     {

@@ -8,12 +8,14 @@ import {
   listProblems,
   listWorkspaceFiles,
   openWorkspace,
+  saveWorkspaceFile,
 } from './endpoints';
 import {
   exampleFile,
   exampleFileTree,
   exampleProblem,
   exampleProblemDetail,
+  exampleSavedFile,
   exampleWorkspace,
   jsonResponse,
   pageOf,
@@ -128,5 +130,35 @@ describe('workspace endpoints', () => {
       status: 400,
       code: 'validation_failed',
     });
+  });
+
+  it('saves a file with PUT: the path in the query, the text and its base revision in the body', async () => {
+    const { client, fetchStub } = stub(jsonResponse(exampleSavedFile));
+
+    const saved = await saveWorkspaceFile(
+      client,
+      exampleWorkspace.id,
+      exampleFile.path,
+      'namespace Orders.Totals;\r\n',
+      exampleFile.revision,
+    );
+
+    const [url, init] = fetchStub.mock.calls[0] ?? [];
+    expect(url).toBe(`http://api.test/api/v1/workspaces/${exampleWorkspace.id}/files/content?path=src%2FOrderTotal.cs`);
+    expect(init?.method).toBe('PUT');
+    expect(init?.body).toBe(
+      JSON.stringify({ content: 'namespace Orders.Totals;\r\n', baseRevision: exampleFile.revision }),
+    );
+    expect(saved).toEqual(exampleSavedFile);
+  });
+
+  it('surfaces a save over a file that changed as workspace_file_changed, not as a success', async () => {
+    const { client } = stub(
+      problemResponse(412, 'workspace_file_changed', "The file at 'src/OrderTotal.cs' has changed since that copy of it was read."),
+    );
+
+    await expect(
+      saveWorkspaceFile(client, exampleWorkspace.id, exampleFile.path, 'namespace Orders;\r\n', exampleFile.revision),
+    ).rejects.toMatchObject({ status: 412, code: 'workspace_file_changed' });
   });
 });

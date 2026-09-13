@@ -102,6 +102,28 @@ public sealed class ProblemIngestServiceTests(PostgresTestServer postgres, Minio
     }
 
     [Fact]
+    public async Task Ingest_RecordsWhatAWorkspaceMayChange_AndHowLargeItMayGrow()
+    {
+        // Resolved by the loader and stored here, so a workspace save can be refused by a module that
+        // never reads the manifest — see IWorkspaceAllowanceLookup.
+        var database = await NewDatabaseAsync();
+        var package = LoadExample();
+        var ingested = await IngestAsync(database, package);
+
+        await using var context = database.CreateContext();
+        var version = await context.ProblemVersions
+            .AsNoTracking()
+            .SingleAsync(v => v.Id == ingested.ProblemVersionId, TestContext.Current.CancellationToken);
+
+        Assert.NotEmpty(version.EditableFiles);
+        Assert.Equal(package.EditableFiles, version.EditableFiles);
+        Assert.DoesNotContain(version.EditableFiles, package.ReadonlyFiles.Contains);
+        Assert.Equal(package.Manifest.Limits.MaxFiles, version.MaxFiles);
+        Assert.Equal(package.Manifest.Limits.MaxFileBytes, version.MaxFileBytes);
+        Assert.Equal(package.Manifest.Limits.MaxTotalBytes, version.MaxTotalBytes);
+    }
+
+    [Fact]
     public async Task TheStoredValidatorConfig_KeepsThePipelineInOrder()
     {
         var database = await NewDatabaseAsync();

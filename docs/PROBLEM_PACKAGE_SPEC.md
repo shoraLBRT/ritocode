@@ -136,7 +136,8 @@ Two rules make the declaration total, and both are checked when the package is l
 2. **At least one file is editable.** A task nobody can change is not a task.
 
 `readonly` is enforced twice, and the second time is the one that matters. The write endpoint
-([#12](https://github.com/shoraLBRT/ritocode/issues/12)) rejects a write to a read-only path, and
+([#12](https://github.com/shoraLBRT/ritocode/issues/12)) rejects a write to any path `editable` did
+not match — `403 workspace_file_read_only` — and
 the orchestrator restores every read-only file from the package before the validators run
 ([#17](https://github.com/shoraLBRT/ritocode/issues/17)). A submitted tree can therefore be tampered
 with and still be graded honestly: the tests that decide the verdict are the package's tests, never
@@ -152,8 +153,9 @@ something different on the machine that resolves it, which is the opposite of re
 
 ### Limits
 
-Bounds on the workspace tree, applied to the materialised package and again to the submitted tree
-([#36](https://github.com/shoraLBRT/ritocode/issues/36)).
+Bounds on the workspace tree, applied to the materialised package when it is loaded, to the tree on
+every save of a workspace file ([#12](https://github.com/shoraLBRT/ritocode/issues/12)), and again
+to the submitted tree ([#36](https://github.com/shoraLBRT/ritocode/issues/36)).
 
 | Field | Type | Default | Range |
 | --- | --- | --- | --- |
@@ -236,8 +238,13 @@ untestable phrase.
 
 The rest of the manifest is not stored here. `slug`, `title`, `difficulty`, `description` and `tags`
 become columns on `problems`; the package tree becomes the bundle at
-`problem_versions.snapshot_reference`. `hints` and `limits` have no column yet — they travel with
-the bundle until an issue needs them in SQL.
+`problem_versions.snapshot_reference`. `workspace.root` becomes `problem_versions.workspace_root`,
+the three `limits` become `max_files`, `max_file_bytes` and `max_total_bytes`, and `workspace.editable`
+becomes `editable_files` — **resolved**: the list of starter files the globs matched, not the globs.
+A module outside Problems that enforces it compares paths and never has to know this glob syntax.
+The consequence is that a save can replace an editable file and cannot create one, since a path the
+starter tree did not hold was never matched. `hints` have no column yet — they travel with the bundle
+until an issue needs them in SQL.
 
 ## Loading a package
 

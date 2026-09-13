@@ -173,8 +173,14 @@ records its own. Determinism is a property of the normalised projection of a run
 that two bundles are byte-identical is asserting the wrong thing.
 
 A workspace snapshot is written as one whole object per save. A put is atomic per object, so a
-reader sees the previous tree or the new one and never half of either; two saves racing means the
-later put wins, which is the same answer `workspaces.updated_at` gives.
+reader sees the previous tree or the new one and never half of either. That atomicity is not enough
+for two saves, though: each reads the tree, changes one file and puts the whole tree back, so if they
+overlapped the later put would silently drop the earlier save — even a save of a different file.
+Saves to one workspace are therefore serialised by a lock on the workspace row, held from before the
+snapshot is read until the row's `updated_at` commits
+([#12](https://github.com/shoraLBRT/ritocode/issues/12)). Any later writer of this key — reset in
+[#13](https://github.com/shoraLBRT/ritocode/issues/13) is the next — has to take the same lock, or it
+reopens the race.
 
 ## What is deliberately not here
 

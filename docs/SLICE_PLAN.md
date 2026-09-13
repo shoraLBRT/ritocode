@@ -9,7 +9,7 @@ reductions that are allowed and the list that are forbidden. **Read that ADR bef
 anything here.** This file tracks progress; it holds no decisions.
 
 - **Last updated:** 2026-09-13
-- **Progress:** 15 / 37
+- **Progress:** 17 / 37
 - **Estimate:** 30–34 sessions, six to seven weeks at five sessions a week
 - **Then:** [stage two](#after-the-slice) — the rest of Phase 1
 
@@ -30,7 +30,7 @@ anything here.** This file tracks progress; it holds no decisions.
 | --- | --- | --- |
 | [1 — Foundation](#stage-1--foundation) | 5 | 5 / 5 |
 | [2 — Content and catalog](#stage-2--content-and-catalog) | 5 | 6 / 6 |
-| [3 — Identity and workspace](#stage-3--identity-and-workspace) | 6 | 4 / 7 |
+| [3 — Identity and workspace](#stage-3--identity-and-workspace) | 6 | 6 / 7 |
 | [4 — Submission and queue](#stage-4--submission-and-queue) | 5 | 0 / 5 |
 | [5 — Execution](#stage-5--execution) | 7 | 0 / 8 |
 | [6 — Product face](#stage-6--product-face) | 6 | 0 / 6 |
@@ -253,11 +253,36 @@ first time.
   policy question #12 has to answer, see [Open questions](PROJECT_STATE.md#open-questions). The
   frontend API client gained `openWorkspace`, `getWorkspace`, `listWorkspaceFiles` and
   `getWorkspaceFile`; the screen that uses them is [#28](https://github.com/shoraLBRT/ritocode/issues/28).
-- [ ] **[#12](https://github.com/shoraLBRT/ritocode/issues/12) — file write and draft persistence.**
-- [ ] **[#36](https://github.com/shoraLBRT/ritocode/issues/36) (partial) — path and size limits.**
+- [x] **[#12](https://github.com/shoraLBRT/ritocode/issues/12) — file write and draft persistence.**
+  `PUT /api/v1/workspaces/{id}/files/content?path=` replaces an editable file's text at the address a
+  read uses, and the next read — and the next open of the same version — returns the change.
+  **Three decisions the plan did not state.** *What a version allows reaches Workspaces resolved*:
+  ingest now stores `problem_versions.editable_files` — the manifest's globs already matched against
+  the starter tree — and the three limits, and a third contract, `IWorkspaceAllowanceLookup`, hands
+  them over. A new interface rather than more fields on `ProblemVersionSummary`, per ADR 0007 §1,
+  and resolved so glob matching stays in Problems; the price is that a save replaces a file and never
+  creates one. *Revision protection is a per-file content hash*: a read reports `revision`, the
+  SHA-256 of the file's bytes, a save must send it back as `baseRevision`, and a file that moved on
+  answers `412 workspace_file_changed` — the first producer of `PreconditionFailed`. And *saves
+  serialise on the workspace row*: the snapshot is one object rewritten whole, so a `FOR UPDATE` lock
+  is held from the read of the snapshot to the commit, or two saves of different files would drop
+  each other's change. The tree now marks each file `editable`, and a file the version does not list
+  answers `403 workspace_file_read_only`. Versions ingested before this migrate with **no** editable
+  files, so a development database seeded earlier needs its problems re-ingested. See
+  [Open questions](PROJECT_STATE.md#open-questions).
+- [x] **[#36](https://github.com/shoraLBRT/ritocode/issues/36) (partial) — path and size limits.**
   Path normalisation, no escaping the workspace root, no symlink traversal, limits on file size and
   file count. Ships **in the same PR as #12**, not after it. Deferred as a whole this is not
   technical debt, it is a hole.
+  **What landed**: a path from the request is refused before anything is read — never normalised —
+  and a save can only replace a file the snapshot already holds and the version lists, so it can
+  neither leave the tree nor add a link; the snapshot is rewritten as regular files only, and a
+  corrupt one fails the save rather than being saved back clean. `max_file_bytes` is checked on the
+  UTF-8 bytes (`400`, `errors.content`), and `max_total_bytes` and `max_files` on the tree as it
+  would be written (`409 workspace_limit_exceeded`). **What did not**, and the issue stays open for:
+  the limits applied again to a submitted tree, which arrives with
+  [#14](https://github.com/shoraLBRT/ritocode/issues/14); a request-body cap below the server's
+  default; and a rule that a starter file is UTF-8, which belongs to the package loader.
 - [ ] **[#35](https://github.com/shoraLBRT/ritocode/issues/35) (partial) — ownership guards.**
   Every workspace and submission endpoint checks that the resource belongs to the caller, returning
   404 rather than 403 per [ADR 0003](adr/0003-api-conventions.md). Without this the identity seam

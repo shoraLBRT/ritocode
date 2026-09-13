@@ -4,11 +4,13 @@ using Microsoft.AspNetCore.Routing;
 using Ritocode.Modules.Workspaces.Lifecycle;
 using Ritocode.Shared.Http;
 using Ritocode.Shared.Identity;
+using Ritocode.Shared.Validation;
 
 namespace Ritocode.Modules.Workspaces.Files;
 
 /// <summary>
-/// <c>GET /api/v1/workspaces/{id}/files</c> and <c>GET /api/v1/workspaces/{id}/files/content?path=</c>.
+/// <c>GET /api/v1/workspaces/{id}/files</c>, and <c>GET</c> and <c>PUT</c> on
+/// <c>/api/v1/workspaces/{id}/files/content?path=</c>.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -16,11 +18,12 @@ namespace Ritocode.Modules.Workspaces.Files;
 /// <c>.</c> and <c>..</c> segments from a request path before routing, so a path carried there is not
 /// the path the client sent: <c>files/../problem.yaml</c> would arrive as some other route entirely,
 /// and the rule that refuses it could never be exercised, only trusted. A query value arrives verbatim,
-/// is refused by name as <c>errors.path</c>, and needs no per-segment escaping from a client.
+/// is refused by name as <c>errors.path</c>, and needs no per-segment escaping from a client. A save
+/// is addressed the same way, so the path a client read is the path it writes.
 /// </para>
 /// <para>
-/// Like the lifecycle endpoints, neither says anything about authorisation: the host's fallback
-/// policy closes them.
+/// Like the lifecycle endpoints, none says anything about authorisation: the host's fallback policy
+/// closes them.
 /// </para>
 /// </remarks>
 internal static class WorkspaceFileEndpoints
@@ -34,6 +37,11 @@ internal static class WorkspaceFileEndpoints
         endpoints.MapGet("/{id}/files/content", ReadAsync)
             .WithName("ReadWorkspaceFile")
             .WithTags("Workspaces");
+
+        endpoints.MapPut("/{id}/files/content", WriteAsync)
+            .WithName("WriteWorkspaceFile")
+            .WithTags("Workspaces")
+            .WithValidation<WriteWorkspaceFileRequest>();
 
         return endpoints;
     }
@@ -79,6 +87,39 @@ internal static class WorkspaceFileEndpoints
 
         return result.Match(
             file => Results.Ok(file),
+            error => ApiProblem.ToResult(error, context));
+    }
+
+    /// <summary>200 with the saved file's size and new revision.</summary>
+    private static async Task<IResult> WriteAsync(
+        string id,
+        string? path,
+        WriteWorkspaceFileRequest request,
+        IWorkspaceFiles files,
+        ICurrentUser currentUser,
+        HttpContext context,
+        CancellationToken cancellationToken)
+    {
+        var userId = currentUser.RequireId();
+
+        if (!Guid.TryParse(id, out var workspaceId))
+        {
+            return ApiProblem.ToResult(WorkspaceLifecycle.WorkspaceNotFound(), context);
+        }
+
+        // The validation filter has already refused an absent content and an absent or malformed
+        // revision; the defaults are only what a caller bypassing it would get, and an empty revision
+        // matches no file.
+        var result = await files.WriteAsync(
+            userId,
+            workspaceId,
+            path,
+            request.Content ?? string.Empty,
+            request.BaseRevision ?? string.Empty,
+            cancellationToken);
+
+        return result.Match(
+            saved => Results.Ok(saved),
             error => ApiProblem.ToResult(error, context));
     }
 }

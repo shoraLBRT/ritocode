@@ -72,6 +72,8 @@ export interface WorkspaceFileEntry {
   readonly path: string;
   /** Bytes, not characters. */
   readonly sizeBytes: number;
+  /** Whether the problem lets the user change this file. A save of any other file is refused. */
+  readonly editable: boolean;
 }
 
 /**
@@ -87,4 +89,13 @@ export interface WorkspaceFile {
   readonly path: string;
   readonly sizeBytes: number;
   readonly content: string;
+  /** SHA-256 of the file's bytes. Sent back as `baseRevision` when this copy is saved. */
+  readonly revision: string;
+}
+
+/** What a save answers: the file's new size, and the revision the next save of it sends. */
+export interface SavedWorkspaceFile {
+  readonly path: string;
+  readonly sizeBytes: number;
+  readonly revision: string;
 }

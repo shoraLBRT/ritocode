@@ -70,6 +70,12 @@ Fields:
 - workspace_root — the package's `workspace.root` with no trailing slash: the directory inside the
   bundle whose files are the starter tree. Stored so a workspace can be materialised by a module that
   may not parse the manifest format, and handed to it by `IProblemVersionLookup`
+- editable_files — the workspace-relative paths a user may change: the manifest's `workspace.editable`
+  globs resolved against the starter tree at ingest, ordered ordinally. Resolved rather than stored as
+  globs, so glob matching stays in the Problems module. Empty for a version that never declared it,
+  which means nothing is editable
+- max_files, max_file_bytes, max_total_bytes — the manifest's `limits`. With `editable_files`, handed
+  to Workspaces by `IWorkspaceAllowanceLookup` and checked on every save
 - created_at
 - published_at — null while the version is a draft
 
@@ -103,8 +109,16 @@ A user has **one workspace per version**: opening a version they already have a 
 that workspace rather than creating an empty second one. The schema does not enforce this — two
 concurrent first opens can both create, and a later open returns the most recently written.
 
-A workspace is read only by its owner. Another user's workspace is answered exactly like a missing
-one, with a 404, so the API never confirms that an id exists.
+A workspace is read and saved only by its owner. Another user's workspace is answered exactly like a
+missing one, with a 404, so the API never confirms that an id exists.
+
+A save **replaces one file** the version lists as editable; it never creates, deletes or renames one.
+It names the **revision** it was made to — the SHA-256 of the file's bytes, which a read reports —
+and a file that has moved on since is refused rather than overwritten. The revision is per file and
+derived from the content, so it needs no column. Saves to one workspace are serialised by a lock on
+its row, because each rewrites the whole snapshot. A save is refused when the file would exceed the
+version's `max_file_bytes`, or the tree its `max_total_bytes` or `max_files`, and a save of exactly
+what is stored writes nothing and leaves `updated_at` where it was.
 
 ## Submission
 
