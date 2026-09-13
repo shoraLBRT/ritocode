@@ -62,7 +62,7 @@ public sealed class WorkspaceFiles(
         Guid workspaceId,
         CancellationToken cancellationToken = default)
     {
-        var workspace = await context.Workspaces.FindOwnedAsync(userId, workspaceId, cancellationToken);
+        var workspace = await context.FindOwnedAsync(userId, workspaceId, cancellationToken);
 
         if (workspace is null)
         {
@@ -92,7 +92,7 @@ public sealed class WorkspaceFiles(
             return InvalidPath(path);
         }
 
-        var workspace = await context.Workspaces.FindOwnedAsync(userId, workspaceId, cancellationToken);
+        var workspace = await context.FindOwnedAsync(userId, workspaceId, cancellationToken);
 
         if (workspace is null)
         {
