@@ -100,6 +100,19 @@ public sealed record ValidatorResult
         return new ValidatorResult(step.Id, step.Type, ValidatorOutcome.Skipped, runOutcome: null, [], summary: null);
     }
 
+    /// <summary>
+    /// A step that could not be run at all: no plugin answers its type, or its <c>with</c> cannot be
+    /// planned. The summary says which, because the fault is in the problem's content rather than in the
+    /// attempt, and the person reading the report should be able to tell.
+    /// </summary>
+    public static ValidatorResult NotRunnable(ValidatorStepDefinition step, string summary)
+    {
+        ArgumentNullException.ThrowIfNull(step);
+        ArgumentException.ThrowIfNullOrWhiteSpace(summary);
+
+        return new ValidatorResult(step.Id, step.Type, ValidatorOutcome.NotRunnable, runOutcome: null, [], summary);
+    }
+
     private static ValidatorCheck[] Projection(IEnumerable<ValidatorCheck> checks)
     {
         var ordered = checks.OrderBy(check => check.Name, StringComparer.Ordinal).ToArray();
@@ -131,6 +144,12 @@ public enum ValidatorOutcome
 
     /// <summary>The step never ran: the pipeline stopped at a required step before it.</summary>
     Skipped,
+
+    /// <summary>
+    /// The step could not be run at all — no plugin answers its type, or its <c>with</c> cannot be
+    /// planned. A fault in the problem's content, not in the attempt.
+    /// </summary>
+    NotRunnable,
 }
 
 /// <summary>One named check a validator found — for the test validator, one test.</summary>

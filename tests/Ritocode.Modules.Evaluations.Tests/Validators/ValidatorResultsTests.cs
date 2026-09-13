@@ -79,6 +79,17 @@ public sealed class ValidatorResultsTests
     }
 
     [Fact]
+    public void ToJson_WritesANotRunnableStep_WithItsReasonAndNoRunOutcome()
+    {
+        // A summary with no character the default encoder escapes, so the literal below reads as written.
+        var json = ValidatorResults.ToJson([ValidatorResult.NotRunnable(Build.Step(id: "lint", type: "lint"), "No validator answers the type lint.")]);
+
+        Assert.Equal(
+            """{"schemaVersion":1,"validators":[{"id":"lint","type":"lint","outcome":"notRunnable","runOutcome":null,"summary":"No validator answers the type lint.","checks":[]}]}""",
+            json);
+    }
+
+    [Fact]
     public void ToJson_OfNoResults_IsAnEmptyPipeline()
     {
         Assert.Equal("""{"schemaVersion":1,"validators":[]}""", ValidatorResults.ToJson([]));
