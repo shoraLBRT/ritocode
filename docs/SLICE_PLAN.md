@@ -335,6 +335,11 @@ The button exists and the state machine is real, but nothing runs yet.
   partial index `(status, created_at) WHERE status IN ('Queued','Running')` is already in the
   schema — it was designed for exactly this query. No Redis. Extracting the worker into its own
   process is stage two and must not require domain changes.
+  **Placed by [ADR 0009](adr/0009-evaluation-is-a-command-submissions-issues.md)**: the drain lives
+  in Submissions, which records every transition itself, and reaches Evaluations only through the
+  `ISubmissionEvaluator` command that #17 implements. So this box builds the claim, the guard on
+  recording, and recovery of an attempt a dead process left `Running` — and **no loop that claims**,
+  which would strand attempts until #17 can evaluate them. The hosted loop lands with #17.
 - [ ] **[#18](https://github.com/shoraLBRT/ritocode/issues/18) — validator plugin interface.**
   This is what makes "two validators instead of four" an addition later rather than a rewrite, so
   it comes before any validator is written.

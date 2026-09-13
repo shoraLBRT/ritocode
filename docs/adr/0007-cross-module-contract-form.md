@@ -1,6 +1,6 @@
 # 0007 — Cross-module contract form
 
-- Status: Accepted
+- Status: Accepted; §4 superseded in part by [0009](0009-evaluation-is-a-command-submissions-issues.md), for command contracts only
 - Date: 2026-09-05
 - Relates to: [`docs/DATABASE_SCHEMA.md`](../DATABASE_SCHEMA.md), [`docs/SLICE_PLAN.md`](../SLICE_PLAN.md), [#10](https://github.com/shoraLBRT/ritocode/issues/10)
 - Builds on: [0002](0002-modular-monolith-layout.md), [0004](0004-persistence-and-migrations.md), [0005](0005-vertical-slice-before-breadth.md)

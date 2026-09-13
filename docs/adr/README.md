@@ -12,8 +12,9 @@ and the old one is marked `Superseded by NNNN` rather than edited.
 | [0004](0004-persistence-and-migrations.md) | Persistence and migrations | Accepted |
 | [0005](0005-vertical-slice-before-breadth.md) | Vertical slice before breadth | Accepted |
 | [0006](0006-sandbox-execution-model.md) | Sandbox execution model | Accepted |
-| [0007](0007-cross-module-contract-form.md) | Cross-module contract form | Accepted |
+| [0007](0007-cross-module-contract-form.md) | Cross-module contract form | Accepted; §4 superseded in part by 0009 |
 | [0008](0008-authentication-seam.md) | Authentication seam | Proposed |
+| [0009](0009-evaluation-is-a-command-submissions-issues.md) | Evaluation is a command the Submissions module issues | Accepted |
 
 ## Writing a new ADR
 

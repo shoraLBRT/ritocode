@@ -354,21 +354,25 @@ query — `OwnershipRuleTests` fails otherwise. **Stage 4 is one box of five in*
 submitted, which freezes its tree into a column-referenced copy and queues an attempt the caller can
 read back and list. **The next box is:**
 
-1. **[#15](https://github.com/shoraLBRT/ritocode/issues/15) (partial) — queue and worker.** A
-   PostgreSQL table drained with `SKIP LOCKED` by a hosted service in the API process, over the partial
-   index `(status, created_at) WHERE status IN ('Queued','Running')` that has waited in the schema
-   since #3. What #14 left for it: `Submission.Start` is the transition a claim makes, and the worker
-   is the first code in Submissions that reads rows **by status rather than by owner** — so it needs an
-   allowance in `OwnershipRuleTests` that says why no owner applies, rather than a way around the rule.
-   Two things it has to settle and ADR 0005 already bounds: the worker's domain code must not know it
-   runs inside the API process, or stage two's extraction stops being a move; and what a claim does
-   with an attempt left `Running` by a process that died — the constraint forbids nothing there, so
-   the answer is the worker's. With no validators until stage 5, what the worker runs for a claimed
-   attempt is the orchestrator's question in #17, and #15 can ship with a dispatch seam and no
-   pipeline behind it.
+1. **[#15](https://github.com/shoraLBRT/ritocode/issues/15) (partial) — queue and worker.** Shaped by
+   [ADR 0009](adr/0009-evaluation-is-a-command-submissions-issues.md), decided with the maintainer
+   before any of it was written: **the Submissions module drains its own table** and records every
+   state change, and Evaluations is reached through one command contract, `ISubmissionEvaluator`, that
+   writes no other module's rows. So #15 is Submissions-internal: the claim — `FOR UPDATE SKIP LOCKED`
+   over the partial index `(status, created_at) WHERE status IN ('Queued','Running')`, then
+   `Submission.Start`, in one short transaction — the guard that records a result only on the attempt
+   still claimed, and the rule for an attempt left `Running` by a process that died, which ADR 0009
+   §3.3 makes safe to evaluate again. The drain is the first code in Submissions that reads by status
+   rather than by owner, so it gets an allowance in `OwnershipRuleTests` that says why. **What #15 must
+   not do**: start a loop that claims attempts. `ISubmissionEvaluator` arrives with its implementation
+   in #17 — ADR 0007 §7 requires a contract to be registered exactly once — and a claimed attempt
+   nothing can evaluate would sit `Running` forever, while a stand-in that grades is ADR 0005's first
+   forbidden row.
 
-The three ADRs written so far are off this list and their obligations are in
-[Open questions](#open-questions) instead. Briefly: submission reports gain somewhere to carry a
+The ADRs written so far are off this list and their obligations are in
+[Open questions](#open-questions) instead. The newest,
+[ADR 0009](adr/0009-evaluation-is-a-command-submissions-issues.md), places the worker in Submissions
+and makes evaluation a command Evaluations answers; #15 and #17 are built to it. Briefly: submission reports gain somewhere to carry a
 timeout or a resource exhaustion, and #22 gains a runner registry. ADR 0007's obligation — two lookup
 interfaces and the assertions that keep them honest — is now met.
 
@@ -628,12 +632,14 @@ Decisions a future session will hit, and where in the slice each one comes due.
   worker that needs a workspace **without** a user — none does yet, since the frozen tree is all an
   evaluation reads — would get its own interface rather than an optional owner on this one.
 - **Where a submission report carries a timeout or a resource exhaustion.** *Created by
-  [ADR 0006](adr/0006-sandbox-execution-model.md) §5, due in stage 4 with
-  [#17](https://github.com/shoraLBRT/ritocode/issues/17) — [#14](https://github.com/shoraLBRT/ritocode/issues/14)
-  left it there, because the report is written by the orchestrator and #14 writes no report.*
-  `Submission.Fail(at)` records no reason, on purpose: whether the reason belongs on the submission
-  or in the report's per-validator results is the question itself, and the report is where a
-  per-validator outcome already lives. The runner distinguishes `Completed`,
+  [ADR 0006](adr/0006-sandbox-execution-model.md) §5; settled by
+  [ADR 0009](adr/0009-evaluation-is-a-command-submissions-issues.md) §4, and built by
+  [#17](https://github.com/shoraLBRT/ritocode/issues/17).* In the report, per validator. A run that
+  ended `TimedOut`, `ResourceExhausted` or `Crashed` makes the submission `Failed` — ADR 0006 §5 already
+  said so — and the report still carries each validator's runner outcome, so the distinction reaches
+  the person reading it rather than being flattened into the status. A pipeline that ran to the end is
+  `Completed` with its score, passing or not. `Submission.Fail(at)` therefore stays reason-less on
+  purpose. The JSON shape of `validator_results` is [#18](https://github.com/shoraLBRT/ritocode/issues/18)'s. The runner distinguishes `Completed`,
   `TimedOut`, `ResourceExhausted` and `Crashed`, and is explicitly allowed not to know which of the
   last two applies — `OOMKilled` is a reliable positive and an unreliable negative, since a managed
   `OutOfMemoryException` aborts at 134 before the kernel is involved. If the schema above the runner
@@ -843,8 +849,12 @@ Decisions a future session will hit, and where in the slice each one comes due.
   `Workspace.Create` now truncates to the microsecond. `ProblemVersion.Create` does not, and does not
   need to yet, because nothing answers with a version it just built; the next endpoint that answers a
   create with the entity in hand needs the same truncation, or the same test.
-- **How does one module *change* another's state?** *Open, and outside the slice.* ADR 0007 is
-  read-only by decision, so there is no mechanism and no need for one yet. The first real case is
+- **How does one module *change* another's state?** *Answered for evaluation by
+  [ADR 0009](adr/0009-evaluation-is-a-command-submissions-issues.md); open for everything else, and
+  outside the slice.* Evaluation does not change another module's state at all: Submissions issues a
+  command whose callee writes only its own artifacts and returns the outcome, and Submissions records
+  it. ADR 0009 admits that category — a *command contract* — under three conditions, and any need that
+  fails one of them is still without a mechanism. ADR 0007 is otherwise read-only by decision. The first real case is
   user deletion in [#43](https://github.com/shoraLBRT/ritocode/issues/43), which
   [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) already says must notify each module rather than run a
   single `DELETE`. Whether the answer is a command interface or a domain event is worth deciding
