@@ -74,14 +74,14 @@ public sealed class CatalogApi(PostgresTestServer postgres) : IAsyncLifetime
 
         for (var index = 0; index < published; index++)
         {
-            var row = ProblemVersion.Create(problem.Id, ++version, "{}", createdAt);
+            var row = ProblemVersion.Create(problem.Id, ++version, "{}", "starter", createdAt);
             row.Publish(createdAt);
             context.ProblemVersions.Add(row);
         }
 
         for (var index = 0; index < drafts; index++)
         {
-            context.ProblemVersions.Add(ProblemVersion.Create(problem.Id, ++version, "{}", createdAt));
+            context.ProblemVersions.Add(ProblemVersion.Create(problem.Id, ++version, "{}", "starter", createdAt));
         }
     }
 }

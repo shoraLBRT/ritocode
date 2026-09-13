@@ -32,6 +32,10 @@ internal sealed class ProblemVersionConfiguration : IEntityTypeConfiguration<Pro
         // directly when diagnosing an evaluation, which a text blob cannot.
         builder.Property(v => v.ValidatorConfig).HasColumnType("jsonb").IsRequired();
 
+        // Unbounded text, like the description: the manifest format puts no length on a path, and
+        // a limit invented here would reject a valid package at insert time rather than at load.
+        builder.Property(v => v.WorkspaceRoot).IsRequired();
+
         // Same module, so this is a real foreign key. Deleting a problem takes its versions with
         // it; a version without its problem has no meaning.
         builder.HasOne(v => v.Problem)

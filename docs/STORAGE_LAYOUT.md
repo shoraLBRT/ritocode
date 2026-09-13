@@ -16,15 +16,17 @@ the only description of.
 - Defined by [#5](https://github.com/shoraLBRT/ritocode/issues/5) *(partial)*, and implemented by
   `IObjectStore` in `src/Ritocode.Shared/Storage`. Put and get only — the client cannot delete or
   list, and does not copy server-side.
-- **Problem bundles are the only objects anything writes today**, by ingest
-  ([#9](https://github.com/shoraLBRT/ritocode/issues/9)). The other two buckets stay empty until
-  stages 3 and 4. `problem_versions.snapshot_reference` is the first reference column with a value
-  in it, and it is typed as a `StorageReference` through an EF value converter rather than held as
-  free text — see [PROJECT_STATE.md](PROJECT_STATE.md#open-questions); the other two columns keep
-  their `string` mapping until their first writer.
+- **Two of the three buckets are written today**: problem bundles by ingest
+  ([#9](https://github.com/shoraLBRT/ritocode/issues/9)), and workspace snapshots by workspace
+  creation ([#10](https://github.com/shoraLBRT/ritocode/issues/10)), which is also the first code
+  that reads a bundle back. Evaluation artifacts stay empty until stages 4 and 5.
+  `problem_versions.snapshot_reference` and `workspaces.snapshot_reference` are both typed as a
+  `StorageReference` through an EF value converter rather than held as free text — see
+  [PROJECT_STATE.md](PROJECT_STATE.md#open-questions); `submission_reports.logs_reference` keeps its
+  `string` mapping until its first writer.
 - **Retention and deletion are out of scope**, deferred with
   [#43](https://github.com/shoraLBRT/ritocode/issues/43). Nothing here says when an object dies.
-- **Last updated:** 2026-09-08
+- **Last updated:** 2026-09-13
 
 ## Buckets are roles; their names are configuration
 
@@ -33,7 +35,7 @@ There are three buckets, one per role. `compose.yaml` already creates them for l
 | Role | Local bucket | Holds | Written by | Read by |
 | --- | --- | --- | --- | --- |
 | `problem-bundles` | `problem-bundles` | One archive per published problem version | Ingest ([#9](https://github.com/shoraLBRT/ritocode/issues/9)) | Workspace creation ([#10](https://github.com/shoraLBRT/ritocode/issues/10)), the orchestrator ([#17](https://github.com/shoraLBRT/ritocode/issues/17)) |
-| `workspace-snapshots` | `workspace-snapshots` | One archive per workspace: its current working tree | File write ([#12](https://github.com/shoraLBRT/ritocode/issues/12)) | File read ([#11](https://github.com/shoraLBRT/ritocode/issues/11)), submission ([#14](https://github.com/shoraLBRT/ritocode/issues/14)) |
+| `workspace-snapshots` | `workspace-snapshots` | One archive per workspace: its current working tree | Workspace creation ([#10](https://github.com/shoraLBRT/ritocode/issues/10)), then file write ([#12](https://github.com/shoraLBRT/ritocode/issues/12)) | File read ([#11](https://github.com/shoraLBRT/ritocode/issues/11)), submission ([#14](https://github.com/shoraLBRT/ritocode/issues/14)) |
 | `evaluation-artifacts` | `evaluation-artifacts` | Per submission: the frozen input tree and everything the run produced | The orchestrator ([#17](https://github.com/shoraLBRT/ritocode/issues/17)) and [#23](https://github.com/shoraLBRT/ritocode/issues/23) | The report API ([#16](https://github.com/shoraLBRT/ritocode/issues/16)) |
 
 Three buckets rather than one bucket with three prefixes, because a bucket is the coarsest unit an
@@ -182,8 +184,14 @@ later put wins, which is the same answer `workspaces.updated_at` gives.
   an object that must never be served to a user is safest as an object that does not exist. The
   bundle is the manifest, the description and the workspace root, which is why it can be served
   without filtering. `ProblemBundleWriter` is that rule in code: entries keep their
-  package-relative paths, so a bundle is a filtered copy of the package and a reader finds the
-  workspace tree the way the loader did — by reading `workspace.root` out of the manifest.
+  package-relative paths, so a bundle is a filtered copy of the package. A reader finds the
+  workspace tree under `problem_versions.workspace_root` — the manifest's `workspace.root`, stored at
+  ingest and carried by `IProblemVersionLookup` — rather than by parsing the manifest, whose format
+  belongs to the Problems module and which a reader in another module may not reference.
+- **A workspace snapshot is not the bundle.** It holds only the files under the workspace root, at
+  paths relative to it: no manifest, no description, and no root directory in any path. Only regular
+  files are carried over, and a bundle entry that is a link or whose path could leave the tree fails
+  the creation rather than being normalised — `StarterTree` in the Workspaces module.
 - **Retention, lifecycle rules and deletion.** Deferred with
   [#43](https://github.com/shoraLBRT/ritocode/issues/43). Every object written today is written
   forever; that is a known hole rather than an oversight, and the bucket split above is what keeps

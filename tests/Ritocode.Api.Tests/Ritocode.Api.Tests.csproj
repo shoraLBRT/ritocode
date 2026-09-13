@@ -14,6 +14,16 @@
     <ProjectReference Include="../Ritocode.TestSupport/Ritocode.TestSupport.csproj" />
   </ItemGroup>
 
+  <!--
+    The workspace endpoints are tested against a real published package, ingested from the committed
+    content tree, so what a workspace is materialised from is what the catalog actually ships.
+  -->
+  <ItemGroup>
+    <Content Include="../../content/problems/**/*"
+             LinkBase="content/problems"
+             CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
