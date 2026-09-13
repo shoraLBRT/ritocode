@@ -27,8 +27,11 @@ namespace Ritocode.TestSupport;
 /// </remarks>
 public sealed class MinioTestServer : IAsyncDisposable
 {
-    /// <summary>Matches the image in <c>compose.yaml</c>, so tests never run on a different build.</summary>
-    public const string Image = "minio/minio:RELEASE.2025-04-22T22-12-26Z";
+    /// <summary>
+    /// Matches the image in <c>compose.yaml</c>, so tests never run on a different build. Pulled from
+    /// quay.io because MinIO no longer publishes to Docker Hub, where <c>minio/minio</c> now 404s.
+    /// </summary>
+    public const string Image = "quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z";
 
     private readonly SemaphoreSlim _gate = new(1, 1);
 
