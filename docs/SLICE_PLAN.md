@@ -9,7 +9,7 @@ reductions that are allowed and the list that are forbidden. **Read that ADR bef
 anything here.** This file tracks progress; it holds no decisions.
 
 - **Last updated:** 2026-09-13
-- **Progress:** 20 / 37
+- **Progress:** 21 / 37
 - **Estimate:** 30–34 sessions, six to seven weeks at five sessions a week
 - **Then:** [stage two](#after-the-slice) — the rest of Phase 1
 
@@ -31,7 +31,7 @@ anything here.** This file tracks progress; it holds no decisions.
 | [1 — Foundation](#stage-1--foundation) | 5 | 5 / 5 |
 | [2 — Content and catalog](#stage-2--content-and-catalog) | 5 | 6 / 6 |
 | [3 — Identity and workspace](#stage-3--identity-and-workspace) | 6 | 7 / 7 |
-| [4 — Submission and queue](#stage-4--submission-and-queue) | 5 | 2 / 5 |
+| [4 — Submission and queue](#stage-4--submission-and-queue) | 5 | 3 / 5 |
 | [5 — Execution](#stage-5--execution) | 7 | 0 / 8 |
 | [6 — Product face](#stage-6--product-face) | 6 | 0 / 6 |
 
@@ -354,9 +354,30 @@ The button exists and the state machine is real, but nothing runs yet.
   because CA1711 reserves `Queue` for collections, and ADR 0005 already calls this seam the dispatch
   interface. The issue stays open for the hosted loop and the report, which are #17's, and the cap on
   concurrent evaluations, which is #35's box below.
-- [ ] **[#18](https://github.com/shoraLBRT/ritocode/issues/18) — validator plugin interface.**
+- [x] **[#18](https://github.com/shoraLBRT/ritocode/issues/18) (partial) — validator plugin interface.**
   This is what makes "two validators instead of four" an addition later rather than a rewrite, so
   it comes before any validator is written.
+  **Marked partial against the issue, which this plan did not do before and does now**: its acceptance
+  criterion is three validators on the interface, and the slice builds two, in stage 5. The interface,
+  its result schema and its registry are complete; the third validator is stage two's.
+  **What landed**, in the Evaluations module: `IValidatorPlugin`, whose `Plan` says what the runner
+  should run from a step's `with` and whose `InterpretAsync` turns the runner's observation into a
+  verdict — a plugin never starts a process. `SandboxRunResult` is ADR 0006 §5's shape, declared ahead of
+  the runner of #21 because it is what a plugin reads. `ValidatorResult` is built only by `Judged`,
+  `NotCompleted` and `Skipped`, so a run that did not complete is never a pass or a fail, and its checks
+  are the sorted, duplicate-free projection. `ValidatorResults.ToJson` is the canonical JSON of
+  `submission_reports.validator_results` — every field written, enums as camelCase names, and nothing in
+  it that differs between two runs of one submission. `ValidatorRunPlan.FromCommand` parses the `with.command`
+  both slice validators read, as an argument vector and never a string for a shell. The registry maps a
+  type to a plugin ordinally and refuses two plugins on one type or a type no manifest could name; no
+  plugin is registered until #19.
+  **Two decisions the plan did not state.** *A validator reports what happened, never what it is
+  worth*: weights and whether a required failure stops the pipeline are the orchestrator's and #20's, so
+  two plugins cannot score the same outcome two ways — and whether a test validator's score is all or
+  nothing or proportional to the tests passed is left to #20, with the per-test checks in the result so
+  either is possible. *`Plan` is where a malformed `with` is found*, because ingest carries `with`
+  uninterpreted; refusing it at ingest instead needs Problems to ask Evaluations, which is deferred —
+  see [PROJECT_STATE.md](PROJECT_STATE.md#deliberately-deferred).
 - [ ] **[#17](https://github.com/shoraLBRT/ritocode/issues/17) (partial) — orchestrator.**
   Sequential validator execution and status transitions. No retries, priorities, cancellation or
   parallelism.
