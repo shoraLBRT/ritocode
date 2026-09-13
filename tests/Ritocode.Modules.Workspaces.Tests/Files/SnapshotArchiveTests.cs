@@ -2,7 +2,10 @@ using Ritocode.Modules.Workspaces.Files;
 
 namespace Ritocode.Modules.Workspaces.Tests.Files;
 
-/// <summary>Reading a workspace snapshot back. No database and no store: the archive in, the tree out.</summary>
+/// <summary>
+/// Reading a workspace snapshot back, and rewriting one file of it. No database and no store: the
+/// archive in, the tree out.
+/// </summary>
 public sealed class SnapshotArchiveTests
 {
     [Fact]
@@ -20,9 +23,9 @@ public sealed class SnapshotArchiveTests
 
         Assert.Equal(
             [
-                new WorkspaceFileEntry("README.md", 0),
-                new WorkspaceFileEntry("src/App.cs", 2),
-                new WorkspaceFileEntry("tests/AppTests.cs", 5),
+                new SnapshotFile("README.md", 0),
+                new SnapshotFile("src/App.cs", 2),
+                new SnapshotFile("tests/AppTests.cs", 5),
             ],
             files);
     }
@@ -49,6 +52,54 @@ public sealed class SnapshotArchiveTests
 
         Assert.NotNull(bytes);
         Assert.Empty(bytes);
+    }
+
+    [Fact]
+    public async Task Replace_SwapsTheBytesOfOneFile_AndCopiesEveryOtherUnchanged()
+    {
+        using var snapshot = Archives.Build(
+            BundleEntry.File("a.txt", "first"),
+            BundleEntry.File("b.txt", "second"),
+            BundleEntry.File("c.txt", "third"));
+        using var destination = new MemoryStream();
+
+        var replacement = await SnapshotArchive.ReplaceAsync(
+            snapshot, "b.txt", "changed!"u8.ToArray(), destination, TestContext.Current.CancellationToken);
+
+        Assert.Equal("second"u8.ToArray(), replacement.Previous);
+        Assert.Equal(3, replacement.FileCount);
+        Assert.Equal(18L, replacement.TotalBytes);
+        Assert.Equal<(string, string)>(
+            [("a.txt", "first"), ("b.txt", "changed!"), ("c.txt", "third")],
+            (await Archives.ReadAsync(destination)).Select(entry => (entry.Path, entry.Content)));
+    }
+
+    [Fact]
+    public async Task Replace_APathTheSnapshotDoesNotHold_ReplacesNothing_AndAddsNothing()
+    {
+        // A save replaces a file; it never creates one. The copy is there to be discarded.
+        using var snapshot = Archives.Build(BundleEntry.File("a.txt", "first"));
+        using var destination = new MemoryStream();
+
+        var replacement = await SnapshotArchive.ReplaceAsync(
+            snapshot, "new.txt", "new"u8.ToArray(), destination, TestContext.Current.CancellationToken);
+
+        Assert.Null(replacement.Previous);
+        Assert.Equal(["a.txt"], (await Archives.ReadAsync(destination)).Select(entry => entry.Path));
+    }
+
+    [Fact]
+    public async Task Replace_OnACorruptSnapshot_Throws_RatherThanSavingItBackClean()
+    {
+        // The rewrite reads through the same checks as a list: a link that was skipped here would be
+        // gone from the saved tree, and the evidence that the snapshot was tampered with gone with it.
+        using var snapshot = Archives.Build(
+            BundleEntry.File("src/App.cs", "app"),
+            BundleEntry.SymbolicLink("src/secrets", "/etc/passwd"));
+        using var destination = new MemoryStream();
+
+        await Assert.ThrowsAsync<InvalidDataException>(() => SnapshotArchive.ReplaceAsync(
+            snapshot, "src/App.cs", "changed"u8.ToArray(), destination, TestContext.Current.CancellationToken));
     }
 
     [Fact]

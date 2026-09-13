@@ -67,6 +67,22 @@ public sealed class Workspace
         };
     }
 
+    /// <summary>Records a write to the working tree at <paramref name="writtenAt"/>.</summary>
+    /// <remarks>
+    /// Never moves <see cref="UpdatedAt"/> backwards. A clock that stepped back would otherwise put a
+    /// workspace behind older ones in "continue where you left off", and could put it before
+    /// <see cref="CreatedAt"/>, which <c>ck_workspaces_updated_not_before_created</c> refuses.
+    /// </remarks>
+    public void RecordWrite(DateTimeOffset writtenAt)
+    {
+        var timestamp = ToStoredPrecision(writtenAt);
+
+        if (timestamp > UpdatedAt)
+        {
+            UpdatedAt = timestamp;
+        }
+    }
+
     /// <summary>
     /// UTC, truncated to the microsecond a <c>timestamptz</c> holds. Without this, the workspace a
     /// create returns carries .NET's 100-nanosecond ticks and the same workspace read back carries

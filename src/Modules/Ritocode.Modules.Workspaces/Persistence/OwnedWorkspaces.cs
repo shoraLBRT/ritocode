@@ -25,4 +25,29 @@ internal static class OwnedWorkspaces
             .FirstOrDefaultAsync(
                 candidate => candidate.Id == workspaceId && candidate.UserId == userId,
                 cancellationToken);
+
+    /// <summary>
+    /// As <see cref="FindOwnedAsync"/>, tracked, and with the row locked until the caller's transaction
+    /// ends — for a writer that rewrites the workspace's snapshot.
+    /// </summary>
+    /// <remarks>
+    /// The snapshot is one object rewritten whole, so two writers that both read it before either
+    /// wrote would each put back a tree missing the other's change. Holding this lock from the read of
+    /// the snapshot to the commit makes every writer start from the tree the previous one left. It
+    /// only serialises writers that take it: a new writer of the snapshot has to come through here.
+    /// </remarks>
+    public static async Task<Workspace?> FindOwnedForUpdateAsync(
+        this WorkspacesDbContext context,
+        Guid userId,
+        Guid workspaceId,
+        CancellationToken cancellationToken)
+    {
+        // Not composed with any LINQ operator, so EF sends this statement as written rather than
+        // wrapping it in a subquery the locking clause would then sit inside.
+        var rows = await context.Workspaces
+            .FromSql($"SELECT * FROM workspaces.workspaces WHERE id = {workspaceId} AND user_id = {userId} FOR UPDATE")
+            .ToListAsync(cancellationToken);
+
+        return rows.SingleOrDefault();
+    }
 }

@@ -1,4 +1,5 @@
 using System.Net;
+using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Ritocode.Api.Tests.Infrastructure;
@@ -27,6 +28,10 @@ public sealed class WorkspaceFileEndpointsTests(WorkspaceApi api) : IClassFixtur
         Assert.NotNull(tree);
         Assert.Equal(api.Package.WorkspaceFiles, tree.Files.Select(file => file.Path));
         Assert.All(tree.Files, file => Assert.Equal(new FileInfo(StarterPath(file.Path)).Length, file.SizeBytes));
+
+        // Which files may be saved is the committed problem.yaml's answer, carried by ingest and the
+        // Problems contract rather than written down a second time anywhere.
+        Assert.Equal(api.Package.EditableFiles, tree.Files.Where(file => file.Editable).Select(file => file.Path));
     }
 
     [Fact]
@@ -44,6 +49,9 @@ public sealed class WorkspaceFileEndpointsTests(WorkspaceApi api) : IClassFixtur
         Assert.Equal("src/InvoiceSplitter.cs", file.Path);
         Assert.Equal(new FileInfo(StarterPath(file.Path)).Length, file.SizeBytes);
         Assert.Equal(await File.ReadAllTextAsync(StarterPath(file.Path), TestContext.Current.CancellationToken), file.Content);
+        Assert.Equal(
+            Convert.ToHexStringLower(SHA256.HashData(await File.ReadAllBytesAsync(StarterPath(file.Path), TestContext.Current.CancellationToken))),
+            file.Revision);
     }
 
     [Theory]
@@ -160,6 +168,8 @@ public sealed class WorkspaceFileEndpointsTests(WorkspaceApi api) : IClassFixtur
 
 public sealed record FileTreeResponse(IReadOnlyList<FileEntryResponse> Files);
 
-public sealed record FileEntryResponse(string Path, long SizeBytes);
+public sealed record FileEntryResponse(string Path, long SizeBytes, bool Editable);
 
-public sealed record FileResponse(string Path, long SizeBytes, string Content);
+public sealed record FileResponse(string Path, long SizeBytes, string Content, string Revision);
+
+public sealed record SavedFileResponse(string Path, long SizeBytes, string Revision);

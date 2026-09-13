@@ -154,10 +154,18 @@ public sealed class AnonymousRequestTests(AnonymousTestApi api) : IClassFixture<
             new Uri($"/api/v1/workspaces/{Guid.CreateVersion7()}/files/content?path=src%2FApp.cs", UriKind.Relative),
             TestContext.Current.CancellationToken);
 
+        // A body the validation filter would accept, so a 401 here is the policy and not a 400 that
+        // happened to run first.
+        var save = await api.Client.PutAsJsonAsync(
+            new Uri($"/api/v1/workspaces/{Guid.CreateVersion7()}/files/content?path=src%2FApp.cs", UriKind.Relative),
+            new { content = "// mine\n", baseRevision = new string('0', 64) },
+            TestContext.Current.CancellationToken);
+
         Assert.Equal(HttpStatusCode.Unauthorized, open.StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, read.StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, tree.StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, file.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, save.StatusCode);
     }
 
     [Fact]

@@ -5,6 +5,7 @@ import type {
   ModuleInfo,
   Page,
   PageQuery,
+  SavedWorkspaceFile,
   Workspace,
   WorkspaceFile,
   WorkspaceFileTree,
@@ -90,6 +91,35 @@ export function getWorkspaceFile(
 ): Promise<WorkspaceFile> {
   return client.request<WorkspaceFile>(`/workspaces/${encodeURIComponent(workspaceId)}/files/content`, {
     query: { path },
+    ...(signal ? { signal } : {}),
+  });
+}
+
+/**
+ * `PUT /workspaces/{id}/files/content?path=` — replaces an editable file's text, addressed exactly as
+ * a read is.
+ *
+ * `baseRevision` is the `revision` of the copy that was edited — from the read, or from the previous
+ * save. A save over a file that changed since fails with `code: "workspace_file_changed"` (412) rather
+ * than overwriting it; the answer's `revision` is what the next save sends.
+ *
+ * Also fails with `"workspace_file_read_only"` (403) for a file the problem does not let the user
+ * change, `"workspace_file_not_found"` for a path the tree does not hold — a save never creates a
+ * file — `"workspace_limit_exceeded"` (409) when the tree would outgrow its limits, and
+ * `"validation_failed"` naming `path`, `content` or `baseRevision`.
+ */
+export function saveWorkspaceFile(
+  client: ApiClient,
+  workspaceId: string,
+  path: string,
+  content: string,
+  baseRevision: string,
+  signal?: AbortSignal,
+): Promise<SavedWorkspaceFile> {
+  return client.request<SavedWorkspaceFile>(`/workspaces/${encodeURIComponent(workspaceId)}/files/content`, {
+    method: 'PUT',
+    query: { path },
+    body: { content, baseRevision },
     ...(signal ? { signal } : {}),
   });
 }

@@ -17,8 +17,9 @@ namespace Ritocode.Modules.Workspaces;
 /// </summary>
 /// <remarks>
 /// Owns the <c>workspaces</c> schema and the <c>workspace-snapshots</c> objects its rows point at.
-/// Opening a workspace and reading it back exist (#10), and so do listing its files and reading one
-/// (#11); file writes and resets arrive with #12 and #13, and cleanup with #43.
+/// Opening a workspace and reading it back exist (#10), listing its files and reading one (#11), and
+/// saving an editable file within the version's limits (#12, #36); resets arrive with #13, and
+/// cleanup with #43.
 /// </remarks>
 public sealed class WorkspacesModule : IModule
 {
@@ -36,6 +37,7 @@ public sealed class WorkspacesModule : IModule
         services.AddScoped<IWorkspaceLifecycle, WorkspaceLifecycle>();
         services.AddScoped<IWorkspaceFiles, WorkspaceFiles>();
         services.AddScoped<IValidator<OpenWorkspaceRequest>, OpenWorkspaceRequestValidator>();
+        services.AddScoped<IValidator<WriteWorkspaceFileRequest>, WriteWorkspaceFileRequestValidator>();
 
         // TryAdd, as Problems does: the clock is host infrastructure, and whichever module registers
         // it first must not stop another from asking for it.

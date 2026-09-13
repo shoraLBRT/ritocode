@@ -57,4 +57,15 @@ public sealed class ContractResolutionTests(TestApi api) : IClassFixture<TestApi
 
         Assert.Null(version);
     }
+
+    [Fact]
+    public async Task WorkspaceAllowanceLookup_ResolvesAndAnswersNullForAVersionWithNoRow()
+    {
+        await using var scope = api.Services.CreateAsyncScope();
+        var lookup = scope.ServiceProvider.GetRequiredService<IWorkspaceAllowanceLookup>();
+
+        var allowance = await lookup.FindAsync(Guid.CreateVersion7(), TestContext.Current.CancellationToken);
+
+        Assert.Null(allowance);
+    }
 }
