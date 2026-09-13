@@ -36,9 +36,10 @@ services:
 
   # Object storage for problem bundles, workspace snapshots and evaluation artifacts,
   # per docs/ARCHITECTURE.md. S3-compatible, so production can swap in a managed service
-  # without touching application code.
+  # without touching application code. Both MinIO images come from quay.io: MinIO no longer
+  # publishes to Docker Hub, and minio/minio there is gone.
   minio:
-    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    image: quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z
     container_name: ritocode-minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
@@ -61,7 +62,7 @@ services:
   # running it again is harmless. Note that `docker compose up --wait` treats a container that
   # exits as a failure, so scripts wait on postgres and minio and run this one separately.
   minio-init:
-    image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+    image: quay.io/minio/mc:RELEASE.2025-04-16T18-13-26Z
     container_name: ritocode-minio-init
     depends_on:
       minio:
