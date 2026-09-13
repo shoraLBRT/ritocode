@@ -9,7 +9,7 @@ reductions that are allowed and the list that are forbidden. **Read that ADR bef
 anything here.** This file tracks progress; it holds no decisions.
 
 - **Last updated:** 2026-09-13
-- **Progress:** 19 / 37
+- **Progress:** 20 / 37
 - **Estimate:** 30–34 sessions, six to seven weeks at five sessions a week
 - **Then:** [stage two](#after-the-slice) — the rest of Phase 1
 
@@ -31,7 +31,7 @@ anything here.** This file tracks progress; it holds no decisions.
 | [1 — Foundation](#stage-1--foundation) | 5 | 5 / 5 |
 | [2 — Content and catalog](#stage-2--content-and-catalog) | 5 | 6 / 6 |
 | [3 — Identity and workspace](#stage-3--identity-and-workspace) | 6 | 7 / 7 |
-| [4 — Submission and queue](#stage-4--submission-and-queue) | 5 | 1 / 5 |
+| [4 — Submission and queue](#stage-4--submission-and-queue) | 5 | 2 / 5 |
 | [5 — Execution](#stage-5--execution) | 7 | 0 / 8 |
 | [6 — Product face](#stage-6--product-face) | 6 | 0 / 6 |
 
@@ -330,7 +330,7 @@ The button exists and the state machine is real, but nothing runs yet.
   attempts*: each freezes its own tree, and how many a person may make is the rate limit box below,
   not a rule about the workspace. The limits of [#36](https://github.com/shoraLBRT/ritocode/issues/36)
   are **not** checked again on the frozen tree — see [PROJECT_STATE.md](PROJECT_STATE.md#deliberately-deferred).
-- [ ] **[#15](https://github.com/shoraLBRT/ritocode/issues/15) (partial) — queue and worker.**
+- [x] **[#15](https://github.com/shoraLBRT/ritocode/issues/15) (partial) — queue and worker.**
   A PostgreSQL table drained with `SKIP LOCKED`, and a hosted service in the API process. The
   partial index `(status, created_at) WHERE status IN ('Queued','Running')` is already in the
   schema — it was designed for exactly this query. No Redis. Extracting the worker into its own
@@ -340,6 +340,20 @@ The button exists and the state machine is real, but nothing runs yet.
   `ISubmissionEvaluator` command that #17 implements. So this box builds the claim, the guard on
   recording, and recovery of an attempt a dead process left `Running` — and **no loop that claims**,
   which would strand attempts until #17 can evaluate them. The hosted loop lands with #17.
+  **What landed**: `ISubmissionDispatcher` in Submissions. `ClaimNextAsync` takes the oldest attempt
+  that is `Queued` — or still `Running` under a claim older than `Submissions:Queue:ClaimTimeout`,
+  15 minutes by default — with `FOR UPDATE SKIP LOCKED`, and starts or reclaims it in one short
+  transaction. `CompleteAsync` and `FailAsync` record only while the attempt is still `Running` under
+  the claim's own time, so a worker whose attempt was taken over records nothing. **One decision the
+  plan did not state**: *the claim's identity is `submissions.started_at`*, a new column set by
+  `Submission.Start(at)` and moved forward by `Reclaim(at)`, under a second check constraint — one
+  column is both when the attempt started and which claim holds it, where a separate claim token would
+  be a second value that could disagree with the first. Tests prove against a real PostgreSQL that
+  twelve concurrent claims hand out six attempts once each, that a locked row is passed over rather
+  than waited on, and that a reclaimed attempt refuses the old claim's result. Named a *dispatcher*
+  because CA1711 reserves `Queue` for collections, and ADR 0005 already calls this seam the dispatch
+  interface. The issue stays open for the hosted loop and the report, which are #17's, and the cap on
+  concurrent evaluations, which is #35's box below.
 - [ ] **[#18](https://github.com/shoraLBRT/ritocode/issues/18) — validator plugin interface.**
   This is what makes "two validators instead of four" an addition later rather than a rewrite, so
   it comes before any validator is written.

@@ -135,6 +135,9 @@ Fields:
   graded against, copied server-side when the submission is created and never the live snapshot;
   see [STORAGE_LAYOUT.md](STORAGE_LAYOUT.md). Typed as `StorageReference`, required, no default
 - created_at
+- started_at — when a worker last claimed the attempt; null while queued, set when a run starts,
+  moved forward when an abandoned attempt is reclaimed, and kept by a failure during a run. It is also
+  the claim's identity: a worker records a result only while this is still the time its claim set
 - completed_at — set exactly when status becomes terminal
 
 Status values:
@@ -145,10 +148,17 @@ Status values:
 - `Failed` — the pipeline could not run to completion; infrastructure, not a wrong answer
 
 `Completed` and `Failed` are terminal. The transitions are methods on the entity rather than status
-assignments — `Start`, `Complete(score, at)` and `Fail(at)` — so the completion time moves with the
-status: `Queued` → `Running` → `Completed`, and `Failed` from `Queued` or `Running`, since an attempt
-whose input cannot be evaluated at all fails without ever starting. Anything else throws. A
-completion time before the attempt was made is recorded as the time it was made.
+assignments — `Start(at)`, `Reclaim(at)`, `Complete(score, at)` and `Fail(at)` — so the timestamps
+move with the status: `Queued` → `Running` → `Completed`, and `Failed` from `Queued` or `Running`,
+since an attempt whose input cannot be evaluated at all fails without ever starting. `Reclaim` keeps
+a `Running` attempt running under a new, strictly later claim, for the worker that takes over from one
+that died. Anything else throws. A time before the attempt was made is recorded as the time it was
+made.
+
+Attempts are claimed and finished only by the Submissions module's queue
+([ADR 0009](adr/0009-evaluation-is-a-command-submissions-issues.md)): the oldest queued attempt — or
+a running one whose claim has outlived the claim timeout — is claimed with `SKIP LOCKED`, so no attempt
+is handed to two workers, and a result is recorded only on the claim that still holds it.
 
 A submission is made only against a workspace **the caller owns**; another user's workspace is
 answered exactly like a missing one. A workspace may have any number of attempts, queued at once or

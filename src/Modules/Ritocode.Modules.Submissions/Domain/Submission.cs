@@ -7,9 +7,9 @@ namespace Ritocode.Modules.Submissions.Domain;
 /// The lifecycle is <c>Queued</c> → <c>Running</c> → <c>Completed</c> or <c>Failed</c>, and a queued
 /// attempt may also fail without ever running. <c>Completed</c> and <c>Failed</c> are terminal. The
 /// transitions are methods rather than status assignments so the rule lives in one place and the
-/// completion time moves with the status: <c>ck_submissions_completed_at_matches_status</c> refuses a
-/// terminal row without one, and a transition that set one without the other would learn that at
-/// commit, inside a worker.
+/// timestamps move with the status: <c>ck_submissions_completed_at_matches_status</c> and
+/// <c>ck_submissions_started_at_matches_status</c> refuse a row whose times disagree with it, and a
+/// transition that set one without the other would learn that at commit, inside a worker.
 /// </remarks>
 public sealed class Submission
 {
@@ -41,6 +41,13 @@ public sealed class Submission
 
     public DateTimeOffset CreatedAt { get; set; }
 
+    /// <summary>
+    /// When a worker last claimed the attempt: null while it is queued, set by <see cref="Start"/> and
+    /// moved forward by <see cref="Reclaim"/>. It is also the claim's identity — a worker records a
+    /// result only while this is still the time its own claim set (ADR 0009 §1).
+    /// </summary>
+    public DateTimeOffset? StartedAt { get; set; }
+
     /// <summary>Set exactly when <see cref="Status"/> becomes terminal.</summary>
     public DateTimeOffset? CompletedAt { get; set; }
 
@@ -68,13 +75,14 @@ public sealed class Submission
             Score = null,
             InputReference = StorageKeys.SubmissionInputTree(id),
             CreatedAt = ToStoredPrecision(createdAt),
+            StartedAt = null,
             CompletedAt = null,
         };
     }
 
-    /// <summary>A worker has taken the attempt off the queue.</summary>
+    /// <summary>A worker has taken the attempt off the queue at <paramref name="startedAt"/>.</summary>
     /// <exception cref="InvalidOperationException">The attempt is not queued.</exception>
-    public void Start()
+    public void Start(DateTimeOffset startedAt)
     {
         if (Status != SubmissionStatus.Queued)
         {
@@ -82,6 +90,35 @@ public sealed class Submission
         }
 
         Status = SubmissionStatus.Running;
+        StartedAt = NotBeforeCreation(startedAt);
+    }
+
+    /// <summary>
+    /// Takes over a running attempt whose worker is presumed dead, as a new claim at
+    /// <paramref name="claimedAt"/>. Safe because evaluating the same input again produces the same
+    /// verdict (ADR 0009 §3.3); the old worker's result is refused because its claim time no longer
+    /// matches.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// The attempt is not running, or <paramref name="claimedAt"/> is not later than the claim it
+    /// replaces — a claim that did not move could not be told apart from the one it took over.
+    /// </exception>
+    public void Reclaim(DateTimeOffset claimedAt)
+    {
+        if (Status != SubmissionStatus.Running)
+        {
+            throw new InvalidOperationException($"Submission {Id} is {Status}; only a running attempt can be reclaimed.");
+        }
+
+        var timestamp = NotBeforeCreation(claimedAt);
+
+        if (timestamp <= StartedAt)
+        {
+            throw new InvalidOperationException(
+                $"Submission {Id} was claimed at {StartedAt:O}; a new claim has to be later than that.");
+        }
+
+        StartedAt = timestamp;
     }
 
     /// <summary>The pipeline ran to the end and produced <paramref name="score"/>.</summary>
@@ -123,8 +160,8 @@ public sealed class Submission
         new($"Submission {Id} is {Status} and cannot become {target}.");
 
     /// <summary>
-    /// A clock that stepped back would otherwise record an attempt finishing before it was made, which
-    /// no report can explain to a person reading it.
+    /// A clock that stepped back would otherwise record an attempt starting or finishing before it was
+    /// made, which no report can explain to a person reading it.
     /// </summary>
     private DateTimeOffset NotBeforeCreation(DateTimeOffset value)
     {
@@ -134,8 +171,8 @@ public sealed class Submission
     }
 
     /// <summary>
-    /// UTC, truncated to the microsecond a <c>timestamptz</c> holds, so the attempt a submit answers with
-    /// carries the same <c>createdAt</c> as every later read of it — the lesson of <c>Workspace.Create</c>.
+    /// UTC, truncated to the microsecond a <c>timestamptz</c> holds, so a value in memory is the value
+    /// every later read returns — and a claim time compared in SQL matches the one this entity set.
     /// </summary>
     private static DateTimeOffset ToStoredPrecision(DateTimeOffset value)
     {

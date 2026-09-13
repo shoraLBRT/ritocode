@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Ritocode.Modules.Submissions.Domain;
 using Ritocode.Modules.Submissions.Lifecycle;
 using Ritocode.Modules.Submissions.Persistence;
+using Ritocode.Modules.Submissions.Queue;
 using Ritocode.Modules.Workspaces.Domain;
 using Ritocode.Modules.Workspaces.Lifecycle;
 using Ritocode.Modules.Workspaces.Persistence;
@@ -59,6 +60,10 @@ public sealed class OwnershipRuleTests
             typeof(SubmissionLifecycle).FullName!,
             nameof(SubmissionLifecycle.SubmitAsync),
             "Adds the row it creates for its caller, on a workspace IOwnedWorkspaceLookup found by that same owner."),
+        new(
+            typeof(SubmissionDispatcher).FullName!,
+            Method: null,
+            "The queue claims by status and records on the claim it holds; it serves no user, so no owner applies (ADR 0009 §1)."),
     ];
 
     private static readonly HashSet<Type> GuardedEntities = [.. OwnedContexts.SelectMany(EntitiesMappedBy)];
