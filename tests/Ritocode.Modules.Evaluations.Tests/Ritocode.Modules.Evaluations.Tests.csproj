@@ -11,7 +11,8 @@
     <PackageReference Include="xunit.runner.visualstudio" />
   </ItemGroup>
 
-  <!-- No TestSupport: nothing here touches a database, an object store or a container. -->
+  <!-- No TestSupport: nothing here touches a database or an object store. The sandbox runner's own tests
+       start containers through the runner under test, so they need a Docker daemon and nothing else. -->
   <ItemGroup>
     <ProjectReference Include="../../src/Modules/Ritocode.Modules.Evaluations/Ritocode.Modules.Evaluations.csproj" />
   </ItemGroup>

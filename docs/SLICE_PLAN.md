@@ -8,8 +8,8 @@ Decided in [ADR 0005](adr/0005-vertical-slice-before-breadth.md), which also car
 reductions that are allowed and the list that are forbidden. **Read that ADR before ticking
 anything here.** This file tracks progress; it holds no decisions.
 
-- **Last updated:** 2026-09-13
-- **Progress:** 23 / 37
+- **Last updated:** 2026-09-14
+- **Progress:** 24 / 38
 - **Estimate:** 30–34 sessions, six to seven weeks at five sessions a week
 - **Then:** [stage two](#after-the-slice) — the rest of Phase 1
 
@@ -32,7 +32,7 @@ anything here.** This file tracks progress; it holds no decisions.
 | [2 — Content and catalog](#stage-2--content-and-catalog) | 5 | 6 / 6 |
 | [3 — Identity and workspace](#stage-3--identity-and-workspace) | 6 | 7 / 7 |
 | [4 — Submission and queue](#stage-4--submission-and-queue) | 5 | 5 / 5 |
-| [5 — Execution](#stage-5--execution) | 7 | 0 / 8 |
+| [5 — Execution](#stage-5--execution) | 8 | 1 / 9 |
 | [6 — Product face](#stage-6--product-face) | 6 | 0 / 6 |
 
 ---
@@ -340,7 +340,8 @@ The button exists and the state machine is real, but nothing runs yet.
   `ISubmissionEvaluator` command that #17 implements. So this box builds the claim, the guard on
   recording, and recovery of an attempt a dead process left `Running` — and **no loop that claims**,
   which would strand attempts until something can evaluate them. The hosted loop lands with the runner,
-  in #21's box — moved there from #17 with the maintainer on 2026-09-13.
+  in #21's box — moved there from #17 with the maintainer on 2026-09-13, and on 2026-09-14 on again, to
+  the wiring box after #20.
   **What landed**: `ISubmissionDispatcher` in Submissions. `ClaimNextAsync` takes the oldest attempt
   that is `Queued` — or still `Running` under a claim older than `Submissions:Queue:ClaimTimeout`,
   15 minutes by default — with `FOR UPDATE SKIP LOCKED`, and starts or reclaims it in one short
@@ -354,7 +355,8 @@ The button exists and the state machine is real, but nothing runs yet.
   than waited on, and that a reclaimed attempt refuses the old claim's result. Named a *dispatcher*
   because CA1711 reserves `Queue` for collections, and ADR 0005 already calls this seam the dispatch
   interface. The issue stays open for the hosted loop and the report, which land with the runner in
-  #21's box, and the cap on concurrent evaluations, which goes in that loop.
+  #21's box — the wiring box after #20 since 2026-09-14 — and the cap on concurrent evaluations, which
+  goes in that loop.
 - [x] **[#18](https://github.com/shoraLBRT/ritocode/issues/18) (partial) — validator plugin interface.**
   This is what makes "two validators instead of four" an addition later rather than a rewrite, so
   it comes before any validator is written.
@@ -395,7 +397,8 @@ The button exists and the state machine is real, but nothing runs yet.
   ran skipped fails the evaluation rather than being recorded. **Not registered, on purpose**: it needs a
   runner, and the host validates its container on build in Development, so the `ISubmissionEvaluator`
   contract of ADR 0009 — which ADR 0007 §7 requires to be registered from the moment it exists — and the
-  hosted loop move to #21's box with the runner. The status transitions the box names are the
+  hosted loop move to #21's box with the runner — and from there, on 2026-09-14, to the wiring box after
+  #20, because a runner alone still grades nothing. The status transitions the box names are the
   dispatcher's, per ADR 0009, and landed with #15. **One decision the plan did not state**: a step
   whose type no plugin answers, or whose `with` cannot be planned, is `notRunnable` — a new outcome in
   the result schema, carrying a reason — rather than `notCompleted`, because the fault is the problem's
@@ -408,7 +411,8 @@ The button exists and the state machine is real, but nothing runs yet.
   tab — is a denial of service against your own test, and an open invitation to use the runner as
   free compute. `RateLimited` is already in `ErrorType` and maps to 429.
   **The concurrency half moved with the loop on 2026-09-13**: a cap on evaluations running at once
-  belongs in the hosted loop, which is now #21's, so this box is the per-user cap on submitting.
+  belongs in the hosted loop, which is now #21's — the wiring box's after #20, since 2026-09-14 — so this
+  box is the per-user cap on submitting.
   **What landed**: `POST /api/v1/submissions` counts the caller's attempts inside
   `Submissions:RateLimit:Window` and refuses the one past `MaxSubmissions` — ten in ten minutes by
   default, validated at startup — as `429 submission_rate_limited` in the ADR 0003 body, before the
@@ -426,19 +430,38 @@ The button exists and the state machine is real, but nothing runs yet.
 The verdict becomes real. This is the stage that cannot be faked — see the first row of the
 forbidden list.
 
-- [ ] **[#21](https://github.com/shoraLBRT/ritocode/issues/21) (partial) — sandbox runner.**
+- [x] **[#21](https://github.com/shoraLBRT/ritocode/issues/21) (partial) — sandbox runner.**
   Per ADR 0006. Network disabled, cpu / memory / pid limits, read-only root filesystem, non-root
   user, hard timeout, artifacts captured. No warm pool, no cluster.
-  **It also wires the evaluation path stage 4 built unwired** — moved here from #17 with the
-  maintainer on 2026-09-13, because none of it can run before a runner exists: `ISandboxRunner`
-  implemented and registered, `EvaluationPipeline` registered, the `ISubmissionEvaluator` contract of
-  [ADR 0009](adr/0009-evaluation-is-a-command-submissions-issues.md) declared and answered, and the
-  hosted loop in Submissions that claims, evaluates and records — with the cap on concurrent
-  evaluations from #35 inside it.
-  **To settle before this box starts**: a runner alone still cannot grade an attempt — the loop also
-  needs the image (#22), the compile and test validators (#19) and a score to record (#20), all later in
-  this stage — so whether the wiring lands here or with the last of those is the same question the
-  maintainer answered for #17, one stage on. See [PROJECT_STATE.md](PROJECT_STATE.md#next-up).
+  **The wiring moved out, decided with the maintainer on 2026-09-14.** The plan had this box also wire
+  the evaluation path stage 4 built unwired, and asked first whether it should: a runner alone still
+  cannot grade an attempt — the loop also needs the image (#22), the compile and test validators (#19)
+  and a score to record (#20) — so wiring here would fail every attempt `notRunnable` until #19, the
+  outcome ruled out for #17. The wiring is now [its own box](#stage-5--execution), after #20.
+  **What landed**: `DockerSandboxRunner`, the `ISandboxRunner` #17 declared, registered in the Evaluations
+  module and resolved from the host without contacting Docker. A run is `docker create` under the ADR 0006
+  §1 flags, `docker start --attach` waited on with the step's deadline, `docker kill` on expiry,
+  `docker inspect`, and `docker rm --force` whatever happened, cancellation included. Nothing is ever
+  handed to a shell. Every flag is observed from **inside** a real container rather than read from the
+  argument vector — uid 10001, a read-only root and workspace, no interface but `lo`, no capabilities,
+  `NoNewPrivs`, no Docker socket, the pid and memory limits in the cgroup — and all four outcomes of §5
+  are produced for real rather than scripted, the kernel OOM killer included.
+  **Four decisions the plan did not state.** *The environment travels in the request*:
+  `SandboxRunRequest` gained a `SandboxEnvironment` — image, appended arguments and limits, the fields of
+  a runner registry entry — which is how ADR 0006's consequences describe the request, so #22's registry
+  chooses a value and the runner never branches; `EvaluationPipeline.RunAsync` takes one for all its
+  steps. *What counts as a crash*: `ContainerExit.Classify` reads the runner's own kill as `TimedOut`,
+  `OOMKilled` as `ResourceExhausted`, a command that never started or an exit of 129–192 — a death by
+  signal — as `Crashed`, and every other exit as `Completed` with the validator's own answer; a pure
+  function, tested row by row against the spike's table. *A run the runner could not start is not an
+  outcome*: no CLI, a refusing daemon or an image not on the host throws `SandboxRunnerException`, since
+  a person must not be told their code crashed when it never ran — what the loop does with one is the
+  wiring box's. And *the runner downloads and keeps nothing on the daemon*: `--pull never`, so an image
+  has to be on the host before a run, and `--log-driver none`, so each stream is capped at 262 144
+  characters from the attached pipe — drained past the cap — instead of stored whole on the daemon's
+  disk. Artifacts are captured the way ADR 0006 §4 has them, on the output mount on the host; collecting
+  them into object storage is #23. The issue stays open for the image of #22 and the production host
+  ADR 0005 defers.
 - [ ] **[#22](https://github.com/shoraLBRT/ritocode/issues/22) (partial) — one runner image**, for
   the chosen language. The image matrix is stage two.
 - [ ] **[#19](https://github.com/shoraLBRT/ritocode/issues/19) (partial) — compile validator.**
@@ -446,6 +469,19 @@ forbidden list.
   and patch-scope are stage two, added as plugins.
 - [ ] **[#20](https://github.com/shoraLBRT/ritocode/issues/20) — scoring and verdict aggregation.**
   The rules are part of what a person is shown; an opaque number devalues the verdict.
+- [ ] **Wire the evaluation path — [#15](https://github.com/shoraLBRT/ritocode/issues/15),
+  [#17](https://github.com/shoraLBRT/ritocode/issues/17) and
+  [#35](https://github.com/shoraLBRT/ritocode/issues/35) (partial each).** Split out of #21 with the
+  maintainer on 2026-09-14, for the reason #17's wiring moved on 2026-09-13: before this point nothing can
+  grade an attempt, and a loop that claims attempts it cannot grade puts verdicts that could never pass in
+  front of a tester. `EvaluationPipeline` registered; the `ISubmissionEvaluator` contract of
+  [ADR 0009](adr/0009-evaluation-is-a-command-submissions-issues.md) declared and answered by Evaluations;
+  the hosted loop in Submissions that claims, evaluates and records the result and the report — with the
+  cap on concurrent evaluations from #35 inside it. It carries what #17 left open as well: materialising
+  the frozen tree into a workspace mount the container's uid 10001 can read, beside an output mount it can
+  write; the limits of [#36](https://github.com/shoraLBRT/ritocode/issues/36) applied in that unpacking;
+  what the loop does with a `SandboxRunnerException`; and reading a version's pipeline and the environment
+  its language selects, through a Problems contract and #22's registry.
 - [ ] **[#23](https://github.com/shoraLBRT/ritocode/issues/23) — runner logs and artifacts.**
   Captured to object storage under the keys from stage 2, referenced by
   `submission_reports.logs_reference`.

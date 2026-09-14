@@ -4,7 +4,7 @@
 what to build next, and how to verify it. Read it before touching anything; update it before
 finishing.
 
-- **Last updated:** 2026-09-13
+- **Last updated:** 2026-09-14
 - **Current phase:** Phase 1 (MVP) — see `docs/MVP_SCOPE.md`
 - **Current milestone:** the vertical slice — [`docs/SLICE_PLAN.md`](SLICE_PLAN.md), decided in
   [ADR 0005](adr/0005-vertical-slice-before-breadth.md). Phase 1 now ships in two stages; the slice
@@ -117,8 +117,10 @@ src/
                               and Queue/: claiming attempts with SKIP LOCKED and recording a
                               result only on the claim that still holds the attempt
                               Evaluations owns Validators/: the plugin interface, the result
-                              schema and the registry — and Sandbox/: the runner's result shape
-                              from ADR 0006, ahead of the runner
+                              schema and the registry — Sandbox/: the Docker runner of ADR 0006,
+                              its request, environment and result, and the one reading of how a
+                              container ended — and Pipeline/: the orchestrator, unregistered
+                              until the evaluation path is wired
                               Contracts/ in a module is its implementation of a Shared contract
 tests/
   Ritocode.TestSupport/         integration test harnesses: a PostgreSQL container per test
@@ -139,7 +141,8 @@ tests/
                                       submitting, reading and listing against a real PostgreSQL
                                       and MinIO
   Ritocode.Modules.Evaluations.Tests/ the validator plugin interface, the result schema as literal
-                                      JSON and the registry — no Docker, no database
+                                      JSON, the registry, the pipeline over a scripted runner, and
+                                      the sandbox runner against a real Docker daemon — no database
 spikes/
   sandbox-execution/          time-boxed experiment behind ADR 0006, with the script that repeats it
 docs/
@@ -174,10 +177,11 @@ docs/
 | [#12](https://github.com/shoraLBRT/ritocode/issues/12) Workspace file write and draft persistence | Done | `PUT /api/v1/workspaces/{id}/files/content?path=` replaces an editable file's text, addressed exactly as a read is, and answers its new `sizeBytes` and `revision`; the next read — and the next open of the same version — returns the change. **Revision protection** is a per-file content hash: a read reports `revision`, the SHA-256 of the file's bytes, a save must send it back as `baseRevision`, and a file that moved on since answers `412 workspace_file_changed` rather than being overwritten. Saves to one workspace are serialised by a `FOR UPDATE` lock on its row, held from before the snapshot is read until `updated_at` commits, so two saves — even of different files — cannot drop each other's change. What a version allows reaches Workspaces through a third contract, `IWorkspaceAllowanceLookup`: ingest now stores `problem_versions.editable_files`, the manifest globs resolved against the starter tree, and the three limits. A file the version does not list is `403 workspace_file_read_only`, the tree marks each file `editable`, and saving exactly what is stored writes nothing. The frontend API client gained `saveWorkspaceFile` | `src/Modules/Ritocode.Modules.Workspaces/Files`, `src/Ritocode.Shared/Contracts/Problems/IWorkspaceAllowanceLookup.cs`, `src/Modules/Ritocode.Modules.Problems/Contracts/WorkspaceAllowanceLookup.cs`, `tests/Ritocode.Modules.Workspaces.Tests/Files/WorkspaceFileWriteTests.cs`, `tests/Ritocode.Api.Tests/Endpoints/WorkspaceFileWriteEndpointsTests.cs` |
 | [#36](https://github.com/shoraLBRT/ritocode/issues/36) Workspace file handling and sandbox boundaries | Partial | The half a save needs, shipped in the same PR as #12. A path from a request is refused, never normalised, before anything is looked up — the #11 rule, now in front of a write. A save can only replace a file the snapshot already holds and the version lists as editable, so it can neither leave the tree nor add a link: the snapshot is rewritten as regular files only, and a snapshot holding anything else fails the save instead of being saved back clean. `max_file_bytes` is checked on the UTF-8 bytes (`400`, `errors.content`), `max_total_bytes` and `max_files` on the tree as it would be written (`409 workspace_limit_exceeded`), and text with no UTF-8 form is refused rather than stored as a replacement character | `src/Modules/Ritocode.Modules.Workspaces/Files/WorkspaceFiles.cs`, `src/Modules/Ritocode.Modules.Workspaces/Files/SnapshotArchive.cs` |
 | [#14](https://github.com/shoraLBRT/ritocode/issues/14) Submission lifecycle and attempt history | Done | `POST /api/v1/submissions` queues an attempt at a workspace the caller owns — 201 and a `Location` — `GET /api/v1/submissions/{id}` reads it back, and `GET /api/v1/submissions` is the caller's history, newest first, in the page envelope, optionally at one `workspaceId`; another user's workspace or attempt answers exactly like a missing one. Submitting freezes the workspace tree by a **server-side copy** into `evaluation-artifacts`, written before the row commits and referenced by the new `submissions.input_reference`, so a save afterwards never changes what is graded. The transitions are `Submission.Start`, `Complete(score, at)` and `Fail(at)`, and every transition they allow is one `ck_submissions_completed_at_matches_status` accepts. `IObjectStore` gained `CopyAsync`, and Workspaces answers a fourth contract, `IOwnedWorkspaceLookup`, which takes the owner. Nothing runs an attempt yet — that is #15. The frontend API client gained `submitWorkspace`, `getSubmission` and `listSubmissions` | `src/Modules/Ritocode.Modules.Submissions`, `src/Ritocode.Shared/Contracts/Workspaces`, `src/Modules/Ritocode.Modules.Workspaces/Contracts/OwnedWorkspaceLookup.cs`, `tests/Ritocode.Modules.Submissions.Tests`, `tests/Ritocode.Api.Tests/Endpoints/SubmissionEndpointsTests.cs` |
-| [#15](https://github.com/shoraLBRT/ritocode/issues/15) Queue and worker | Partial | The queue half, placed by [ADR 0009](adr/0009-evaluation-is-a-command-submissions-issues.md): the `submissions` table drained by the module that owns it. `ISubmissionDispatcher.ClaimNextAsync` takes the oldest `Queued` attempt — or a `Running` one whose claim is older than `Submissions:Queue:ClaimTimeout` — with `FOR UPDATE SKIP LOCKED`, and starts or reclaims it in one short transaction; `CompleteAsync` and `FailAsync` record only on the claim that still holds the attempt. The claim's identity is the new `submissions.started_at`, set by `Submission.Start(at)`, moved by `Reclaim(at)`, and held to its status by `ck_submissions_started_at_matches_status`. Concurrent claims never hand out an attempt twice, tested with twelve claimers against a real PostgreSQL. No loop drains the queue yet — that lands with the evaluator in #17 | `src/Modules/Ritocode.Modules.Submissions/Queue`, `tests/Ritocode.Modules.Submissions.Tests/Queue/SubmissionDispatcherTests.cs` |
-| [#17](https://github.com/shoraLBRT/ritocode/issues/17) Evaluation orchestrator | Partial | `EvaluationPipeline` in the Evaluations module runs a pipeline's steps in order through `ISandboxRunner` — declared here, implemented by #21 — and the plugin registry. A step that could not complete or could not be run stops it and the attempt did not run to the end; a failed required step stops it and the attempt did; every step after a stop is `Skipped`. A plugin whose report does not match the step or the run fails the evaluation. A step with no plugin or an unplannable `with` is the new `notRunnable` outcome, with a reason. **Deliberately unregistered**, decided with the maintainer: it cannot run before the runner exists, so the `ISubmissionEvaluator` contract and the hosted loop move to #21's box | `src/Modules/Ritocode.Modules.Evaluations/Pipeline`, `src/Modules/Ritocode.Modules.Evaluations/Sandbox/ISandboxRunner.cs`, `tests/Ritocode.Modules.Evaluations.Tests/Pipeline` |
+| [#15](https://github.com/shoraLBRT/ritocode/issues/15) Queue and worker | Partial | The queue half, placed by [ADR 0009](adr/0009-evaluation-is-a-command-submissions-issues.md): the `submissions` table drained by the module that owns it. `ISubmissionDispatcher.ClaimNextAsync` takes the oldest `Queued` attempt — or a `Running` one whose claim is older than `Submissions:Queue:ClaimTimeout` — with `FOR UPDATE SKIP LOCKED`, and starts or reclaims it in one short transaction; `CompleteAsync` and `FailAsync` record only on the claim that still holds the attempt. The claim's identity is the new `submissions.started_at`, set by `Submission.Start(at)`, moved by `Reclaim(at)`, and held to its status by `ck_submissions_started_at_matches_status`. Concurrent claims never hand out an attempt twice, tested with twelve claimers against a real PostgreSQL. No loop drains the queue yet — that lands in the wiring box after #20 | `src/Modules/Ritocode.Modules.Submissions/Queue`, `tests/Ritocode.Modules.Submissions.Tests/Queue/SubmissionDispatcherTests.cs` |
+| [#17](https://github.com/shoraLBRT/ritocode/issues/17) Evaluation orchestrator | Partial | `EvaluationPipeline` in the Evaluations module runs a pipeline's steps in order through `ISandboxRunner` — declared here, implemented by #21 — and the plugin registry. A step that could not complete or could not be run stops it and the attempt did not run to the end; a failed required step stops it and the attempt did; every step after a stop is `Skipped`. A plugin whose report does not match the step or the run fails the evaluation. A step with no plugin or an unplannable `with` is the new `notRunnable` outcome, with a reason. **Deliberately unregistered**, decided with the maintainer: nothing can grade an attempt before the runner, the image, the validators and the verdict rules all exist, so the `ISubmissionEvaluator` contract and the hosted loop move to the wiring box after #20 — from #17 on 2026-09-13, and from #21 on 2026-09-14 | `src/Modules/Ritocode.Modules.Evaluations/Pipeline`, `src/Modules/Ritocode.Modules.Evaluations/Sandbox/ISandboxRunner.cs`, `tests/Ritocode.Modules.Evaluations.Tests/Pipeline` |
 | [#18](https://github.com/shoraLBRT/ritocode/issues/18) Validator plugin interface | Partial | `IValidatorPlugin` in the Evaluations module: `Plan` reads what to run from a step's `with`, `InterpretAsync` turns the runner's observation into a verdict, and a plugin never starts a process. `SandboxRunResult` is ADR 0006 §5's shape, declared ahead of #21. `ValidatorResult` is built only by `Judged`, `NotCompleted` and `Skipped`, so a run that did not complete is never a pass or a fail, and its checks are a sorted, duplicate-free projection. `ValidatorResults.ToJson` is the canonical `validator_results` JSON — the result schema — with nothing in it that differs between two runs. The registry maps a type to a plugin ordinally and refuses a duplicate or unnameable type. No plugin is registered yet, and the issue's three validators are two in the slice | `src/Modules/Ritocode.Modules.Evaluations/Validators`, `src/Modules/Ritocode.Modules.Evaluations/Sandbox`, `tests/Ritocode.Modules.Evaluations.Tests` |
 | [#35](https://github.com/shoraLBRT/ritocode/issues/35) Backend security baseline | Partial | The ownership guard, as a rule rather than a habit. Every workspace endpoint already found its row with the owner inside the query; `OwnershipRuleTests` now fails when code in the Workspaces or Submissions module reaches an entity either context maps anywhere but an allowance that says where and why — `OwnedWorkspaces`, and the creation in `WorkspaceLifecycle.OpenAsync`. Submissions has no allowance, so its first endpoint meets the rule before it exists. The rule reads compiled IL, with the async state machines and lambda closures attributed to the method that was written, and is proved against six shapes of unguarded read. Since then, a per-user cap on submitting: `POST /api/v1/submissions` counts the caller's attempts inside `Submissions:RateLimit:Window` over the existing `(user_id, created_at DESC)` index and refuses the one past `MaxSubmissions` — ten in ten minutes by default — as `429 submission_rate_limited`, before anything is copied. The cap on concurrent evaluations and input hardening stay out | `tests/Ritocode.Architecture.Tests/OwnershipRuleTests.cs`, `tests/Ritocode.Architecture.Tests/MethodBodyReferences.cs`, `src/Modules/Ritocode.Modules.Workspaces/Persistence/OwnedWorkspaces.cs` |
+| [#21](https://github.com/shoraLBRT/ritocode/issues/21) Sandbox runner | Partial | `DockerSandboxRunner`, the `ISandboxRunner` #17 declared, registered in Evaluations and resolved from the host without contacting Docker. One container per run under the ADR 0006 §1 flags; a deadline the runner enforces itself with `docker kill`; `docker inspect` read by `ContainerExit.Classify` into `Completed`, `TimedOut`, `ResourceExhausted` or `Crashed`; both streams captured apart and capped; the container removed whatever happened, cancellation included; nothing handed to a shell. Every flag is observed from inside a real container, and every outcome is produced for real. `SandboxRunRequest` now carries a `SandboxEnvironment` — image, appended arguments, limits — for #22's registry to choose, and a run the host could not start throws `SandboxRunnerException` rather than becoming a verdict. No image, no registry and no caller: the wiring box after #20 is the first, decided with the maintainer on 2026-09-14 | `src/Modules/Ritocode.Modules.Evaluations/Sandbox`, `tests/Ritocode.Modules.Evaluations.Tests/Sandbox`, `tests/Ritocode.Api.Tests/Evaluations/SandboxRunnerCompositionTests.cs` |
 
 The frontend now exists as a shell: it renders the layout, resolves its routes, and reads the
 catalog from a running host. It has no identity, no editor and no designed screens — those are
@@ -185,8 +189,10 @@ stages 3 and 6. It now lists four problems against a development host, and the d
 as text rather than rendered Markdown, which is [#27](https://github.com/shoraLBRT/ritocode/issues/27).
 
 Nothing else from the backlog is implemented. Progress still exposes neither an endpoint nor a
-service. **Evaluations** now registers one — the validator plugin registry, empty until #19 — and owns
-no schema, per ADR 0009. Its pipeline exists and is tested, and is unregistered until the runner. **Submissions is the third module that is alive**: it
+service. **Evaluations** now registers two things — the validator plugin registry, empty until #19, and
+the sandbox runner — and owns no schema, per ADR 0009. Its pipeline exists and is tested, and is
+unregistered until the wiring box after #20. The runner is the first code in the repository that
+starts a container of its own, and nothing in the host calls it yet. **Submissions is the third module that is alive**: it
 writes its own schema and the frozen input trees in `evaluation-artifacts`, serves three protected
 endpoints, and consumes `IUserLookup` and `IOwnedWorkspaceLookup` — but every attempt it creates stays
 `Queued`, because nothing drains the queue until #15. **Auth** owns the authentication
@@ -268,15 +274,31 @@ read back, its files listed, read and — the editable ones — saved, and submi
   [#17](https://github.com/shoraLBRT/ritocode/issues/17) stays open for the three things an evaluation
   needs before `EvaluationPipeline.RunAsync` can be called for real, each waiting for a shape it has to
   meet. **Materialising the frozen tree** — download `submissions.input_reference`, unpack it into the
-  directory the runner mounts read-only, as regular files under confined paths — waits for the runner of
-  [#21](https://github.com/shoraLBRT/ritocode/issues/21) to fix where that directory lives. **The limits
+  directory the runner mounts read-only, as regular files under confined paths — now has a shape to meet:
+  the runner of [#21](https://github.com/shoraLBRT/ritocode/issues/21) mounts any absolute host directory
+  at `/work` read-only, and it has to be readable by the container's uid 10001. **The limits
   of [#36](https://github.com/shoraLBRT/ritocode/issues/36) applied to that tree** happen in the same
   unpacking, which is why they wait with it; `IWorkspaceAllowanceLookup` asks the identical question
   a save asks, so it can be reused. **Reading the pipeline** — a version's `validator_config` as
   `ValidatorStepDefinition`s — needs a read contract answered by Problems, and the runner image a
   version's `language` selects needs the registry of [#22](https://github.com/shoraLBRT/ritocode/issues/22),
   so the two are worth one contract rather than two. None of this is registered: the pipeline, the
-  `ISubmissionEvaluator` contract of ADR 0009 and the hosted loop all move to #21's box.
+  `ISubmissionEvaluator` contract of ADR 0009 and the hosted loop all land in the wiring box after
+  [#20](https://github.com/shoraLBRT/ritocode/issues/20), with the three things above.
+- **The runner runs a container, and nothing asks it to.**
+  [#21](https://github.com/shoraLBRT/ritocode/issues/21) stays open for two things. **The image**: nothing
+  in `src` names one — the tests run busybox, because the runner is language-agnostic and the .NET image
+  with its warmed package cache is [#22](https://github.com/shoraLBRT/ritocode/issues/22)'s — and the
+  runner never pulls, so an image has to be on the worker host before a run. And **the production host**
+  that ADR 0005 and ADR 0006 §7 defer: a warm pool, Docker-in-Docker, a dedicated VM, a worker that is not
+  the Docker host. Three things the wiring box after #20 inherits. **The mounts have to be reachable by
+  uid 10001**: on a Linux host the output directory has to be writable by a user that owns nothing there,
+  which the tests arrange and nothing in `src` does yet. **A `SandboxRunnerException` is a fault of the
+  host**, and must not become a `Failed` attempt blamed on the person. And **cancelling a run kills and
+  removes its container**, so a host stopped mid-evaluation leaves no container behind — only an attempt
+  still `Running`, which the claim timeout of #15 recovers. Docker has **no readiness check**, for the
+  reason object storage has none: registering the runner contacts nothing, and a check would make a bare
+  `dotnet run` require Docker.
 - **The validator interface exists, and no validator does.**
   [#18](https://github.com/shoraLBRT/ritocode/issues/18) stays open for three things. **Its acceptance
   criterion is three validators on the interface**; the slice builds compile and test in
@@ -290,11 +312,12 @@ read back, its files listed, read and — the editable ones — saved, and submi
   TRX from the output directory, and nothing does until #19.
 - **The queue can be claimed and recorded on, and nothing drains it.**
   [#15](https://github.com/shoraLBRT/ritocode/issues/15) stays open for three things, each owned
-  elsewhere on purpose. **The hosted loop** — claim, evaluate, record — lands with the runner, in
-  [#21](https://github.com/shoraLBRT/ritocode/issues/21)'s box, where the maintainer moved it from #17
-  on 2026-09-13: ADR 0009 puts the evaluator behind a contract that cannot be registered before
-  something can run a step, and a loop that claimed without one would strand every attempt in
-  `Running`. **The report** is written in the same transaction as the
+  elsewhere on purpose. **The hosted loop** — claim, evaluate, record — lands in the wiring box after
+  [#20](https://github.com/shoraLBRT/ritocode/issues/20), where the maintainer moved it: from #17 on
+  2026-09-13, and from [#21](https://github.com/shoraLBRT/ritocode/issues/21) on 2026-09-14. ADR 0009
+  puts the evaluator behind a contract that cannot be registered before something can run a step, a loop
+  that claimed without one would strand every attempt in `Running`, and a loop that claimed before the
+  validators exist would fail every attempt it took. **The report** is written in the same transaction as the
   result, and its shape is [#18](https://github.com/shoraLBRT/ritocode/issues/18)'s, so `CompleteAsync`
   records a score and no report yet. **The cap on concurrent evaluations** is
   [#35](https://github.com/shoraLBRT/ritocode/issues/35)'s rate-limit box, and the drain is where it
@@ -357,7 +380,7 @@ read back, its files listed, read and — the editable ones — saved, and submi
   with the owner inside the query, and `OwnershipRuleTests` fails on any other way into the
   Workspaces or Submissions sets; `POST /api/v1/submissions` refuses the attempt past the per-user cap.
   What the issue still holds: the **cap on concurrent evaluations**, which belongs in the hosted loop
-  and moved to #21's box with it, and the **input hardening** — a request body cap, security headers, a
+  and moved to the wiring box after #20 with it, and the **input hardening** — a request body cap, security headers, a
   CORS policy for anything but development — which is after the slice. Two edges the rule does not see, on
   purpose: the non-generic `DbContext.Find(Type, …)` and SQL passed as a string to `ExecuteSql`;
   neither is a way anyone reads a row by accident. And it guards **modules**, not endpoints: a
@@ -405,21 +428,27 @@ which freezes its tree and queues an attempt the caller can read back and list, 
 the queue can be claimed without handing an attempt out twice, with a result recorded only on the claim
 that still holds it; a validator has an interface, a result schema and a registry; and the pipeline
 that runs a version's validators step by step exists and is tested — unwired until stage 5, as the
-maintainer decided. **The next box is stage 5's first:**
+maintainer decided. **Stage 5 has begun**: the sandbox runner of
+[#21](https://github.com/shoraLBRT/ritocode/issues/21) runs a command in a container under every flag of
+ADR 0006 and reports all four outcomes, observed against a real Docker daemon. On 2026-09-14 the maintainer
+moved the wiring of the evaluation path out of that box into its own, after #20. **The next box is:**
 
-1. **[#21](https://github.com/shoraLBRT/ritocode/issues/21) (partial) — sandbox runner.** Per
-   [ADR 0006](adr/0006-sandbox-execution-model.md): `docker run` with network disabled, cpu, memory and
-   pid limits, a read-only root, a non-root user, a hard timeout owned by the caller, and artifacts
-   captured — the implementation of the `ISandboxRunner` that #17 declared, reporting the four outcomes of
-   §5. The spike in `spikes/sandbox-execution/` is the working reference for every flag. **One question
-   to settle with the maintainer before it starts**, the same one #17 raised one stage on. The plan now
-   says this box also wires the evaluation path — `EvaluationPipeline`, the `ISubmissionEvaluator` contract
-   and the hosted loop — because nothing could run a step before a runner exists. But a runner alone
-   still cannot grade: the loop also needs the image (#22), the compile and test validators (#19) and a
-   score to record (#20), all later in this stage. So the wiring either lands here and fails every attempt
-   `notRunnable` until #19 — the outcome the maintainer ruled out for #17 — or moves to the last of those
-   boxes. The runner itself does not depend on the answer: it is tested against a real Docker daemon, which
-   the test suite already needs, and needs no registration to be proved.
+1. **[#22](https://github.com/shoraLBRT/ritocode/issues/22) (partial) — one runner image**, for C#. The
+   spike's [`image/Dockerfile`](../spikes/sandbox-execution/image/Dockerfile) is the working reference: the
+   .NET SDK, a package cache warmed while the network is up, a `<clear />` NuGet config, `NuGetAudit=false`
+   and the CLI's first-run state warmed as uid 10001. What the box adds is the part the spike left as a
+   script: the image as a versioned artifact of the repository, the **runner registry** ADR 0006 names —
+   a `SandboxEnvironment` per language, with its appended arguments (`--configfile`,
+   `-p:NuGetAudit=false`, `--artifacts-path /out`) and its limits versioned beside the image — and the
+   issue's acceptance criterion, the committed packages running through `DockerSandboxRunner` inside that
+   image. Three things to look at before building, each of which may be the maintainer's rather than a
+   detail: **how the image reaches the test run and CI** — a test fixture building an SDK image needs the
+   network and minutes, where every image the suite uses today is pulled; **whether the ingest dependency
+   check of ADR 0006 §3 belongs in this box** — the open question below says #22 is the first point it can
+   exist, and it needs either a dependency declaration in the package format or a cache the registry can
+   expose, which is a change to a shipped format; and **whether a known-good and a known-bad fixture
+   actually separate under the real image here**, which is the first time anything in the repository would
+   run a package's fixture — the check #42 deferred to a sandbox — or whether that stays #38's.
 
 The ADRs written so far are off this list and their obligations are in
 [Open questions](#open-questions) instead. The newest,
@@ -578,6 +607,34 @@ Decisions a future session will hit, and where in the slice each one comes due.
   until queue depth makes one of them necessary. Measured on one Windows/WSL2 machine on cgroups
   v1; a Linux host on cgroups v2 is worth re-measuring, which is one run of
   `spikes/sandbox-execution/run-spike.sh`.
+- **The process that runs the sandbox can start any container.** *Created by
+  [#21](https://github.com/shoraLBRT/ritocode/issues/21); due before anything is deployed, with the
+  production host.* The runner drives the Docker CLI, and whatever can talk to the daemon is root on the
+  Docker host — so during the slice, with the worker in the API process as ADR 0005 allows, the API
+  process is. Containment is not weakened by it: user code still runs only under the ADR 0006 §1 flags,
+  and nothing inside the container can reach the socket, which `DockerSandboxRunnerTests` asserts from
+  inside one. What it does mean is that a compromised API process is a compromised Docker host for as long
+  as the API and the worker share a process. Stage two's extraction of the worker separates the two, and
+  that is the moment to weigh a rootless daemon, a socket proxy that admits only create, start, kill,
+  inspect and remove, or a runner VM. Nothing in the slice needs the answer; a deployment does, and
+  nothing else in the repository will say so.
+- **What `Crashed` means in code.** *Settled by
+  [#21](https://github.com/shoraLBRT/ritocode/issues/21).* ADR 0006 §5 lets the runner not know why a
+  container died; `ContainerExit.Classify` is where that is made exact. The runner's own kill is
+  `TimedOut` whatever else is true; `OOMKilled` is `ResourceExhausted`; a command that never started
+  (`.State.Error` set) or an exit of 129–192 — 128 plus a Linux signal number, real-time signals
+  included — is `Crashed`; every other exit is `Completed`, with the exit code as the validator's own
+  answer. So a managed `OutOfMemoryException` (134) is `Crashed`, as the spike found it looks, and an
+  exit of 255 is the program's answer. A command the image does not have is `Crashed` rather than a fault
+  of the host, because the manifest named it: it is the content's command. The one ambiguity kept on
+  purpose: a program that chooses to exit 137 reads as a crash.
+- **An image is on the worker host before a run.** *Created by
+  [#21](https://github.com/shoraLBRT/ritocode/issues/21); due with
+  [#22](https://github.com/shoraLBRT/ritocode/issues/22).* The runner creates with `--pull never`: an
+  evaluation downloads nothing, so no registry can slow it or break it, and an image that is not there is
+  a `SandboxRunnerException`. #22 has to say how its image reaches a worker host. Built from the
+  repository by a script, as the spike's is, is enough for the slice; distributing images is one of
+  ADR 0006 §7's deferrals.
 - **How a verdict is derived from a runner artifact.** *Settled by
   [ADR 0006](adr/0006-sandbox-execution-model.md) §6, due in stage 5 with
   [#20](https://github.com/shoraLBRT/ritocode/issues/20).* Scores come from a normalised projection
@@ -589,7 +646,7 @@ Decisions a future session will hit, and where in the slice each one comes due.
   changing them can legitimately change a test's answer, and results are comparable only within one
   image-and-limits version.
 - **Where a runner's guarantees may live.** *Settled by
-  [ADR 0006](adr/0006-sandbox-execution-model.md) §1–2, due in stage 5 with
+  [ADR 0006](adr/0006-sandbox-execution-model.md) §1–2, built by
   [#21](https://github.com/shoraLBRT/ritocode/issues/21).* Containment lives in the container flags
   and nowhere else. Where a toolchain lets a submitted `NuGet.Config` or `Directory.Build.props`
   outrank the runner's intent, the runner appends arguments that win by precedence — and those
@@ -849,6 +906,13 @@ Decisions a future session will hit, and where in the slice each one comes due.
   exactly once from the moment it exists, and the host validates its container on build in Development,
   so an evaluator depending on an unregistered `ISandboxRunner` would stop the host starting. That is why
   the pipeline is a class in Evaluations today and the contract that wraps it is #21's.
+  **Decided again, one stage on, on 2026-09-14, while taking [#21](https://github.com/shoraLBRT/ritocode/issues/21):
+  in its own box after [#20](https://github.com/shoraLBRT/ritocode/issues/20).** The runner removed the
+  registration problem above — `ISandboxRunner` is registered now — and did not remove the reason: a
+  runner alone grades nothing, because the loop also needs the image (#22), the compile and test
+  validators (#19) and the verdict rules (#20). Wiring with the runner would have failed every attempt
+  `notRunnable` until #19, which is the outcome ruled out on 2026-09-13; folding it into #20 would have
+  made one PR carry the scoring rules and the loop. Stage 5 therefore has nine boxes rather than eight.
 - **What a validator reports, and what it does not.** *Settled by
   [#18](https://github.com/shoraLBRT/ritocode/issues/18).* A validator reports what happened in its own
   step — `passed`, `failed`, `notCompleted` or `skipped`, the runner's outcome, a one-line summary and
@@ -1128,10 +1192,25 @@ other makes every request fail in the browser and succeed from `curl`.
 | <http://localhost:5173/nowhere> | "Page not found" |
 | the same pages with the API stopped | The failure panel, saying the backend cannot be reached |
 
-Current baseline: **591 backend tests, all passing** — 129 shared, 120 problems, 98 API,
-112 workspaces, 61 submissions, 58 evaluations, 13 architecture — and **68 frontend tests**, run
+Current baseline: **623 backend tests, all passing** — 129 shared, 120 problems, 100 API,
+112 workspaces, 61 submissions, 88 evaluations, 13 architecture — and **68 frontend tests**, run
 separately by `npm test`. A session that leaves either number lower than it found it has broken
 something.
+
+The evaluations assembly rose from 58 to 88 and the API assembly from 98 to 100 with the sandbox runner
+of [#21](https://github.com/shoraLBRT/ritocode/issues/21) — and **the evaluations assembly now needs a
+Docker daemon**, which leaves the architecture assembly as the only one that does not.
+`ContainerExitTests` and `DockerSandboxRunnerArgumentsTests` start nothing: the outcome table row by row,
+the argument vector, and the refusals, proved against a Docker CLI that does not exist so that a request
+that reached Docker would fail differently. `DockerSandboxRunnerTests` runs a busybox image through the
+runner for real and asserts every containment flag from **inside** the container, and produces all four
+outcomes — the kernel's OOM killer included, by filling a tmpfs wider than the memory limit, as the spike
+did. It pulls `busybox:1.37.0` once when the host lacks it, because the runner itself never pulls. Its
+tests run one after another inside the class, which the container-leak assertions rely on. The API
+assembly's two resolve the runner and its options from the real host. **If `DockerSandboxRunnerTests`
+fails with `SandboxRunnerException` before any assertion, check that the Docker engine actually
+answers** — on 2026-09-14 Docker Desktop sat for fifteen minutes with its VM stopped and every API call
+answering 500, and `wsl --shutdown` plus a restart of Docker Desktop was the way out.
 
 The submissions assembly rose from 52 to 61 and the API assembly from 97 to 98 with the submission cap
 of [#35](https://github.com/shoraLBRT/ritocode/issues/35). The lifecycle tests pin the window's boundary

@@ -8,6 +8,10 @@ namespace Ritocode.Modules.Evaluations.Tests;
 /// <summary>Steps and runs built in memory, shaped the way <c>validator_config</c> and ADR 0006 §5 shape them.</summary>
 internal static class Build
 {
+    /// <summary>A runner registry entry shaped like the spike's: the ADR 0006 §1 limits, one appended argument.</summary>
+    public static readonly SandboxEnvironment Environment =
+        new("ritocode-runner:csharp", ["--artifacts-path", "/out"], new SandboxLimits(Cpus: 2m, MemoryBytes: 2L * 1024 * 1024 * 1024, Pids: 256));
+
     public static ValidatorStepDefinition Step(string id = "unit-tests", string type = "exit-code", JsonObject? with = null) =>
         new(id, type, Weight: 100, Required: true, TimeoutSeconds: 120, with ?? new JsonObject());
 
