@@ -23,7 +23,7 @@ public sealed class EvaluationPipelineTests
     {
         var runner = new ScriptedRunner();
 
-        var outcome = await Pipeline(runner).RunAsync([Step("compile"), Step("unit-tests", timeoutSeconds: 300)], Workspace, Output, Token);
+        var outcome = await Pipeline(runner).RunAsync([Step("compile"), Step("unit-tests", timeoutSeconds: 300)], Build.Environment, Workspace, Output, Token);
 
         Assert.True(outcome.RanToEnd);
         Assert.Equal(["compile", "unit-tests"], outcome.Results.Select(result => result.Id));
@@ -34,6 +34,7 @@ public sealed class EvaluationPipelineTests
         Assert.Equal(TimeSpan.FromSeconds(300), runner.Requests[1].Timeout);
         Assert.All(runner.Requests, request =>
         {
+            Assert.Same(Build.Environment, request.Environment);
             Assert.Equal(Workspace, request.WorkspaceDirectory);
             Assert.Equal(Output, request.OutputDirectory);
         });
@@ -45,7 +46,7 @@ public sealed class EvaluationPipelineTests
         // A task that does not compile has nothing to test — and a wrong answer is a score, not a broken run.
         var runner = new ScriptedRunner().Returns("compile", Build.Run(exitCode: 1));
 
-        var outcome = await Pipeline(runner).RunAsync([Step("compile"), Step("unit-tests"), Step("style")], Workspace, Output, Token);
+        var outcome = await Pipeline(runner).RunAsync([Step("compile"), Step("unit-tests"), Step("style")], Build.Environment, Workspace, Output, Token);
 
         Assert.True(outcome.RanToEnd);
         Assert.Equal(
@@ -59,7 +60,7 @@ public sealed class EvaluationPipelineTests
     {
         var runner = new ScriptedRunner().Returns("style", Build.Run(exitCode: 1));
 
-        var outcome = await Pipeline(runner).RunAsync([Step("style", required: false), Step("unit-tests")], Workspace, Output, Token);
+        var outcome = await Pipeline(runner).RunAsync([Step("style", required: false), Step("unit-tests")], Build.Environment, Workspace, Output, Token);
 
         Assert.True(outcome.RanToEnd);
         Assert.Equal([ValidatorOutcome.Failed, ValidatorOutcome.Passed], outcome.Results.Select(result => result.Outcome));
@@ -75,7 +76,7 @@ public sealed class EvaluationPipelineTests
         // Optional or not: an attempt with a step that could not finish cannot be graded (ADR 0009 §4).
         var runner = new ScriptedRunner().Returns("style", Build.Run(runOutcome, exitCode: 137));
 
-        var outcome = await Pipeline(runner).RunAsync([Step("style", required: false), Step("unit-tests")], Workspace, Output, Token);
+        var outcome = await Pipeline(runner).RunAsync([Step("style", required: false), Step("unit-tests")], Build.Environment, Workspace, Output, Token);
 
         Assert.False(outcome.RanToEnd);
         Assert.Equal(ValidatorOutcome.NotCompleted, outcome.Results[0].Outcome);
@@ -89,7 +90,7 @@ public sealed class EvaluationPipelineTests
     {
         var runner = new ScriptedRunner();
 
-        var outcome = await Pipeline(runner).RunAsync([Step("lint", type: "lint"), Step("unit-tests")], Workspace, Output, Token);
+        var outcome = await Pipeline(runner).RunAsync([Step("lint", type: "lint"), Step("unit-tests")], Build.Environment, Workspace, Output, Token);
 
         Assert.False(outcome.RanToEnd);
         Assert.Equal(ValidatorOutcome.NotRunnable, outcome.Results[0].Outcome);
@@ -105,7 +106,7 @@ public sealed class EvaluationPipelineTests
         var runner = new ScriptedRunner();
         var unplannable = Build.Step(id: "compile", type: "exit-code", with: new JsonObject());
 
-        var outcome = await Pipeline(runner).RunAsync([unplannable], Workspace, Output, Token);
+        var outcome = await Pipeline(runner).RunAsync([unplannable], Build.Environment, Workspace, Output, Token);
 
         Assert.False(outcome.RanToEnd);
         Assert.Equal(ValidatorOutcome.NotRunnable, outcome.Results[0].Outcome);
@@ -119,7 +120,7 @@ public sealed class EvaluationPipelineTests
         var forging = new ForgingPlugin((_, run) => ValidatorResult.Judged(Build.Step(id: "someone-else", type: "forging"), run, passed: true));
 
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => Pipeline(new ScriptedRunner(), forging).RunAsync([Step("compile", type: "forging")], Workspace, Output, Token));
+            () => Pipeline(new ScriptedRunner(), forging).RunAsync([Step("compile", type: "forging")], Build.Environment, Workspace, Output, Token));
     }
 
     [Fact]
@@ -130,7 +131,7 @@ public sealed class EvaluationPipelineTests
         var runner = new ScriptedRunner().Returns("compile", Build.Run(SandboxRunOutcome.TimedOut, exitCode: 137));
 
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => Pipeline(runner, forging).RunAsync([Step("compile", type: "forging")], Workspace, Output, Token));
+            () => Pipeline(runner, forging).RunAsync([Step("compile", type: "forging")], Build.Environment, Workspace, Output, Token));
     }
 
     [Fact]
@@ -139,13 +140,13 @@ public sealed class EvaluationPipelineTests
         var forging = new ForgingPlugin((step, _) => ValidatorResult.Skipped(step));
 
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => Pipeline(new ScriptedRunner(), forging).RunAsync([Step("compile", type: "forging")], Workspace, Output, Token));
+            () => Pipeline(new ScriptedRunner(), forging).RunAsync([Step("compile", type: "forging")], Build.Environment, Workspace, Output, Token));
     }
 
     [Fact]
     public async Task AnEmptyPipeline_IsRefused()
     {
-        await Assert.ThrowsAsync<ArgumentException>(() => Pipeline(new ScriptedRunner()).RunAsync([], Workspace, Output, Token));
+        await Assert.ThrowsAsync<ArgumentException>(() => Pipeline(new ScriptedRunner()).RunAsync([], Build.Environment, Workspace, Output, Token));
     }
 
     [Fact]
@@ -160,8 +161,8 @@ public sealed class EvaluationPipelineTests
         var second = new ScriptedRunner()
             .Returns("unit-tests", Build.Run(exitCode: 1) with { Duration = TimeSpan.FromSeconds(11), Stdout = new CapturedOutput("second", true) });
 
-        var once = await Pipeline(first).RunAsync(steps, Workspace, Output, Token);
-        var again = await Pipeline(second).RunAsync(steps, Workspace, Output, Token);
+        var once = await Pipeline(first).RunAsync(steps, Build.Environment, Workspace, Output, Token);
+        var again = await Pipeline(second).RunAsync(steps, Build.Environment, Workspace, Output, Token);
 
         Assert.Equal(ValidatorResults.ToJson(once.Results), ValidatorResults.ToJson(again.Results));
         Assert.Equal(once.RanToEnd, again.RanToEnd);

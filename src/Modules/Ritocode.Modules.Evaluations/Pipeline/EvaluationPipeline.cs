@@ -22,23 +22,29 @@ namespace Ritocode.Modules.Evaluations.Pipeline;
 /// stop is reported <c>Skipped</c>, so a report always has one entry per step.
 /// </para>
 /// <para>
-/// <b>Not registered in the host yet — decided with the maintainer on 2026-09-13.</b> Everything an
-/// evaluation needs to run arrives in slice stage 5: the runner (#21), its image (#22) and the compile and
-/// test validators (#19). This class depends on <see cref="ISandboxRunner"/>, and the host validates its
-/// container on build in Development, so a registration nothing can construct would stop the host
-/// starting. The <c>ISubmissionEvaluator</c> contract of ADR 0009 — which ADR 0007 §7 requires to be
-/// registered from the moment it exists — and the hosted loop that calls it land with the runner.
+/// <b>Not registered in the host yet — decided with the maintainer on 2026-09-13 and 2026-09-14.</b> The
+/// runner exists (#21), and an evaluation still cannot grade anything without its image (#22), the compile
+/// and test validators (#19) and the verdict rules (#20). So the <c>ISubmissionEvaluator</c> contract of
+/// ADR 0009 — which ADR 0007 §7 requires to be registered from the moment it exists — the hosted loop that
+/// calls it, and the registration of this class all land together, in their own stage 5 box after #20.
 /// </para>
 /// </remarks>
 public sealed class EvaluationPipeline(IValidatorPluginRegistry plugins, ISandboxRunner runner)
 {
+    /// <param name="steps">The version's pipeline, in order.</param>
+    /// <param name="environment">The runner registry entry the version's language selects — the same for every step.</param>
+    /// <param name="workspaceDirectory">The frozen input tree, mounted read-only into every step.</param>
+    /// <param name="outputDirectory">The output mount every step shares.</param>
+    /// <param name="cancellationToken">Stops the evaluation; a running container is killed and removed.</param>
     public async Task<PipelineOutcome> RunAsync(
         IReadOnlyList<ValidatorStepDefinition> steps,
+        SandboxEnvironment environment,
         string workspaceDirectory,
         string outputDirectory,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(steps);
+        ArgumentNullException.ThrowIfNull(environment);
         ArgumentException.ThrowIfNullOrWhiteSpace(workspaceDirectory);
         ArgumentException.ThrowIfNullOrWhiteSpace(outputDirectory);
 
@@ -60,7 +66,7 @@ public sealed class EvaluationPipeline(IValidatorPluginRegistry plugins, ISandbo
                 continue;
             }
 
-            var result = await RunStepAsync(step, workspaceDirectory, outputDirectory, cancellationToken);
+            var result = await RunStepAsync(step, environment, workspaceDirectory, outputDirectory, cancellationToken);
             results.Add(result);
 
             switch (result.Outcome)
@@ -85,6 +91,7 @@ public sealed class EvaluationPipeline(IValidatorPluginRegistry plugins, ISandbo
 
     private async Task<ValidatorResult> RunStepAsync(
         ValidatorStepDefinition step,
+        SandboxEnvironment environment,
         string workspaceDirectory,
         string outputDirectory,
         CancellationToken cancellationToken)
@@ -103,6 +110,7 @@ public sealed class EvaluationPipeline(IValidatorPluginRegistry plugins, ISandbo
 
         var request = new SandboxRunRequest(
             step.Id,
+            environment,
             plan.Value.Command,
             workspaceDirectory,
             outputDirectory,
