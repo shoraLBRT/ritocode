@@ -10,11 +10,12 @@ and the old one is marked `Superseded by NNNN` rather than edited.
 | [0002](0002-modular-monolith-layout.md) | Modular monolith layout | Accepted |
 | [0003](0003-api-conventions.md) | API conventions | Accepted |
 | [0004](0004-persistence-and-migrations.md) | Persistence and migrations | Accepted |
-| [0005](0005-vertical-slice-before-breadth.md) | Vertical slice before breadth | Accepted |
+| [0005](0005-vertical-slice-before-breadth.md) | Vertical slice before breadth | Superseded by 0010 |
 | [0006](0006-sandbox-execution-model.md) | Sandbox execution model | Accepted |
 | [0007](0007-cross-module-contract-form.md) | Cross-module contract form | Accepted; §4 superseded in part by 0009 |
 | [0008](0008-authentication-seam.md) | Authentication seam | Proposed |
-| [0009](0009-evaluation-is-a-command-submissions-issues.md) | Evaluation is a command the Submissions module issues | Accepted |
+| [0009](0009-evaluation-is-a-command-submissions-issues.md) | Evaluation is a command the Submissions module issues | Accepted; off the critical path after 0010 |
+| [0010](0010-diagnosis-of-ai-written-code.md) | Ritocode teaches diagnosis of AI-written code | Accepted |
 
 ## Writing a new ADR
 

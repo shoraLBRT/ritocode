@@ -1,5 +1,10 @@
 # Ritocode – Agent Overview
 
+> **Superseded — do not plan work from this file.** It describes the product Ritocode was
+> before 2026-09-30. What Ritocode is now: [../docs/CONCEPT.md](../docs/CONCEPT.md), decided in
+> [ADR 0010](../docs/adr/0010-diagnosis-of-ai-written-code.md). This file is rewritten or retired
+> when the specification lands.
+
 This document is intended for AI agents and automated contributors working in this repository.
 It provides a fast overview of the project's purpose, constraints, and development priorities.
 
