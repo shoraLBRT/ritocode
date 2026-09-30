@@ -3,8 +3,8 @@
 - Status: Accepted — decided by the maintainer on 2026-09-30
 - Date: 2026-09-30
 - Relates to: [`docs/CONCEPT.md`](../CONCEPT.md), the mechanics prototype at <https://claude.ai/artifact/NgUY8CZZcDnbgApen2nf6S>
-- Supersedes: [0005](0005-vertical-slice-before-breadth.md) — the milestone and its slice plan, not the engineering rules it restates
-- Leaves in place, off the critical path: [0006](0006-sandbox-execution-model.md), [0009](0009-evaluation-is-a-command-submissions-issues.md)
+- Supersedes: 0005 — the milestone and its slice plan, not the engineering rules it restates
+- Leaves in place, off the critical path: 0006, 0009 — later removed with the code they governed (#119, #40)
 
 ## Context
 
@@ -99,11 +99,11 @@ learner does not yet have. It is the natural successor once the catalogue exists
 
 ## Consequences
 
-- **[ADR 0005](0005-vertical-slice-before-breadth.md) is superseded**: the vertical slice, its plan
+- **ADR 0005 is superseded**: the vertical slice, its plan
   and its definition of done describe the previous product. Its engineering rules — user code only
   in a sandbox, no `user_id` from a request body, ownership checked in the query, no schema change
   without a migration — survive because they are restated in `AGENTS.md` and enforced by tests.
-- **[ADR 0006](0006-sandbox-execution-model.md) and [ADR 0009](0009-evaluation-is-a-command-submissions-issues.md)
+- **ADR 0006 and ADR 0009
   remain correct** for the code that implements them, and leave the critical path. Diagnosis runs
   nothing the learner wrote. The sandbox runner of #21 stays in the repository, unregistered work
   that becomes relevant again only if a task type asks for code or for a proof-by-test.

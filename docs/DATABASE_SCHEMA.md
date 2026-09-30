@@ -1,6 +1,6 @@
 # Database Schema
 
-The Phase 1 schema. Structure and reasoning are decided in
+The schema as it exists. Structure and reasoning are decided in
 [ADR 0004](adr/0004-persistence-and-migrations.md); this document is the map.
 
 One PostgreSQL database, one schema per module. A module's `DbContext` maps only its own tables, so
@@ -11,10 +11,13 @@ a module cannot reach another module's data through EF at all.
 | `users` | Users | `users` |
 | `auth` | Auth | `linked_accounts` |
 | `problems` | Problems | `problems`, `problem_versions` |
-| `workspaces` | Workspaces | `workspaces` |
-| `submissions` | Submissions | `submissions`, `submission_reports` |
 
 Each schema also holds its own `__migrations_history`, so module migrations are independent.
+
+> **The `problems` schema belongs to the previous product** and is replaced by the Content schema of
+> [#121](https://github.com/shoraLBRT/ritocode/issues/121). The Workspaces and Submissions schemas
+> were removed in [#119](https://github.com/shoraLBRT/ritocode/issues/119); no production database
+> ever held them, so development databases are recreated rather than migrated.
 
 ## Entity relationships
 
@@ -24,20 +27,13 @@ because they cross a module boundary — see [Cross-module references](#cross-mo
 ```mermaid
 erDiagram
     USERS ||..o{ LINKED_ACCOUNTS : "user_id (no FK)"
-    USERS ||..o{ WORKSPACES : "user_id (no FK)"
-    USERS ||..o{ SUBMISSIONS : "user_id (no FK)"
     PROBLEMS ||--o{ PROBLEM_VERSIONS : "problem_id"
-    PROBLEM_VERSIONS ||..o{ WORKSPACES : "problem_version_id (no FK)"
-    WORKSPACES ||..o{ SUBMISSIONS : "workspace_id (no FK)"
-    SUBMISSIONS ||--|| SUBMISSION_REPORTS : "submission_id"
 
     USERS {
         uuid id PK
         text email UK "stored lower-cased"
         text username UK "stored lower-cased"
         timestamptz created_at
-        int xp "check: >= 0"
-        text trust_level "check: enum"
     }
 
     LINKED_ACCOUNTS {
@@ -65,42 +61,13 @@ erDiagram
         int version "UK with problem_id, check: >= 1"
         text snapshot_reference
         jsonb validator_config
-        text workspace_root "bundle directory of the starter tree"
-        text_array editable_files "resolved from the manifest globs"
+        text workspace_root
+        text_array editable_files
         int max_files "check: limits valid"
         int max_file_bytes "check: limits valid"
         int max_total_bytes "check: limits valid"
         timestamptz created_at
         timestamptz published_at "null while draft"
-    }
-
-    WORKSPACES {
-        uuid id PK
-        uuid user_id "no FK, indexed"
-        uuid problem_version_id "no FK, indexed"
-        text snapshot_reference
-        timestamptz created_at
-        timestamptz updated_at "check: >= created_at"
-    }
-
-    SUBMISSIONS {
-        uuid id PK
-        uuid workspace_id "no FK, indexed"
-        uuid user_id "no FK, indexed"
-        text status "check: enum"
-        int score "check: null or 0-100"
-        text input_reference "frozen workspace tree"
-        timestamptz created_at
-        timestamptz started_at "check: null iff queued, unless failed"
-        timestamptz completed_at "check: set iff terminal"
-    }
-
-    SUBMISSION_REPORTS {
-        uuid id PK
-        uuid submission_id FK "UK"
-        jsonb validator_results
-        text logs_reference "nullable"
-        timestamptz created_at
     }
 ```
 
@@ -119,62 +86,37 @@ hand in `psql` as often as by the application, so it follows PostgreSQL conventi
 enum column carries a check constraint listing the allowed values. Text alone would accept anything.
 
 **JSON** columns are `jsonb`, not `text`: PostgreSQL validates them on write, and they can be
-queried directly when diagnosing an evaluation.
-
-**Storage references** — `problem_versions.snapshot_reference`, `workspaces.snapshot_reference`,
-`submissions.input_reference` and `submission_reports.logs_reference` — are `varchar(512)` holding a
-storage role and an object key, never a URL. The form and the key layout are fixed in
-[STORAGE_LAYOUT.md](STORAGE_LAYOUT.md). `input_reference` is required and has no default: an attempt
-with no frozen tree could never be evaluated.
+queried directly when diagnosing a problem.
 
 ## Cross-module references
 
-`workspaces.user_id` points at a row in `users.users`, but there is no `FOREIGN KEY`. Constraints
-across schemas would reinstate exactly the coupling the schema split removes. The five unconstrained
-references are:
+`linked_accounts.user_id` points at a row in `users.users`, but there is no `FOREIGN KEY`.
+Constraints across schemas would reinstate exactly the coupling the schema split removes.
 
 | Column | Points at | Validated by |
 | --- | --- | --- |
 | `auth.linked_accounts.user_id` | `users.users.id` | Auth module on link |
-| `workspaces.workspaces.user_id` | `users.users.id` | Workspaces module on create |
-| `workspaces.workspaces.problem_version_id` | `problems.problem_versions.id` | Workspaces module on create |
-| `submissions.submissions.workspace_id` | `workspaces.workspaces.id` | Submissions module on create |
-| `submissions.submissions.user_id` | `users.users.id` | Submissions module on create |
 
-"Validated by" means through a contract in `Ritocode.Shared/Contracts`, never by opening the owning
-module's `DbContext` — [ADR 0007](adr/0007-cross-module-contract-form.md). `IUserLookup`,
-`IProblemVersionLookup` and `IOwnedWorkspaceLookup` exist, so four of the five are validated;
-`linked_accounts.user_id` arrives with the Auth module's first writer. `submissions.user_id` reuses
-`IUserLookup`, which asks the identical question, and `submissions.workspace_id` is validated by
-`IOwnedWorkspaceLookup`, which takes the owner as well as the id: a workspace that exists but is
-someone else's is refused exactly as a missing one is.
-`IWorkspaceAllowanceLookup` is a third contract that validates no reference: it hands Workspaces a
-version's `editable_files` and limits, which a save is checked against.
+"Validated by" means through a contract in `Ritocode.Shared/Contracts` — here `IUserLookup` — never
+by opening the owning module's `DbContext` ([ADR 0007](adr/0007-cross-module-contract-form.md)).
+`linked_accounts.user_id` gets its first writer with sign-in,
+[#7](https://github.com/shoraLBRT/ritocode/issues/7).
 
 What this costs, and what pays for it:
 
-- Orphan rows become possible if a delete races a write. Cleanup is
-  [#43](https://github.com/shoraLBRT/ritocode/issues/43); user deletion must notify each module
+- Orphan rows become possible if a delete races a write; user deletion must notify each module
   rather than run a single `DELETE`.
-- Every one of these columns is explicitly indexed, since without a constraint it inherits nothing.
+- Every such column is explicitly indexed, since without a constraint it inherits nothing.
 - Cross-module joins are impossible in SQL. A screen needing data from two modules composes it in
   the API layer. If that becomes a performance problem, the answer is a read model owned by one
   module, not a cross-schema join.
 
 ## Invariants the database enforces
 
-Application code can enforce these too, but a worker crashing mid-transition is exactly how such
-rules rot, so they live in the schema:
-
 | Constraint | Rule |
 | --- | --- |
-| `ck_users_xp_not_negative` | `xp >= 0` |
 | `ck_problem_versions_version_positive` | `version >= 1` |
-| `ck_problem_versions_limits_valid` | `max_files >= 1`, `max_file_bytes >= 1`, and `max_total_bytes >= max_file_bytes` — the format's own rule |
-| `ck_workspaces_updated_not_before_created` | `updated_at >= created_at` |
-| `ck_submissions_score_range` | `score` is null or between 0 and 100 |
-| `ck_submissions_completed_at_matches_status` | `completed_at` is set exactly when status is terminal |
-| `ck_submissions_started_at_matches_status` | `started_at` is null when queued and set when running or completed; a failed attempt may have either, since it may have failed in the queue |
+| `ck_problem_versions_limits_valid` | `max_files >= 1`, `max_file_bytes >= 1`, and `max_total_bytes >= max_file_bytes` |
 | `ck_*_<enum column>` | the column holds a value from its enum |
 
 ## Indexes that exist for a specific query
@@ -183,11 +125,8 @@ Beyond primary keys and uniqueness:
 
 | Index | Serves |
 | --- | --- |
-| `problems (tags)` GIN | catalog filtering by tag, `tags @> ARRAY['refactoring']` |
-| `problem_versions (problem_id, published_at)` partial | resolving the current version of a problem; drafts are never resolved, so they are excluded |
-| `workspaces (user_id, updated_at DESC)` | "continue where you left off" |
-| `submissions (user_id, created_at DESC)` | attempt history, newest first |
-| `submissions (status, created_at)` partial | the queue drain — `ISubmissionDispatcher.ClaimNextAsync`, which names the statuses as literals so the planner can match the partial predicate; stays the size of the backlog rather than of all history |
+| `problems (tags)` GIN | catalog filtering by tag |
+| `problem_versions (problem_id, published_at)` partial | resolving the current version of a problem; drafts are excluded |
 
 ## Working with the schema
 
@@ -198,7 +137,7 @@ Beyond primary keys and uniqueness:
 Adds a migration to one module:
 
 ```bash
-pwsh ./scripts/db-migrations-add.ps1 -Module Problems -Name AddProblemLanguage
+pwsh ./scripts/db-migrations-add.ps1 -Module Users -Name AddDisplayName
 ```
 
 Applies pending migrations:

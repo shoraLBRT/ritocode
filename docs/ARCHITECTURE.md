@@ -1,59 +1,49 @@
 # System Architecture
 
-The system follows a modular monolith architecture in early phases.
+A modular monolith: one API host, one PostgreSQL database, one schema per module, and a React
+frontend. The target shape is fixed in [SPEC.md](SPEC.md) §9; this file maps it to the code and says
+how far along each part is.
 
-Major subsystems:
+Nothing here executes code a learner writes. Diagnosis is reading and choosing, so there are no
+sandbox runners, no evaluation workers and no queue.
 
-- API Service
-- Evaluation Workers
-- Sandbox Runners
-- Problem Catalog
-- Workspace System
+## Modules
 
-## Core Components
+Each module is one project under `src/Modules/`, owns one database schema, and never references
+another module ([ADR 0002](adr/0002-modular-monolith-layout.md)). A module asks another a question
+only through a contract in `src/Ritocode.Shared/Contracts`
+([ADR 0007](adr/0007-cross-module-contract-form.md)). Both rules are enforced by
+`tests/Ritocode.Architecture.Tests`.
 
-### API
+| Module | Owns | State |
+| --- | --- | --- |
+| **Auth** | Sign-in with GitHub and Google, sessions, linked accounts | The identity seam and the development identity exist ([ADR 0008](adr/0008-authentication-seam.md)); real sign-in is [#6](https://github.com/shoraLBRT/ritocode/issues/6) and [#7](https://github.com/shoraLBRT/ritocode/issues/7) |
+| **Users** | Users; who is an admin comes from configuration | Exists; answers `IUserLookup` |
+| **Content** | Problem cards, the treatment tree, materials, tasks and answer keys; ingest from `content/` and validation; the catalogue reads | Today still the **Problems** module of the previous product. Replaced in [#120](https://github.com/shoraLBRT/ritocode/issues/120), [#121](https://github.com/shoraLBRT/ritocode/issues/121) and [#9](https://github.com/shoraLBRT/ritocode/issues/9) |
+| **Attempts** | Attempts, scoring, progress, signals | Not built: [#20](https://github.com/shoraLBRT/ritocode/issues/20), [#125](https://github.com/shoraLBRT/ritocode/issues/125) |
 
-Responsibilities:
+The host, `src/Ritocode.Api`, is the composition root: the only project that references every
+module, listed once in `Setup/ModuleRegistry.cs`. `src/Ritocode.DbMigrator` applies every module's
+migrations; the host never migrates itself.
 
-- authentication
-- problem catalog
-- workspace management
-- submission lifecycle
-- user progress
+## Shared infrastructure
 
-### Evaluation Workers
+`src/Ritocode.Shared` holds what every module uses and none owns: the unified error body and
+`Result<T>`, paging, request correlation, the persistence base, the identity seam (`ICurrentUser`),
+and the cross-module contracts. It also still holds the object storage client, which goes with the
+Problems module in #121.
 
-Responsible for:
+## Storage
 
-- pulling submission jobs
-- executing validators
-- aggregating results
+PostgreSQL only, one schema per module ([DATABASE_SCHEMA.md](DATABASE_SCHEMA.md)). Content is small
+text and is stored in the database; object storage leaves the product in #121.
 
-### Sandbox Runner
+## Frontend
 
-Responsible for safe execution of untrusted code:
+`frontend/`: React, Vite and TypeScript. `src/api` is the only code that knows the backend exists;
+the rest is the shell around it. The screens of SPEC §4 are stage S3 onward.
 
-- isolated containers
-- resource limits
-- disabled networking
-- artifact capture
+## Deployment
 
-### Storage
-
-Main data stores:
-
-PostgreSQL:
-- users
-- problems
-- submissions
-- progress
-
-Object storage:
-- problem bundles
-- workspace snapshots
-- evaluation artifacts
-
-Redis (optional):
-- queues
-- short-lived caching
+One VPS in Russia running Docker Compose: a reverse proxy with TLS, the API, the static frontend,
+PostgreSQL and Umami (SPEC §9.5). Stage S7.

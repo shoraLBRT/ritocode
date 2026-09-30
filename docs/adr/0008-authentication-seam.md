@@ -2,12 +2,12 @@
 
 - Status: Proposed
 - Date: 2026-09-12
-- Relates to: [`docs/SLICE_PLAN.md`](../SLICE_PLAN.md), [#6](https://github.com/shoraLBRT/ritocode/issues/6), [#35](https://github.com/shoraLBRT/ritocode/issues/35)
-- Builds on: [0003](0003-api-conventions.md), [0004](0004-persistence-and-migrations.md), [0005](0005-vertical-slice-before-breadth.md), [0007](0007-cross-module-contract-form.md)
+- Relates to: [#6](https://github.com/shoraLBRT/ritocode/issues/6), [#35](https://github.com/shoraLBRT/ritocode/issues/35)
+- Builds on: [0003](0003-api-conventions.md), [0004](0004-persistence-and-migrations.md), [0007](0007-cross-module-contract-form.md)
 
 ## Context
 
-[ADR 0005](0005-vertical-slice-before-breadth.md) allows the slice to ship **a seeded development
+ADR 0005 (removed, see the ADR index) allows the slice to ship **a seeded development
 identity instead of a login**, and names the seam that keeps the reduction reversible:
 "`ICurrentUser` and the authentication middleware exist; no endpoint changes when a real provider is
 wired in". It also forbids two things that the absence of a seam makes tempting — taking `user_id`

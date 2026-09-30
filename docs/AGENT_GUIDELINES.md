@@ -41,8 +41,7 @@ assembly, and ask for a database with `CreateDatabaseAsync`. Every caller gets i
 already migrated.
 
 Do not build a fixture of your own — an in-memory provider, a shared database, a hand-rolled
-container. ADR 0005 lists ad-hoc fixtures among the shortcuts that are forbidden, because the
-first module that needs isolation makes every test written on one of them get rewritten.
+container. Ad-hoc fixtures are forbidden here, because the first module that needs isolation makes every test written on one of them get rewritten.
 
 ## Safe Execution
 

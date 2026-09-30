@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 namespace Ritocode.Shared.Identity;
 
 /// <summary>
-/// The seeded development identity ADR 0005 allows in place of a login, bound from the
+/// The seeded development identity of ADR 0008, in place of a login, bound from the
 /// <c>Authentication:DevelopmentIdentity</c> configuration section.
 /// </summary>
 /// <remarks>
