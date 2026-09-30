@@ -5,7 +5,7 @@ The training content of Ritocode, in the format of
 
 ```
 taxonomy/     the six classes and the treatment tree, with Russian labels
-problems/     one directory per problem card        (none yet — #124)
+problems/     one directory per problem card        (3 so far — #124)
 materials/    one directory per material             (none yet — #42)
 tasks/        one directory per task                 (none yet — #42)
 ```

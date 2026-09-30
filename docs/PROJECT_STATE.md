@@ -41,6 +41,7 @@ Content.
 | Users | The `users` table and `IUserLookup`. `xp` and `trust_level` removed in #119 | `src/Modules/Ritocode.Modules.Users` |
 | Ownership rule | An architecture test reading compiled IL: a user's rows are reached only where the owner is in the query. No module owns such rows until Attempts ([#125](https://github.com/shoraLBRT/ritocode/issues/125)); its reader is proved against a test-only context | `tests/Ritocode.Architecture.Tests/OwnershipRuleTests.cs` |
 | Content ([#120](https://github.com/shoraLBRT/ritocode/issues/120), [#121](https://github.com/shoraLBRT/ritocode/issues/121)) | The format of [CONTENT_FORMAT.md](CONTENT_FORMAT.md) parsed and validated — every rule of §7 tested — and `content validate` in CI (job *Validate content*). The `content` schema — taxonomy, cards, materials, tasks — and an ingest that validates first, writes in one transaction stamped with the commit, upserts by slug, retires cards and unpublishes tasks that left `content/`, and derives the material overview and the easy-task shortlist. A development host seeds `content/` on start. The public reads of SPEC §9.3 ([#9](https://github.com/shoraLBRT/ritocode/issues/9)): `GET /problems` (every live card in full, with the classes), `GET /treatments`, `GET /tasks` (a page, easy first) and `GET /tasks/{slug}` (context, brief, material with its overview, the cards to pick from — name, summary and keywords only, the shortlist for an easy task — and the other tasks over the same material). No answer key and no card weight leave the server; a test serialises a task and looks for them | `src/Modules/Ritocode.Modules.Content`, `src/Ritocode.ContentTool`, `content/` |
+| Authoring ([#122](https://github.com/shoraLBRT/ritocode/issues/122)) | The `author-card` skill: drafts a card from a name, reading the live catalogue so the summary is delimited from its neighbours; checks it with `content validate`; never overwrites a card. Three cards drafted with it — `secrets-in-repo`, `money-in-float`, `god-class` — open the catalogue of [#124](https://github.com/shoraLBRT/ritocode/issues/124) | `.claude/skills/author-card`, `content/problems` |
 | Frontend shell | React, Vite and TypeScript; the API client that owns the error envelope; layout, routes, loading, error and empty states | `frontend/` |
 | CI | Backend build, test, formatting, migrations and drift; frontend lint, build and test. Nothing is shipped yet | `.github/workflows/` |
 
@@ -53,9 +54,8 @@ storage with MinIO, and the frontend's old problem pages. All of it remains read
 
 From [ROADMAP.md](ROADMAP.md), in order:
 
-1. S2: the `author-card` and `author-task` skills
-   ([#122](https://github.com/shoraLBRT/ritocode/issues/122),
-   [#123](https://github.com/shoraLBRT/ritocode/issues/123)). After them the content track — 55–60
+1. S2: the `author-task` skill with the blind smoke test
+   ([#123](https://github.com/shoraLBRT/ritocode/issues/123)). After it the content track — 55–60
    cards ([#124](https://github.com/shoraLBRT/ritocode/issues/124)) and the 20 tasks
    ([#42](https://github.com/shoraLBRT/ritocode/issues/42)) — is the maintainer's.
 2. S3 can run beside the content track: scoring ([#20](https://github.com/shoraLBRT/ritocode/issues/20)),
