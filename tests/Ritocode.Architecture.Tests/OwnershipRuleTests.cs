@@ -1,6 +1,7 @@
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Ritocode.Modules.Attempts.Persistence;
 
 namespace Ritocode.Architecture.Tests;
 
@@ -30,18 +31,26 @@ public sealed class OwnershipRuleTests
 {
     /// <summary>The contexts whose rows belong to a user. Every entity one of them maps is guarded.</summary>
     /// <remarks>
-    /// Empty between the removal of the previous product (#119) and the Attempts module (#125), which
-    /// lists its context here. Until then the module-facing tests pass over nothing; the reader itself is
-    /// still proved, against <see cref="ProofContext"/>, by
+    /// The reader itself is proved, against <see cref="ProofContext"/>, by
     /// <see cref="TheReader_SeesEveryShapeOfReachingAUsersRows"/>.
     /// </remarks>
-    private static readonly Type[] OwnedContexts = [];
+    private static readonly Type[] OwnedContexts = [typeof(AttemptsDbContext)];
 
     /// <summary>
     /// Where a user's rows may be reached, and why. A new entry is a claim a reviewer reads; the reason
     /// is the part that has to be true.
     /// </summary>
-    private static readonly Allowance[] Allowances = [];
+    private static readonly Allowance[] Allowances =
+    [
+        new(
+            "Ritocode.Modules.Attempts.Persistence.OwnedAttempts",
+            Method: null,
+            "Every lookup there takes the owner and puts it inside the query."),
+        new(
+            "Ritocode.Modules.Attempts.Lifecycle.AttemptLifecycle",
+            "StartAsync",
+            "Adds the row it creates for its caller, and reads nothing."),
+    ];
 
     private static readonly HashSet<Type> GuardedEntities = [.. OwnedContexts.SelectMany(EntitiesMappedBy)];
 

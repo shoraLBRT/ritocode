@@ -47,10 +47,13 @@ public sealed class DiagnosisScoringTests
         var godClass = score.Cards[1].Treatment!;
         Assert.False(godClass.Matched);
         Assert.Equal(["manual.split"], godClass.WrongLeaves);
-        Assert.Equal(["accept.fits-context"], godClass.KeyLeaves);
+        Assert.Equal(["accept.fits-context"], score.Cards[1].KeyLeaves);
 
+        // The key is revealed for a missed card too; an extra card has none.
         Assert.Null(score.Cards[2].Treatment);
+        Assert.Equal(["manual.representation"], score.Cards[2].KeyLeaves);
         Assert.Null(score.Cards[3].Treatment);
+        Assert.Null(score.Cards[3].KeyLeaves);
     }
 
     [Fact]

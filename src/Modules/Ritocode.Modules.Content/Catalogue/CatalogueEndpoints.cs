@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Ritocode.Shared.Http;
+using Ritocode.Shared.Identity;
 using Ritocode.Shared.Paging;
 
 namespace Ritocode.Modules.Content.Catalogue;
@@ -43,6 +44,7 @@ internal static class CatalogueEndpoints
 
     private static async Task<IResult> ListTasksAsync(
         IContentCatalogue catalogue,
+        ICurrentUser currentUser,
         HttpContext context,
         int? page,
         int? pageSize,
@@ -53,7 +55,7 @@ internal static class CatalogueEndpoints
         var request = PageRequest.Create(page, pageSize);
 
         return request.IsSuccess
-            ? Results.Ok(await catalogue.ListTasksAsync(request.Value, cancellationToken))
+            ? Results.Ok(await catalogue.ListTasksAsync(request.Value, currentUser.Id, cancellationToken))
             : ApiProblem.ToResult(request.Error!, context);
     }
 

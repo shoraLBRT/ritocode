@@ -2,8 +2,8 @@
 
 The entities that exist in the code, and which module owns each. The physical schema, indexes and
 constraints are in [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md); this document is the conceptual view.
-The entities still to come — attempts and signals — are described in [SPEC.md](SPEC.md) §4–5 and join
-this file as they are built.
+The entities still to come — signals — are described in [SPEC.md](SPEC.md) §4.8 and join this file
+as they are built.
 
 Every entity is owned by exactly one module. An entity is only ever read or written through its
 owning module — see [ADR 0002](adr/0002-modular-monolith-layout.md).
@@ -54,10 +54,21 @@ beside the columns: content is read whole, by slug, and never queried by a field
   `content/` is **unpublished**, never deleted. The findings never leave the server except inside a
   submitted attempt.
 
+## Attempt
+
+Owned by the **Attempts** module. One learner's answer to one task, and its result
+([SPEC.md](SPEC.md) §5.4): the user, the task's slug, when it started, the furthest **step** reached
+(diagnosis or treatment — the journal of §8), and, once **submitted**, the answer, the result with
+the key revealed, the score and its maximum, and the content revision it was scored against. A
+submitted attempt never changes again: a later change to the task, a card or the scoring parameters
+does not rewrite it. The **first submitted** attempt at a task counts toward progress; every later
+one is **practice**. The task and its key reach Attempts through `ITaskForAttemptLookup`, which
+Content answers; the task catalogue's solved flags reach Content through `ISubmittedTaskLookup`,
+which Attempts answers.
+
 ## Scoring
 
-Owned by the **Attempts** module; no table yet — the attempt that stores a score is
-[#125](https://github.com/shoraLBRT/ritocode/issues/125). Scoring is a pure function of an
+Owned by the **Attempts** module and stored in an attempt's result. Scoring is a pure function of an
 **answer** (the picked cards, each with its leaves), the **answer key** with each card's weight, and
 the **scoring parameters** (SPEC §5.2, configured under `Attempts:Scoring`). It returns the total,
 floored at zero, the maximum, whether the answer is **correct** — nothing lost, which on a clean task

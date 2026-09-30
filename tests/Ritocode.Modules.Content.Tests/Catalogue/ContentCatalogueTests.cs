@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http.Json;
 using Ritocode.Modules.Content.Catalogue;
 using Ritocode.Modules.Content.Ingest;
 using Ritocode.Modules.Content.Tests.Format;
+using Ritocode.Shared.Contracts.Attempts;
 using Ritocode.Shared.Paging;
 using Ritocode.TestSupport;
 
@@ -76,11 +77,24 @@ public sealed class ContentCatalogueTests(PostgresTestServer postgres) : IAsyncL
     [Fact]
     public async Task TheTaskCatalogue_ListsPublishedTasks_EasyFirst()
     {
-        var page = await Catalogue().ListTasksAsync(PageRequest.Create(null, null).Value, TestContext.Current.CancellationToken);
+        var page = await Catalogue().ListTasksAsync(PageRequest.Create(null, null).Value, null, TestContext.Current.CancellationToken);
 
         Assert.Equal(2, page.TotalItems);
         Assert.Equal([("invoice-mailer-monthly", "easy"), ("invoice-mailer-hosted", "medium")], page.Items.Select(task => (task.Slug, task.Difficulty)));
         Assert.Equal("Счёт клиенту по почте", page.Items[0].Title);
+        Assert.All(page.Items, task => Assert.Null(task.Solved));
+    }
+
+    [Fact]
+    public async Task ForASignedInCaller_EachTaskSaysWhetherTheySolvedIt()
+    {
+        var user = Guid.CreateVersion7();
+        var submitted = new SubmittedTasks(user, "invoice-mailer-hosted");
+
+        var page = await Catalogue(submitted).ListTasksAsync(PageRequest.Create(null, null).Value, user, TestContext.Current.CancellationToken);
+
+        Assert.Equal([("invoice-mailer-monthly", false), ("invoice-mailer-hosted", true)], page.Items.Select(task => (task.Slug, task.Solved!.Value)));
+        Assert.Equal(["invoice-mailer-monthly", "invoice-mailer-hosted"], submitted.Asked);
     }
 
     [Fact]
@@ -142,19 +156,33 @@ public sealed class ContentCatalogueTests(PostgresTestServer postgres) : IAsyncL
     {
         var empty = await ContentDatabase.CreateAsync(postgres, nameof(AnEmptyDatabase_AnswersEmptyViews_NotErrors));
         await using var context = empty.CreateContext();
-        var catalogue = new ContentCatalogue(context);
+        var catalogue = new ContentCatalogue(context, new SubmittedTasks(Guid.Empty));
 
         Assert.Empty((await catalogue.GetProblemsAsync(TestContext.Current.CancellationToken)).Cards);
         Assert.Empty((await catalogue.GetTreatmentsAsync(TestContext.Current.CancellationToken)).Branches);
-        Assert.Equal(0, (await catalogue.ListTasksAsync(PageRequest.Create(null, null).Value, TestContext.Current.CancellationToken)).TotalItems);
+        Assert.Equal(0, (await catalogue.ListTasksAsync(PageRequest.Create(null, null).Value, Guid.CreateVersion7(), TestContext.Current.CancellationToken)).TotalItems);
     }
 
-    private ContentCatalogue Catalogue() => new(_database.CreateContext());
+    private ContentCatalogue Catalogue(SubmittedTasks? submitted = null) =>
+        new(_database.CreateContext(), submitted ?? new SubmittedTasks(Guid.Empty));
 
     private async Task IngestAsync()
     {
         await using var context = _database.CreateContext();
         var result = await new ContentIngest(context, TimeProvider.System).IngestAsync(_content.Root, "test", TestContext.Current.CancellationToken);
         Assert.True(result.Ingested, string.Join("\n", result.Report.Issues));
+    }
+
+    /// <summary>The Attempts module's answer, stood in for: one user, and the tasks they submitted.</summary>
+    private sealed class SubmittedTasks(Guid user, params string[] slugs) : ISubmittedTaskLookup
+    {
+        public List<string> Asked { get; } = [];
+
+        public System.Threading.Tasks.Task<IReadOnlySet<string>> FindSubmittedAsync(Guid userId, IReadOnlyCollection<string> taskSlugs, CancellationToken cancellationToken)
+        {
+            Asked.AddRange(taskSlugs);
+            IReadOnlySet<string> found = userId == user ? taskSlugs.Intersect(slugs).ToHashSet() : new HashSet<string>();
+            return System.Threading.Tasks.Task.FromResult(found);
+        }
     }
 }
