@@ -63,6 +63,24 @@ jobs:
           path: ./test-results
           retention-days: 7
 
+  validate-content:
+    name: Validate content
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    # The same check authors and the authoring skills run (docs/CONTENT_FORMAT.md §7): errors fail
+    # the job, warnings are printed and never do. No database and no Docker.
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Validate content/
+        run: dotnet run --project src/Ritocode.ContentTool --configuration Release -- validate content
+
   verify-formatting:
     name: Verify formatting
     runs-on: ubuntu-latest

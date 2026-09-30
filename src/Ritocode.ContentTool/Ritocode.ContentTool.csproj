@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The content command line: `validate` checks a content tree against docs/CONTENT_FORMAT.md
+    without a database or a host, so authors, the authoring skills and CI run the same check.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Modules/Ritocode.Modules.Problems/Ritocode.Modules.Problems.csproj" />
+  </ItemGroup>
+
+</Project>

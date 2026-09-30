@@ -332,7 +332,9 @@ context of a hosted service used by many studios, would list `hardcoded-config` 
 
 ## 7. Validation
 
-`content validate` checks the whole tree and reports every fault at once. It runs in the authoring
+`content validate` checks the whole tree and reports every fault at once —
+`dotnet run --project src/Ritocode.ContentTool -- validate [path]`, where the path defaults to
+`content`. It exits 1 on errors; warnings are printed and never fail it. It runs in the authoring
 skills, in CI on every pull request, and inside ingest before anything is written.
 
 **Errors** — ingest refuses to run:

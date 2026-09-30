@@ -1,0 +1,13 @@
+# The treatment tree (docs/SPEC.md §3.3). A branch is where the measure lives, a leaf is what the
+# measure is. A leaf is addressed as branch.leaf, for example auto.secrets.
+branches:
+  - id: brief
+    leaves: [scale, lifetime, scope, requirements, reuse]
+  - id: rule
+    leaves: [structure, limits, conventions, forbidden, tests]
+  - id: auto
+    leaves: [linter, types, secrets, metrics, dependencies, architecture, test-quality]
+  - id: manual
+    leaves: [split, dedupe, extract-config, handle-errors, validate, representation, invariant, remove, tests]
+  - id: accept
+    leaves: [fits-context, not-worth-it, debt]

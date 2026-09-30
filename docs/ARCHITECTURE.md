@@ -24,7 +24,8 @@ only through a contract in `src/Ritocode.Shared/Contracts`
 
 The host, `src/Ritocode.Api`, is the composition root: the only project that references every
 module, listed once in `Setup/ModuleRegistry.cs`. `src/Ritocode.DbMigrator` applies every module's
-migrations; the host never migrates itself.
+migrations; the host never migrates itself. `src/Ritocode.ContentTool` is the content command line —
+`validate` checks a content tree against [CONTENT_FORMAT.md](CONTENT_FORMAT.md) with no database.
 
 ## Shared infrastructure
 

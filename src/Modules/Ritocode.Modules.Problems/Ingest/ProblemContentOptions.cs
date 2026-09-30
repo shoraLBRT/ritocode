@@ -20,5 +20,5 @@ public sealed class ProblemContentOptions
     /// Directory holding one package per subdirectory. Relative paths resolve against the host's
     /// content root.
     /// </summary>
-    public string Directory { get; init; } = "content/problems";
+    public string Directory { get; init; } = "content/legacy-problems";
 }

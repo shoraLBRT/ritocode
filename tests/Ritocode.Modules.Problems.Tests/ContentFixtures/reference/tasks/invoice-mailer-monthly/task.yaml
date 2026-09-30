@@ -1,0 +1,9 @@
+material: invoice-mailer
+difficulty: easy
+findings:
+  - card: secrets-in-repo
+    leaves: [auto.secrets, rule.conventions]
+  - card: money-in-float
+    leaves: [manual.representation]
+  - card: swallowed-error
+    leaves: [manual.handle-errors]
