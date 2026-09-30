@@ -195,6 +195,37 @@ export interface AttemptSummary {
   readonly maxScore: number | null;
 }
 
+/**
+ * `GET /api/v1/me/progress` (docs/SPEC.md §4.7): built from the caller's first attempts only. Every
+ * class, in the taxonomy's order; the cards met or picked, grouped by class, a card Content no longer
+ * knows last with no class.
+ */
+export interface Progress {
+  /** How many tasks it is built from — one first attempt each. */
+  readonly tasks: number;
+  readonly classes: readonly ClassProgress[];
+  readonly cards: readonly CardProgress[];
+}
+
+export interface ClassProgress {
+  readonly class: string;
+  readonly name: string;
+  readonly met: number;
+  readonly found: number;
+  readonly treatedRight: number;
+}
+
+export interface CardProgress {
+  readonly card: string;
+  readonly name: string;
+  readonly class: string | null;
+  readonly met: number;
+  readonly found: number;
+  readonly missed: number;
+  readonly pickedWhenAbsent: number;
+  readonly treatedRight: number;
+}
+
 /** Paging inputs, 1-based. Out-of-range values are rejected by the API, never clamped. */
 export interface PageQuery {
   readonly page?: number;

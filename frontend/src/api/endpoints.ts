@@ -9,6 +9,7 @@ import type {
   PageQuery,
   Pick,
   ProblemCatalogue,
+  Progress,
   TaskDetail,
   TaskSummary,
   TreatmentTree,
@@ -23,6 +24,11 @@ import type {
 /** `GET /me` — the signed-in caller. Rejects with an unauthenticated {@link ApiError} when signed out. */
 export function getMe(client: ApiClient, signal?: AbortSignal): Promise<Me> {
   return client.request<Me>('/me', { ...(signal ? { signal } : {}) });
+}
+
+/** `GET /me/progress` — the caller's progress, from first attempts only. */
+export function getProgress(client: ApiClient, signal?: AbortSignal): Promise<Progress> {
+  return client.request<Progress>('/me/progress', { ...(signal ? { signal } : {}) });
 }
 
 /** `GET /problems` — the whole problem catalogue, one object rather than a page (SPEC §4.2). */

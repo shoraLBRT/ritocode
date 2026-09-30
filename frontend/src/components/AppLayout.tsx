@@ -12,6 +12,8 @@ import { useSession } from '../session';
  */
 export function AppLayout() {
   const t = useT();
+  // Progress is a signed-in page, so it is offered only to a signed-in learner.
+  const signedIn = useSession().status === 'signedIn';
 
   return (
     <div className="app">
@@ -33,6 +35,11 @@ export function AppLayout() {
           <NavLink to="/problems" className={navClass}>
             {t('nav.problems')}
           </NavLink>
+          {signedIn && (
+            <NavLink to="/progress" className={navClass}>
+              {t('nav.progress')}
+            </NavLink>
+          )}
         </nav>
         <SessionStatus />
       </header>

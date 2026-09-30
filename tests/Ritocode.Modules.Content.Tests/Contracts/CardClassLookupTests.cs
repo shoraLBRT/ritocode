@@ -38,6 +38,19 @@ public sealed class CardClassLookupTests(PostgresTestServer postgres) : IAsyncLi
     }
 
     [Fact]
+    public async Task TheNamesOfEveryClassAndOfEachKnownCard_InTheDefaultLocale()
+    {
+        await using var context = _database.CreateContext();
+
+        var found = await new CardClassLookup(context).FindAsync(["money-in-float", "no-such-card"], TestContext.Current.CancellationToken);
+
+        Assert.Equal(6, found.ClassNames.Count);
+        Assert.Equal("Предметная область", found.ClassNames["domain"]);
+        Assert.Equal(["money-in-float"], found.CardNames.Keys);
+        Assert.Equal("Деньги не в десятичном типе", found.CardNames["money-in-float"]);
+    }
+
+    [Fact]
     public async Task ARetiredCard_StillHasItsClass()
     {
         _content.Delete("tasks/invoice-mailer-monthly").Delete("problems/hardcoded-config");
@@ -47,6 +60,7 @@ public sealed class CardClassLookupTests(PostgresTestServer postgres) : IAsyncLi
         var found = await new CardClassLookup(context).FindAsync(["hardcoded-config"], TestContext.Current.CancellationToken);
 
         Assert.Equal("hygiene", found.ClassOf["hardcoded-config"]);
+        Assert.Equal("Хардкод конфигурации", found.CardNames["hardcoded-config"]);
     }
 
     private async Task IngestAsync(string revision)

@@ -502,6 +502,83 @@ code {
   margin: 0.5rem 0;
 }
 
+/* Progress (SPEC §4.7): the classes as a list, then the cards as a table grouped by class. */
+.progress-classes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-width: 46rem;
+}
+
+.progress-classes__item {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.25rem var(--gap);
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.progress-classes__name {
+  font-weight: 600;
+}
+
+.progress-classes__counts--none {
+  color: var(--text-muted);
+}
+
+.table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/*
+ * Words stay whole here, unlike in the body: a header broken letter by letter is unreadable. On a
+ * phone the table is wider than the screen and its region scrolls, the card column staying put.
+ */
+.progress-table {
+  border-collapse: collapse;
+  font-size: 0.95rem;
+  overflow-wrap: normal;
+}
+
+.progress-table th,
+.progress-table td {
+  padding: 0.4rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  text-align: right;
+}
+
+.progress-table th[scope='row'],
+.progress-table th[scope='col']:first-child,
+.progress-table__group th {
+  text-align: left;
+}
+
+.progress-table th[scope='row'],
+.progress-table th[scope='col']:first-child {
+  position: sticky;
+  left: 0;
+  min-width: 9rem;
+  background: var(--surface);
+}
+
+.progress-table th[scope='row'] {
+  font-weight: normal;
+}
+
+.progress-table__group th {
+  padding-top: 1rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
 @media (max-width: 64rem) {
   .task-tabs {
     display: flex;
