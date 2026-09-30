@@ -1,6 +1,6 @@
 # 0011 — Release images on GitHub Container Registry
 
-- Status: Proposed
+- Status: Accepted (by the maintainer, 2026-10-01)
 - Date: 2026-10-01
 - Relates to: [#31](https://github.com/shoraLBRT/ritocode/issues/31), [#135](https://github.com/shoraLBRT/ritocode/issues/135), [#136](https://github.com/shoraLBRT/ritocode/issues/136)
 - Builds on: [0001](0001-technology-stack.md), [SPEC.md](../SPEC.md) §9.5

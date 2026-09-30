@@ -1,4 +1,4 @@
-export { ApiClient, REQUEST_ID_HEADER } from './client';
+export { ApiClient, CSRF_HEADER, REQUEST_ID_HEADER } from './client';
 export type { ApiClientOptions, RequestOptions } from './client';
 export { ApiError, isApiError, parseProblemBody } from './errors';
 export type { ApiErrorKind, ApiProblemBody } from './errors';

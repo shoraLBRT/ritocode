@@ -22,4 +22,12 @@ public interface IModule
 
     /// <summary>Maps the module's endpoints under the shared versioned API group.</summary>
     void MapEndpoints(IEndpointRouteBuilder endpoints);
+
+    /// <summary>
+    /// Maps endpoints that live outside the versioned API — sign-in, its callbacks and sign-out
+    /// (docs/SPEC.md §9.3), whose addresses providers and browsers keep. Most modules have none.
+    /// </summary>
+    void MapHostEndpoints(IEndpointRouteBuilder root)
+    {
+    }
 }

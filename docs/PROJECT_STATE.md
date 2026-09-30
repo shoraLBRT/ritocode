@@ -4,7 +4,7 @@
 in the same pull request as the work it describes — a session that skips this makes the next one
 start from nothing.
 
-- **Last updated:** 2026-09-30
+- **Last updated:** 2026-10-01
 - **Current stage:** S4 · Accounts — S3 closed with #29: under the development identity a task is
   opened from the catalogue, solved on a desktop and at 375 px, and its score and review read. The
   content track of S2 ([#124](https://github.com/shoraLBRT/ritocode/issues/124),
@@ -50,7 +50,8 @@ Content.
 | API conventions | [ADR 0003](adr/0003-api-conventions.md): RFC 9457 errors, pagination envelope, validation filter | `src/Ritocode.Shared` |
 | Persistence | PostgreSQL, EF Core per module, one schema each, migrations applied by `Ritocode.DbMigrator`, drift check in CI ([ADR 0004](adr/0004-persistence-and-migrations.md)) | `src/Ritocode.DbMigrator`, `scripts/` |
 | Test harness | One PostgreSQL container per test assembly, one migrated database per test class | `tests/Ritocode.TestSupport` |
-| Identity seam | `ICurrentUser`, a real authentication scheme with a seeded development identity, authenticated by default ([ADR 0008](adr/0008-authentication-seam.md)). `GET /api/v1/me` answers the caller (id, username) or 401 — it reads `ICurrentUser`, so #6's sessions change nothing in it. No real sign-in yet | `src/Ritocode.Shared/Identity`, `src/Modules/Ritocode.Modules.Auth` |
+| Identity seam | `ICurrentUser`, real authentication schemes, authenticated by default ([ADR 0008](adr/0008-authentication-seam.md), Accepted). `GET /api/v1/me` answers the caller (id, username) or 401 | `src/Ritocode.Shared/Identity`, `src/Modules/Ritocode.Modules.Auth` |
+| Sessions ([#6](https://github.com/shoraLBRT/ritocode/issues/6)) | [ADR 0012](adr/0012-sessions.md): an opaque token in `__Host-ritocode-session` (Secure, HttpOnly, SameSite=Lax), the session in `auth.sessions` by the token's SHA-256 — the token is never stored — with its expiry (30 days, `Auth:Session:Lifetime`), revocation and CSRF token. A request with the cookie is the `Session` scheme's, any other the development identity's (off outside development). Every state-changing request under a session repeats its CSRF token — from the readable `__Host-ritocode-csrf` cookie — in `X-CSRF-Token`, or gets `403 csrf_token_invalid` (`CsrfProtectionMiddleware`); `ApiClient` sends it. `POST /auth/logout` (outside `/api/v1`, through the new `IModule.MapHostEndpoints`) revokes the session and clears both cookies. `ISessionIssuer.StartAsync` + `SessionCookies.Write` are what #7's sign-in calls. **Nothing issues a session over HTTP yet**: that is sign-in, #7; the header has no sign-in or sign-out button until then | `src/Modules/Ritocode.Modules.Auth/Session`, `src/Ritocode.Shared/Identity/CsrfProtectionMiddleware.cs` |
 | Users | The `users` table and `IUserLookup`. `xp` and `trust_level` removed in #119 | `src/Modules/Ritocode.Modules.Users` |
 | Ownership rule | An architecture test reading compiled IL: a user's rows are reached only where the owner is in the query. It guards the Attempts module's context; the allowances are `OwnedAttempts` (every lookup by owner) and the creation in `AttemptLifecycle.StartAsync`. Its reader is proved against a test-only context | `tests/Ritocode.Architecture.Tests/OwnershipRuleTests.cs` |
 | Content ([#120](https://github.com/shoraLBRT/ritocode/issues/120), [#121](https://github.com/shoraLBRT/ritocode/issues/121)) | The format of [CONTENT_FORMAT.md](CONTENT_FORMAT.md) parsed and validated — every rule of §7 tested — and `content validate` in CI (job *Validate content*). The `content` schema — taxonomy, cards, materials, tasks — and an ingest that validates first, writes in one transaction stamped with the commit, upserts by slug, retires cards and unpublishes tasks that left `content/`, and derives the material overview and the easy-task shortlist. A development host seeds `content/` on start. The public reads of SPEC §9.3 ([#9](https://github.com/shoraLBRT/ritocode/issues/9)): `GET /problems` (every live card in full, with the classes), `GET /treatments`, `GET /tasks` (a page, easy first) and `GET /tasks/{slug}` (context, brief, material with its overview, the cards to pick from — name, summary and keywords only, the shortlist for an easy task — and the other tasks over the same material). No answer key and no card weight leave the server; a test serialises a task and looks for them | `src/Modules/Ritocode.Modules.Content`, `src/Ritocode.ContentTool`, `content/` |
@@ -77,7 +78,7 @@ storage with MinIO, and the frontend's old problem pages. All of it remains read
 
 From [ROADMAP.md](ROADMAP.md), in order:
 
-1. S4 is blocked on the maintainer — see the list below — and what is left of S5 waits on it: the
+1. S4 goes on with sessions (#6) done; sign-in (#7) needs the OAuth apps from the maintainer. What is left of S5 waits on it: the
    admin area ([#130](https://github.com/shoraLBRT/ritocode/issues/130)) and the security baseline
    ([#35](https://github.com/shoraLBRT/ritocode/issues/35)) both need #7. So S6 goes on meanwhile:
    the landing page (#131) and the prerender (#132) exist, and Umami
@@ -85,12 +86,12 @@ From [ROADMAP.md](ROADMAP.md), in order:
    issues are done — release images (#31) and logs (#33) — and the rest of S7 needs the VPS of #134:
    deployment ([#135](https://github.com/shoraLBRT/ritocode/issues/135)), then the release command
    ([#136](https://github.com/shoraLBRT/ritocode/issues/136)), monitoring (#34) and the runbook (#41).
-   **No engineering issue is unblocked** until the maintainer decides ADR 0008's token question
-   (#6), registers the OAuth apps (#7) or provides the VPS (#134); the end-to-end test
-   ([#39](https://github.com/shoraLBRT/ritocode/issues/39)) waits on S5.
-2. S4 · Accounts, once unblocked: sessions ([#6](https://github.com/shoraLBRT/ritocode/issues/6)) — cookie
-   sign-in state, sign-out, CSRF; `GET /me` exists and stays. Then sign-in with GitHub and Google
-   ([#7](https://github.com/shoraLBRT/ritocode/issues/7)), which needs OAuth apps registered by the
+   **No engineering issue is unblocked** until the maintainer registers the OAuth apps (#7) or
+   provides the VPS (#134); the end-to-end test ([#39](https://github.com/shoraLBRT/ritocode/issues/39))
+   waits on S5.
+2. S4 · Accounts: sessions (#6) exist. Next, sign-in with GitHub and Google
+   ([#7](https://github.com/shoraLBRT/ritocode/issues/7)) — it starts a session with `ISessionIssuer`,
+   adds the sign-in and sign-out buttons — which needs OAuth apps registered by the
    maintainer (localhost is enough for development), signed-out solving
    ([#127](https://github.com/shoraLBRT/ritocode/issues/127)), and the privacy page
    ([#128](https://github.com/shoraLBRT/ritocode/issues/128)), which needs the policy text of #134.
@@ -106,14 +107,14 @@ apps, privacy text — runs in parallel and gates S7.
 Decisions the specification left open are listed in [SPEC.md](SPEC.md) §13. Add here anything a
 future session would otherwise have to rediscover.
 
-- **One signal per extra pick** (#129): a second one for the same card of the same attempt is refused,
-  so the author's list counts learners, not clicks. A practice attempt can signal like a first one:
+- **One signal per extra pick** (#129, confirmed by the maintainer on 2026-10-01): a second one for
+  the same card of the same attempt is refused, so the author's list counts learners, not clicks. A practice attempt can signal like a first one:
   it is the same key.
 - **Two `appsettings.json` race into `Ritocode.Api.Tests`' output** (found in #33): the API's, and
   the migrator's through `Ritocode.TestSupport`. Which one the test host reads depends on build
   order — the API's locally, the migrator's in CI — so a test must not rely on a production setting
   from that file; set what it needs in the fixture, or read `src/Ritocode.Api/appsettings.json`.
-- **Registry reachability** (ADR 0011): images are on GHCR because a pull needs no account and
+- **Registry reachability** (ADR 0011, accepted 2026-10-01): images are on GHCR because a pull needs no account and
   GitHub is reachable from Russian hosting. #135 is where a pull from the VPS is first tried; if it
   is slow or fails, add a mirror in a Russian registry (needs the maintainer's account).
 - **Serving the static build** (#132, for #135): try the path, then the path with `.html`, then
@@ -217,10 +218,10 @@ compose stack is PostgreSQL only.
 | --- | --- |
 | `Ritocode.Architecture.Tests` | 13 |
 | `Ritocode.Shared.Tests` | 51 |
-| `Ritocode.Api.Tests` | 72 |
+| `Ritocode.Api.Tests` | 79 |
 | `Ritocode.Modules.Content.Tests` | 71 |
 | `Ritocode.Modules.Attempts.Tests` | 19 |
-| Frontend (vitest) | 130 |
+| Frontend (vitest) | 133 |
 
 The count is a ratchet: if it drops, the PR says which tests went and why.
 
@@ -239,6 +240,7 @@ In Development (`ASPNETCORE_ENVIRONMENT=Development`) the host seeds `content/` 
 | `GET /health/ready` | `200`, one check per module schema |
 | `GET /api/v1/meta/modules` | `200`, four modules: Auth, Users, Content, Attempts |
 | `GET /api/v1/me` | `200`, `{"id":"0199aa00-…","username":"developer"}` under the development identity; `401 unauthenticated` without it |
+| `POST /auth/logout` | `204`, two `Set-Cookie` headers clearing `__Host-ritocode-session` and `__Host-ritocode-csrf` |
 | `GET /api/v1/problems` | `200`, `{ classes, cards }` — the six classes once content is seeded |
 | `GET /api/v1/treatments` | `200`, five branches, leaves as `branch.leaf` |
 | `GET /api/v1/tasks?pageSize=1000` | `400`, `code: "validation_failed"`, `errors.pageSize` present |

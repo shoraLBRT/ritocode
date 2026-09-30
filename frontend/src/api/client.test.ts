@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ApiClient } from './client';
+import { ApiClient, CSRF_HEADER, csrfTokenFrom } from './client';
 import { ApiError } from './errors';
 import { jsonResponse, problemResponse, TEST_REQUEST_ID } from '../test/responses';
 
@@ -131,5 +131,39 @@ describe('ApiClient', () => {
     await clientWith(fetchStub).request('/things');
     const withoutBody = fetchStub.mock.calls[1]?.[1];
     expect(withoutBody?.body).toBeUndefined();
+  });
+
+  it('repeats the session CSRF token on a state-changing request, and only there', async () => {
+    const fetchStub = vi
+      .fn<typeof globalThis.fetch>()
+      .mockImplementation(() => Promise.resolve(jsonResponse({ ok: true })));
+    const client = new ApiClient({ baseUrl: 'http://api.test/api/v1', fetch: fetchStub, csrfToken: () => 'the-token' });
+
+    await client.request('/attempts', { method: 'POST', body: {} });
+    await client.request('/attempts/1', { method: 'patch', body: {} });
+    await client.request('/me');
+
+    const headers = fetchStub.mock.calls.map((call) => call[1]?.headers as Record<string, string>);
+    expect(headers[0]?.[CSRF_HEADER]).toBe('the-token');
+    expect(headers[1]?.[CSRF_HEADER]).toBe('the-token');
+    expect(headers[2]?.[CSRF_HEADER]).toBeUndefined();
+  });
+
+  it('sends no CSRF header when there is no session', async () => {
+    const fetchStub = vi
+      .fn<typeof globalThis.fetch>()
+      .mockImplementation(() => Promise.resolve(jsonResponse({ ok: true })));
+    const client = new ApiClient({ baseUrl: 'http://api.test/api/v1', fetch: fetchStub, csrfToken: () => undefined });
+
+    await client.request('/attempts', { method: 'POST', body: {} });
+
+    expect((fetchStub.mock.calls[0]?.[1]?.headers as Record<string, string>)[CSRF_HEADER]).toBeUndefined();
+  });
+
+  it('finds the token among the page cookies', () => {
+    expect(csrfTokenFrom('theme=dark; __Host-ritocode-csrf=abc_-123; other=1')).toBe('abc_-123');
+    expect(csrfTokenFrom('theme=dark')).toBeUndefined();
+    expect(csrfTokenFrom('__Host-ritocode-csrf=')).toBeUndefined();
+    expect(csrfTokenFrom('')).toBeUndefined();
   });
 });

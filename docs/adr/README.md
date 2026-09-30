@@ -11,9 +11,10 @@ and the old one is marked `Superseded by NNNN` rather than edited.
 | [0003](0003-api-conventions.md) | API conventions | Accepted |
 | [0004](0004-persistence-and-migrations.md) | Persistence and migrations | Accepted |
 | [0007](0007-cross-module-contract-form.md) | Cross-module contract form | Accepted |
-| [0008](0008-authentication-seam.md) | Authentication seam | Proposed |
+| [0008](0008-authentication-seam.md) | Authentication seam | Accepted |
 | [0010](0010-diagnosis-of-ai-written-code.md) | Ritocode teaches diagnosis of AI-written code | Accepted |
-| [0011](0011-release-images.md) | Release images on GitHub Container Registry | Proposed |
+| [0011](0011-release-images.md) | Release images on GitHub Container Registry | Accepted |
+| [0012](0012-sessions.md) | Sessions: an opaque token in a cookie, the session in a table | Accepted |
 
 ## Removed
 

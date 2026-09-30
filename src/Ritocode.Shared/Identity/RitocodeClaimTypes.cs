@@ -15,4 +15,11 @@ public static class RitocodeClaimTypes
     /// relying on a framework's inbound claim mapping to do it invisibly.
     /// </remarks>
     public const string UserId = "ritocode:user_id";
+
+    /// <summary>
+    /// The token a state-changing request must repeat in <see cref="CsrfProtectionMiddleware.HeaderName"/>.
+    /// Carried only by a principal a browser authenticates with an ambient credential — the session
+    /// cookie — because only such a request can be forged from another site.
+    /// </summary>
+    public const string CsrfToken = "ritocode:csrf";
 }

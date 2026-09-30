@@ -9,7 +9,7 @@ a module cannot reach another module's data through EF at all.
 | Schema | Owner module | Tables |
 | --- | --- | --- |
 | `users` | Users | `users` |
-| `auth` | Auth | `linked_accounts` |
+| `auth` | Auth | `linked_accounts`, `sessions` |
 | `content` | Content | `taxonomy`, `cards`, `materials`, `tasks` |
 | `attempts` | Attempts | `attempts`, `signals` |
 
@@ -27,6 +27,7 @@ Solid lines are real foreign keys. Dashed lines are references that carry **no**
 ```mermaid
 erDiagram
     USERS ||..o{ LINKED_ACCOUNTS : "user_id (no FK)"
+    USERS ||..o{ SESSIONS : "user_id (no FK)"
     MATERIALS ||..o{ TASKS : "material (no FK)"
     USERS ||..o{ ATTEMPTS : "user_id (no FK)"
     TASKS ||..o{ ATTEMPTS : "task_slug (no FK)"
@@ -38,6 +39,16 @@ erDiagram
         text email UK "stored lower-cased"
         text username UK "stored lower-cased"
         timestamptz created_at
+    }
+
+    SESSIONS {
+        uuid id PK
+        uuid user_id "no FK, indexed"
+        char64 token_hash UK "SHA-256 of the cookie's token"
+        text csrf_token
+        timestamptz created_at
+        timestamptz expires_at
+        timestamptz revoked_at "null while active"
     }
 
     LINKED_ACCOUNTS {
@@ -144,6 +155,7 @@ schemas would reinstate exactly the coupling the schema split removes.
 | Column | Points at | Validated by |
 | --- | --- | --- |
 | `auth.linked_accounts.user_id` | `users.users.id` | Auth module on link |
+| `auth.sessions.user_id` | `users.users.id` | Auth module on sign-in, through `IUserLookup` |
 | `attempts.attempts.user_id` | `users.users.id` | Attempts module on start, through `IUserLookup` |
 | `attempts.attempts.task_slug` | `content.tasks.slug` | Attempts module on start, through `ITaskForAttemptLookup` |
 | `attempts.signals.user_id`, `task_slug` | `users.users.id`, `content.tasks.slug` | copied from the attempt the signal is sent from |
@@ -181,6 +193,7 @@ Beyond primary keys and uniqueness:
 | `attempts (user_id, submitted_at)` | the submit rate limit's count of a user's recent submits |
 | `attempts (user_id, task_slug)` | a user's attempts at one task, and the task catalogue's solved flags |
 | `signals (user_id, created_at)` | the signal rate limit's count of a user's recent signals |
+| `sessions (user_id)` | ending all of a user's sessions |
 
 ## Working with the schema
 

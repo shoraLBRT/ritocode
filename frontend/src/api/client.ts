@@ -6,8 +6,8 @@ import { ApiError, parseProblemBody } from './errors';
  * Everything the rest of the app knows about the backend goes through `ApiClient.request`:
  * where it lives, how a failure is read, and what a 204 means. Nothing else calls `fetch`,
  * which is what makes the ADR 0003 error envelope handled in one place rather than in each
- * screen — and what will make adding a credential header, when #6 issues one, a change here
- * instead of a change everywhere.
+ * screen — and what makes the session's CSRF token (#6) a header added here rather than in
+ * every screen.
  */
 
 export interface ApiClientOptions {
@@ -18,6 +18,8 @@ export interface ApiClientOptions {
   readonly baseUrl: string;
   /** Injected in tests; defaults to the platform `fetch`. */
   readonly fetch?: typeof globalThis.fetch;
+  /** The session's CSRF token, if there is one. Injected in tests; defaults to reading its cookie. */
+  readonly csrfToken?: () => string | undefined;
 }
 
 export interface RequestOptions {
@@ -30,15 +32,27 @@ export interface RequestOptions {
 /** Header ADR 0003 correlates a response with its log line by. Echoed back on every response. */
 export const REQUEST_ID_HEADER = 'X-Request-Id';
 
+/**
+ * Header a state-changing request repeats the session's CSRF token in (ADR 0012). The token is in a
+ * cookie this page can read and another site cannot; the session cookie itself is out of reach.
+ */
+export const CSRF_HEADER = 'X-CSRF-Token';
+
+const CSRF_COOKIE = '__Host-ritocode-csrf';
+
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
 export class ApiClient {
   readonly #baseUrl: string;
   readonly #fetch: typeof globalThis.fetch;
+  readonly #csrfToken: () => string | undefined;
 
   constructor(options: ApiClientOptions) {
     this.#baseUrl = options.baseUrl.replace(/\/+$/, '');
     // Bound to `globalThis` because an unbound `fetch` throws an illegal-invocation TypeError
     // in the browser the moment it is called as a bare function reference.
     this.#fetch = options.fetch ?? globalThis.fetch.bind(globalThis);
+    this.#csrfToken = options.csrfToken ?? readCsrfCookie;
   }
 
   get baseUrl(): string {
@@ -55,14 +69,17 @@ export class ApiClient {
   async request<T>(path: string, options: RequestOptions = {}): Promise<T> {
     const url = this.#resolve(path, options.query);
     const hasBody = options.body !== undefined;
+    const method = (options.method ?? 'GET').toUpperCase();
+    const csrf = SAFE_METHODS.has(method) ? undefined : this.#csrfToken();
 
     let response: Response;
     try {
       response = await this.#fetch(url, {
-        method: options.method ?? 'GET',
+        method,
         headers: {
           Accept: 'application/json',
           ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
+          ...(csrf !== undefined ? { [CSRF_HEADER]: csrf } : {}),
         },
         ...(hasBody ? { body: JSON.stringify(options.body) } : {}),
         ...(options.signal ? { signal: options.signal } : {}),
@@ -100,6 +117,18 @@ export class ApiClient {
     const suffix = search.size > 0 ? `?${search.toString()}` : '';
     return `${this.#baseUrl}${normalisedPath}${suffix}`;
   }
+}
+
+/** The session's CSRF token from the page's cookies; none when signed out, or where there is no document. */
+function readCsrfCookie(): string | undefined {
+  return typeof document === 'undefined' ? undefined : csrfTokenFrom(document.cookie);
+}
+
+/** The CSRF token in a `document.cookie` string, if the session's cookie is there. */
+export function csrfTokenFrom(cookies: string): string | undefined {
+  const prefix = `${CSRF_COOKIE}=`;
+  const cookie = cookies.split(/;\s*/).find((part) => part.startsWith(prefix));
+  return cookie === undefined || cookie.length === prefix.length ? undefined : decodeURIComponent(cookie.slice(prefix.length));
 }
 
 async function toApiError(response: Response): Promise<ApiError> {
