@@ -87,6 +87,10 @@ public sealed class ProgressEndpointTests(ContentTestApi api) : IClassFixture<Co
         Assert.Equal((3, 2, 2), classes["hygiene"]);
         Assert.Equal((1, 1, 0), classes["domain"]);
         Assert.Equal((0, 0, 0), classes["growth"]);
+
+        // Named for the page that shows them, retired or not: the page never asks for the catalogue.
+        Assert.Equal("Секреты в репозитории", root.GetProperty("cards")[1].GetProperty("name").GetString());
+        Assert.Equal("Предметная область", root.GetProperty("classes").EnumerateArray().Single(item => item.GetProperty("class").GetString() == "domain").GetProperty("name").GetString());
     }
 
     private static object Pick(string card, params string[] leaves) => new { card, leaves };

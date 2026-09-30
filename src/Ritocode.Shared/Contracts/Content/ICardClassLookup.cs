@@ -1,8 +1,9 @@
 namespace Ritocode.Shared.Contracts.Content;
 
 /// <summary>
-/// Answers which class each of some cards belongs to, and the order of the classes — what the
-/// Attempts module needs to group a learner's progress by class (docs/SPEC.md §4.7).
+/// Answers which class each of some cards belongs to, the order of the classes, and the names of
+/// both — what the Attempts module needs to group a learner's progress by class and show it
+/// (docs/SPEC.md §4.7).
 /// </summary>
 /// <remarks>
 /// A cross-module contract in the sense of ADR 0007, implemented by the Content module. It takes many
