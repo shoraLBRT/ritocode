@@ -3,8 +3,6 @@ using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Ritocode.Shared.Errors;
-using Ritocode.Shared.Http;
 using Ritocode.Shared.Identity;
 
 namespace Ritocode.Modules.Auth.Identity;
@@ -16,9 +14,9 @@ namespace Ritocode.Modules.Auth.Identity;
 /// <para>
 /// This is the seeded identity of ADR 0008 — a fixed user instead of a login — implemented as a
 /// real authentication scheme rather than as a middleware that sets a user id somewhere. That is
-/// what makes it substitutable: stage two replaces this handler with one that reads a session
-/// token, and no endpoint, no authorisation policy and no <see cref="ICurrentUser"/> consumer
-/// changes.
+/// what made it substitutable: a request with a session cookie is authenticated by
+/// <see cref="SessionAuthenticationHandler"/> instead, and no endpoint, no authorisation policy and
+/// no <see cref="ICurrentUser"/> consumer tells the two apart.
 /// </para>
 /// <para>
 /// Disabled, it returns <see cref="AuthenticateResult.NoResult"/> rather than a failure: nothing was
@@ -30,7 +28,7 @@ internal sealed class DevelopmentIdentityAuthenticationHandler(
     ILoggerFactory loggerFactory,
     UrlEncoder encoder,
     IOptions<DevelopmentIdentityOptions> developmentIdentity)
-    : AuthenticationHandler<AuthenticationSchemeOptions>(options, loggerFactory, encoder)
+    : ProblemAuthenticationHandler(options, loggerFactory, encoder)
 {
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
@@ -53,27 +51,4 @@ internal sealed class DevelopmentIdentityAuthenticationHandler(
 
         return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(principal, Scheme.Name)));
     }
-
-    /// <summary>
-    /// Answers an unauthenticated request with the ADR 0003 error body instead of an empty 401.
-    /// </summary>
-    /// <remarks>
-    /// No <c>WWW-Authenticate</c> header: there is no credential a client could be told to present
-    /// yet, and offering one browsers understand would put a native credential prompt in front of a
-    /// single-page application. The frontend already branches on this body through
-    /// <c>ApiError.isUnauthenticated</c>.
-    /// </remarks>
-    protected override Task HandleChallengeAsync(AuthenticationProperties properties) =>
-        WriteProblemAsync(AppError.Unauthenticated());
-
-    protected override Task HandleForbiddenAsync(AuthenticationProperties properties) =>
-        WriteProblemAsync(AppError.Forbidden("forbidden", "You may not perform this action."));
-
-    private Task WriteProblemAsync(AppError error) =>
-        // A handler can be invoked after the response has begun — an endpoint that streamed and then
-        // failed. There is nothing useful to write at that point and writing throws, so the status
-        // the client already received stands.
-        Response.HasStarted
-            ? Task.CompletedTask
-            : ApiProblem.WriteAsync(Context, error, Context.RequestAborted);
 }

@@ -1,6 +1,6 @@
 # 0008 — Authentication seam
 
-- Status: Proposed
+- Status: Accepted (2026-10-01; the token format it left open is [0012](0012-sessions.md))
 - Date: 2026-09-12
 - Relates to: [#6](https://github.com/shoraLBRT/ritocode/issues/6), [#35](https://github.com/shoraLBRT/ritocode/issues/35)
 - Builds on: [0003](0003-api-conventions.md), [0004](0004-persistence-and-migrations.md), [0007](0007-cross-module-contract-form.md)

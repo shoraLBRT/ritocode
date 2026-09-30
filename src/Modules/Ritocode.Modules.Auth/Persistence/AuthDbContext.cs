@@ -13,10 +13,13 @@ public sealed class AuthDbContext(DbContextOptions<AuthDbContext> options) : Mod
 
     public DbSet<LinkedAccount> LinkedAccounts => Set<LinkedAccount>();
 
+    public DbSet<UserSession> Sessions => Set<UserSession>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
         modelBuilder.ApplyConfiguration(new LinkedAccountConfiguration());
+        modelBuilder.ApplyConfiguration(new UserSessionConfiguration());
     }
 }

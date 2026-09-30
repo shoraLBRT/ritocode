@@ -124,6 +124,10 @@ public static class ApiSetupExtensions
         app.UseMiddleware<UserLogScopeMiddleware>();
         app.UseHttpLogging();
 
+        // After authentication, which says whether the request rode on the session cookie, and
+        // before any endpoint: a forged state-changing request never reaches one.
+        app.UseMiddleware<CsrfProtectionMiddleware>();
+
         app.UseAuthorization();
 
         app.MapHealthEndpoints();
@@ -138,6 +142,7 @@ public static class ApiSetupExtensions
         var api = app.MapGroup(options.BasePath);
         api.MapMetaEndpoints();
         api.MapModules(ModuleRegistry.All);
+        app.MapModuleHostEndpoints(ModuleRegistry.All);
 
         return app;
     }

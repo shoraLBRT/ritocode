@@ -34,6 +34,13 @@ Fields:
 The immutable id is what identifies the account; logins get renamed and must not silently detach an
 account.
 
+## UserSession
+
+Owned by the **Auth** module. A signed-in browser ([ADR 0012](adr/0012-sessions.md)): the user, the
+SHA-256 of the token its cookie carries (never the token), the CSRF token its state-changing requests
+repeat, when it was created and expires, and when it was revoked. Active until it expires or is
+revoked; signing out revokes it. Started by sign-in (#7) through `ISessionIssuer`.
+
 ## Content
 
 Owned by the **Content** module. Written only by ingest, from `content/` in the repository

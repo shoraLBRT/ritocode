@@ -35,6 +35,20 @@ public static class ModuleRegistrationExtensions
     }
 
     /// <summary>Maps every registered module's endpoints under <paramref name="root"/>.</summary>
+    /// <summary>The endpoints each module keeps outside the versioned API, at the host's root.</summary>
+    public static IEndpointRouteBuilder MapModuleHostEndpoints(this IEndpointRouteBuilder root, IReadOnlyList<IModule> modules)
+    {
+        ArgumentNullException.ThrowIfNull(root);
+        ArgumentNullException.ThrowIfNull(modules);
+
+        foreach (var module in modules)
+        {
+            module.MapHostEndpoints(root);
+        }
+
+        return root;
+    }
+
     public static IEndpointRouteBuilder MapModules(this IEndpointRouteBuilder root, IReadOnlyList<IModule> modules)
     {
         ArgumentNullException.ThrowIfNull(root);
