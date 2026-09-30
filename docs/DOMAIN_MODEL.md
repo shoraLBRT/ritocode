@@ -53,3 +53,14 @@ beside the columns: content is read whole, by slug, and never queried by a field
   its findings plus up to 20 others, chosen deterministically from its slug. A task that leaves
   `content/` is **unpublished**, never deleted. The findings never leave the server except inside a
   submitted attempt.
+
+## Scoring
+
+Owned by the **Attempts** module; no table yet — the attempt that stores a score is
+[#125](https://github.com/shoraLBRT/ritocode/issues/125). Scoring is a pure function of an
+**answer** (the picked cards, each with its leaves), the **answer key** with each card's weight, and
+the **scoring parameters** (SPEC §5.2, configured under `Attempts:Scoring`). It returns the total,
+floored at zero, the maximum, whether the answer is **correct** — nothing lost, which on a clean task
+means nothing picked — and one line per card: **found** with its treatment (the picked leaves that
+match the key, the ones that do not, and the key's own), **missed**, or **extra**. The order of
+picks and leaves never changes the result.

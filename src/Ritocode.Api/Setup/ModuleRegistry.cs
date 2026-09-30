@@ -1,3 +1,4 @@
+using Ritocode.Modules.Attempts;
 using Ritocode.Modules.Auth;
 using Ritocode.Modules.Content;
 using Ritocode.Modules.Users;
@@ -16,5 +17,6 @@ public static class ModuleRegistry
         new AuthModule(),
         new UsersModule(),
         new ContentModule(),
+        new AttemptsModule(),
     ];
 }
