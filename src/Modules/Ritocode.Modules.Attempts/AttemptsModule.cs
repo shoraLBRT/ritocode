@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Ritocode.Modules.Attempts.Contracts;
 using Ritocode.Modules.Attempts.Lifecycle;
 using Ritocode.Modules.Attempts.Persistence;
+using Ritocode.Modules.Attempts.Progress;
 using Ritocode.Modules.Attempts.Scoring;
 using Ritocode.Shared.Contracts.Attempts;
 using Ritocode.Shared.Modules;
@@ -15,7 +16,7 @@ using Ritocode.Shared.Persistence;
 namespace Ritocode.Modules.Attempts;
 
 /// <summary>
-/// A learner's attempts at tasks and their scoring (docs/SPEC.md §5); later, progress and signals.
+/// A learner's attempts at tasks, their scoring and progress (docs/SPEC.md §4.7, §5); later, signals.
 /// </summary>
 /// <remarks>
 /// Owns the <c>attempts</c> schema. Reads a task and its answer key through
@@ -51,6 +52,7 @@ public sealed class AttemptsModule : IModule
         services.AddScoped<IValidator<SubmitAttemptRequest>, SubmitAttemptRequestValidator>();
 
         services.AddScoped<ISubmittedTaskLookup, SubmittedTaskLookup>();
+        services.AddScoped<IProgressReader, ProgressReader>();
 
         // TryAdd, as the other modules do: the clock is host infrastructure.
         services.TryAddSingleton(TimeProvider.System);
@@ -61,5 +63,6 @@ public sealed class AttemptsModule : IModule
         ArgumentNullException.ThrowIfNull(endpoints);
 
         endpoints.MapGroup(RoutePrefix).MapAttemptEndpoints();
+        endpoints.MapProgressEndpoints();
     }
 }

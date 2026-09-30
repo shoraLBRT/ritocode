@@ -76,3 +76,11 @@ floored at zero, the maximum, whether the answer is **correct** — nothing lost
 means nothing picked — and one line per card: **found** with its treatment (the picked leaves that
 match the key, the ones that do not, and the key's own), **missed**, or **extra**. The order of
 picks and leaves never changes the result.
+
+## Progress
+
+Owned by the **Attempts** module and never stored: computed on read from the scored results of a
+user's **first** attempts ([SPEC.md](SPEC.md) §4.7), so practice cannot move it and a result that
+never changes gives a progress that never needs rewriting. Per class — findings met, found, and
+found ones treated right — and per card — met, found, missed, picked when absent, treated right. The
+class of a card comes from Content through `ICardClassLookup`.
