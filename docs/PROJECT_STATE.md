@@ -64,7 +64,8 @@ Content.
 | Catalogue pages ([#27](https://github.com/shoraLBRT/ritocode/issues/27)) | `/tasks`: title, difficulty, the time from the difficulty (SPEC §3.4), and for a signed-in learner a solved mark; filters by difficulty and — signed in — by solved; no class tags; the API's order. Read in one request (`pageSize=100`) and filtered in the page. `/problems`: one page, cards grouped by class in the taxonomy's order and shown in full, their sections rendered by `Markdown` — the project's own renderer for the subset cards use, React elements only, no `innerHTML`; search over name, summary and keywords, ignoring case and ё; an anchor per card, and `/problems#<slug>` scrolls to it once the cards arrive. Both checked at 1280 and 375 px | `frontend/src/pages`, `frontend/src/components/Markdown.tsx` |
 | Task screen ([#126](https://github.com/shoraLBRT/ritocode/issues/126)) | `/tasks/{slug}`: context and brief (rendered as Markdown), the material — overview, file tree with line counts, the selected file with line numbers and Python highlighting from the project's own tokenizer (`components/python.ts`) — and the answer, side by side on a desktop and three tabs below 64 rem. Step 1: the offered cards by name and summary, grouped by class (`GET /tasks/{slug}` now carries the class names, so the screen never asks for `/problems`), with search; step 2: the whole tree per picked card, branches as disclosure widgets, leaves as checkboxes; back to step 1 keeps the picks; *Check* needs a leaf on every picked card and a signed-in learner. A signed-in learner works in the newest open attempt at the task, or a new one; reaching step 2 is recorded on it. Checking lands on the review. Solved end to end at 1280 and 375 px | `frontend/src/pages/task` |
 | Review ([#29](https://github.com/shoraLBRT/ritocode/issues/29)) | `/tasks/{slug}/attempts/{id}`, owner only: the score in points with its composition (found of present, extra picks, matched treatments); every finding of the key, found or missed, with the learner's leaves beside the author's, the author's note and the full card on expanding; every extra pick with its card; the lesson; the other tasks over the same material; *Try again*. A clean task says its outcome in words. Found, missed and extra each carry a mark and a word. The notes and the lesson are kept with the attempt on submit (`attempts.review`), so the review matches the key it was scored against | `frontend/src/pages/task/ReviewPage.tsx` |
-| CI | Backend build, test, formatting, migrations and drift; frontend lint, build and test. Nothing is shipped yet | `.github/workflows/` |
+| CI | Backend build, test, formatting, migrations and drift; content validation; frontend lint, build and test; the prerendered pages | `.github/workflows/` |
+| Release images ([#31](https://github.com/shoraLBRT/ritocode/issues/31)) | On every push to `main`, `ghcr.io/shoralbrt/ritocode-api` (the API, with the migrator at `migrator/Ritocode.DbMigrator.dll`) and `ghcr.io/shoralbrt/ritocode-web` (the static build of #132, served by Caddy on port 80 with its `try_files` rule), tagged with the full commit and `main`, public — [ADR 0011](adr/0011-release-images.md), **Proposed**. Built without pushing on every pull request. The web image takes the site's address from the repository variable `SITE_ORIGIN`, a placeholder until #134 | `deploy/`, `.github/workflows/release-images.yml` |
 
 Removed in #119: the Workspaces, Evaluations, Submissions and Progress modules, the sandbox runner,
 `spikes/`. Removed in #121: the Problems module, the old package format and its C# packages, object
@@ -80,8 +81,8 @@ From [ROADMAP.md](ROADMAP.md), in order:
    ([#35](https://github.com/shoraLBRT/ritocode/issues/35)) both need #7. So S6 goes on meanwhile:
    the landing page (#131) and the prerender (#132) exist, and Umami
    ([#133](https://github.com/shoraLBRT/ritocode/issues/133)) depends on #127. So S7's unblocked
-   issues go on: release images ([#31](https://github.com/shoraLBRT/ritocode/issues/31)), then
-   structured logging ([#33](https://github.com/shoraLBRT/ritocode/issues/33)).
+   issues go on: the release images (#31) exist; next is structured logging
+   ([#33](https://github.com/shoraLBRT/ritocode/issues/33)). #135 and #136 need the VPS of #134.
 2. S4 · Accounts, once unblocked: sessions ([#6](https://github.com/shoraLBRT/ritocode/issues/6)) — cookie
    sign-in state, sign-out, CSRF; `GET /me` exists and stays. Then sign-in with GitHub and Google
    ([#7](https://github.com/shoraLBRT/ritocode/issues/7)), which needs OAuth apps registered by the
@@ -103,6 +104,9 @@ future session would otherwise have to rediscover.
 - **One signal per extra pick** (#129): a second one for the same card of the same attempt is refused,
   so the author's list counts learners, not clicks. A practice attempt can signal like a first one:
   it is the same key.
+- **Registry reachability** (ADR 0011): images are on GHCR because a pull needs no account and
+  GitHub is reachable from Russian hosting. #135 is where a pull from the VPS is first tried; if it
+  is slow or fails, add a mirror in a Russian registry (needs the maintainer's account).
 - **Serving the static build** (#132, for #135): try the path, then the path with `.html`, then
   `spa.html` — Caddy `try_files {path} {path}.html /spa.html`. `index.html` is the rendered landing,
   so it must not be the fallback for other routes. `SITE_ORIGIN` is the production address; CI uses

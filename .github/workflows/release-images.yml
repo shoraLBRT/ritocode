@@ -1,0 +1,77 @@
+name: Release images
+
+# On every merge to main: the API image and the frontend image, tagged with the commit and published
+# to GitHub Container Registry (ADR 0011). On a pull request both are built and not pushed, so a
+# broken Dockerfile fails before it reaches main. The build, test and verification jobs of the other
+# two workflows are untouched.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: release-images-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  image:
+    name: Image (${{ matrix.image }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [api, web]
+
+    env:
+      PUSH: ${{ github.event_name != 'pull_request' }}
+      # The site's address, for the sitemap and canonical links of the prerendered pages. A
+      # repository variable once the domain exists (#134); a placeholder until then.
+      SITE_ORIGIN: ${{ vars.SITE_ORIGIN || 'https://ritocode.example' }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # Registry paths are lower-case; the owner's name is not.
+      - name: Name the image
+        id: name
+        run: echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/ritocode-${{ matrix.image }}" >> "$GITHUB_OUTPUT"
+
+      - name: Say when the site's address is a placeholder
+        if: matrix.image == 'web' && vars.SITE_ORIGIN == ''
+        run: echo "::warning::SITE_ORIGIN is not set; the sitemap and canonical links name $SITE_ORIGIN."
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        if: env.PUSH == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Tagged with the full commit, which a release names, and with `main`, the newest.
+      - name: Build${{ github.event_name != 'pull_request' && ' and push' || '' }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/${{ matrix.image }}.Dockerfile
+          push: ${{ env.PUSH == 'true' }}
+          tags: |
+            ${{ steps.name.outputs.image }}:${{ github.sha }}
+            ${{ steps.name.outputs.image }}:main
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          build-args: |
+            SITE_ORIGIN=${{ env.SITE_ORIGIN }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,scope=${{ matrix.image }},mode=max

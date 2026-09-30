@@ -13,6 +13,7 @@ and the old one is marked `Superseded by NNNN` rather than edited.
 | [0007](0007-cross-module-contract-form.md) | Cross-module contract form | Accepted |
 | [0008](0008-authentication-seam.md) | Authentication seam | Proposed |
 | [0010](0010-diagnosis-of-ai-written-code.md) | Ritocode teaches diagnosis of AI-written code | Accepted |
+| [0011](0011-release-images.md) | Release images on GitHub Container Registry | Proposed |
 
 ## Removed
 
