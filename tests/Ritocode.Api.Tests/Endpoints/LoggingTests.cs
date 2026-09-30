@@ -96,13 +96,28 @@ public sealed class ProductionLoggingSettingsTests
     [Fact]
     public void TheApiLogsJson_WithScopes_AndItsRequestSummaries()
     {
+        // From the source tree, not the test output: the migrator's appsettings.json also reaches the
+        // output through Ritocode.TestSupport, and which of the two lands there depends on build order.
         using var settings = JsonDocument.Parse(
-            File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "appsettings.json")),
+            File.ReadAllText(Path.Combine(RepositoryRoot(), "src", "Ritocode.Api", "appsettings.json")),
             new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip });
         var logging = settings.RootElement.GetProperty("Logging");
 
         Assert.Equal("json", logging.GetProperty("Console").GetProperty("FormatterName").GetString());
         Assert.True(logging.GetProperty("Console").GetProperty("FormatterOptions").GetProperty("IncludeScopes").GetBoolean());
         Assert.Equal("Information", logging.GetProperty("LogLevel").GetProperty("Microsoft.AspNetCore.HttpLogging").GetString());
+    }
+
+    private static string RepositoryRoot()
+    {
+        for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "Ritocode.slnx")))
+            {
+                return directory.FullName;
+            }
+        }
+
+        throw new InvalidOperationException($"No Ritocode.slnx above {AppContext.BaseDirectory}.");
     }
 }

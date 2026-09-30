@@ -109,6 +109,10 @@ future session would otherwise have to rediscover.
 - **One signal per extra pick** (#129): a second one for the same card of the same attempt is refused,
   so the author's list counts learners, not clicks. A practice attempt can signal like a first one:
   it is the same key.
+- **Two `appsettings.json` race into `Ritocode.Api.Tests`' output** (found in #33): the API's, and
+  the migrator's through `Ritocode.TestSupport`. Which one the test host reads depends on build
+  order — the API's locally, the migrator's in CI — so a test must not rely on a production setting
+  from that file; set what it needs in the fixture, or read `src/Ritocode.Api/appsettings.json`.
 - **Registry reachability** (ADR 0011): images are on GHCR because a pull needs no account and
   GitHub is reachable from Russian hosting. #135 is where a pull from the VPS is first tried; if it
   is slow or fails, add a mirror in a Russian registry (needs the maintainer's account).
