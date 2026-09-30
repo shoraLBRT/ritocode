@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.Extensions.Options;
 using Ritocode.Api.Configuration;
 using Ritocode.Api.Endpoints;
@@ -22,6 +23,18 @@ public static class ApiSetupExtensions
     public static WebApplicationBuilder AddRitocodeApi(this WebApplicationBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
+
+        // One line per request, which its request id finds: the method, the path, the status and
+        // the time taken. No headers, query or bodies — they carry credentials and personal data.
+        // The level is the category's, `Microsoft.AspNetCore.HttpLogging` in appsettings.json.
+        builder.Services.AddHttpLogging(options =>
+        {
+            options.LoggingFields = HttpLoggingFields.RequestMethod
+                | HttpLoggingFields.RequestPath
+                | HttpLoggingFields.ResponseStatusCode
+                | HttpLoggingFields.Duration;
+            options.CombineLogs = true;
+        });
 
         builder.Services
             .AddOptions<ApiOptions>()
@@ -104,6 +117,13 @@ public static class ApiSetupExtensions
         // is readable here: after CORS, because a rejected preflight must not depend on a
         // credential, and before any endpoint runs.
         app.UseAuthentication();
+
+        // Every line from here on names the caller's user id; the one-line summary of the request
+        // below carries it and the request id, and comes before authorisation so a refused request
+        // is logged too.
+        app.UseMiddleware<UserLogScopeMiddleware>();
+        app.UseHttpLogging();
+
         app.UseAuthorization();
 
         app.MapHealthEndpoints();
