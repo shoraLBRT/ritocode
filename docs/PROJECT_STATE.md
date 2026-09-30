@@ -59,6 +59,7 @@ Content.
 | Progress ([#24](https://github.com/shoraLBRT/ritocode/issues/24), [#30](https://github.com/shoraLBRT/ritocode/issues/30)) | `GET /api/v1/me/progress`: from the caller's **first** attempts only, computed on read by a pure `ProgressCalculator` — per class (every class, in taxonomy order): findings met, found, found and treated right; per card: met, found, missed, picked when absent, treated right; and how many tasks it is built from. Classes and cards carry their names (#30): the class of each card and both names come from Content through `ICardClassLookup` (retired cards included; a card Content does not know is named by its slug, with no class). **The page** `/progress`, signed in, in the header for a signed-in learner: the six classes with their counts, then a table of the cards grouped by class, each linking to `/problems#<slug>`; the table scrolls in its own region on a phone, the card column staying put. A learner with no first attempt is pointed to `/tasks`. Checked at 1280 and 375 px, with and without attempts A test submits first and practice attempts and another user's, and shows practice and others change nothing | `src/Modules/Ritocode.Modules.Attempts/Progress`, `frontend/src/pages/ProgressPage.tsx` |
 | Signals ([#129](https://github.com/shoraLBRT/ritocode/issues/129)) | The `attempts.signals` table and `POST /api/v1/signals` (`{ attempt, card, comment? }`, 201): sent only from an **extra pick** of the caller's own **submitted** attempt — another user's attempt is a 404 like a missing one, an open attempt is `409 attempt_not_submitted` whatever the card (so it cannot probe the key), a card that is not an extra pick is `400` on `card`, a second signal for the same pick is `409 signal_already_sent` (a unique index settles a race). The comment is trimmed, blank is none, at most 500 characters. Capped per user (`Attempts:SignalRateLimit`, 10 in 10 minutes, `429 signal_rate_limited`). The attempt is read untracked and never written; `GET /attempts/{id}` lists `signalledCards`. Reached through `OwnedSignals`, the ownership rule's new allowance. **In the review**, each extra pick has *Я уверен, что это здесь*: a one-line comment, send or cancel, then "sent, the score does not change"; a pick signalled before shows as sent. Checked in a browser at 1280 and 375 px | `src/Modules/Ritocode.Modules.Attempts/Signals`, `frontend/src/pages/task/SignalControl.tsx` |
 | Landing ([#131](https://github.com/shoraLBRT/ritocode/issues/131)) | `/`: what Ritocode is and who it is for, from [CONCEPT.md](CONCEPT.md) — the lead, how a task goes in three steps, proportion, the defect in the brief, the catalogue — and the ways in: a **demo task**, `/tasks`, `/problems`. The demo is an easy task named at build time by `VITE_DEMO_TASK` (default `flower-shop-daily-revenue`), read in `main.tsx` and handed down as `SiteConfig`, as the API address is. The page asks the API for nothing, so #132 can prerender it; the shell's old proof-of-life call to `/meta/modules` is gone from it. Checked at 1280 and 375 px; the demo opens signed out | `frontend/src/pages/HomePage.tsx`, `frontend/src/site` |
+| Prerendered public pages ([#132](https://github.com/shoraLBRT/ritocode/issues/132)) | `content export <file> [path]` writes the problem catalogue exactly as `GET /problems` serves it — one mapping, `ProblemCatalogueMapping`, now behind both, and a test holds the export to the API's body. `npm run build:static` (`CONTENT_EXPORT`, `SITE_ORIGIN`) renders `/` and `/problems` with React's server renderer into `dist/index.html` and `dist/problems.html` — every card in full with its anchor — each with its title, description and canonical address, plus `spa.html` (the shell for every other route), `sitemap.xml` and `robots.txt`. Titles and descriptions come from one table (`site/pageMeta.ts`) that the application also applies on every route change. The application renders over the static markup once loaded. CI job *Prerender public pages* runs the export and the build and checks every card is on the page. Checked in a browser: the raw HTML holds every card and anchor, and the application takes over and scrolls to `#money-in-float` | `src/Ritocode.ContentTool`, `frontend/src/prerender`, `frontend/scripts/prerender.mjs` |
 | Frontend shell ([#26](https://github.com/shoraLBRT/ritocode/issues/26)) | React, Vite and TypeScript; the API client that owns the error envelope; layout, routes, loading, error and empty states. A **translation catalogue** of its own (`src/i18n`: typed dotted keys, `{name}` placeholders, Russian plurals through `Intl.PluralRules`, `<html lang="ru">`), every string moved into it, and an ESLint rule that fails on text written in JSX. The **signed-in state** from `/me` (`src/session`: loading, signed in, signed out on a 401, error) in the header, and `RequireSignIn`, a layout route for pages that need a learner. A **phone-width layout**, checked at 375 px: no horizontal scroll, the header wraps | `frontend/` |
 | Catalogue pages ([#27](https://github.com/shoraLBRT/ritocode/issues/27)) | `/tasks`: title, difficulty, the time from the difficulty (SPEC §3.4), and for a signed-in learner a solved mark; filters by difficulty and — signed in — by solved; no class tags; the API's order. Read in one request (`pageSize=100`) and filtered in the page. `/problems`: one page, cards grouped by class in the taxonomy's order and shown in full, their sections rendered by `Markdown` — the project's own renderer for the subset cards use, React elements only, no `innerHTML`; search over name, summary and keywords, ignoring case and ё; an anchor per card, and `/problems#<slug>` scrolls to it once the cards arrive. Both checked at 1280 and 375 px | `frontend/src/pages`, `frontend/src/components/Markdown.tsx` |
 | Task screen ([#126](https://github.com/shoraLBRT/ritocode/issues/126)) | `/tasks/{slug}`: context and brief (rendered as Markdown), the material — overview, file tree with line counts, the selected file with line numbers and Python highlighting from the project's own tokenizer (`components/python.ts`) — and the answer, side by side on a desktop and three tabs below 64 rem. Step 1: the offered cards by name and summary, grouped by class (`GET /tasks/{slug}` now carries the class names, so the screen never asks for `/problems`), with search; step 2: the whole tree per picked card, branches as disclosure widgets, leaves as checkboxes; back to step 1 keeps the picks; *Check* needs a leaf on every picked card and a signed-in learner. A signed-in learner works in the newest open attempt at the task, or a new one; reaching step 2 is recorded on it. Checking lands on the review. Solved end to end at 1280 and 375 px | `frontend/src/pages/task` |
@@ -77,9 +78,10 @@ From [ROADMAP.md](ROADMAP.md), in order:
 1. S4 is blocked on the maintainer — see the list below — and what is left of S5 waits on it: the
    admin area ([#130](https://github.com/shoraLBRT/ritocode/issues/130)) and the security baseline
    ([#35](https://github.com/shoraLBRT/ritocode/issues/35)) both need #7. So S6 goes on meanwhile:
-   prerendering `/` and `/problems` ([#132](https://github.com/shoraLBRT/ritocode/issues/132)) —
-   the landing page (#131) exists — then Umami ([#133](https://github.com/shoraLBRT/ritocode/issues/133)),
-   which depends on #127 as well.
+   the landing page (#131) and the prerender (#132) exist, and Umami
+   ([#133](https://github.com/shoraLBRT/ritocode/issues/133)) depends on #127. So S7's unblocked
+   issues go on: release images ([#31](https://github.com/shoraLBRT/ritocode/issues/31)), then
+   structured logging ([#33](https://github.com/shoraLBRT/ritocode/issues/33)).
 2. S4 · Accounts, once unblocked: sessions ([#6](https://github.com/shoraLBRT/ritocode/issues/6)) — cookie
    sign-in state, sign-out, CSRF; `GET /me` exists and stays. Then sign-in with GitHub and Google
    ([#7](https://github.com/shoraLBRT/ritocode/issues/7)), which needs OAuth apps registered by the
@@ -101,6 +103,14 @@ future session would otherwise have to rediscover.
 - **One signal per extra pick** (#129): a second one for the same card of the same attempt is refused,
   so the author's list counts learners, not clicks. A practice attempt can signal like a first one:
   it is the same key.
+- **Serving the static build** (#132, for #135): try the path, then the path with `.html`, then
+  `spa.html` — Caddy `try_files {path} {path}.html /spa.html`. `index.html` is the rendered landing,
+  so it must not be the fallback for other routes. `SITE_ORIGIN` is the production address; CI uses
+  a placeholder until the domain exists (#134).
+- **The application renders over the prerendered markup** rather than hydrating it: `/problems`
+  fetches its catalogue, so the first client render would not match. A visitor with JavaScript
+  sees the catalogue give way to the loading state for as long as `GET /problems` takes. Embedding
+  the export in the page as initial data would remove that, if it is ever noticed.
 - Tasks are ordered by difficulty, then title. SPEC §4.3 says "then publication", which needs a
   first-published timestamp the schema does not keep yet; add it if the order starts to matter.
 - **The review's notes and lesson are kept with the attempt on submit** (#29), as the key is, so a
@@ -157,6 +167,16 @@ Frontend, from `frontend/`:
 npm ci && npm run lint && npm run build && npx vitest run
 ```
 
+The prerendered pages, from the repository root (CI job *Prerender public pages*):
+
+```bash
+dotnet run --project src/Ritocode.ContentTool -- export content-export.json content
+```
+
+```bash
+cd frontend && CONTENT_EXPORT=../content-export.json SITE_ORIGIN=https://ritocode.example npm run build:static
+```
+
 The drift check runs against the compose stack. `db-verify-no-drift.sh` and `dotnet ef` read
 `Database__ConnectionString` from the environment; `dev-up` prints it.
 
@@ -184,10 +204,10 @@ compose stack is PostgreSQL only.
 | --- | --- |
 | `Ritocode.Architecture.Tests` | 13 |
 | `Ritocode.Shared.Tests` | 51 |
-| `Ritocode.Api.Tests` | 66 |
+| `Ritocode.Api.Tests` | 67 |
 | `Ritocode.Modules.Content.Tests` | 71 |
 | `Ritocode.Modules.Attempts.Tests` | 19 |
-| Frontend (vitest) | 122 |
+| Frontend (vitest) | 130 |
 
 The count is a ratchet: if it drops, the PR says which tests went and why.
 

@@ -1,6 +1,7 @@
 import { Link, NavLink, Outlet } from 'react-router';
 import { useT } from '../i18n';
 import { useSession } from '../session';
+import { useDocumentMeta } from '../site';
 
 /**
  * The frame every route renders inside: a header with the primary navigation and who is signed
@@ -12,6 +13,7 @@ import { useSession } from '../session';
  */
 export function AppLayout() {
   const t = useT();
+  useDocumentMeta();
   // Progress is a signed-in page, so it is offered only to a signed-in learner.
   const signedIn = useSession().status === 'signedIn';
 

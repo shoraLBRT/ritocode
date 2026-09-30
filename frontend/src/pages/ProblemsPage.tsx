@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import { useLocation } from 'react-router';
 import { getProblemCatalogue, useApiClient } from '../api';
 import type { ProblemCard, ProblemCatalogue } from '../api';
@@ -30,16 +31,42 @@ export function ProblemsPage() {
   }, [loaded, hash]);
 
   return (
+    <ProblemsFrame>
+      {state.status === 'loading' && <LoadingState label={t('problems.loading')} />}
+      {state.status === 'error' && <ErrorState error={state.error} onRetry={reload} />}
+      {state.status === 'success' && <CatalogueOrEmpty catalogue={state.data} />}
+    </ProblemsFrame>
+  );
+}
+
+/**
+ * The same page for a catalogue already in hand: what the build prerenders from the content export
+ * (docs/SPEC.md §4.1), so a search engine reads every card without running JavaScript.
+ */
+export function StaticProblemsPage({ catalogue }: { catalogue: ProblemCatalogue }) {
+  return (
+    <ProblemsFrame>
+      <CatalogueOrEmpty catalogue={catalogue} />
+    </ProblemsFrame>
+  );
+}
+
+function ProblemsFrame({ children }: { children: ReactNode }) {
+  const t = useT();
+
+  return (
     <section className="page">
       <h1>{t('problems.title')}</h1>
       <p className="page__lead">{t('problems.lead')}</p>
-
-      {state.status === 'loading' && <LoadingState label={t('problems.loading')} />}
-      {state.status === 'error' && <ErrorState error={state.error} onRetry={reload} />}
-      {state.status === 'success' && state.data.cards.length === 0 && <EmptyState>{t('problems.empty')}</EmptyState>}
-      {state.status === 'success' && state.data.cards.length > 0 && <Catalogue catalogue={state.data} />}
+      {children}
     </section>
   );
+}
+
+function CatalogueOrEmpty({ catalogue }: { catalogue: ProblemCatalogue }) {
+  const t = useT();
+
+  return catalogue.cards.length === 0 ? <EmptyState>{t('problems.empty')}</EmptyState> : <Catalogue catalogue={catalogue} />;
 }
 
 function Catalogue({ catalogue }: { catalogue: ProblemCatalogue }) {
