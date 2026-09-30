@@ -54,13 +54,13 @@ describe('the application shell', () => {
   });
 
   it('shows the loading state before the first response arrives', () => {
-    renderApp(vi.fn<typeof globalThis.fetch>().mockReturnValue(new Promise<Response>(() => undefined)));
+    renderApp(vi.fn<typeof globalThis.fetch>().mockReturnValue(new Promise<Response>(() => undefined)), '/tasks');
 
-    expect(screen.getByRole('status')).toHaveTextContent(ru.home.checking);
+    expect(screen.getByRole('status')).toHaveTextContent(ru.tasks.loading);
   });
 
   it('shows the failure panel when the API cannot be reached', async () => {
-    renderApp(vi.fn<typeof globalThis.fetch>().mockRejectedValue(new TypeError('Failed to fetch')));
+    renderApp(vi.fn<typeof globalThis.fetch>().mockRejectedValue(new TypeError('Failed to fetch')), '/tasks');
 
     await waitFor(() => {
       expect(screen.getByRole('alert')).toHaveTextContent(ru.state.unreachable);
