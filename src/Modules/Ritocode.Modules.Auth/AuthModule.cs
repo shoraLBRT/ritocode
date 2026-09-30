@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Ritocode.Modules.Auth.Identity;
 using Ritocode.Modules.Auth.Persistence;
 using Ritocode.Modules.Auth.Session;
+using Ritocode.Modules.Auth.SignIn;
 using Ritocode.Shared.Modules;
 using Ritocode.Shared.Persistence;
 
@@ -16,8 +17,8 @@ namespace Ritocode.Modules.Auth;
 /// </summary>
 /// <remarks>
 /// Owns the <c>auth</c> schema and the platform's authentication: the session cookie of ADR 0012,
-/// the seeded development identity of ADR 0008, <c>/me</c> and <c>/auth/logout</c>. Signing in with
-/// a provider, which starts a session, is <see href="https://github.com/shoraLBRT/ritocode/issues/7">#7</see>.
+/// the seeded development identity of ADR 0008, <c>/me</c>, <c>/auth/logout</c>, and signing in with
+/// GitHub or Google (#7), which links the provider's identity to a user and starts a session.
 /// </remarks>
 public sealed class AuthModule : IModule
 {
@@ -39,6 +40,11 @@ public sealed class AuthModule : IModule
 
         services.AddScoped<ISessionIssuer, SessionIssuer>();
 
+        services.AddOptions<SignInOptions>()
+            .Bind(configuration.GetSection(SignInOptions.SectionName));
+
+        services.AddScoped<AccountLinker>();
+
         // TryAdd, as the other modules do: the clock is host infrastructure.
         services.TryAddSingleton(TimeProvider.System);
 
@@ -46,7 +52,8 @@ public sealed class AuthModule : IModule
         // UseAuthentication sits in the pipeline. The default sends a request that carries the
         // session cookie to the session scheme and any other to the development identity, so a real
         // session wins even where the development identity is on.
-        services.AddAuthentication(RitocodeAuthenticationSchemes.Default)
+        var authentication = services.AddAuthentication(RitocodeAuthenticationSchemes.Default);
+        authentication
             .AddPolicyScheme(RitocodeAuthenticationSchemes.Default, displayName: null, options =>
                 options.ForwardDefaultSelector = context =>
                     context.Request.Cookies.ContainsKey(SessionCookies.SessionName)
@@ -60,6 +67,9 @@ public sealed class AuthModule : IModule
                 RitocodeAuthenticationSchemes.DevelopmentIdentity,
                 displayName: null,
                 configureOptions: null);
+
+        // GitHub and Google, each only when its client is configured.
+        OAuthProviders.Add(authentication, configuration);
     }
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints)
@@ -73,6 +83,7 @@ public sealed class AuthModule : IModule
     {
         ArgumentNullException.ThrowIfNull(root);
 
+        root.MapLoginEndpoints();
         root.MapLogoutEndpoints();
     }
 }

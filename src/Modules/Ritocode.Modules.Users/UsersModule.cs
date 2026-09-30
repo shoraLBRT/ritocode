@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Ritocode.Modules.Users.Contracts;
 using Ritocode.Modules.Users.Identity;
 using Ritocode.Modules.Users.Persistence;
@@ -16,7 +17,7 @@ namespace Ritocode.Modules.Users;
 /// <remarks>
 /// Owns the <c>users</c> schema, and with it the row behind the seeded development identity the
 /// Auth module's scheme asserts. Answers <c>IUserLookup</c> for the modules that store a user
-/// reference. No endpoints yet — those arrive with issue #25.
+/// reference, and <c>IUserAccounts</c> for the Auth module signing someone in. No endpoints yet — those arrive with issue #25.
 /// </remarks>
 public sealed class UsersModule : IModule
 {
@@ -34,6 +35,8 @@ public sealed class UsersModule : IModule
         // The contract other modules validate a user reference through (ADR 0007). Scoped, like
         // the context it reads.
         services.AddScoped<IUserLookup, UserLookup>();
+        services.AddScoped<IUserAccounts, UserAccounts>();
+        services.TryAddSingleton(TimeProvider.System);
 
         services.AddHostedService<DevelopmentIdentitySeeder>();
     }

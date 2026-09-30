@@ -25,8 +25,7 @@ Fields:
 
 - id
 - user_id — the Ritocode user
-- provider — `GitHub` today; Google arrives with sign-in
-  ([#7](https://github.com/shoraLBRT/ritocode/issues/7))
+- provider — `GitHub` or `Google` ([#7](https://github.com/shoraLBRT/ritocode/issues/7))
 - provider_user_id — the provider's immutable identifier, unique per provider
 - provider_login — last known login at the provider, for display only, may be stale
 - linked_at

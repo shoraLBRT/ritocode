@@ -40,10 +40,12 @@ internal sealed class TestApiHost : IAsyncDisposable
     public IServiceProvider Services => _app.Services;
 
     /// <param name="settings">Configuration a fixture varies on top of the defaults below, such as a smaller cap.</param>
+    /// <param name="configureServices">Services a fixture replaces after the host's own, such as a fake provider's backchannel.</param>
     public static async Task<TestApiHost> StartAsync(
         string connectionString,
         bool developmentIdentityEnabled,
-        IReadOnlyDictionary<string, string?>? settings = null)
+        IReadOnlyDictionary<string, string?>? settings = null,
+        Action<IServiceCollection>? configureServices = null)
     {
         var builder = WebApplication.CreateBuilder();
         builder.Environment.EnvironmentName = Environments.Development;
@@ -74,6 +76,7 @@ internal sealed class TestApiHost : IAsyncDisposable
         }
 
         builder.AddRitocodeApi();
+        configureServices?.Invoke(builder.Services);
         builder.Services.AddScoped<IValidator<EchoRequest>, EchoRequestValidator>();
 
         // Beside the host's own providers, so a test reads the lines an operator would.
