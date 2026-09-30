@@ -55,7 +55,7 @@ storage with MinIO, and the frontend's old problem pages. All of it remains read
 From [ROADMAP.md](ROADMAP.md), in order:
 
 1. S2: the `author-task` skill with the blind smoke test
-   ([#123](https://github.com/shoraLBRT/ritocode/issues/123)). After them the content track — 55–60
+   ([#123](https://github.com/shoraLBRT/ritocode/issues/123)). After it the content track — 55–60
    cards ([#124](https://github.com/shoraLBRT/ritocode/issues/124)) and the 20 tasks
    ([#42](https://github.com/shoraLBRT/ritocode/issues/42)) — is the maintainer's.
 2. S3 can run beside the content track: scoring ([#20](https://github.com/shoraLBRT/ritocode/issues/20)),
