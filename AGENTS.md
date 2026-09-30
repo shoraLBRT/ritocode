@@ -33,6 +33,11 @@ Issues are the source of truth for what is done. `docs/ROADMAP.md` holds what an
 the order, the dependencies, and what "done" means for each stage. Take the first open issue of the
 lowest open stage whose dependencies are met.
 
+A coding session does not take `type:content` issues (the catalogue, the tasks) or the maintainer's
+own launch prerequisites ([#134](https://github.com/shoraLBRT/ritocode/issues/134)) unless the
+maintainer asks. Stop and ask before building when an issue needs an architectural or business
+decision that [`SPEC.md`](docs/SPEC.md) §13 and the open questions in `PROJECT_STATE.md` do not make.
+
 ## Non-negotiables
 
 1. Follow the architecture in `ARCHITECTURE.md` and the ADRs. A module never references another
@@ -55,7 +60,10 @@ Prefer explicit domain models, small functions, deterministic logic and clear AP
 Avoid hidden side effects, dynamic runtime magic, and frameworks introduced without a stated reason.
 
 - Work on a branch, one issue per branch. Never commit to `main`.
-- Ship tests with the code. `dotnet build` and `dotnet test` must be clean — warnings are errors.
+- Ship tests with the code. `dotnet build` and `dotnet test` must be clean — warnings are errors,
+  vulnerability warnings included; a newly disclosed CVE is fixed by pinning the package forward.
+- A decision that outlives the session goes in an ADR under `docs/adr/`, not in a commit message.
+- Update `DOMAIN_MODEL.md` and `DATABASE_SCHEMA.md` when entities or tables change.
 - Open a PR that references the issue, and comment on the issue with what landed and what did not.
 - Leave an issue open if the work is partial, and say so explicitly rather than implying completion.
 - Update `docs/PROJECT_STATE.md` in the same PR. A session that skips this makes the next one start
