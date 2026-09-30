@@ -38,6 +38,50 @@ export interface Me {
   readonly username: string;
 }
 
+export type Difficulty = 'easy' | 'medium' | 'hard';
+
+/** One row of `GET /api/v1/tasks`. `solved` is set for a signed-in caller and `null` otherwise. */
+export interface TaskSummary {
+  readonly slug: string;
+  readonly title: string;
+  readonly difficulty: Difficulty;
+  readonly solved: boolean | null;
+}
+
+/** `GET /api/v1/problems`: the six classes, and every live card in full. */
+export interface ProblemCatalogue {
+  readonly classes: readonly ProblemClass[];
+  readonly cards: readonly ProblemCard[];
+}
+
+export interface ProblemClass {
+  readonly id: string;
+  readonly name: string;
+  readonly description: string | null;
+}
+
+export interface ProblemCard {
+  readonly slug: string;
+  readonly class: string;
+  readonly name: string;
+  readonly summary: string;
+  /** Never shown; what search matches besides the name and summary. */
+  readonly keywords: readonly string[];
+  readonly sections: CardSections;
+}
+
+/** A card's long fields, each Markdown, in the order the page shows them. Optional ones may be null. */
+export interface CardSections {
+  readonly signs: string | null;
+  readonly whyAiDoesIt: string | null;
+  readonly cost: string | null;
+  readonly acceptableWhen: string | null;
+  readonly detection: string | null;
+  readonly treatment: string | null;
+  readonly sources: string | null;
+  readonly counterArguments: string | null;
+}
+
 /** Paging inputs, 1-based. Out-of-range values are rejected by the API, never clamped. */
 export interface PageQuery {
   readonly page?: number;

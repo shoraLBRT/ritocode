@@ -2,6 +2,8 @@ import type { RouteObject } from 'react-router';
 import { AppLayout } from './components/AppLayout';
 import { HomePage } from './pages/HomePage';
 import { NotFoundPage } from './pages/NotFoundPage';
+import { ProblemsPage } from './pages/ProblemsPage';
+import { TasksPage } from './pages/TasksPage';
 
 /**
  * The route table, as data.
@@ -17,6 +19,8 @@ export const routes: RouteObject[] = [
     Component: AppLayout,
     children: [
       { index: true, Component: HomePage },
+      { path: 'tasks', Component: TasksPage },
+      { path: 'problems', Component: ProblemsPage },
       { path: '*', Component: NotFoundPage },
     ],
   },

@@ -27,6 +27,12 @@ export function AppLayout() {
           <NavLink to="/" end className={navClass}>
             {t('nav.home')}
           </NavLink>
+          <NavLink to="/tasks" className={navClass}>
+            {t('nav.tasks')}
+          </NavLink>
+          <NavLink to="/problems" className={navClass}>
+            {t('nav.problems')}
+          </NavLink>
         </nav>
         <SessionStatus />
       </header>

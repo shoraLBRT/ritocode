@@ -48,8 +48,8 @@ src/
   i18n/        the translation catalogue (ru.ts), translate() and useT()
   session/     who is signed in, from GET /me, and RequireSignIn for pages that need it
   hooks/       useApiResource — one request, four states, no cache
-  components/  the layout and the loading / error / empty panels
-  pages/       one component per route
+  components/  the layout, the loading / error / empty panels, and Markdown for card text
+  pages/       one component per route: home, /tasks, /problems, not found
   routes.tsx   the route table, as data
   test/        render helpers and response builders shaped like the real API
 ```
@@ -83,7 +83,9 @@ the first. The bodies in `src/test/responses.ts` are copied from the verificatio
   until [#6](https://github.com/shoraLBRT/ritocode/issues/6) and [#7](https://github.com/shoraLBRT/ritocode/issues/7)
   bring sessions and sign-in; `RequireSignIn` tells a signed-out visitor the page is closed, and
   the button to sign in arrives with #7.
-- **The product screens.** The catalogue pages are [#27](https://github.com/shoraLBRT/ritocode/issues/27),
-  the task screen #126 and the review #29.
+- **The task and review screens.** The task screen is
+  [#126](https://github.com/shoraLBRT/ritocode/issues/126) and the review #29; `/tasks` already links
+  to `/tasks/<slug>`, which is the not-found page until then.
+- **Prerendering.** `/` and `/problems` are prerendered for search engines in #132.
 - **A data-fetching library, a state manager and a design system.** Nothing in the slice needs a
   cache, and a design system invented here would be replaced by stage 6.
