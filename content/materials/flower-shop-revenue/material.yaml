@@ -1,0 +1,6 @@
+language: python
+notes: >-
+  A one-file script that sums a small shop's paid orders for a day and prints
+  the revenue with a 6% tax. Planted: the database password in the connection
+  string (secrets-in-repo) and money summed and taxed in float, rounded at the
+  end (money-in-float). Used by flower-shop-daily-revenue.
