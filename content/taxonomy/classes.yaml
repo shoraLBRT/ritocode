@@ -1,0 +1,8 @@
+# The six classes of problem, in the order every screen shows them (docs/SPEC.md §3.1).
+classes:
+  - disproportion
+  - project-knowledge
+  - hygiene
+  - growth
+  - false-confidence
+  - domain
