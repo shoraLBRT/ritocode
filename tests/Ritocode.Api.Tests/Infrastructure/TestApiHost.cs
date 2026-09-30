@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Ritocode.Api.Setup;
 using Ritocode.Modules.Content.Ingest;
 using Ritocode.Shared.Errors;
@@ -74,6 +75,11 @@ internal sealed class TestApiHost : IAsyncDisposable
 
         builder.AddRitocodeApi();
         builder.Services.AddScoped<IValidator<EchoRequest>, EchoRequestValidator>();
+
+        // Beside the host's own providers, so a test reads the lines an operator would.
+        var logs = new CapturedLogs();
+        builder.Logging.AddProvider(logs);
+        builder.Services.AddSingleton(logs);
 
         var app = builder.Build();
         app.UseRitocodeApi();

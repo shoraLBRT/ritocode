@@ -66,6 +66,7 @@ Content.
 | Review ([#29](https://github.com/shoraLBRT/ritocode/issues/29)) | `/tasks/{slug}/attempts/{id}`, owner only: the score in points with its composition (found of present, extra picks, matched treatments); every finding of the key, found or missed, with the learner's leaves beside the author's, the author's note and the full card on expanding; every extra pick with its card; the lesson; the other tasks over the same material; *Try again*. A clean task says its outcome in words. Found, missed and extra each carry a mark and a word. The notes and the lesson are kept with the attempt on submit (`attempts.review`), so the review matches the key it was scored against | `frontend/src/pages/task/ReviewPage.tsx` |
 | CI | Backend build, test, formatting, migrations and drift; content validation; frontend lint, build and test; the prerendered pages | `.github/workflows/` |
 | Release images ([#31](https://github.com/shoraLBRT/ritocode/issues/31)) | On every push to `main`, `ghcr.io/shoralbrt/ritocode-api` (the API, with the migrator at `migrator/Ritocode.DbMigrator.dll`) and `ghcr.io/shoralbrt/ritocode-web` (the static build of #132, served by Caddy on port 80 with its `try_files` rule), tagged with the full commit and `main`, public — [ADR 0011](adr/0011-release-images.md), **Proposed**. Built without pushing on every pull request. The web image takes the site's address from the repository variable `SITE_ORIGIN`, a placeholder until #134 | `deploy/`, `.github/workflows/release-images.yml` |
+| Logs ([#33](https://github.com/shoraLBRT/ritocode/issues/33)) | The API logs one JSON object per line (the console's `json` formatter, UTC, scopes included) outside Development. Every line of a request carries its request id — the `X-Request-Id` — and, signed in, the user id (`UserLogScopeMiddleware`, after authentication), nothing else about the person. One summary line per request from ASP.NET's HTTP logging: method, path, status, duration — no headers, query or body — before authorisation, so a refused request is logged too. SQL is quiet in production (`Warning`), verbose in development. Levels from `Logging:LogLevel`. How to find a request's lines, and the rotation #135 must configure: [deploy/README.md](../deploy/README.md). Tests capture the host's log lines (`CapturedLogs`) and find a request's by its id | `src/Ritocode.Shared`, `src/Ritocode.Api/appsettings.json`, `deploy/README.md` |
 
 Removed in #119: the Workspaces, Evaluations, Submissions and Progress modules, the sandbox runner,
 `spikes/`. Removed in #121: the Problems module, the old package format and its C# packages, object
@@ -80,9 +81,13 @@ From [ROADMAP.md](ROADMAP.md), in order:
    admin area ([#130](https://github.com/shoraLBRT/ritocode/issues/130)) and the security baseline
    ([#35](https://github.com/shoraLBRT/ritocode/issues/35)) both need #7. So S6 goes on meanwhile:
    the landing page (#131) and the prerender (#132) exist, and Umami
-   ([#133](https://github.com/shoraLBRT/ritocode/issues/133)) depends on #127. So S7's unblocked
-   issues go on: the release images (#31) exist; next is structured logging
-   ([#33](https://github.com/shoraLBRT/ritocode/issues/33)). #135 and #136 need the VPS of #134.
+   ([#133](https://github.com/shoraLBRT/ritocode/issues/133)) depends on #127. S7's unblocked
+   issues are done — release images (#31) and logs (#33) — and the rest of S7 needs the VPS of #134:
+   deployment ([#135](https://github.com/shoraLBRT/ritocode/issues/135)), then the release command
+   ([#136](https://github.com/shoraLBRT/ritocode/issues/136)), monitoring (#34) and the runbook (#41).
+   **No engineering issue is unblocked** until the maintainer decides ADR 0008's token question
+   (#6), registers the OAuth apps (#7) or provides the VPS (#134); the end-to-end test
+   ([#39](https://github.com/shoraLBRT/ritocode/issues/39)) waits on S5.
 2. S4 · Accounts, once unblocked: sessions ([#6](https://github.com/shoraLBRT/ritocode/issues/6)) — cookie
    sign-in state, sign-out, CSRF; `GET /me` exists and stays. Then sign-in with GitHub and Google
    ([#7](https://github.com/shoraLBRT/ritocode/issues/7)), which needs OAuth apps registered by the
@@ -208,7 +213,7 @@ compose stack is PostgreSQL only.
 | --- | --- |
 | `Ritocode.Architecture.Tests` | 13 |
 | `Ritocode.Shared.Tests` | 51 |
-| `Ritocode.Api.Tests` | 67 |
+| `Ritocode.Api.Tests` | 72 |
 | `Ritocode.Modules.Content.Tests` | 71 |
 | `Ritocode.Modules.Attempts.Tests` | 19 |
 | Frontend (vitest) | 130 |

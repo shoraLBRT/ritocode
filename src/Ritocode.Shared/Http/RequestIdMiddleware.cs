@@ -11,6 +11,10 @@ namespace Ritocode.Shared.Http;
 /// </summary>
 public sealed class RequestIdMiddleware(RequestDelegate next, ILogger<RequestIdMiddleware> logger)
 {
+    /// <summary>A template rather than a dictionary, so the scope also reads as text: <c>RequestId:&lt;id&gt;</c>.</summary>
+    private static readonly Func<ILogger, string, IDisposable?> Scope =
+        LoggerMessage.DefineScope<string>("RequestId:{" + RequestId.LogPropertyName + "}");
+
     public async Task InvokeAsync(HttpContext context)
     {
         var requestId = ResolveRequestId(context);
@@ -19,7 +23,7 @@ public sealed class RequestIdMiddleware(RequestDelegate next, ILogger<RequestIdM
         context.TraceIdentifier = requestId;
         context.Response.Headers[RequestId.HeaderName] = requestId;
 
-        using (logger.BeginScope(new Dictionary<string, object> { [RequestId.LogPropertyName] = requestId }))
+        using (Scope(logger, requestId))
         {
             await next(context);
         }

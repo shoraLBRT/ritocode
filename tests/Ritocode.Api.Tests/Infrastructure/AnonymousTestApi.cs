@@ -17,6 +17,9 @@ public sealed class AnonymousTestApi(PostgresTestServer postgres) : IAsyncLifeti
 
     public HttpClient Client => _host!.Client;
 
+    /// <summary>The host's composed container. Resolve scoped services from a scope of your own.</summary>
+    public IServiceProvider Services => _host!.Services;
+
     public string ConnectionString { get; private set; } = string.Empty;
 
     public async ValueTask InitializeAsync()
