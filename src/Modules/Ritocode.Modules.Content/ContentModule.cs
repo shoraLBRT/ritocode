@@ -42,6 +42,7 @@ public sealed class ContentModule : IModule
 
         // The answer key and the weights leave this module through here only (ADR 0007).
         services.AddScoped<ITaskForAttemptLookup, TaskForAttemptLookup>();
+        services.AddScoped<ICardClassLookup, CardClassLookup>();
 
         // TryAdd: the clock is host infrastructure any module may want.
         services.TryAddSingleton(TimeProvider.System);
