@@ -3,6 +3,12 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <UserSecretsId>ritocode-dbmigrator</UserSecretsId>
+    <!--
+      The API's appsettings.json arrives through the reference below beside this project's own. A
+      build keeps this project's, and so does a publish once it is allowed to: deploy/api.Dockerfile
+      checks that it did.
+    -->
+    <ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
   </PropertyGroup>
 
   <ItemGroup>
