@@ -61,19 +61,3 @@ export function pageOf<T>(items: T[], pageNumber = 1, pageSize = 20, totalItems 
     hasPreviousPage: pageNumber > 1,
   };
 }
-
-export const exampleProblem = {
-  id: '0199a1d2-0000-7000-8000-000000000001',
-  slug: 'example-order-total',
-  title: 'Order total',
-  difficulty: 'medium' as const,
-  tags: ['refactoring', 'tests'],
-  problemVersionId: '0199a1d2-0000-7000-8000-000000000002',
-  version: 1,
-  publishedAt: '2026-09-08T10:00:00Z',
-};
-
-export const exampleProblemDetail = {
-  ...exampleProblem,
-  description: '# Order total\n\nImprove the calculation.',
-};

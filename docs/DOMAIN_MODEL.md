@@ -2,8 +2,8 @@
 
 The entities that exist in the code, and which module owns each. The physical schema, indexes and
 constraints are in [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md); this document is the conceptual view.
-The entities the new product is building toward — problem cards, materials, tasks, attempts,
-signals — are described in [SPEC.md](SPEC.md) §3 and §5, and join this file as they are built.
+The entities still to come — attempts and signals — are described in [SPEC.md](SPEC.md) §4–5 and join
+this file as they are built.
 
 Every entity is owned by exactly one module. An entity is only ever read or written through its
 owning module — see [ADR 0002](adr/0002-modular-monolith-layout.md).
@@ -36,19 +36,20 @@ Fields:
 The immutable id is what identifies the account; logins get renamed and must not silently detach an
 account.
 
-## Problem and ProblemVersion — previous product
+## Content
 
-Owned by the **Problems** module, and **replaced** by the Content module of
-[#121](https://github.com/shoraLBRT/ritocode/issues/121). They describe a refactoring exercise
-loaded from the old package format ([PROBLEM_PACKAGE_SPEC.md](PROBLEM_PACKAGE_SPEC.md)) into a
-bundle in object storage ([STORAGE_LAYOUT.md](STORAGE_LAYOUT.md)); all three go together.
+Owned by the **Content** module. Written only by ingest, from `content/` in the repository
+([CONTENT_FORMAT.md](CONTENT_FORMAT.md)); read by everything else. Every row carries the commit it
+was loaded from (`content_revision`). Localised text and the lists an item holds are stored as JSON
+beside the columns: content is read whole, by slug, and never queried by a field inside it.
 
-- **Problem:** id, slug (unique), title, difficulty (`Easy`, `Medium`, `Hard`), description in
-  Markdown, tags, created_at.
-- **ProblemVersion:** one immutable revision of a problem — id, problem_id, version (from 1, unique
-  per problem), snapshot_reference to the bundle, validator_config, workspace_root, editable_files,
-  the three size limits, created_at, published_at (null while a draft). The catalog resolves only
-  the highest **published** version.
-
-The columns that served workspaces — `workspace_root`, `editable_files` and the limits — have had no
-reader since [#119](https://github.com/shoraLBRT/ritocode/issues/119) removed the Workspaces module.
+- **Taxonomy** — the one set of classes and the treatment tree, with their labels per locale.
+- **Card** — a problem card: slug (permanent), class, weight (1–3), text per locale. A card that
+  leaves `content/` is **retired**, never deleted, because attempts name it.
+- **Material** — slug, language, its files, and an **overview** derived at ingest: files with line
+  counts, total lines, declared dependencies.
+- **Task** — slug, material, difficulty, **findings** (the answer key: a card and the leaves right
+  for it), text per locale, and for an easy task the **shortlist** of cards offered in step 1 —
+  its findings plus up to 20 others, chosen deterministically from its slug. A task that leaves
+  `content/` is **unpublished**, never deleted. The findings never leave the server except inside a
+  submitted attempt.

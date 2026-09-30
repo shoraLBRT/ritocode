@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../Modules/Ritocode.Modules.Problems/Ritocode.Modules.Problems.csproj" />
+    <ProjectReference Include="../Modules/Ritocode.Modules.Content/Ritocode.Modules.Content.csproj" />
   </ItemGroup>
 
 </Project>

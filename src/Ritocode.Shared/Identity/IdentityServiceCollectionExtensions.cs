@@ -10,7 +10,7 @@ public static class IdentityServiceCollectionExtensions
     /// settings the Auth and Users modules both read.
     /// </summary>
     /// <remarks>
-    /// Called once from the composition root, like <c>AddObjectStorage</c>, because this is host
+    /// Called once from the composition root, because this is host
     /// infrastructure a module consumes rather than something a module owns. Binding the options
     /// here rather than in each module is what keeps one configuration section from being bound —
     /// and validated — twice.

@@ -1,5 +1,5 @@
 using Ritocode.Modules.Auth;
-using Ritocode.Modules.Problems;
+using Ritocode.Modules.Content;
 using Ritocode.Modules.Users;
 using Ritocode.Shared.Modules;
 
@@ -15,6 +15,6 @@ public static class ModuleRegistry
     [
         new AuthModule(),
         new UsersModule(),
-        new ProblemsModule(),
+        new ContentModule(),
     ];
 }

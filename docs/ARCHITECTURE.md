@@ -19,7 +19,7 @@ only through a contract in `src/Ritocode.Shared/Contracts`
 | --- | --- | --- |
 | **Auth** | Sign-in with GitHub and Google, sessions, linked accounts | The identity seam and the development identity exist ([ADR 0008](adr/0008-authentication-seam.md)); real sign-in is [#6](https://github.com/shoraLBRT/ritocode/issues/6) and [#7](https://github.com/shoraLBRT/ritocode/issues/7) |
 | **Users** | Users; who is an admin comes from configuration | Exists; answers `IUserLookup` |
-| **Content** | Problem cards, the treatment tree, materials, tasks and answer keys; ingest from `content/` and validation; the catalogue reads | Today still the **Problems** module of the previous product. Replaced in [#120](https://github.com/shoraLBRT/ritocode/issues/120), [#121](https://github.com/shoraLBRT/ritocode/issues/121) and [#9](https://github.com/shoraLBRT/ritocode/issues/9) |
+| **Content** | Problem cards, the treatment tree, materials, tasks and answer keys; ingest from `content/` and validation; the catalogue reads | The format, validation, the `content` schema and ingest exist ([#120](https://github.com/shoraLBRT/ritocode/issues/120), [#121](https://github.com/shoraLBRT/ritocode/issues/121)); the read APIs are [#9](https://github.com/shoraLBRT/ritocode/issues/9) |
 | **Attempts** | Attempts, scoring, progress, signals | Not built: [#20](https://github.com/shoraLBRT/ritocode/issues/20), [#125](https://github.com/shoraLBRT/ritocode/issues/125) |
 
 The host, `src/Ritocode.Api`, is the composition root: the only project that references every
@@ -31,13 +31,12 @@ migrations; the host never migrates itself. `src/Ritocode.ContentTool` is the co
 
 `src/Ritocode.Shared` holds what every module uses and none owns: the unified error body and
 `Result<T>`, paging, request correlation, the persistence base, the identity seam (`ICurrentUser`),
-and the cross-module contracts. It also still holds the object storage client, which goes with the
-Problems module in #121.
+and the cross-module contracts.
 
 ## Storage
 
 PostgreSQL only, one schema per module ([DATABASE_SCHEMA.md](DATABASE_SCHEMA.md)). Content is small
-text and is stored in the database; object storage leaves the product in #121.
+text and is stored in the database; there is no object storage (it left with #121).
 
 ## Frontend
 
