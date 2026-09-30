@@ -20,7 +20,7 @@ only through a contract in `src/Ritocode.Shared/Contracts`
 | **Auth** | Sign-in with GitHub and Google, sessions, linked accounts | The identity seam and the development identity exist ([ADR 0008](adr/0008-authentication-seam.md)); real sign-in is [#6](https://github.com/shoraLBRT/ritocode/issues/6) and [#7](https://github.com/shoraLBRT/ritocode/issues/7) |
 | **Users** | Users; who is an admin comes from configuration | Exists; answers `IUserLookup` |
 | **Content** | Problem cards, the treatment tree, materials, tasks and answer keys; ingest from `content/` and validation; the catalogue reads | Exists: the format and validation (#120), the `content` schema and ingest (#121), and the public reads (#9) |
-| **Attempts** | Attempts, scoring, progress, signals | Not built: [#20](https://github.com/shoraLBRT/ritocode/issues/20), [#125](https://github.com/shoraLBRT/ritocode/issues/125) |
+| **Attempts** | Attempts, scoring, progress, signals | Scoring exists ([#20](https://github.com/shoraLBRT/ritocode/issues/20)): a pure function and its parameters in configuration. No schema or endpoints yet — attempts are [#125](https://github.com/shoraLBRT/ritocode/issues/125) |
 
 The host, `src/Ritocode.Api`, is the composition root: the only project that references every
 module, listed once in `Setup/ModuleRegistry.cs`. `src/Ritocode.DbMigrator` applies every module's

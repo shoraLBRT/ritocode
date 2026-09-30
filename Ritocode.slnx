@@ -6,6 +6,7 @@
     <Project Path="src/Ritocode.Shared/Ritocode.Shared.csproj" />
   </Folder>
   <Folder Name="/src/Modules/">
+    <Project Path="src/Modules/Ritocode.Modules.Attempts/Ritocode.Modules.Attempts.csproj" />
     <Project Path="src/Modules/Ritocode.Modules.Auth/Ritocode.Modules.Auth.csproj" />
     <Project Path="src/Modules/Ritocode.Modules.Content/Ritocode.Modules.Content.csproj" />
     <Project Path="src/Modules/Ritocode.Modules.Users/Ritocode.Modules.Users.csproj" />
@@ -13,6 +14,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/Ritocode.Api.Tests/Ritocode.Api.Tests.csproj" />
     <Project Path="tests/Ritocode.Architecture.Tests/Ritocode.Architecture.Tests.csproj" />
+    <Project Path="tests/Ritocode.Modules.Attempts.Tests/Ritocode.Modules.Attempts.Tests.csproj" />
     <Project Path="tests/Ritocode.Modules.Content.Tests/Ritocode.Modules.Content.Tests.csproj" />
     <Project Path="tests/Ritocode.Shared.Tests/Ritocode.Shared.Tests.csproj" />
     <Project Path="tests/Ritocode.TestSupport/Ritocode.TestSupport.csproj" />

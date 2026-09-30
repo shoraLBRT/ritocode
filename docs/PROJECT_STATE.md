@@ -55,6 +55,7 @@ Content.
 | Ownership rule | An architecture test reading compiled IL: a user's rows are reached only where the owner is in the query. No module owns such rows until Attempts ([#125](https://github.com/shoraLBRT/ritocode/issues/125)); its reader is proved against a test-only context | `tests/Ritocode.Architecture.Tests/OwnershipRuleTests.cs` |
 | Content ([#120](https://github.com/shoraLBRT/ritocode/issues/120), [#121](https://github.com/shoraLBRT/ritocode/issues/121)) | The format of [CONTENT_FORMAT.md](CONTENT_FORMAT.md) parsed and validated — every rule of §7 tested — and `content validate` in CI (job *Validate content*). The `content` schema — taxonomy, cards, materials, tasks — and an ingest that validates first, writes in one transaction stamped with the commit, upserts by slug, retires cards and unpublishes tasks that left `content/`, and derives the material overview and the easy-task shortlist. A development host seeds `content/` on start. The public reads of SPEC §9.3 ([#9](https://github.com/shoraLBRT/ritocode/issues/9)): `GET /problems` (every live card in full, with the classes), `GET /treatments`, `GET /tasks` (a page, easy first) and `GET /tasks/{slug}` (context, brief, material with its overview, the cards to pick from — name, summary and keywords only, the shortlist for an easy task — and the other tasks over the same material). No answer key and no card weight leave the server; a test serialises a task and looks for them | `src/Modules/Ritocode.Modules.Content`, `src/Ritocode.ContentTool`, `content/` |
 | Authoring ([#122](https://github.com/shoraLBRT/ritocode/issues/122), [#123](https://github.com/shoraLBRT/ritocode/issues/123)) | The `author-card` skill: drafts a card from a name, reading the live catalogue so the summary is delimited from its neighbours; checks it with `content validate`; never overwrites a card. Three cards drafted with it — `secrets-in-repo`, `money-in-float`, `god-class` — open the catalogue of [#124](https://github.com/shoraLBRT/ritocode/issues/124). The `author-task` skill: writes a material and one task per context from the maintainer's idea, validates, and runs the **blind smoke test** — `content learner-view <task>` renders the task as the task screen receives it (no key, notes, lesson, weight or card sections; a test holds it to that), and a separate `claude -p` session with no tools, run from an empty directory outside the repository, answers it from that alone; every difference from the key is reported. One easy task made with it, `flower-shop-daily-revenue` over `flower-shop-revenue`, whose smoke answer matched the key | `.claude/skills/author-task`, `src/Modules/Ritocode.Modules.Content/Authoring`, `content/materials`, `content/tasks` |
+| Scoring ([#20](https://github.com/shoraLBRT/ritocode/issues/20)) | The Attempts module, so far only its scoring: `DiagnosisScoring.Score`, a pure function of the answer, the key with the card weights, and the parameters of SPEC §5.2 — configured under `Attempts:Scoring`, validated on start. It returns the total (floored at zero), the maximum, whether the answer is correct, and a line per card: found with its treatment, missed or extra. The worked example of SPEC §5.3 scores 49 of 120; a clean task with nothing picked is 0 of 0 and correct; the order of picks and leaves changes nothing. No schema and no endpoints yet | `src/Modules/Ritocode.Modules.Attempts` |
 | Frontend shell | React, Vite and TypeScript; the API client that owns the error envelope; layout, routes, loading, error and empty states | `frontend/` |
 | CI | Backend build, test, formatting, migrations and drift; frontend lint, build and test. Nothing is shipped yet | `.github/workflows/` |
 
@@ -67,10 +68,12 @@ storage with MinIO, and the frontend's old problem pages. All of it remains read
 
 From [ROADMAP.md](ROADMAP.md), in order:
 
-1. S3, beside the content track: scoring ([#20](https://github.com/shoraLBRT/ritocode/issues/20)),
-   then the Attempts module ([#125](https://github.com/shoraLBRT/ritocode/issues/125)); the frontend
-   shell ([#26](https://github.com/shoraLBRT/ritocode/issues/26)) and the catalogue pages
-   ([#27](https://github.com/shoraLBRT/ritocode/issues/27)) can run in parallel with them.
+1. S3, beside the content track: the rest of the Attempts module
+   ([#125](https://github.com/shoraLBRT/ritocode/issues/125)) — its schema, the answer key and
+   weights from Content through a contract, start, record step, submit, read, history — which
+   stores what the scoring of #20 returns. The frontend shell
+   ([#26](https://github.com/shoraLBRT/ritocode/issues/26)) and the catalogue pages
+   ([#27](https://github.com/shoraLBRT/ritocode/issues/27)) can run in parallel with it.
 2. The content track is the maintainer's, with the two skills: 55–60 cards
    ([#124](https://github.com/shoraLBRT/ritocode/issues/124)) and the 20 tasks
    ([#42](https://github.com/shoraLBRT/ritocode/issues/42)).
@@ -159,6 +162,7 @@ compose stack is PostgreSQL only.
 | `Ritocode.Shared.Tests` | 48 |
 | `Ritocode.Api.Tests` | 39 |
 | `Ritocode.Modules.Content.Tests` | 63 |
+| `Ritocode.Modules.Attempts.Tests` | 15 |
 | Frontend (vitest) | 44 |
 
 The count is a ratchet: if it drops, the PR says which tests went and why.
@@ -176,7 +180,7 @@ In Development (`ASPNETCORE_ENVIRONMENT=Development`) the host seeds `content/` 
 | --- | --- |
 | `GET /health/live` | `200`, `{"status":"Healthy","checks":[]}` |
 | `GET /health/ready` | `200`, one check per module schema |
-| `GET /api/v1/meta/modules` | `200`, three modules: Auth, Users, Content |
+| `GET /api/v1/meta/modules` | `200`, four modules: Auth, Users, Content, Attempts |
 | `GET /api/v1/problems` | `200`, `{ classes, cards }` — the six classes once content is seeded |
 | `GET /api/v1/treatments` | `200`, five branches, leaves as `branch.leaf` |
 | `GET /api/v1/tasks?pageSize=1000` | `400`, `code: "validation_failed"`, `errors.pageSize` present |
