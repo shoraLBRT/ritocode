@@ -29,6 +29,15 @@ export interface ModuleInfo {
   readonly routePrefix: string;
 }
 
+/**
+ * `GET /api/v1/me`: the signed-in caller. The development identity until
+ * [#6](https://github.com/shoraLBRT/ritocode/issues/6) brings real sessions; a 401 means signed out.
+ */
+export interface Me {
+  readonly id: string;
+  readonly username: string;
+}
+
 /** Paging inputs, 1-based. Out-of-range values are rejected by the API, never clamped. */
 export interface PageQuery {
   readonly page?: number;

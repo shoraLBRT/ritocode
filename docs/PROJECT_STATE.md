@@ -50,13 +50,13 @@ Content.
 | API conventions | [ADR 0003](adr/0003-api-conventions.md): RFC 9457 errors, pagination envelope, validation filter | `src/Ritocode.Shared` |
 | Persistence | PostgreSQL, EF Core per module, one schema each, migrations applied by `Ritocode.DbMigrator`, drift check in CI ([ADR 0004](adr/0004-persistence-and-migrations.md)) | `src/Ritocode.DbMigrator`, `scripts/` |
 | Test harness | One PostgreSQL container per test assembly, one migrated database per test class | `tests/Ritocode.TestSupport` |
-| Identity seam | `ICurrentUser`, a real authentication scheme with a seeded development identity, authenticated by default ([ADR 0008](adr/0008-authentication-seam.md)). No real sign-in yet | `src/Ritocode.Shared/Identity`, `src/Modules/Ritocode.Modules.Auth` |
+| Identity seam | `ICurrentUser`, a real authentication scheme with a seeded development identity, authenticated by default ([ADR 0008](adr/0008-authentication-seam.md)). `GET /api/v1/me` answers the caller (id, username) or 401 — it reads `ICurrentUser`, so #6's sessions change nothing in it. No real sign-in yet | `src/Ritocode.Shared/Identity`, `src/Modules/Ritocode.Modules.Auth` |
 | Users | The `users` table and `IUserLookup`. `xp` and `trust_level` removed in #119 | `src/Modules/Ritocode.Modules.Users` |
 | Ownership rule | An architecture test reading compiled IL: a user's rows are reached only where the owner is in the query. It guards the Attempts module's context; the allowances are `OwnedAttempts` (every lookup by owner) and the creation in `AttemptLifecycle.StartAsync`. Its reader is proved against a test-only context | `tests/Ritocode.Architecture.Tests/OwnershipRuleTests.cs` |
 | Content ([#120](https://github.com/shoraLBRT/ritocode/issues/120), [#121](https://github.com/shoraLBRT/ritocode/issues/121)) | The format of [CONTENT_FORMAT.md](CONTENT_FORMAT.md) parsed and validated — every rule of §7 tested — and `content validate` in CI (job *Validate content*). The `content` schema — taxonomy, cards, materials, tasks — and an ingest that validates first, writes in one transaction stamped with the commit, upserts by slug, retires cards and unpublishes tasks that left `content/`, and derives the material overview and the easy-task shortlist. A development host seeds `content/` on start. The public reads of SPEC §9.3 ([#9](https://github.com/shoraLBRT/ritocode/issues/9)): `GET /problems` (every live card in full, with the classes), `GET /treatments`, `GET /tasks` (a page, easy first) and `GET /tasks/{slug}` (context, brief, material with its overview, the cards to pick from — name, summary and keywords only, the shortlist for an easy task — and the other tasks over the same material). No answer key and no card weight leave the server; a test serialises a task and looks for them | `src/Modules/Ritocode.Modules.Content`, `src/Ritocode.ContentTool`, `content/` |
 | Authoring ([#122](https://github.com/shoraLBRT/ritocode/issues/122), [#123](https://github.com/shoraLBRT/ritocode/issues/123)) | The `author-card` skill: drafts a card from a name, reading the live catalogue so the summary is delimited from its neighbours; checks it with `content validate`; never overwrites a card. Three cards drafted with it — `secrets-in-repo`, `money-in-float`, `god-class` — open the catalogue of [#124](https://github.com/shoraLBRT/ritocode/issues/124). The `author-task` skill: writes a material and one task per context from the maintainer's idea, validates, and runs the **blind smoke test** — `content learner-view <task>` renders the task as the task screen receives it (no key, notes, lesson, weight or card sections; a test holds it to that), and a separate `claude -p` session with no tools, run from an empty directory outside the repository, answers it from that alone; every difference from the key is reported. One easy task made with it, `flower-shop-daily-revenue` over `flower-shop-revenue`, whose smoke answer matched the key | `.claude/skills/author-task`, `src/Modules/Ritocode.Modules.Content/Authoring`, `content/materials`, `content/tasks` |
 | Attempts ([#20](https://github.com/shoraLBRT/ritocode/issues/20), [#125](https://github.com/shoraLBRT/ritocode/issues/125)) | **Scoring**: `DiagnosisScoring.Score`, a pure function of the answer, the key with the card weights, and the parameters of SPEC §5.2 (`Attempts:Scoring`, validated on start); the total floored at zero, the maximum, whether the answer is correct, and a line per card — found with its treatment, missed or extra — with the author's leaves for every card of the key. **Attempts**: the `attempts` schema; `POST /attempts` (a published task; 201), `PATCH /attempts/{id}` (the step reached, forward only), `POST /attempts/{id}/submit` (validated against the cards the task offers and the leaves of the tree, scored, stored with the content revision; the first submitted attempt at a task counts, later ones are practice, a partial unique index settles a race), `GET /attempts/{id}`, `GET /attempts?task=` (a page, newest first). A submitted attempt is never changed; a test re-ingests changed content and compares the stored result byte for byte. Submitting is capped per user (`Attempts:RateLimit`, 10 in 10 minutes, `429 attempt_rate_limited`). The key and weights come from Content through `ITaskForAttemptLookup`; `GET /tasks` carries `solved` for a signed-in caller through `ISubmittedTaskLookup`, which Attempts answers | `src/Modules/Ritocode.Modules.Attempts`, `src/Ritocode.Shared/Contracts` |
-| Frontend shell | React, Vite and TypeScript; the API client that owns the error envelope; layout, routes, loading, error and empty states | `frontend/` |
+| Frontend shell ([#26](https://github.com/shoraLBRT/ritocode/issues/26)) | React, Vite and TypeScript; the API client that owns the error envelope; layout, routes, loading, error and empty states. A **translation catalogue** of its own (`src/i18n`: typed dotted keys, `{name}` placeholders, Russian plurals through `Intl.PluralRules`, `<html lang="ru">`), every string moved into it, and an ESLint rule that fails on text written in JSX. The **signed-in state** from `/me` (`src/session`: loading, signed in, signed out on a 401, error) in the header, and `RequireSignIn`, a layout route for pages that need a learner. A **phone-width layout**, checked at 375 px: no horizontal scroll, the header wraps | `frontend/` |
 | CI | Backend build, test, formatting, migrations and drift; frontend lint, build and test. Nothing is shipped yet | `.github/workflows/` |
 
 Removed in #119: the Workspaces, Evaluations, Submissions and Progress modules, the sandbox runner,
@@ -68,10 +68,8 @@ storage with MinIO, and the frontend's old problem pages. All of it remains read
 
 From [ROADMAP.md](ROADMAP.md), in order:
 
-1. S3, beside the content track: the frontend shell
-   ([#26](https://github.com/shoraLBRT/ritocode/issues/26)) — translation catalogue, signed-in
-   state, phone-width layout — then the catalogue pages
-   ([#27](https://github.com/shoraLBRT/ritocode/issues/27)), the task screen
+1. S3, beside the content track: the catalogue pages
+   ([#27](https://github.com/shoraLBRT/ritocode/issues/27)), then the task screen
    ([#126](https://github.com/shoraLBRT/ritocode/issues/126)) over the attempt endpoints, and the
    review screen ([#29](https://github.com/shoraLBRT/ritocode/issues/29)).
 2. The content track is the maintainer's, with the two skills: 55–60 cards
@@ -167,10 +165,10 @@ compose stack is PostgreSQL only.
 | --- | --- |
 | `Ritocode.Architecture.Tests` | 13 |
 | `Ritocode.Shared.Tests` | 51 |
-| `Ritocode.Api.Tests` | 55 |
+| `Ritocode.Api.Tests` | 57 |
 | `Ritocode.Modules.Content.Tests` | 68 |
 | `Ritocode.Modules.Attempts.Tests` | 15 |
-| Frontend (vitest) | 44 |
+| Frontend (vitest) | 58 |
 
 The count is a ratchet: if it drops, the PR says which tests went and why.
 
@@ -188,6 +186,7 @@ In Development (`ASPNETCORE_ENVIRONMENT=Development`) the host seeds `content/` 
 | `GET /health/live` | `200`, `{"status":"Healthy","checks":[]}` |
 | `GET /health/ready` | `200`, one check per module schema |
 | `GET /api/v1/meta/modules` | `200`, four modules: Auth, Users, Content, Attempts |
+| `GET /api/v1/me` | `200`, `{"id":"0199aa00-…","username":"developer"}` under the development identity; `401 unauthenticated` without it |
 | `GET /api/v1/problems` | `200`, `{ classes, cards }` — the six classes once content is seeded |
 | `GET /api/v1/treatments` | `200`, five branches, leaves as `branch.leaf` |
 | `GET /api/v1/tasks?pageSize=1000` | `400`, `code: "validation_failed"`, `errors.pageSize` present |

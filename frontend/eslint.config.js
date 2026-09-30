@@ -34,6 +34,26 @@ export default tseslint.config(
     },
   },
   {
+    // No user-visible string is written in a component (docs/SPEC.md §3.6): text in JSX, and the
+    // attributes a person reads or hears, come from the translation catalogue in src/i18n.
+    files: ['src/**/*.tsx'],
+    ignores: ['**/*.test.tsx', 'src/test/**'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          // Any text that is not only whitespace. Doubled, so the string holds `\S` and not `S`.
+          selector: 'JSXText[value=/\\S/]',
+          message: 'User-visible text goes in the translation catalogue (src/i18n/ru.ts) and is read with useT().',
+        },
+        {
+          selector: 'JSXAttribute[name.name=/^(aria-label|title|alt|placeholder|label)$/] > Literal',
+          message: 'User-visible text goes in the translation catalogue (src/i18n/ru.ts) and is read with useT().',
+        },
+      ],
+    },
+  },
+  {
     files: ['**/*.test.{ts,tsx}', 'src/test/**/*.ts'],
     languageOptions: { globals: { ...globals.browser, ...globals.node } },
   },

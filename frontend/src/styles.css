@@ -41,6 +41,8 @@ body {
   background: var(--surface);
   color: var(--text);
   font: 16px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* A long identifier or URL breaks rather than pushing the page wider than a phone. */
+  overflow-wrap: anywhere;
 }
 
 code {
@@ -54,12 +56,34 @@ code {
   min-height: 100vh;
 }
 
+.skip-link {
+  position: absolute;
+  left: -100vw;
+}
+
+.skip-link:focus {
+  left: var(--gap);
+  top: var(--gap);
+  padding: 0.35rem 0.8rem;
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--accent);
+  z-index: 1;
+}
+
 .app__header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: calc(var(--gap) * 2);
+  gap: 0.5rem calc(var(--gap) * 2);
   padding: var(--gap) calc(var(--gap) * 1.5);
   border-bottom: 1px solid var(--border);
+}
+
+.app__session {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: 0.875rem;
 }
 
 .app__brand {
@@ -96,6 +120,39 @@ code {
   border-top: 1px solid var(--border);
   color: var(--text-muted);
   font-size: 0.875rem;
+}
+
+/*
+ * Phone width (SPEC §9.4). The header wraps — brand and navigation, then who is signed in on a
+ * line of its own — and the page keeps a narrow margin instead of the desktop one.
+ */
+@media (max-width: 40rem) {
+  .app__header,
+  .app__footer {
+    padding: 0.75rem var(--gap);
+  }
+
+  .app__header {
+    gap: 0.25rem var(--gap);
+  }
+
+  .app__session {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+
+  .app__main {
+    padding: calc(var(--gap) * 1.25) var(--gap);
+  }
+
+  h1 {
+    font-size: 1.6rem;
+  }
+}
+
+pre {
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 .page > h1 {

@@ -17,7 +17,7 @@ only through a contract in `src/Ritocode.Shared/Contracts`
 
 | Module | Owns | State |
 | --- | --- | --- |
-| **Auth** | Sign-in with GitHub and Google, sessions, linked accounts | The identity seam and the development identity exist ([ADR 0008](adr/0008-authentication-seam.md)); real sign-in is [#6](https://github.com/shoraLBRT/ritocode/issues/6) and [#7](https://github.com/shoraLBRT/ritocode/issues/7) |
+| **Auth** | Sign-in with GitHub and Google, sessions, linked accounts | The identity seam, the development identity ([ADR 0008](adr/0008-authentication-seam.md)) and `GET /me` exist; real sign-in is [#6](https://github.com/shoraLBRT/ritocode/issues/6) and [#7](https://github.com/shoraLBRT/ritocode/issues/7) |
 | **Users** | Users; who is an admin comes from configuration | Exists; answers `IUserLookup` |
 | **Content** | Problem cards, the treatment tree, materials, tasks and answer keys; ingest from `content/` and validation; the catalogue reads | Exists: the format and validation (#120), the `content` schema and ingest (#121), and the public reads (#9) |
 | **Attempts** | Attempts, scoring, progress, signals | Exists: scoring ([#20](https://github.com/shoraLBRT/ritocode/issues/20)), and the `attempts` schema with start, step, submit, read and history ([#125](https://github.com/shoraLBRT/ritocode/issues/125)). Progress and signals are S5 |

@@ -2,7 +2,8 @@
 
 React + Vite + TypeScript. This is the application shell and the API client layer from
 [#26](https://github.com/shoraLBRT/ritocode/issues/26) — the frame the product screens are built
-into, not the product screens themselves.
+into, not the product screens themselves: the translation catalogue, who is signed in, and a layout
+that works at phone width.
 
 ## Running it
 
@@ -44,6 +45,8 @@ CI resolves the Node line in `.nvmrc`, which may be newer than the machine you a
 ```
 src/
   api/         the only code that knows the backend exists
+  i18n/        the translation catalogue (ru.ts), translate() and useT()
+  session/     who is signed in, from GET /me, and RequireSignIn for pages that need it
   hooks/       useApiResource — one request, four states, no cache
   components/  the layout and the loading / error / empty panels
   pages/       one component per route
@@ -51,7 +54,14 @@ src/
   test/        render helpers and response builders shaped like the real API
 ```
 
-Three things worth knowing before changing it:
+Four things worth knowing before changing it:
+
+- **No user-visible string is written in a component.** Text lives in `src/i18n/ru.ts` under a key
+  saying where it is shown, and a component reads it with `useT()`: `t('session.signedInAs',
+  { username })`. ESLint fails on text in JSX and on a literal `aria-label`, `title`, `alt`,
+  `placeholder` or `label`. The catalogue is this project's own, not a library: typed keys, `{name}`
+  placeholders and Russian plurals are all it needs, and a second locale is an `en.ts` of the same
+  shape. Dates and numbers go through `Intl` with `useLocale()`.
 
 - **Nothing outside `src/api` calls `fetch`.** The ADR 0003 error envelope is read in exactly one
   place, `api/errors.ts`, and every failure reaches a screen as an `ApiError` carrying the stable
@@ -69,13 +79,11 @@ the first. The bodies in `src/test/responses.ts` are copied from the verificatio
 
 ## What is deliberately not here
 
-- **Protected routes and anything about a signed-in user.** There is no authentication yet — the
-  identity seam is [#6](https://github.com/shoraLBRT/ritocode/issues/6) in slice stage 3 — so a
-  route guard written now would be guarding against a session nothing issues, and would be replaced
-  rather than wired up. `ApiError.isUnauthenticated` exists so the branch is not forgotten, and
-  `routes.tsx` says where the guard goes. #26 stays open for it.
-- **The catalog and problem screens.** `ProblemsPage` and `ProblemDetailPage` are wiring, not
-  design: they exist to prove the page envelope, the query parameters and the error body all
-  survive the trip. [#27](https://github.com/shoraLBRT/ritocode/issues/27) in stage 6 replaces both.
+- **Signing in.** Who is signed in comes from `GET /me`, which answers for the development identity
+  until [#6](https://github.com/shoraLBRT/ritocode/issues/6) and [#7](https://github.com/shoraLBRT/ritocode/issues/7)
+  bring sessions and sign-in; `RequireSignIn` tells a signed-out visitor the page is closed, and
+  the button to sign in arrives with #7.
+- **The product screens.** The catalogue pages are [#27](https://github.com/shoraLBRT/ritocode/issues/27),
+  the task screen #126 and the review #29.
 - **A data-fetching library, a state manager and a design system.** Nothing in the slice needs a
   cache, and a design system invented here would be replaced by stage 6.
