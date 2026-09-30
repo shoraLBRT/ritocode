@@ -16,12 +16,5 @@ Check it before committing — CI runs the same command on every pull request:
 dotnet run --project src/Ritocode.ContentTool -- validate content
 ```
 
-## legacy-problems/
-
-The C# refactoring packages of the product Ritocode was before 2026-09-30, in the old package
-format. They moved here in [#120](https://github.com/shoraLBRT/ritocode/issues/120) so that
-`problems/` could hold problem cards, and are deleted with the old format in
-[#121](https://github.com/shoraLBRT/ritocode/issues/121). Until then the development seeder and the
-old format's tests still read them. The empty `Directory.Build.props` and `Directory.Packages.props`
-here exist for them — they keep the repository's MSBuild settings away from those packages — and go
-with them.
+A development host (`ASPNETCORE_ENVIRONMENT=Development`) loads this tree into its database when it
+starts, so an edit shows up on the next run.

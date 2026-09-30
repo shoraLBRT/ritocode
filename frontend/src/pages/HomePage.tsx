@@ -7,7 +7,7 @@ import { LoadingState } from '../components/LoadingState';
  * The landing route, and the shell's own proof of life: it calls `/meta/modules` through the
  * client and renders whichever of the three states comes back. That endpoint is diagnostics
  * rather than product, which is the point — it exercises the client, the loading view and the
- * failure view without pre-empting the catalog screens in #27.
+ * failure view without pre-empting the screens of the trainer.
  */
 export function HomePage() {
   const client = useApiClient();
@@ -17,8 +17,8 @@ export function HomePage() {
     <section className="page">
       <h1>Ritocode</h1>
       <p className="page__lead">
-        Solve tasks by improving existing code. Solutions are graded by deterministic validators,
-        not by opinion.
+        A catalogue of what breaks in code written by AI, and a trainer that teaches you to see
+        it.
       </p>
 
       <h2>Backend</h2>

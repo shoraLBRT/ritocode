@@ -6,16 +6,16 @@
   Wraps `dotnet ef migrations add` so the module name is the only thing to remember: the context
   name, project paths and output directory all follow from it.
 .PARAMETER Module
-  Module name as it appears in src/Modules/Ritocode.Modules.<Module>, e.g. Problems.
+  Module name as it appears in src/Modules/Ritocode.Modules.<Module>, e.g. Content.
 .PARAMETER Name
   Migration name, e.g. AddProblemLanguage.
 .EXAMPLE
-  ./scripts/db-migrations-add.ps1 -Module Problems -Name AddProblemLanguage
+  ./scripts/db-migrations-add.ps1 -Module Content -Name AddCardAuthor
 #>
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)]
-    [ValidateSet('Users', 'Auth', 'Problems')]
+    [ValidateSet('Users', 'Auth', 'Content')]
     [string] $Module,
 
     [Parameter(Mandatory)]

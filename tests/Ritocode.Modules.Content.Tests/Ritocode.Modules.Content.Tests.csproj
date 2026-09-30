@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Modules/Ritocode.Modules.Content/Ritocode.Modules.Content.csproj" />
+    <ProjectReference Include="../Ritocode.TestSupport/Ritocode.TestSupport.csproj" />
+  </ItemGroup>
+
+  <!--
+    The content format (docs/CONTENT_FORMAT.md). The reference fixture borrows the committed
+    taxonomy rather than a copy of it, and the committed content tree is validated as it ships.
+  -->
+  <ItemGroup>
+    <None Update="ContentFixtures/**/*" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../content/taxonomy/**/*" LinkBase="ContentFixtures/reference/taxonomy" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../content/taxonomy/**/*" LinkBase="committed-content/taxonomy" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../content/problems/**/*" LinkBase="committed-content/problems" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../content/materials/**/*" LinkBase="committed-content/materials" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../content/tasks/**/*" LinkBase="committed-content/tasks" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

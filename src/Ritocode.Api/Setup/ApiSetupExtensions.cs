@@ -7,7 +7,6 @@ using Ritocode.Api.Endpoints;
 using Ritocode.Shared.Http;
 using Ritocode.Shared.Identity;
 using Ritocode.Shared.Modules;
-using Ritocode.Shared.Storage;
 
 namespace Ritocode.Api.Setup;
 
@@ -42,14 +41,7 @@ public static class ApiSetupExtensions
 
         builder.Services.AddHealthChecks();
 
-        // Storage is host infrastructure, like the database: registered once here so a module takes
-        // IObjectStore as a dependency instead of building a client. No readiness check yet —
-        // adding one would make `dotnet test` and a bare `dotnet run` require MinIO, which is the
-        // property #37 spent a session buying back. It belongs with the first endpoint that reads
-        // an object.
-        builder.Services.AddObjectStorage(builder.Configuration);
-
-        // The identity seam is host infrastructure like storage: ICurrentUser is what every
+        // The identity seam is host infrastructure: ICurrentUser is what every
         // endpoint takes its user from, and the development identity settings below are read by two
         // modules that may not reference each other. What authenticates a request is the Auth
         // module's business and is registered there.

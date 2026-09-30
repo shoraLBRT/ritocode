@@ -1,4 +1,4 @@
-using Ritocode.Modules.Problems.ContentFormat;
+using Ritocode.Modules.Content.Format;
 
 // Exit codes: 0 — no errors (warnings are printed but never fail); 1 — the content has errors;
 // 2 — the command line was not understood.

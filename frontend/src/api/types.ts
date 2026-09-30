@@ -1,8 +1,7 @@
 /**
  * The wire types the backend actually serves, transcribed from the C# records behind
- * `/api/v1`. They are hand-written rather than generated: the surface is the catalog plus
- * meta, and a generator would put a running backend on the critical
- * path of a frontend build.
+ * `/api/v1`. They are hand-written rather than generated: the surface is meta for
+ * now, and a generator would put a running backend on the critical path of a frontend build.
  * When that stops being true, generating from the OpenAPI document the API already produces
  * (`Api:EnableOpenApi`) replaces this file without changing anything that imports it.
  *
@@ -22,29 +21,6 @@ export interface Page<T> {
   readonly totalPages: number;
   readonly hasNextPage: boolean;
   readonly hasPreviousPage: boolean;
-}
-
-/**
- * Serialised as a camelCase name, never an ordinal — see the API conventions note in
- * `PROJECT_STATE.md`. A number would tie this union to a C# enum's member order.
- */
-export type Difficulty = 'easy' | 'medium' | 'hard';
-
-/** One catalog row: a problem plus the published version a workspace is created from. */
-export interface CatalogProblem {
-  readonly id: string;
-  readonly slug: string;
-  readonly title: string;
-  readonly difficulty: Difficulty;
-  readonly tags: readonly string[];
-  readonly problemVersionId: string;
-  readonly version: number;
-  readonly publishedAt: string;
-}
-
-/** The catalog row plus the Markdown description. Flat, not nested around `CatalogProblem`. */
-export interface CatalogProblemDetail extends CatalogProblem {
-  readonly description: string;
 }
 
 /** One row of `GET /api/v1/meta/modules`: which modules this host composed in. */

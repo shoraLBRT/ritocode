@@ -16,9 +16,6 @@ export function AppLayout() {
           <NavLink to="/" end className={navClass}>
             Home
           </NavLink>
-          <NavLink to="/problems" className={navClass}>
-            Problems
-          </NavLink>
         </nav>
       </header>
 
@@ -27,7 +24,7 @@ export function AppLayout() {
       </main>
 
       <footer className="app__footer">
-        <span>Practise code review, refactoring and test quality on real code.</span>
+        <span>What breaks in code written by AI, and how to see it.</span>
       </footer>
     </div>
   );

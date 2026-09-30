@@ -24,14 +24,8 @@ foreach ($line in Get-Content .env) {
 }
 
 Write-Host 'Starting dependencies...'
-# --wait is applied only to the long-running services: it treats a container that exits as a
-# failure, and minio-init is a one-shot that exits 0 by design. The init runs separately so its
-# exit code is still checked.
-docker compose up -d --wait postgres minio
+docker compose up -d --wait postgres
 if ($LASTEXITCODE -ne 0) { throw 'docker compose failed' }
-
-docker compose run --rm minio-init
-if ($LASTEXITCODE -ne 0) { throw 'bucket initialisation failed' }
 
 $env:Database__ConnectionString = "Host=localhost;Port=$($settings.POSTGRES_PORT);Database=$($settings.POSTGRES_DB);Username=$($settings.POSTGRES_USER);Password=$($settings.POSTGRES_PASSWORD)"
 
@@ -44,8 +38,6 @@ Write-Host @"
 Ready.
 
   PostgreSQL     localhost:$($settings.POSTGRES_PORT)  (db $($settings.POSTGRES_DB), user $($settings.POSTGRES_USER))
-  MinIO API      localhost:$($settings.MINIO_PORT)
-  MinIO console  http://localhost:$($settings.MINIO_CONSOLE_PORT)
 
 Run the API:   dotnet run --project src/Ritocode.Api
 Run the tests: dotnet test Ritocode.slnx

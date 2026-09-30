@@ -27,8 +27,8 @@ The `session` skill in `.claude/skills/session/` carries the full loop. In short
 
 ## What exists
 
-After [#119](https://github.com/shoraLBRT/ritocode/issues/119), the repository holds the platform
-the new product keeps, plus the Problems module that S1 replaces.
+The repository holds the platform the new product keeps and the first module built for it,
+Content.
 
 | Part | State | Where |
 | --- | --- | --- |
@@ -39,22 +39,21 @@ the new product keeps, plus the Problems module that S1 replaces.
 | Identity seam | `ICurrentUser`, a real authentication scheme with a seeded development identity, authenticated by default ([ADR 0008](adr/0008-authentication-seam.md)). No real sign-in yet | `src/Ritocode.Shared/Identity`, `src/Modules/Ritocode.Modules.Auth` |
 | Users | The `users` table and `IUserLookup`. `xp` and `trust_level` removed in #119 | `src/Modules/Ritocode.Modules.Users` |
 | Ownership rule | An architecture test reading compiled IL: a user's rows are reached only where the owner is in the query. No module owns such rows until Attempts ([#125](https://github.com/shoraLBRT/ritocode/issues/125)); its reader is proved against a test-only context | `tests/Ritocode.Architecture.Tests/OwnershipRuleTests.cs` |
-| Content format ([#120](https://github.com/shoraLBRT/ritocode/issues/120)) | Parsers and validation for [CONTENT_FORMAT.md](CONTENT_FORMAT.md): taxonomy, cards, materials, tasks, every rule of §7 tested. `content validate` runs in CI (job *Validate content*). The taxonomy of SPEC §3.3 is committed with Russian labels; a reference card set, material and task live in the test fixtures. Not yet loaded into the database — that is #121 | `src/Modules/Ritocode.Modules.Problems/ContentFormat`, `src/Ritocode.ContentTool`, `content/taxonomy` |
-| Problems — previous product | The old package format, ingest into object storage, and `GET /api/v1/problems`. **Replaced in S1** by [#121](https://github.com/shoraLBRT/ritocode/issues/121) and [#9](https://github.com/shoraLBRT/ritocode/issues/9) | `src/Modules/Ritocode.Modules.Problems`, `content/legacy-problems` |
+| Content ([#120](https://github.com/shoraLBRT/ritocode/issues/120), [#121](https://github.com/shoraLBRT/ritocode/issues/121)) | The format of [CONTENT_FORMAT.md](CONTENT_FORMAT.md) parsed and validated — every rule of §7 tested — and `content validate` in CI (job *Validate content*). The `content` schema — taxonomy, cards, materials, tasks — and an ingest that validates first, writes in one transaction stamped with the commit, upserts by slug, retires cards and unpublishes tasks that left `content/`, and derives the material overview and the easy-task shortlist. A development host seeds `content/` on start. No read APIs yet — [#9](https://github.com/shoraLBRT/ritocode/issues/9) | `src/Modules/Ritocode.Modules.Content`, `src/Ritocode.ContentTool`, `content/` |
 | Frontend shell | React, Vite and TypeScript; the API client that owns the error envelope; layout, routes, loading, error and empty states | `frontend/` |
 | CI | Backend build, test, formatting, migrations and drift; frontend lint, build and test. Nothing is shipped yet | `.github/workflows/` |
 
 Removed in #119: the Workspaces, Evaluations, Submissions and Progress modules, the sandbox runner,
-`spikes/`. They remain readable at the tag `pre-diagnosis`.
+`spikes/`. Removed in #121: the Problems module, the old package format and its C# packages, object
+storage with MinIO, and the frontend's old problem pages. All of it remains readable at the tag
+`pre-diagnosis`.
 
 ## Next up
 
 From [ROADMAP.md](ROADMAP.md), in order:
 
-1. [#121](https://github.com/shoraLBRT/ritocode/issues/121) — ingest content into PostgreSQL, and
-   remove object storage, the old package format and `content/legacy-problems`.
-2. [#9](https://github.com/shoraLBRT/ritocode/issues/9) — the content read APIs.
-3. S2 can start once #121 lands: the `author-card` and `author-task` skills
+1. [#9](https://github.com/shoraLBRT/ritocode/issues/9) — the content read APIs, which close S1.
+2. S2 can start now: the `author-card` and `author-task` skills
    ([#122](https://github.com/shoraLBRT/ritocode/issues/122),
    [#123](https://github.com/shoraLBRT/ritocode/issues/123)).
 
@@ -66,13 +65,12 @@ apps, privacy text — runs in parallel and gates S7.
 Decisions the specification left open are listed in [SPEC.md](SPEC.md) §13. Add here anything a
 future session would otherwise have to rediscover.
 
-- `docs/PROBLEM_PACKAGE_SPEC.md` and `docs/STORAGE_LAYOUT.md` describe code that still exists and are
-  removed together with it in #121, not in #40.
-- The old C# packages moved to `content/legacy-problems/` in #120, so `content/problems/` holds
-  cards. The development seeder and the old tests read them from there until #121 deletes them.
-- **CI's *Build and test* job is red on `main`** since 2026-09-30: every test that starts MinIO fails
-  pulling `quay.io/minio/minio` (unauthorized). Nothing else fails. #121 removes MinIO and with it
-  the failure; until then, check that a red run has only those failures before merging.
+- Ingest has no production entry point yet: a development host seeds `content/` on start, stamped
+  `development`. The release command of [#136](https://github.com/shoraLBRT/ritocode/issues/136)
+  runs ingest with the commit it deploys.
+- A module's test context should be configured as the host configures one. The host's contexts
+  retry transient failures, and a retrying strategy refuses a transaction opened by hand — the smoke
+  run of #121 caught exactly that, which a test context without retries had passed.
 
 ---
 
@@ -118,18 +116,19 @@ The drift check runs against the compose stack. `db-verify-no-drift.sh` and `dot
 ./scripts/db-verify-no-drift.sh
 ```
 
-**After #119, recreate the development database** (`docker compose down -v`, then `dev-up`): the
-compose volume still holds the schemas of the removed modules, and no migration drops them.
+**Recreate an old development database** (`docker compose down -v`, then `dev-up`): a volume from
+before #119 or #121 still holds the schemas of the removed modules, and no migration drops them. The
+compose stack is PostgreSQL only.
 
 ### Baseline
 
 | Suite | Tests |
 | --- | --- |
 | `Ritocode.Architecture.Tests` | 13 |
-| `Ritocode.Shared.Tests` | 129 |
-| `Ritocode.Api.Tests` | 40 |
-| `Ritocode.Modules.Problems.Tests` | 151 |
-| Frontend (vitest) | 55 |
+| `Ritocode.Shared.Tests` | 48 |
+| `Ritocode.Api.Tests` | 32 |
+| `Ritocode.Modules.Content.Tests` | 48 |
+| Frontend (vitest) | 44 |
 
 The count is a ratchet: if it drops, the PR says which tests went and why.
 
@@ -139,10 +138,12 @@ The count is a ratchet: if it drops, the PR says which tests went and why.
 dotnet run --project src/Ritocode.Api --no-launch-profile --urls http://127.0.0.1:5199
 ```
 
+In Development (`ASPNETCORE_ENVIRONMENT=Development`) the host seeds `content/` on start and logs
+`Seeded content from … N cards, N materials, N tasks`; content with errors is logged and not written.
+
 | Request | Expected |
 | --- | --- |
 | `GET /health/live` | `200`, `{"status":"Healthy","checks":[]}` |
 | `GET /health/ready` | `200`, one check per module schema |
-| `GET /api/v1/meta/modules` | `200`, three modules: Auth, Users, Problems |
-| `GET /api/v1/problems?pageSize=1000` | `400`, `code: "validation_failed"`, `errors.pageSize` present |
+| `GET /api/v1/meta/modules` | `200`, three modules: Auth, Users, Content |
 | any response | carries an `X-Request-Id` header |
