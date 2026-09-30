@@ -1,7 +1,9 @@
 import { RouterProvider, createBrowserRouter } from 'react-router';
 import { ApiClientProvider } from './api';
 import type { ApiClient } from './api';
+import { I18nProvider } from './i18n';
 import { routes } from './routes';
+import { SessionProvider } from './session';
 
 const router = createBrowserRouter(routes);
 
@@ -12,8 +14,12 @@ const router = createBrowserRouter(routes);
  */
 export function App({ client }: { client: ApiClient }) {
   return (
-    <ApiClientProvider client={client}>
-      <RouterProvider router={router} />
-    </ApiClientProvider>
+    <I18nProvider>
+      <ApiClientProvider client={client}>
+        <SessionProvider>
+          <RouterProvider router={router} />
+        </SessionProvider>
+      </ApiClientProvider>
+    </I18nProvider>
   );
 }

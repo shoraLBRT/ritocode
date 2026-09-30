@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ApiError } from '../api';
+import { ru } from '../i18n';
 import { ErrorState } from './ErrorState';
 
 describe('ErrorState', () => {
@@ -13,7 +14,7 @@ describe('ErrorState', () => {
   it('writes its own sentence for an unreachable server, which has nothing to quote', () => {
     render(<ErrorState error={new ApiError('The server could not be reached.', 'network')} />);
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Check that the backend is running.');
+    expect(screen.getByRole('alert')).toHaveTextContent(ru.state.unreachable);
   });
 
   it('names the status for a response that was not the documented envelope', () => {
@@ -44,10 +45,10 @@ describe('ErrorState', () => {
     const onRetry = vi.fn();
     const { rerender } = render(<ErrorState error={new ApiError('x', 'network')} onRetry={onRetry} />);
 
-    screen.getByRole('button', { name: 'Try again' }).click();
+    screen.getByRole('button', { name: ru.state.retry }).click();
     expect(onRetry).toHaveBeenCalledOnce();
 
     rerender(<ErrorState error={new ApiError('x', 'network')} />);
-    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: ru.state.retry })).not.toBeInTheDocument();
   });
 });

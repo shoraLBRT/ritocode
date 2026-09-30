@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Ritocode.Modules.Auth.Identity;
 using Ritocode.Modules.Auth.Persistence;
+using Ritocode.Modules.Auth.Session;
 using Ritocode.Shared.Modules;
 using Ritocode.Shared.Persistence;
 
@@ -14,8 +15,8 @@ namespace Ritocode.Modules.Auth;
 /// </summary>
 /// <remarks>
 /// Owns the <c>auth</c> schema and the platform's authentication scheme. For now that scheme
-/// is the seeded development identity of ADR 0008; login, session issuance and <c>/me</c> are
-/// the rest of <see href="https://github.com/shoraLBRT/ritocode/issues/6">#6</see>, and provider
+/// is the seeded development identity of ADR 0008, and <c>/me</c> answers for it; login and session
+/// issuance are the rest of <see href="https://github.com/shoraLBRT/ritocode/issues/6">#6</see>, and provider
 /// linking is <see href="https://github.com/shoraLBRT/ritocode/issues/7">#7</see>.
 /// </remarks>
 public sealed class AuthModule : IModule
@@ -44,6 +45,8 @@ public sealed class AuthModule : IModule
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints)
     {
-        // Intentionally empty: this module exposes no endpoints yet.
+        ArgumentNullException.ThrowIfNull(endpoints);
+
+        endpoints.MapMeEndpoints();
     }
 }

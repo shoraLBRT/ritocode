@@ -7,9 +7,9 @@ import { NotFoundPage } from './pages/NotFoundPage';
  * The route table, as data.
  *
  * Kept out of the component tree so a test can mount one route with a memory router and no
- * browser history, and so the place a protected route will be introduced — a wrapper element
- * around the routes that need one, once [#6](https://github.com/shoraLBRT/ritocode/issues/6)
- * gives the client an identity to check — is a single visible edit rather than a search.
+ * browser history. A page that needs a signed-in learner goes under a `RequireSignIn` layout
+ * route (`src/session`), which renders its children only for one: the progress page (#30) and
+ * the review of an attempt (#29) are the first.
  */
 export const routes: RouteObject[] = [
   {
