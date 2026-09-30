@@ -51,8 +51,9 @@ Content.
 | Persistence | PostgreSQL, EF Core per module, one schema each, migrations applied by `Ritocode.DbMigrator`, drift check in CI ([ADR 0004](adr/0004-persistence-and-migrations.md)) | `src/Ritocode.DbMigrator`, `scripts/` |
 | Test harness | One PostgreSQL container per test assembly, one migrated database per test class | `tests/Ritocode.TestSupport` |
 | Identity seam | `ICurrentUser`, real authentication schemes, authenticated by default ([ADR 0008](adr/0008-authentication-seam.md), Accepted). `GET /api/v1/me` answers the caller (id, username) or 401 | `src/Ritocode.Shared/Identity`, `src/Modules/Ritocode.Modules.Auth` |
-| Sessions ([#6](https://github.com/shoraLBRT/ritocode/issues/6)) | [ADR 0012](adr/0012-sessions.md): an opaque token in `__Host-ritocode-session` (Secure, HttpOnly, SameSite=Lax), the session in `auth.sessions` by the token's SHA-256 — the token is never stored — with its expiry (30 days, `Auth:Session:Lifetime`), revocation and CSRF token. A request with the cookie is the `Session` scheme's, any other the development identity's (off outside development). Every state-changing request under a session repeats its CSRF token — from the readable `__Host-ritocode-csrf` cookie — in `X-CSRF-Token`, or gets `403 csrf_token_invalid` (`CsrfProtectionMiddleware`); `ApiClient` sends it. `POST /auth/logout` (outside `/api/v1`, through the new `IModule.MapHostEndpoints`) revokes the session and clears both cookies. `ISessionIssuer.StartAsync` + `SessionCookies.Write` are what #7's sign-in calls. **Nothing issues a session over HTTP yet**: that is sign-in, #7; the header has no sign-in or sign-out button until then | `src/Modules/Ritocode.Modules.Auth/Session`, `src/Ritocode.Shared/Identity/CsrfProtectionMiddleware.cs` |
-| Users | The `users` table and `IUserLookup`. `xp` and `trust_level` removed in #119 | `src/Modules/Ritocode.Modules.Users` |
+| Sessions ([#6](https://github.com/shoraLBRT/ritocode/issues/6)) | [ADR 0012](adr/0012-sessions.md): an opaque token in `__Host-ritocode-session` (Secure, HttpOnly, SameSite=Lax), the session in `auth.sessions` by the token's SHA-256 — the token is never stored — with its expiry (30 days, `Auth:Session:Lifetime`), revocation and CSRF token. A request with the cookie is the `Session` scheme's, any other the development identity's (off outside development). Every state-changing request under a session repeats its CSRF token — from the readable `__Host-ritocode-csrf` cookie — in `X-CSRF-Token`, or gets `403 csrf_token_invalid` (`CsrfProtectionMiddleware`); `ApiClient` sends it. `POST /auth/logout` (outside `/api/v1`, through the new `IModule.MapHostEndpoints`) revokes the session and clears both cookies. `ISessionIssuer.StartAsync` + `SessionCookies.Write` are what #7's sign-in calls. Sign-in (#7) issues one; the header has no sign-in or sign-out button yet | `src/Modules/Ritocode.Modules.Auth/Session`, `src/Ritocode.Shared/Identity/CsrfProtectionMiddleware.cs` |
+| Sign-in ([#7](https://github.com/shoraLBRT/ritocode/issues/7)) | `GET /auth/login/{github,google}?returnUrl=` sends the browser to the provider through ASP.NET's OAuth handler — state with its correlation cookie, PKCE (S256) — and the provider returns to `/auth/callback/{provider}`. There `AccountLinker` resolves the user: an identity already linked signs in as its user (the stored login follows a rename); a new one with a **verified** address joins the user with that address or a new user made for it (`IUserAccounts`, answered by Users; the username from the GitHub login or the address's local part, made unique); a new one without a verified address reaches nobody. GitHub's address is the **primary** one of `/user/emails`; Google's is userinfo's `email` with `email_verified`. Then a session starts (`ISessionIssuer`, `SessionCookies.Write`) and the browser returns to `returnUrl`, accepted only as a local path (`400` otherwise); a refusal or a provider failure returns there with `?signInError=email_unverified`, `provider_already_linked` or `provider_failed`. A provider is offered only when `Auth:GitHub` / `Auth:Google` (`ClientId`, `ClientSecret`) is configured. `Auth:SignIn:AppOrigin` prefixes the return path where the pages are served from another origin (Vite's `http://localhost:5173` in development; empty in production). Tested against a fake provider through the real handler. **Not yet**: the header's sign-in and sign-out buttons and any handling of `signInError` in the page (#127 builds the sign-in prompt); a real round trip against GitHub and Google, which needs the OAuth apps of #134 | `src/Modules/Ritocode.Modules.Auth/SignIn` |
+| Users | The `users` table, `IUserLookup`, and `IUserAccounts` (find by address, create) for sign-in. `xp` and `trust_level` removed in #119 | `src/Modules/Ritocode.Modules.Users` |
 | Ownership rule | An architecture test reading compiled IL: a user's rows are reached only where the owner is in the query. It guards the Attempts module's context; the allowances are `OwnedAttempts` (every lookup by owner) and the creation in `AttemptLifecycle.StartAsync`. Its reader is proved against a test-only context | `tests/Ritocode.Architecture.Tests/OwnershipRuleTests.cs` |
 | Content ([#120](https://github.com/shoraLBRT/ritocode/issues/120), [#121](https://github.com/shoraLBRT/ritocode/issues/121)) | The format of [CONTENT_FORMAT.md](CONTENT_FORMAT.md) parsed and validated — every rule of §7 tested — and `content validate` in CI (job *Validate content*). The `content` schema — taxonomy, cards, materials, tasks — and an ingest that validates first, writes in one transaction stamped with the commit, upserts by slug, retires cards and unpublishes tasks that left `content/`, and derives the material overview and the easy-task shortlist. A development host seeds `content/` on start. The public reads of SPEC §9.3 ([#9](https://github.com/shoraLBRT/ritocode/issues/9)): `GET /problems` (every live card in full, with the classes), `GET /treatments`, `GET /tasks` (a page, easy first) and `GET /tasks/{slug}` (context, brief, material with its overview, the cards to pick from — name, summary and keywords only, the shortlist for an easy task — and the other tasks over the same material). No answer key and no card weight leave the server; a test serialises a task and looks for them | `src/Modules/Ritocode.Modules.Content`, `src/Ritocode.ContentTool`, `content/` |
 | Authoring ([#122](https://github.com/shoraLBRT/ritocode/issues/122), [#123](https://github.com/shoraLBRT/ritocode/issues/123)) | The `author-card` skill: drafts a card from a name, reading the live catalogue so the summary is delimited from its neighbours; checks it with `content validate`; never overwrites a card. Three cards drafted with it — `secrets-in-repo`, `money-in-float`, `god-class` — open the catalogue of [#124](https://github.com/shoraLBRT/ritocode/issues/124). The `author-task` skill: writes a material and one task per context from the maintainer's idea, validates, and runs the **blind smoke test** — `content learner-view <task>` renders the task as the task screen receives it (no key, notes, lesson, weight or card sections; a test holds it to that), and a separate `claude -p` session with no tools, run from an empty directory outside the repository, answers it from that alone; every difference from the key is reported. One easy task made with it, `flower-shop-daily-revenue` over `flower-shop-revenue`, whose smoke answer matched the key | `.claude/skills/author-task`, `src/Modules/Ritocode.Modules.Content/Authoring`, `content/materials`, `content/tasks` |
@@ -78,21 +79,20 @@ storage with MinIO, and the frontend's old problem pages. All of it remains read
 
 From [ROADMAP.md](ROADMAP.md), in order:
 
-1. S4 goes on with sessions (#6) done; sign-in (#7) needs the OAuth apps from the maintainer. What is left of S5 waits on it: the
-   admin area ([#130](https://github.com/shoraLBRT/ritocode/issues/130)) and the security baseline
-   ([#35](https://github.com/shoraLBRT/ritocode/issues/35)) both need #7. So S6 goes on meanwhile:
-   the landing page (#131) and the prerender (#132) exist, and Umami
-   ([#133](https://github.com/shoraLBRT/ritocode/issues/133)) depends on #127. S7's unblocked
-   issues are done — release images (#31) and logs (#33) — and the rest of S7 needs the VPS of #134:
-   deployment ([#135](https://github.com/shoraLBRT/ritocode/issues/135)), then the release command
-   ([#136](https://github.com/shoraLBRT/ritocode/issues/136)), monitoring (#34) and the runbook (#41).
-   **No engineering issue is unblocked** until the maintainer registers the OAuth apps (#7) or
-   provides the VPS (#134); the end-to-end test ([#39](https://github.com/shoraLBRT/ritocode/issues/39))
-   waits on S5.
-2. S4 · Accounts: sessions (#6) exist. Next, sign-in with GitHub and Google
-   ([#7](https://github.com/shoraLBRT/ritocode/issues/7)) — it starts a session with `ISessionIssuer`,
-   adds the sign-in and sign-out buttons — which needs OAuth apps registered by the
-   maintainer (localhost is enough for development), signed-out solving
+1. S4 goes on: sign-in (#7) is built and tested against a fake provider; only the real round trip
+   waits on the OAuth apps of #134, and that does not block the next issues. Next is signed-out
+   solving ([#127](https://github.com/shoraLBRT/ritocode/issues/127)): the sign-in prompt on *Check*,
+   the header's sign-in and sign-out buttons, and the page's handling of `?signInError=`. Then S5's
+   admin area ([#130](https://github.com/shoraLBRT/ritocode/issues/130)) and security baseline
+   ([#35](https://github.com/shoraLBRT/ritocode/issues/35)). Maintainer-provided resources (OAuth
+   apps, VPS, domain, policy text) block only an issue's final real check, not its engineering:
+   build with fakes, a local `docker compose` or a placeholder, and name the real check as left.
+   Umami ([#133](https://github.com/shoraLBRT/ritocode/issues/133)) depends on #127; the rest of
+   S7 — deployment ([#135](https://github.com/shoraLBRT/ritocode/issues/135)), the release command
+   ([#136](https://github.com/shoraLBRT/ritocode/issues/136)), monitoring (#34), the runbook (#41) —
+   can be built against a local stack; the end-to-end test
+   ([#39](https://github.com/shoraLBRT/ritocode/issues/39)) waits on S5.
+2. S4 · Accounts: sessions (#6) and sign-in (#7) exist. Left: signed-out solving
    ([#127](https://github.com/shoraLBRT/ritocode/issues/127)), and the privacy page
    ([#128](https://github.com/shoraLBRT/ritocode/issues/128)), which needs the policy text of #134.
 3. The content track is the maintainer's, with the two skills: 55–60 cards
@@ -106,6 +106,22 @@ apps, privacy text — runs in parallel and gates S7.
 
 Decisions the specification left open are listed in [SPEC.md](SPEC.md) §13. Add here anything a
 future session would otherwise have to rediscover.
+
+- **A new identity without a verified address cannot sign in** (#7). SPEC §6.1 says such an address
+  never links; it is also never used to create a user, so every user has a verified address — which
+  naming admins by e-mail (§6.2) relies on. A GitHub account whose primary address is unverified is
+  refused even if a secondary one is verified. The browser returns with
+  `?signInError=email_unverified`; #127 decides what the page says.
+- **One account per provider per user** (the unique index on `linked_accounts`): a second GitHub
+  account whose verified address is an existing user's is refused (`provider_already_linked`)
+  rather than replacing the first link.
+- **Data-protection keys protect the sign-in state** between `/auth/login` and the callback. The
+  host keeps the default key ring, so a restart during someone's sign-in fails that sign-in; #135
+  should persist the keys (a volume) so a deploy does not do that to everyone mid-flow.
+- **Registering the OAuth apps** (#134): the callback addresses are `/auth/callback/github` and
+  `/auth/callback/google` on the API's origin (`http://localhost:<api port>` in development); the
+  secrets go in `Auth:GitHub:ClientId` / `ClientSecret` and `Auth:Google:…`, through user secrets or
+  the environment, never the repository.
 
 - **One signal per extra pick** (#129, confirmed by the maintainer on 2026-10-01): a second one for
   the same card of the same attempt is refused, so the author's list counts learners, not clicks. A practice attempt can signal like a first one:
@@ -218,7 +234,7 @@ compose stack is PostgreSQL only.
 | --- | --- |
 | `Ritocode.Architecture.Tests` | 13 |
 | `Ritocode.Shared.Tests` | 51 |
-| `Ritocode.Api.Tests` | 79 |
+| `Ritocode.Api.Tests` | 99 |
 | `Ritocode.Modules.Content.Tests` | 71 |
 | `Ritocode.Modules.Attempts.Tests` | 19 |
 | Frontend (vitest) | 133 |
@@ -241,6 +257,7 @@ In Development (`ASPNETCORE_ENVIRONMENT=Development`) the host seeds `content/` 
 | `GET /api/v1/meta/modules` | `200`, four modules: Auth, Users, Content, Attempts |
 | `GET /api/v1/me` | `200`, `{"id":"0199aa00-…","username":"developer"}` under the development identity; `401 unauthenticated` without it |
 | `POST /auth/logout` | `204`, two `Set-Cookie` headers clearing `__Host-ritocode-session` and `__Host-ritocode-csrf` |
+| `GET /auth/login/github?returnUrl=/tasks` | `302` to GitHub with `state` and `code_challenge` when `Auth:GitHub` is configured; `404 provider_not_found` when it is not; `400` with `errors.returnUrl` for `returnUrl=https://…` |
 | `GET /api/v1/problems` | `200`, `{ classes, cards }` — the six classes once content is seeded |
 | `GET /api/v1/treatments` | `200`, five branches, leaves as `branch.leaf` |
 | `GET /api/v1/tasks?pageSize=1000` | `400`, `code: "validation_failed"`, `errors.pageSize` present |
