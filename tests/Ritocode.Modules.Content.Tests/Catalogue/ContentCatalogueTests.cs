@@ -108,6 +108,10 @@ public sealed class ContentCatalogueTests(PostgresTestServer postgres) : IAsyncL
         Assert.Equal("invoice.py", Assert.Single(task.Material.Files).Path);
         Assert.Equal(20, task.Material.Overview.TotalLines);
         Assert.Equal("invoice-mailer-hosted", Assert.Single(task.SameMaterial).Slug);
+
+        // The six groups step 1 browses by, named, in the taxonomy's order.
+        Assert.Equal(["disproportion", "project-knowledge", "hygiene", "growth", "false-confidence", "domain"], task.Classes.Select(@class => @class.Id));
+        Assert.Equal("Гигиена и безопасность", task.Classes[2].Name);
     }
 
     [Fact]

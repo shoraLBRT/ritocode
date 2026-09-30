@@ -1,5 +1,18 @@
 import type { ApiClient } from './client';
-import type { Me, ModuleInfo, Page, PageQuery, ProblemCatalogue, TaskSummary } from './types';
+import type {
+  Attempt,
+  AttemptStep,
+  AttemptSummary,
+  Me,
+  ModuleInfo,
+  Page,
+  PageQuery,
+  Pick,
+  ProblemCatalogue,
+  TaskDetail,
+  TaskSummary,
+  TreatmentTree,
+} from './types';
 
 /**
  * One function per endpoint the API serves today. They hold no state and no fetching policy —
@@ -20,6 +33,45 @@ export function getProblemCatalogue(client: ApiClient, signal?: AbortSignal): Pr
 /** `GET /tasks` — a page of the task catalogue, easy first. */
 export function listTasks(client: ApiClient, query: PageQuery = {}, signal?: AbortSignal): Promise<Page<TaskSummary>> {
   return client.request<Page<TaskSummary>>('/tasks', { query: { ...query }, ...(signal ? { signal } : {}) });
+}
+
+/** `GET /tasks/{slug}` — a task to solve, without its answer key. */
+export function getTask(client: ApiClient, slug: string, signal?: AbortSignal): Promise<TaskDetail> {
+  return client.request<TaskDetail>(`/tasks/${encodeURIComponent(slug)}`, { ...(signal ? { signal } : {}) });
+}
+
+/** `GET /treatments` — the treatment tree. */
+export function getTreatments(client: ApiClient, signal?: AbortSignal): Promise<TreatmentTree> {
+  return client.request<TreatmentTree>('/treatments', { ...(signal ? { signal } : {}) });
+}
+
+/** `GET /attempts?task=` — the caller's attempts, newest first. */
+export function listAttempts(
+  client: ApiClient,
+  query: PageQuery & { readonly task?: string } = {},
+  signal?: AbortSignal,
+): Promise<Page<AttemptSummary>> {
+  return client.request<Page<AttemptSummary>>('/attempts', { query: { ...query }, ...(signal ? { signal } : {}) });
+}
+
+/** `POST /attempts` — starts an attempt at a published task. */
+export function startAttempt(client: ApiClient, task: string): Promise<Attempt> {
+  return client.request<Attempt>('/attempts', { method: 'POST', body: { task } });
+}
+
+/** `PATCH /attempts/{id}` — records the step reached. */
+export function recordStep(client: ApiClient, id: string, step: AttemptStep): Promise<Attempt> {
+  return client.request<Attempt>(`/attempts/${encodeURIComponent(id)}`, { method: 'PATCH', body: { step } });
+}
+
+/** `POST /attempts/{id}/submit` — checks the answer; the result reveals the key. */
+export function submitAttempt(client: ApiClient, id: string, picks: readonly Pick[]): Promise<Attempt> {
+  return client.request<Attempt>(`/attempts/${encodeURIComponent(id)}/submit`, { method: 'POST', body: { picks } });
+}
+
+/** `GET /attempts/{id}` — an attempt and, once submitted, its result. */
+export function getAttempt(client: ApiClient, id: string, signal?: AbortSignal): Promise<Attempt> {
+  return client.request<Attempt>(`/attempts/${encodeURIComponent(id)}`, { ...(signal ? { signal } : {}) });
 }
 
 /** `GET /meta/modules` — which modules this host composed in. Diagnostics, not a product surface. */

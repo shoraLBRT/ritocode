@@ -82,6 +82,110 @@ export interface CardSections {
   readonly counterArguments: string | null;
 }
 
+/**
+ * `GET /api/v1/tasks/{slug}`: everything a learner needs to solve a task, and nothing that gives the
+ * answer away — the cards carry a name, a summary and search keywords only.
+ */
+export interface TaskDetail {
+  readonly slug: string;
+  readonly title: string;
+  readonly difficulty: Difficulty;
+  readonly context: string;
+  readonly brief: string;
+  readonly material: Material;
+  readonly classes: readonly ProblemClass[];
+  readonly cards: readonly CandidateCard[];
+  readonly sameMaterial: readonly TaskSummary[];
+}
+
+export interface Material {
+  readonly files: readonly MaterialFile[];
+  readonly overview: MaterialOverview;
+}
+
+export interface MaterialFile {
+  readonly path: string;
+  readonly content: string;
+}
+
+export interface MaterialOverview {
+  readonly files: readonly { readonly path: string; readonly lines: number }[];
+  readonly totalLines: number;
+  readonly fileCount: number;
+  readonly dependencies: readonly string[];
+}
+
+/** A card as step 1 offers it: name and summary to read, keywords to search by. */
+export interface CandidateCard {
+  readonly slug: string;
+  readonly class: string;
+  readonly name: string;
+  readonly summary: string;
+  readonly keywords: readonly string[];
+}
+
+/** `GET /api/v1/treatments`: the whole tree, shown for every picked card. */
+export interface TreatmentTree {
+  readonly branches: readonly TreatmentBranch[];
+}
+
+export interface TreatmentBranch {
+  readonly id: string;
+  readonly name: string;
+  readonly leaves: readonly TreatmentLeaf[];
+}
+
+/** A leaf, addressed as `branch.leaf` — the identifier an answer names. */
+export interface TreatmentLeaf {
+  readonly id: string;
+  readonly label: string;
+}
+
+export type AttemptStep = 'diagnosis' | 'treatment';
+
+/** One picked card and its leaves: the answer's unit. */
+export interface Pick {
+  readonly card: string;
+  readonly leaves: readonly string[];
+}
+
+/** `/api/v1/attempts/{id}`: an attempt, and once submitted its answer and result. */
+export interface Attempt {
+  readonly id: string;
+  readonly task: string;
+  readonly startedAt: string;
+  readonly step: AttemptStep;
+  readonly submittedAt: string | null;
+  readonly practice: boolean;
+  readonly contentRevision: string | null;
+  readonly answer: { readonly picks: readonly Pick[] } | null;
+  readonly result: AttemptResult | null;
+}
+
+export interface AttemptResult {
+  readonly total: number;
+  readonly maximum: number;
+  readonly isCorrect: boolean;
+  readonly cards: readonly {
+    readonly card: string;
+    readonly outcome: 'found' | 'missed' | 'extra';
+    readonly points: number;
+    readonly keyLeaves: readonly string[] | null;
+  }[];
+}
+
+/** One row of `GET /api/v1/attempts`. */
+export interface AttemptSummary {
+  readonly id: string;
+  readonly task: string;
+  readonly startedAt: string;
+  readonly step: AttemptStep;
+  readonly submittedAt: string | null;
+  readonly practice: boolean;
+  readonly score: number | null;
+  readonly maxScore: number | null;
+}
+
 /** Paging inputs, 1-based. Out-of-range values are rejected by the API, never clamped. */
 export interface PageQuery {
   readonly page?: number;

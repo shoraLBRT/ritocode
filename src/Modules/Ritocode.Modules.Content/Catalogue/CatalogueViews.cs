@@ -54,6 +54,7 @@ public sealed record TaskView(
     string Context,
     string Brief,
     MaterialView Material,
+    IReadOnlyList<ClassView> Classes,
     IReadOnlyList<CandidateCardView> Cards,
     IReadOnlyList<TaskSummaryView> SameMaterial);
 

@@ -119,6 +119,9 @@ internal sealed class ContentCatalogue(ContentDbContext context, ISubmittedTaskL
 
         var cards = await CandidatesAsync(task, cancellationToken).ConfigureAwait(false);
 
+        // The six groups step 1 browses by (SPEC §4.4) — their names, never a card's full text.
+        var classes = await ClassesAsync(cancellationToken).ConfigureAwait(false);
+
         var siblings = (await PublishedTasksAsync(cancellationToken).ConfigureAwait(false))
             .Where(row => row.Material == task.Material && row.Slug != task.Slug)
             .Select(Summary)
@@ -132,8 +135,19 @@ internal sealed class ContentCatalogue(ContentDbContext context, ISubmittedTaskL
             text.Context,
             text.Brief,
             new MaterialView(files, ContentJson.Read<MaterialOverview>(material.Overview)),
+            classes,
             cards,
             siblings);
+    }
+
+    private async Task<List<ClassView>> ClassesAsync(CancellationToken cancellationToken)
+    {
+        var taxonomy = await TaxonomyAsync(cancellationToken).ConfigureAwait(false);
+        var labels = Localised(taxonomy.Texts);
+
+        return [.. taxonomy.Classes.Select(id => labels?.Classes.GetValueOrDefault(id) is { } label
+            ? new ClassView(id, label.Name, label.Description)
+            : new ClassView(id, id, null))];
     }
 
     /// <summary>The shortlist for an easy task, the whole live catalogue for any other (SPEC §4.4).</summary>
