@@ -1,0 +1,7 @@
+material: flower-shop-revenue
+difficulty: easy
+findings:
+  - card: secrets-in-repo
+    leaves: [manual.extract-config, auto.secrets, rule.conventions]
+  - card: money-in-float
+    leaves: [manual.representation, brief.requirements]

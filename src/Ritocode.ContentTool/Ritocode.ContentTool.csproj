@@ -2,7 +2,9 @@
 
   <!--
     The content command line: `validate` checks a content tree against docs/CONTENT_FORMAT.md
-    without a database or a host, so authors, the authoring skills and CI run the same check.
+    without a database or a host, so authors, the authoring skills and CI run the same check;
+    `learner-view` prints a task exactly as a learner receives it, the input of the blind smoke
+    test of the author-task skill.
   -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
