@@ -6,23 +6,35 @@ import { ApiClient, ApiClientProvider } from '../api';
 import { I18nProvider } from '../i18n';
 import { routes } from '../routes';
 import { SessionProvider } from '../session';
+import { SiteConfigContext } from '../site';
+import type { SiteConfig } from '../site';
+
+/** The configuration tests run with: a demo task of its own name, so a link to it is unmistakable. */
+export const TEST_SITE_CONFIG: SiteConfig = { demoTask: 'demo-task' };
 
 /**
  * Mounts a route table — the real one by default — on a memory router, inside the providers the
  * application has, so a test navigates it the way a user does — through the layout, not around
  * it — without a browser history.
  */
-export function renderApp(fetchStub: typeof globalThis.fetch, initialPath = '/', table: RouteObject[] = routes) {
+export function renderApp(
+  fetchStub: typeof globalThis.fetch,
+  initialPath = '/',
+  table: RouteObject[] = routes,
+  config: SiteConfig = TEST_SITE_CONFIG,
+) {
   const client = new ApiClient({ baseUrl: 'http://api.test/api/v1', fetch: fetchStub });
   const router = createMemoryRouter(table, { initialEntries: [initialPath] });
 
   return render(
     <I18nProvider>
-      <ApiClientProvider client={client}>
-        <SessionProvider>
-          <RouterProvider router={router} />
-        </SessionProvider>
-      </ApiClientProvider>
+      <SiteConfigContext value={config}>
+        <ApiClientProvider client={client}>
+          <SessionProvider>
+            <RouterProvider router={router} />
+          </SessionProvider>
+        </ApiClientProvider>
+      </SiteConfigContext>
     </I18nProvider>,
   );
 }

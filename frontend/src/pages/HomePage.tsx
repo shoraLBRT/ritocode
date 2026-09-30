@@ -1,41 +1,59 @@
-import { listModules, useApiClient } from '../api';
-import { useApiResource } from '../hooks/useApiResource';
-import { ErrorState } from '../components/ErrorState';
-import { LoadingState } from '../components/LoadingState';
+import { Link } from 'react-router';
 import { useT } from '../i18n';
+import { useSiteConfig } from '../site';
 
 /**
- * The landing route, and the shell's own proof of life: it calls `/meta/modules` through the
- * client and renders whichever of the three states comes back. That endpoint is diagnostics
- * rather than product, which is the point — it exercises the client, the loading view and the
- * failure view without pre-empting the landing page of
- * [#131](https://github.com/shoraLBRT/ritocode/issues/131).
+ * `/` — the landing page (docs/SPEC.md §4.1, docs/CONCEPT.md): what Ritocode is and who it is for,
+ * a demo task, and the way to the tasks and the problem catalogue.
+ *
+ * It asks the API for nothing, so what it shows does not depend on a request — the prerender of
+ * [#132](https://github.com/shoraLBRT/ritocode/issues/132) can take it as it is. The demo task is
+ * an easy task named in configuration (`VITE_DEMO_TASK`), and opens signed out.
  */
 export function HomePage() {
-  const client = useApiClient();
   const t = useT();
-  const { state, reload } = useApiResource((signal) => listModules(client, signal), [client]);
+  const { demoTask } = useSiteConfig();
 
   return (
-    <section className="page">
-      <h1>{t('app.name')}</h1>
-      <p className="page__lead">{t('home.lead')}</p>
+    <section className="page landing">
+      <header className="landing__hero">
+        <h1>{t('app.name')}</h1>
+        <p className="landing__lead">{t('home.lead')}</p>
+        <p className="page__lead">{t('home.audience')}</p>
 
-      <h2>{t('home.backendTitle')}</h2>
-      <p className="page__note">{t('home.backendAt', { url: client.baseUrl })}</p>
+        <nav className="landing__actions" aria-label={t('home.actions')}>
+          <Link className="button button--primary" to={`/tasks/${demoTask}`}>
+            {t('home.demo')}
+          </Link>
+          <Link className="button" to="/tasks">
+            {t('home.tasks')}
+          </Link>
+          <Link className="button" to="/problems">
+            {t('home.problems')}
+          </Link>
+        </nav>
+        <p className="page__note">{t('home.demoNote')}</p>
+      </header>
 
-      {state.status === 'loading' && <LoadingState label={t('home.checking')} />}
-      {state.status === 'error' && <ErrorState error={state.error} onRetry={reload} />}
-      {state.status === 'success' && (
-        <ul className="module-list">
-          {state.data.map((module) => (
-            <li key={module.name} className="module-list__item">
-              <span className="module-list__name">{module.name}</span>
-              <code className="module-list__prefix">{module.routePrefix}</code>
-            </li>
-          ))}
-        </ul>
-      )}
+      <h2>{t('home.taskTitle')}</h2>
+      <p>{t('home.taskLead')}</p>
+      <ol className="landing__steps">
+        <li>{t('home.step1')}</li>
+        <li>{t('home.step2')}</li>
+        <li>{t('home.step3')}</li>
+      </ol>
+
+      <h2>{t('home.proportionTitle')}</h2>
+      <p>{t('home.proportionText')}</p>
+
+      <h2>{t('home.briefTitle')}</h2>
+      <p>{t('home.briefText')}</p>
+
+      <h2>{t('home.catalogueTitle')}</h2>
+      <p>{t('home.catalogueText')}</p>
+      <p>
+        <Link to="/problems">{t('home.catalogueLink')}</Link>
+      </p>
     </section>
   );
 }

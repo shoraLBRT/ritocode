@@ -502,6 +502,31 @@ code {
   margin: 0.5rem 0;
 }
 
+/* The landing page (SPEC §4.1): a short hero with the ways in, then prose. */
+.landing {
+  max-width: 46rem;
+}
+
+.landing__lead {
+  font-size: 1.2rem;
+}
+
+.landing__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: calc(var(--gap) * 1.5);
+}
+
+.landing__actions .button {
+  padding: 0.5rem 1rem;
+  text-decoration: none;
+}
+
+.landing__steps li + li {
+  margin-top: 0.5rem;
+}
+
 /* The signal under an extra pick (SPEC §4.8): a button, then a one-line comment. */
 .signal {
   margin: 0.75rem 0 0;
