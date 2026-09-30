@@ -1,14 +1,16 @@
 # Domain Model
 
-The core entities of the system, and which module owns each. The physical schema, indexes and
+The entities that exist in the code, and which module owns each. The physical schema, indexes and
 constraints are in [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md); this document is the conceptual view.
+The entities the new product is building toward — problem cards, materials, tasks, attempts,
+signals — are described in [SPEC.md](SPEC.md) §3 and §5, and join this file as they are built.
 
 Every entity is owned by exactly one module. An entity is only ever read or written through its
 owning module — see [ADR 0002](adr/0002-modular-monolith-layout.md).
 
 ## User
 
-Owned by the **Users** module.
+Owned by the **Users** module. A platform account.
 
 Fields:
 
@@ -16,10 +18,6 @@ Fields:
 - email — stored lower-cased, unique
 - username — stored lower-cased, unique
 - created_at
-- xp — never negative
-- trust_level — `New`, `Established`, `Trusted`
-
-Trust level only gates behaviour from Phase 3 onward, when contributions reach real repositories.
 
 ## LinkedAccount
 
@@ -29,7 +27,8 @@ Fields:
 
 - id
 - user_id — the Ritocode user
-- provider — `GitHub` is the only value in Phase 1
+- provider — `GitHub` today; Google arrives with sign-in
+  ([#7](https://github.com/shoraLBRT/ritocode/issues/7))
 - provider_user_id — the provider's immutable identifier, unique per provider
 - provider_login — last known login at the provider, for display only, may be stale
 - linked_at
@@ -37,146 +36,19 @@ Fields:
 The immutable id is what identifies the account; logins get renamed and must not silently detach an
 account.
 
-## Problem
+## Problem and ProblemVersion — previous product
 
-Owned by the **Problems** module. Carries only what stays stable across versions.
+Owned by the **Problems** module, and **replaced** by the Content module of
+[#121](https://github.com/shoraLBRT/ritocode/issues/121). They describe a refactoring exercise
+loaded from the old package format ([PROBLEM_PACKAGE_SPEC.md](PROBLEM_PACKAGE_SPEC.md)) into a
+bundle in object storage ([STORAGE_LAYOUT.md](STORAGE_LAYOUT.md)); all three go together.
 
-Fields:
+- **Problem:** id, slug (unique), title, difficulty (`Easy`, `Medium`, `Hard`), description in
+  Markdown, tags, created_at.
+- **ProblemVersion:** one immutable revision of a problem — id, problem_id, version (from 1, unique
+  per problem), snapshot_reference to the bundle, validator_config, workspace_root, editable_files,
+  the three size limits, created_at, published_at (null while a draft). The catalog resolves only
+  the highest **published** version.
 
-- id
-- slug — stable identifier used in catalog URLs, unique
-- title
-- difficulty — `Easy`, `Medium`, `Hard`
-- description — Markdown
-- tags
-- created_at
-
-## ProblemVersion
-
-Owned by the **Problems** module. One immutable revision of a problem.
-
-Fields:
-
-- id
-- problem_id
-- version — starts at 1, unique per problem
-- snapshot_reference — storage reference of the problem bundle, in the form fixed by
-  [STORAGE_LAYOUT.md](STORAGE_LAYOUT.md). Typed as `StorageReference` in the model, not as a string:
-  an EF value converter maps it onto the `varchar(512)` column, so nothing can put another kind of
-  value there and a value the build cannot resolve fails at the read
-- validator_config — validator pipeline configuration; the canonical JSON projection of a problem
-  package's `validators` list, defined in
-  [PROBLEM_PACKAGE_SPEC.md](PROBLEM_PACKAGE_SPEC.md#validator_config)
-- workspace_root — the package's `workspace.root` with no trailing slash: the directory inside the
-  bundle whose files are the starter tree. Stored so a workspace can be materialised by a module that
-  may not parse the manifest format, and handed to it by `IProblemVersionLookup`
-- editable_files — the workspace-relative paths a user may change: the manifest's `workspace.editable`
-  globs resolved against the starter tree at ingest, ordered ordinally. Resolved rather than stored as
-  globs, so glob matching stays in the Problems module. Empty for a version that never declared it,
-  which means nothing is editable
-- max_files, max_file_bytes, max_total_bytes — the manifest's `limits`. With `editable_files`, handed
-  to Workspaces by `IWorkspaceAllowanceLookup` and checked on every save
-- created_at
-- published_at — null while the version is a draft
-
-A workspace is created from a version, never from a problem, so editing a problem never alters an
-in-flight attempt. The catalog only ever resolves published versions, and resolves the **highest
-published** one — a draft with a higher number is invisible to it.
-
-Ingest creates a version and publishes it in the same step: it adds a version to a problem every
-time it runs and never replaces one, because a published version is what a workspace was created
-from. A draft and review flow is what `published_at` is nullable for, and nothing in Phase 1 stage
-one moves a version through one.
-
-## Workspace
-
-Owned by the **Workspaces** module. A user's working copy of a problem version.
-
-Fields:
-
-- id
-- user_id
-- problem_version_id
-- snapshot_reference — storage reference of the current working tree, overwritten on every save;
-  see [STORAGE_LAYOUT.md](STORAGE_LAYOUT.md). Typed as `StorageReference`, as the problem version's is.
-  Written first at creation, holding the version's starter tree re-rooted so its paths are the paths
-  a user sees
-- created_at
-- updated_at — last write, and never earlier than created_at
-
-A workspace is opened on a **published** version only; a draft is answered as if it did not exist.
-A user has **one workspace per version**: opening a version they already have a workspace on returns
-that workspace rather than creating an empty second one. The schema does not enforce this — two
-concurrent first opens can both create, and a later open returns the most recently written.
-
-A workspace is read and saved only by its owner. Another user's workspace is answered exactly like a
-missing one, with a 404, so the API never confirms that an id exists.
-
-A save **replaces one file** the version lists as editable; it never creates, deletes or renames one.
-It names the **revision** it was made to — the SHA-256 of the file's bytes, which a read reports —
-and a file that has moved on since is refused rather than overwritten. The revision is per file and
-derived from the content, so it needs no column. Saves to one workspace are serialised by a lock on
-its row, because each rewrites the whole snapshot. A save is refused when the file would exceed the
-version's `max_file_bytes`, or the tree its `max_total_bytes` or `max_files`, and a save of exactly
-what is stored writes nothing and leaves `updated_at` where it was.
-
-## Submission
-
-Owned by the **Submissions** module. One evaluation attempt against a workspace.
-
-Fields:
-
-- id
-- workspace_id
-- user_id — denormalised from the workspace so attempt history is a single-table query
-- status
-- score — null until the pipeline completes, otherwise 0–100
-- input_reference — storage reference of the **frozen copy** of the workspace tree the attempt is
-  graded against, copied server-side when the submission is created and never the live snapshot;
-  see [STORAGE_LAYOUT.md](STORAGE_LAYOUT.md). Typed as `StorageReference`, required, no default
-- created_at
-- started_at — when a worker last claimed the attempt; null while queued, set when a run starts,
-  moved forward when an abandoned attempt is reclaimed, and kept by a failure during a run. It is also
-  the claim's identity: a worker records a result only while this is still the time its claim set
-- completed_at — set exactly when status becomes terminal
-
-Status values:
-
-- `Queued` — accepted, waiting for a worker
-- `Running` — a worker is executing the validator pipeline
-- `Completed` — the pipeline ran to completion; the verdict is the score and the report
-- `Failed` — the pipeline could not run to completion; infrastructure, not a wrong answer
-
-`Completed` and `Failed` are terminal. The transitions are methods on the entity rather than status
-assignments — `Start(at)`, `Reclaim(at)`, `Complete(score, at)` and `Fail(at)` — so the timestamps
-move with the status: `Queued` → `Running` → `Completed`, and `Failed` from `Queued` or `Running`,
-since an attempt whose input cannot be evaluated at all fails without ever starting. `Reclaim` keeps
-a `Running` attempt running under a new, strictly later claim, for the worker that takes over from one
-that died. Anything else throws. A time before the attempt was made is recorded as the time it was
-made.
-
-Attempts are claimed and finished only by the Submissions module's queue
-([ADR 0009](adr/0009-evaluation-is-a-command-submissions-issues.md)): the oldest queued attempt — or
-a running one whose claim has outlived the claim timeout — is claimed with `SKIP LOCKED`, so no attempt
-is handed to two workers, and a result is recorded only on the claim that still holds it.
-
-A submission is made only against a workspace **the caller owns**; another user's workspace is
-answered exactly like a missing one. A workspace may have any number of attempts, queued at once or
-not, and each freezes its own tree — a save after submitting never changes what is graded. How many
-attempts a person may make is the rate limit of [#35](https://github.com/shoraLBRT/ritocode/issues/35),
-not a rule about the workspace. An attempt is read and listed only by its owner, newest first.
-
-## SubmissionReport
-
-Owned by the **Submissions** module. One report per submission.
-
-Fields:
-
-- id
-- submission_id — unique
-- validator_results — per-validator outcomes; shape follows the validator plugin interface from
-  [#18](https://github.com/shoraLBRT/ritocode/issues/18)
-- logs_reference — storage reference of the submission's artifacts, null when nothing was captured.
-  A prefix rather than a single object, because one run produces a file per validator — see
-  [STORAGE_LAYOUT.md](STORAGE_LAYOUT.md)
-- created_at
+The columns that served workspaces — `workspace_root`, `editable_files` and the limits — have had no
+reader since [#119](https://github.com/shoraLBRT/ritocode/issues/119) removed the Workspaces module.

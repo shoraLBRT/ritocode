@@ -3,7 +3,7 @@ using Ritocode.TestSupport;
 namespace Ritocode.Api.Tests.Infrastructure;
 
 /// <summary>
-/// The host as a developer runs it: the seeded development identity from ADR 0005 authenticating
+/// The host as a developer runs it: the seeded development identity of ADR 0008 authenticating
 /// every request.
 /// </summary>
 /// <remarks>

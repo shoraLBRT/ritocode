@@ -8,7 +8,7 @@ using Ritocode.Shared.Identity;
 namespace Ritocode.Api.Tests.Endpoints;
 
 /// <summary>
-/// The identity seam as the host actually composes it: the development identity from ADR 0005
+/// The identity seam as the host actually composes it: the development identity of ADR 0008
 /// authenticating requests, and the row behind it.
 /// </summary>
 public sealed class AuthenticationTests(TestApi api) : IClassFixture<TestApi>

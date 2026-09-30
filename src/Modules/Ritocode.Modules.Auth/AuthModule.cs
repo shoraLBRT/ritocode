@@ -13,8 +13,8 @@ namespace Ritocode.Modules.Auth;
 /// Authentication, session issuance and linked provider accounts.
 /// </summary>
 /// <remarks>
-/// Owns the <c>auth</c> schema and the platform's authentication scheme. For the slice that scheme
-/// is the seeded development identity ADR 0005 allows; login, session issuance and <c>/me</c> are
+/// Owns the <c>auth</c> schema and the platform's authentication scheme. For now that scheme
+/// is the seeded development identity of ADR 0008; login, session issuance and <c>/me</c> are
 /// the rest of <see href="https://github.com/shoraLBRT/ritocode/issues/6">#6</see>, and provider
 /// linking is <see href="https://github.com/shoraLBRT/ritocode/issues/7">#7</see>.
 /// </remarks>

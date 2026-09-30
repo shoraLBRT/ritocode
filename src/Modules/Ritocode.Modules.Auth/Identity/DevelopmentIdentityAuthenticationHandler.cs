@@ -14,7 +14,7 @@ namespace Ritocode.Modules.Auth.Identity;
 /// </summary>
 /// <remarks>
 /// <para>
-/// This is the reduction ADR 0005 allows — a seeded identity instead of a login — implemented as a
+/// This is the seeded identity of ADR 0008 — a fixed user instead of a login — implemented as a
 /// real authentication scheme rather than as a middleware that sets a user id somewhere. That is
 /// what makes it substitutable: stage two replaces this handler with one that reads a session
 /// token, and no endpoint, no authorisation policy and no <see cref="ICurrentUser"/> consumer

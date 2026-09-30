@@ -7,7 +7,7 @@ namespace Ritocode.Shared.Identity;
 /// <remarks>
 /// <para>
 /// This is the seam <see href="https://github.com/shoraLBRT/ritocode/issues/6">#6</see> exists to
-/// build, and the reason ADR 0005 may ship a seeded development identity instead of a login: the
+/// build, and the reason a seeded development identity can stand in for a login (ADR 0008): the
 /// implementation behind this interface changes when a real session provider arrives, and no
 /// endpoint does. Taking <c>user_id</c> from a request body or query string instead is the second
 /// row of that ADR's forbidden list.
