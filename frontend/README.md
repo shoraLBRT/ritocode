@@ -21,8 +21,9 @@ The dev server binds port 5173 with `strictPort`, because that exact origin is w
 `appsettings.Development.json` allows through CORS. Changing the port here without changing it
 there makes every request fail in the browser and succeed from `curl`.
 
-`VITE_API_BASE_URL` says where the API lives; see `.env.example` for the default. It is read at
-build time and inlined, so a change needs a rebuild.
+`VITE_API_BASE_URL` says where the API lives, and `VITE_DEMO_TASK` which easy task the landing page
+offers; see `.env.example` for the defaults. Both are read at build time and inlined, so a change
+needs a rebuild.
 
 ## Scripts
 
@@ -30,6 +31,7 @@ build time and inlined, so a change needs a rebuild.
 | --- | --- |
 | `npm run dev` | Vite dev server on <http://localhost:5173> |
 | `npm run build` | Typecheck, then a production bundle in `dist/` |
+| `npm run build:static` | `build`, then `/` and `/problems` prerendered into it — see below |
 | `npm run typecheck` | `tsc --build` over the app and the tooling config |
 | `npm run lint` | ESLint, type-aware rules included |
 | `npm test` | Vitest, once |
@@ -40,6 +42,30 @@ directory on every pull request. None of the three needs a backend, a database o
 job is the frontend's whole gate and running it here reproduces it — with one caveat worth knowing:
 CI resolves the Node line in `.nvmrc`, which may be newer than the machine you are on.
 
+## The prerendered pages
+
+`/` and `/problems` must be readable without JavaScript (docs/SPEC.md §4.1), so a release builds
+with `build:static`. It renders `src/prerender/prerender.tsx` with Vite's SSR build and writes into
+`dist/`:
+
+| File | Served for |
+| --- | --- |
+| `index.html` | `/` — the landing page, rendered |
+| `problems.html` | `/problems` — every card in full, each with its anchor |
+| `spa.html` | every other route — the untouched shell |
+| `sitemap.xml`, `robots.txt` | themselves |
+
+It needs the content export, made by the backend's own parser, and the site's address:
+
+```bash
+dotnet run --project src/Ritocode.ContentTool -- export content-export.json content
+CONTENT_EXPORT=../content-export.json SITE_ORIGIN=https://ritocode.ru npm run build:static
+```
+
+The server tries the path, then the path with `.html`, then `spa.html` (Caddy:
+`try_files {path} {path}.html /spa.html`). Once the bundle loads, the application renders over the
+static markup; `/problems` then reads the catalogue from the API as it always does.
+
 ## How it is put together
 
 ```
@@ -49,8 +75,10 @@ src/
   session/     who is signed in, from GET /me, and RequireSignIn for pages that need it
   hooks/       useApiResource — one request, four states, no cache
   components/  the layout, the loading / error / empty panels, and Markdown for card text
-  pages/       one component per route: home, /tasks, /problems, not found;
+  pages/       one component per route: the landing, /tasks, /problems, /progress, not found;
                task/ is the task screen and the review it lands on
+  site/        build-time configuration (the demo task), and each page's title and description
+  prerender/   / and /problems as static HTML, for build:static
   routes.tsx   the route table, as data
   test/        render helpers and response builders shaped like the real API
 ```

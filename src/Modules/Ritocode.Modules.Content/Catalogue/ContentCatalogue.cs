@@ -31,24 +31,11 @@ internal sealed class ContentCatalogue(ContentDbContext context, ISubmittedTaskL
     public async Task<ProblemCatalogueView> GetProblemsAsync(CancellationToken cancellationToken)
     {
         var taxonomy = await TaxonomyAsync(cancellationToken).ConfigureAwait(false);
-        var labels = Localised(taxonomy.Texts);
         var cards = await LiveCardsAsync(cancellationToken).ConfigureAwait(false);
 
-        var classes = taxonomy.Classes
-            .Select(id => labels?.Classes.GetValueOrDefault(id) is { } label
-                ? new ClassView(id, label.Name, label.Description)
-                : new ClassView(id, id, null))
-            .ToList();
-
-        var views = cards
-            .OrderBy(card => ClassRank(taxonomy, card.Class))
-            .ThenBy(card => card.Slug, StringComparer.Ordinal)
-            .Select(card => (card, text: Localised(ContentJson.Read<Dictionary<string, CardText>>(card.Texts))))
-            .Where(pair => pair.text is not null)
-            .Select(pair => ToView(pair.card, pair.text!))
-            .ToList();
-
-        return new ProblemCatalogueView(classes, views);
+        return ProblemCatalogueMapping.Map(
+            taxonomy,
+            cards.Select(card => new ProblemCard(card.Slug, card.Class, card.Weight, ContentJson.Read<Dictionary<string, CardText>>(card.Texts))));
     }
 
     public async Task<TreatmentTreeView> GetTreatmentsAsync(CancellationToken cancellationToken)
@@ -188,22 +175,6 @@ internal sealed class ContentCatalogue(ContentDbContext context, ISubmittedTaskL
 
     private static TaskSummaryView Summary(StoredTask task) =>
         new(task.Slug, Localised(ContentJson.Read<Dictionary<string, TaskText>>(task.Texts))?.Title ?? task.Slug, task.Difficulty);
-
-    private static CardView ToView(StoredCard card, CardText text) => new(
-        card.Slug,
-        card.Class,
-        text.Name,
-        text.Summary,
-        text.Keywords,
-        new CardSectionsView(
-            text.Sections.GetValueOrDefault(CardSection.Signs),
-            text.Sections.GetValueOrDefault(CardSection.WhyAiDoesIt),
-            text.Sections.GetValueOrDefault(CardSection.Cost),
-            text.Sections.GetValueOrDefault(CardSection.AcceptableWhen),
-            text.Sections.GetValueOrDefault(CardSection.Detection),
-            text.Sections.GetValueOrDefault(CardSection.Treatment),
-            text.Sections.GetValueOrDefault(CardSection.Sources),
-            text.Sections.GetValueOrDefault(CardSection.CounterArguments)));
 
     private static int ClassRank(Taxonomy taxonomy, string id)
     {

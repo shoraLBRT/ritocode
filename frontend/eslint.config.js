@@ -5,7 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist', 'coverage', 'node_modules'] },
+  { ignores: ['dist', 'dist-ssr', 'coverage', 'node_modules'] },
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
@@ -54,11 +54,16 @@ export default tseslint.config(
     },
   },
   {
+    // Rendered once at build time, never hot-reloaded: a page component beside the function is fine.
+    files: ['src/prerender/**/*.tsx'],
+    rules: { 'react-refresh/only-export-components': 'off' },
+  },
+  {
     files: ['**/*.test.{ts,tsx}', 'src/test/**/*.ts'],
     languageOptions: { globals: { ...globals.browser, ...globals.node } },
   },
   {
-    files: ['vite.config.ts', 'eslint.config.js'],
+    files: ['vite.config.ts', 'eslint.config.js', 'scripts/**/*.mjs'],
     extends: [tseslint.configs.disableTypeChecked],
     languageOptions: { globals: globals.node },
   },

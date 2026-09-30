@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --build --force && vite build",
+    "build:static": "npm run build && vite build --ssr src/prerender/prerender.tsx --outDir dist-ssr --emptyOutDir && node scripts/prerender.mjs",
     "typecheck": "tsc --build --force",
     "lint": "eslint .",
     "test": "vitest run",

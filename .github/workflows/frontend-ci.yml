@@ -59,3 +59,55 @@ jobs:
       # None of these need a backend, a database or Docker: the tests stub `fetch`.
       - name: Test
         run: npm test
+
+  prerender:
+    name: Prerender public pages
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    # `/` and `/problems` as static HTML from the content export (docs/SPEC.md §4.1): the export is
+    # made by the backend's own parser, so this job needs .NET as well as Node. The origin is a
+    # placeholder until the domain exists (#134); a release sets the real one.
+    env:
+      CONTENT_EXPORT: ${{ github.workspace }}/content-export.json
+      SITE_ORIGIN: https://ritocode.example
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Export content/
+        run: dotnet run --project src/Ritocode.ContentTool --configuration Release -- export "$CONTENT_EXPORT" content
+
+      - name: Install
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build with the prerendered pages
+        working-directory: frontend
+        run: npm run build:static
+
+      # Every card of the export is on the static page with its anchor: what a search engine that
+      # runs no JavaScript reads.
+      - name: Check every card is on the static page
+        working-directory: frontend
+        run: |
+          node -e '
+            const fs = require("node:fs");
+            const cards = JSON.parse(fs.readFileSync(process.env.CONTENT_EXPORT, "utf8")).problems.cards;
+            const html = fs.readFileSync("dist/problems.html", "utf8");
+            const missing = cards.filter((card) => !html.includes(`id="${card.slug}"`)).map((card) => card.slug);
+            if (cards.length === 0 || missing.length > 0) { console.error("Missing from dist/problems.html:", missing); process.exit(1); }
+            console.log(`${cards.length} cards on dist/problems.html`);
+          '
