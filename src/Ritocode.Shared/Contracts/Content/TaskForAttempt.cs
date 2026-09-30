@@ -7,13 +7,17 @@ namespace Ritocode.Shared.Contracts.Content;
 /// <param name="Findings">The answer key, each finding with its card's weight, in the author's order.</param>
 /// <param name="OfferedCards">The cards step 1 offers: the shortlist for an easy task, every live card otherwise.</param>
 /// <param name="Leaves">Every leaf of the treatment tree, as <c>branch.leaf</c>.</param>
+/// <param name="Notes">The author's note per finding, by card, in the default locale — shown in the review.</param>
+/// <param name="Lesson">The closing text of the review, if the task has one.</param>
 public sealed record TaskForAttempt(
     string Slug,
     bool Published,
     string ContentRevision,
     IReadOnlyList<TaskFinding> Findings,
     IReadOnlyList<string> OfferedCards,
-    IReadOnlyList<string> Leaves);
+    IReadOnlyList<string> Leaves,
+    IReadOnlyDictionary<string, string> Notes,
+    string? Lesson);
 
 /// <summary>One finding of an answer key: a card, the card's weight, and the leaves right for it, any of them.</summary>
 public sealed record TaskFinding(string Card, int Weight, IReadOnlyList<string> Leaves);

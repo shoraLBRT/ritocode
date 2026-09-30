@@ -1,25 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router';
 import { getProblemCatalogue, useApiClient } from '../api';
-import type { CardSections, ProblemCard, ProblemCatalogue } from '../api';
+import type { ProblemCard, ProblemCatalogue } from '../api';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { LoadingState } from '../components/LoadingState';
-import { Markdown } from '../components/Markdown';
+import { CardSectionsView } from '../components/CardSectionsView';
 import { useApiResource } from '../hooks/useApiResource';
 import { useT } from '../i18n';
-
-/** The long fields of a card, in the order a card is read. */
-const sectionOrder: readonly (keyof CardSections)[] = [
-  'signs',
-  'whyAiDoesIt',
-  'cost',
-  'acceptableWhen',
-  'detection',
-  'treatment',
-  'sources',
-  'counterArguments',
-];
 
 /**
  * `/problems` — the problem catalogue (docs/SPEC.md §4.2): one page, every card in full, grouped by
@@ -112,18 +100,7 @@ function Card({ card }: { card: ProblemCard }) {
       </h3>
       <p className="problem-card__summary">{card.summary}</p>
 
-      {sectionOrder.map((section) => {
-        const text = card.sections[section];
-
-        return (
-          text !== null && (
-            <div key={section} className="problem-card__section">
-              <h4>{t(`problems.sections.${section}`)}</h4>
-              <Markdown source={text} />
-            </div>
-          )
-        );
-      })}
+      <CardSectionsView sections={card.sections} />
     </article>
   );
 }

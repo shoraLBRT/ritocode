@@ -124,6 +124,11 @@ public sealed class AttemptEndpointsTests(ContentTestApi api) : IClassFixture<Co
         var missed = result.GetProperty("cards")[2];
         Assert.Equal(["manual.handle-errors"], missed.GetProperty("keyLeaves").EnumerateArray().Select(leaf => leaf.GetString()));
 
+        // The author's words come with the key: the note for a finding of this key, and the lesson.
+        var review = root.GetProperty("review");
+        Assert.StartsWith("Десять счетов в месяц", review.GetProperty("notes").GetProperty("money-in-float").GetString(), StringComparison.Ordinal);
+        Assert.StartsWith("Масштаб маленький", review.GetProperty("lesson").GetString(), StringComparison.Ordinal);
+
         // The answer is stored as sent, in order: picks by card.
         Assert.Equal(
             ["hardcoded-config", "money-in-float", "secrets-in-repo"],
@@ -274,6 +279,7 @@ public sealed class AttemptEndpointsTests(ContentTestApi api) : IClassFixture<Co
         using (var open = await GetJsonAsync($"/api/v1/attempts/{id}", HttpStatusCode.OK))
         {
             AssertNoKey(open.RootElement.GetRawText());
+            Assert.Equal(JsonValueKind.Null, open.RootElement.GetProperty("review").ValueKind);
         }
 
         using (var history = await GetJsonAsync("/api/v1/attempts", HttpStatusCode.OK))
@@ -373,7 +379,7 @@ public sealed class AttemptHistoryTests(ContentTestApi api) : IClassFixture<Cont
         foreach (var _ in new[] { 1, 2 })
         {
             var attempt = Attempt.Start(user, ContentTestApi.MediumTask, now);
-            attempt.Submit(now, "first", "{\"picks\":[]}", "{}", 0, 15, countsTowardProgress: true);
+            attempt.Submit(now, "first", "{\"picks\":[]}", "{}", "{}", 0, 15, countsTowardProgress: true);
             context.Attempts.Add(attempt);
         }
 

@@ -160,6 +160,8 @@ export interface Attempt {
   readonly contentRevision: string | null;
   readonly answer: { readonly picks: readonly Pick[] } | null;
   readonly result: AttemptResult | null;
+  /** The author's note per finding, by card, and the lesson — kept with the attempt on submit. */
+  readonly review: { readonly notes: Readonly<Record<string, string>>; readonly lesson: string | null } | null;
 }
 
 export interface AttemptResult {
@@ -170,7 +172,14 @@ export interface AttemptResult {
     readonly card: string;
     readonly outcome: 'found' | 'missed' | 'extra';
     readonly points: number;
+    /** The author's leaves, for every card of the key; null for an extra pick. */
     readonly keyLeaves: readonly string[] | null;
+    /** For a found card: the learner's leaves, split by whether the key lists them. */
+    readonly treatment: {
+      readonly matched: boolean;
+      readonly matchedLeaves: readonly string[];
+      readonly wrongLeaves: readonly string[];
+    } | null;
   }[];
 }
 

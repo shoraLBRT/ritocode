@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Ritocode.Modules.Attempts.Persistence;
@@ -11,9 +12,11 @@ using Ritocode.Modules.Attempts.Persistence;
 namespace Ritocode.Modules.Attempts.Persistence.Migrations
 {
     [DbContext(typeof(AttemptsDbContext))]
-    partial class AttemptsDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260930155204_AddAttemptReview")]
+    partial class AddAttemptReview
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
