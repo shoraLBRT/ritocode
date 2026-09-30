@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { ru } from '../../i18n';
 import { renderApp } from '../../test/render';
-import { jsonResponse } from '../../test/responses';
+import { jsonResponse, problemResponse } from '../../test/responses';
 import { task, tree } from './fixtures';
 
 const sections = {
@@ -53,6 +53,7 @@ const scored = {
     ],
   },
   review: { notes: { 'money-in-float': 'Копейки расходятся с бухгалтерией.' }, lesson: 'Деньги и секреты от масштаба не зависят.' },
+  signalledCards: [],
 };
 
 const clean = {
@@ -62,10 +63,15 @@ const clean = {
   review: { notes: {}, lesson: null },
 };
 
-function api(attempt: object, taskBody: object = task) {
+function api(attempt: object, taskBody: object = task, signal: () => Response = () => jsonResponse({}, 201)) {
   return vi.fn<typeof globalThis.fetch>().mockImplementation((input) => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
     const path = new URL(url).pathname.replace('/api/v1', '');
+
+    if (path === '/signals') {
+      return Promise.resolve(signal());
+    }
+
     const bodies: Record<string, object> = {
       '/me': { id: 'u', username: 'developer' },
       '/attempts/attempt-1': attempt,
@@ -166,5 +172,81 @@ describe('the review', () => {
 
     expect(screen.getByText(ru.review.cleanExtra)).toBeInTheDocument();
     expect(within(line('Класс-бог')).getByText(ru.review.extra)).toBeInTheDocument();
+  });
+});
+
+function urlOf(input: RequestInfo | URL): string {
+  return typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+}
+
+function signalCalls(stub: ReturnType<typeof api>) {
+  return stub.mock.calls.filter(([input]) => urlOf(input).endsWith('/signals'));
+}
+
+describe('a signal from an extra pick', () => {
+  it('opens a one-line comment under the extra pick only, and sends it for that pick', async () => {
+    const stub = api(scored);
+    renderApp(stub, `/tasks/${task.slug}/attempts/attempt-1`);
+    await screen.findByRole('heading', { level: 1, name: ru.review.title });
+
+    // Only the extra pick offers it: a found or missed card is already in the key.
+    expect(screen.getAllByRole('button', { name: ru.review.signal })).toHaveLength(1);
+    const extra = within(line('Класс-бог'));
+
+    fireEvent.click(extra.getByRole('button', { name: ru.review.signal }));
+    fireEvent.change(extra.getByLabelText(ru.review.signalComment), { target: { value: 'Класс на 400 строк в app.py' } });
+    fireEvent.click(extra.getByRole('button', { name: ru.review.signalSend }));
+
+    expect(await extra.findByText(ru.review.signalSent)).toBeInTheDocument();
+    expect(extra.queryByRole('button', { name: ru.review.signal })).not.toBeInTheDocument();
+
+    const [call] = signalCalls(stub);
+    expect(call?.[1]?.method).toBe('POST');
+    expect(JSON.parse(call?.[1]?.body as string)).toEqual({ attempt: 'attempt-1', card: 'god-class', comment: 'Класс на 400 строк в app.py' });
+
+    // The score is the one it was.
+    expect(screen.getByText('29 из 90')).toBeInTheDocument();
+  });
+
+  it('can be cancelled without sending anything', async () => {
+    const stub = api(scored);
+    renderApp(stub, `/tasks/${task.slug}/attempts/attempt-1`);
+    await screen.findByRole('heading', { level: 1, name: ru.review.title });
+    const extra = within(line('Класс-бог'));
+
+    fireEvent.click(extra.getByRole('button', { name: ru.review.signal }));
+    fireEvent.click(extra.getByRole('button', { name: ru.review.signalCancel }));
+
+    expect(extra.getByRole('button', { name: ru.review.signal })).toBeInTheDocument();
+    expect(signalCalls(stub)).toHaveLength(0);
+  });
+
+  it('shows a pick signalled before as sent', async () => {
+    await openReview({ ...scored, signalledCards: ['god-class'] });
+
+    expect(within(line('Класс-бог')).getByText(ru.review.signalSent)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: ru.review.signal })).not.toBeInTheDocument();
+  });
+
+  it('takes a signal the API already has as sent', async () => {
+    renderApp(api(scored, task, () => problemResponse(409, 'signal_already_sent', 'Already.')), `/tasks/${task.slug}/attempts/attempt-1`);
+    await screen.findByRole('heading', { level: 1, name: ru.review.title });
+    const extra = within(line('Класс-бог'));
+    fireEvent.click(extra.getByRole('button', { name: ru.review.signal }));
+    fireEvent.click(extra.getByRole('button', { name: ru.review.signalSend }));
+    expect(await extra.findByText(ru.review.signalSent)).toBeInTheDocument();
+  });
+
+  it('keeps the comment and says why when sending fails', async () => {
+    renderApp(api(scored, task, () => problemResponse(429, 'signal_rate_limited', 'At most 10 signals.')), `/tasks/${task.slug}/attempts/attempt-1`);
+    await screen.findByRole('heading', { level: 1, name: ru.review.title });
+    const extra = within(line('Класс-бог'));
+    fireEvent.click(extra.getByRole('button', { name: ru.review.signal }));
+    fireEvent.change(extra.getByLabelText(ru.review.signalComment), { target: { value: 'здесь' } });
+    fireEvent.click(extra.getByRole('button', { name: ru.review.signalSend }));
+
+    expect(await extra.findByText('At most 10 signals.')).toBeInTheDocument();
+    expect(extra.getByLabelText(ru.review.signalComment)).toHaveValue('здесь');
+    expect(extra.getByRole('button', { name: ru.review.signalSend })).toBeEnabled();
   });
 });

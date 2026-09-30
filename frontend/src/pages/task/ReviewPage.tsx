@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Link, useParams } from 'react-router';
 import { getAttempt, getProblemCatalogue, getTask, getTreatments, useApiClient } from '../../api';
 import type { Attempt, AttemptResult, ProblemCard, TaskDetail, TreatmentTree } from '../../api';
@@ -7,6 +8,7 @@ import { LoadingState } from '../../components/LoadingState';
 import { Markdown } from '../../components/Markdown';
 import { useApiResource } from '../../hooks/useApiResource';
 import { useT } from '../../i18n';
+import { SignalControl } from './SignalControl';
 
 type Line = AttemptResult['cards'][number];
 
@@ -14,7 +16,8 @@ type Line = AttemptResult['cards'][number];
  * `/tasks/{slug}/attempts/{id}` — the review of a checked answer (docs/SPEC.md §4.5), for its owner.
  * The score in points with its composition; every finding of the key, found or missed, with the
  * learner's leaves beside the author's, the author's note and the full card on expanding; every
- * extra pick with its card; the lesson; the same code in another context; and trying again.
+ * extra pick with its card and the signal button (SPEC §4.8); the lesson; the same code in another
+ * context; and trying again.
  *
  * Found, missed and extra each carry a mark and a word, never colour alone. The note and the lesson
  * are the ones kept with the attempt, so the review always matches the key it was scored against;
@@ -105,7 +108,9 @@ function Review({ attempt, task, tree, cards }: { attempt: Attempt; task: TaskDe
         <>
           <h2>{t('review.extras')}</h2>
           {extras.map((line) => (
-            <ReviewLine key={line.card} line={line} name={name(line.card)} card={card(line.card)} yours={picked(line.card).map(label)} />
+            <ReviewLine key={line.card} line={line} name={name(line.card)} card={card(line.card)} yours={picked(line.card).map(label)}>
+              <SignalControl attempt={attempt.id} card={line.card} sent={attempt.signalledCards.includes(line.card)} />
+            </ReviewLine>
           ))}
         </>
       )}
@@ -146,6 +151,7 @@ function ReviewLine({
   yours,
   authors,
   note,
+  children,
 }: {
   line: Line;
   name: string;
@@ -153,6 +159,7 @@ function ReviewLine({
   yours: readonly string[];
   authors?: readonly string[];
   note?: string | undefined;
+  children?: ReactNode;
 }) {
   const t = useT();
   const leaves = (list: readonly string[]) => (list.length === 0 ? t('review.noLeaves') : list.join(', '));
@@ -196,6 +203,8 @@ function ReviewLine({
           <CardSectionsView sections={card.sections} />
         </details>
       )}
+
+      {children}
     </article>
   );
 }

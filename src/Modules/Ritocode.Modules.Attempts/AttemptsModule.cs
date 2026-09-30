@@ -9,6 +9,7 @@ using Ritocode.Modules.Attempts.Lifecycle;
 using Ritocode.Modules.Attempts.Persistence;
 using Ritocode.Modules.Attempts.Progress;
 using Ritocode.Modules.Attempts.Scoring;
+using Ritocode.Modules.Attempts.Signals;
 using Ritocode.Shared.Contracts.Attempts;
 using Ritocode.Shared.Modules;
 using Ritocode.Shared.Persistence;
@@ -16,7 +17,8 @@ using Ritocode.Shared.Persistence;
 namespace Ritocode.Modules.Attempts;
 
 /// <summary>
-/// A learner's attempts at tasks, their scoring and progress (docs/SPEC.md §4.7, §5); later, signals.
+/// A learner's attempts at tasks, their scoring and progress, and the signals sent from their reviews
+/// (docs/SPEC.md §4.7, §4.8, §5).
 /// </summary>
 /// <remarks>
 /// Owns the <c>attempts</c> schema. Reads a task and its answer key through
@@ -46,6 +48,11 @@ public sealed class AttemptsModule : IModule
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
+        services.AddOptions<SignalRateLimitOptions>()
+            .Bind(configuration.GetSection(SignalRateLimitOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
         services.AddScoped<IAttemptLifecycle, AttemptLifecycle>();
         services.AddScoped<IValidator<StartAttemptRequest>, StartAttemptRequestValidator>();
         services.AddScoped<IValidator<RecordStepRequest>, RecordStepRequestValidator>();
@@ -53,6 +60,8 @@ public sealed class AttemptsModule : IModule
 
         services.AddScoped<ISubmittedTaskLookup, SubmittedTaskLookup>();
         services.AddScoped<IProgressReader, ProgressReader>();
+        services.AddScoped<ISignalSender, SignalSender>();
+        services.AddScoped<IValidator<SendSignalRequest>, SendSignalRequestValidator>();
 
         // TryAdd, as the other modules do: the clock is host infrastructure.
         services.TryAddSingleton(TimeProvider.System);
@@ -64,5 +73,6 @@ public sealed class AttemptsModule : IModule
 
         endpoints.MapGroup(RoutePrefix).MapAttemptEndpoints();
         endpoints.MapProgressEndpoints();
+        endpoints.MapSignalEndpoints();
     }
 }

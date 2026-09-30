@@ -50,6 +50,14 @@ public sealed class OwnershipRuleTests
             "Ritocode.Modules.Attempts.Lifecycle.AttemptLifecycle",
             "StartAsync",
             "Adds the row it creates for its caller, and reads nothing."),
+        new(
+            "Ritocode.Modules.Attempts.Persistence.OwnedSignals",
+            Method: null,
+            "Every lookup there takes the owner and puts it inside the query."),
+        new(
+            "Ritocode.Modules.Attempts.Signals.SignalSender",
+            "SendAsync",
+            "Adds the signal it creates from an attempt it found by owner, and reads nothing directly."),
     ];
 
     private static readonly HashSet<Type> GuardedEntities = [.. OwnedContexts.SelectMany(EntitiesMappedBy)];

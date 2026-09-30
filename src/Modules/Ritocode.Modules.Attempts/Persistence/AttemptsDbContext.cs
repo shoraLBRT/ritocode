@@ -4,7 +4,10 @@ using Ritocode.Shared.Persistence;
 
 namespace Ritocode.Modules.Attempts.Persistence;
 
-/// <summary>The <c>attempts</c> schema. Every row belongs to a user; see <see cref="OwnedAttempts"/>.</summary>
+/// <summary>
+/// The <c>attempts</c> schema: attempts and signals. Every row belongs to a user; see
+/// <see cref="OwnedAttempts"/> and <see cref="OwnedSignals"/>.
+/// </summary>
 public sealed class AttemptsDbContext(DbContextOptions<AttemptsDbContext> options) : ModuleDbContext(options)
 {
     public const string SchemaName = "attempts";
@@ -13,10 +16,13 @@ public sealed class AttemptsDbContext(DbContextOptions<AttemptsDbContext> option
 
     public DbSet<Attempt> Attempts => Set<Attempt>();
 
+    public DbSet<Signal> Signals => Set<Signal>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
         modelBuilder.ApplyConfiguration(new AttemptConfiguration());
+        modelBuilder.ApplyConfiguration(new SignalConfiguration());
     }
 }

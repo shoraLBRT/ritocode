@@ -10,6 +10,7 @@ import type {
   Pick,
   ProblemCatalogue,
   Progress,
+  Signal,
   TaskDetail,
   TaskSummary,
   TreatmentTree,
@@ -78,6 +79,14 @@ export function submitAttempt(client: ApiClient, id: string, picks: readonly Pic
 /** `GET /attempts/{id}` — an attempt and, once submitted, its result. */
 export function getAttempt(client: ApiClient, id: string, signal?: AbortSignal): Promise<Attempt> {
   return client.request<Attempt>(`/attempts/${encodeURIComponent(id)}`, { ...(signal ? { signal } : {}) });
+}
+
+/**
+ * `POST /signals` — says an extra pick of a submitted attempt is really present. Never changes the
+ * score; a second signal for the same pick is refused with `signal_already_sent`.
+ */
+export function sendSignal(client: ApiClient, attempt: string, card: string, comment: string): Promise<Signal> {
+  return client.request<Signal>('/signals', { method: 'POST', body: { attempt, card, comment } });
 }
 
 /** `GET /meta/modules` — which modules this host composed in. Diagnostics, not a product surface. */

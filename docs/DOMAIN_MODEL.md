@@ -2,8 +2,6 @@
 
 The entities that exist in the code, and which module owns each. The physical schema, indexes and
 constraints are in [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md); this document is the conceptual view.
-The entities still to come — signals — are described in [SPEC.md](SPEC.md) §4.8 and join this file
-as they are built.
 
 Every entity is owned by exactly one module. An entity is only ever read or written through its
 owning module — see [ADR 0002](adr/0002-modular-monolith-layout.md).
@@ -66,6 +64,15 @@ does not rewrite it. The **first submitted** attempt at a task counts toward pro
 one is **practice**. The task and its key reach Attempts through `ITaskForAttemptLookup`, which
 Content answers; the task catalogue's solved flags reach Content through `ISubmittedTaskLookup`,
 which Attempts answers.
+
+## Signal
+
+Owned by the **Attempts** module. A learner saying "this card is really here, the answer key missed
+it" ([SPEC.md](SPEC.md) §4.8): the user, the attempt, its task, the card, an optional comment of up
+to 500 characters, when it was sent, and when the author resolved it. It is sent only from an
+**extra pick** of the learner's own **submitted** attempt — a card they picked that the key does not
+list — once per pick, and never changes the attempt or its score. The attempt's review lists the
+cards signalled from it. The author reads signals in the admin area (§6.2).
 
 ## Scoring
 

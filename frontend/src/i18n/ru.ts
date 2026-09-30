@@ -126,6 +126,13 @@ export const ru = {
     lesson: 'Вывод',
     sameMaterial: 'Тот же код в другом контексте',
     tryAgain: 'Попробовать снова',
+    signal: 'Я уверен, что это здесь',
+    signalComment: 'Комментарий для автора (необязательно)',
+    signalPlaceholder: 'Где это в коде и почему',
+    signalSend: 'Отправить',
+    signalSending: 'Отправляем…',
+    signalCancel: 'Отмена',
+    signalSent: 'Сигнал отправлен автору. На баллы он не влияет.',
   },
   progress: {
     title: 'Прогресс',

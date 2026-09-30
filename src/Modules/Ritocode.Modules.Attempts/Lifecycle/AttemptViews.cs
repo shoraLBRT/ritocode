@@ -10,6 +10,7 @@ namespace Ritocode.Modules.Attempts.Lifecycle;
 /// <param name="Practice">True for a submitted attempt that is not the first at its task (SPEC §5.4).</param>
 /// <param name="ContentRevision">The content the result was scored against; null until submitted.</param>
 /// <param name="Review">The author's note per finding and the lesson; null until submitted.</param>
+/// <param name="SignalledCards">The extra picks the learner has sent a signal for (SPEC §4.8).</param>
 public sealed record AttemptView(
     Guid Id,
     string Task,
@@ -20,7 +21,8 @@ public sealed record AttemptView(
     string? ContentRevision,
     DiagnosisAnswer? Answer,
     DiagnosisScore? Result,
-    AttemptReview? Review);
+    AttemptReview? Review,
+    IReadOnlyList<string> SignalledCards);
 
 /// <summary>The author's words for the review, kept with the attempt on submit.</summary>
 public sealed record AttemptReview(IReadOnlyDictionary<string, string> Notes, string? Lesson);

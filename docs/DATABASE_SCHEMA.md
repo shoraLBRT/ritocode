@@ -11,7 +11,7 @@ a module cannot reach another module's data through EF at all.
 | `users` | Users | `users` |
 | `auth` | Auth | `linked_accounts` |
 | `content` | Content | `taxonomy`, `cards`, `materials`, `tasks` |
-| `attempts` | Attempts | `attempts` |
+| `attempts` | Attempts | `attempts`, `signals` |
 
 Each schema also holds its own `__migrations_history`, so module migrations are independent.
 
@@ -30,6 +30,8 @@ erDiagram
     MATERIALS ||..o{ TASKS : "material (no FK)"
     USERS ||..o{ ATTEMPTS : "user_id (no FK)"
     TASKS ||..o{ ATTEMPTS : "task_slug (no FK)"
+    ATTEMPTS ||--o{ SIGNALS : "attempt_id"
+    CARDS ||..o{ SIGNALS : "card (no FK)"
 
     USERS {
         uuid id PK
@@ -100,6 +102,17 @@ erDiagram
         int max_score "set on submit"
         bool counts_toward_progress "the first submitted attempt at a task"
     }
+
+    SIGNALS {
+        uuid id PK
+        uuid user_id "no FK, the attempt's owner"
+        uuid attempt_id FK "cascade"
+        text task_slug "the attempt's, no FK"
+        text card "an extra pick of the attempt, no FK"
+        text comment "up to 500, null when none"
+        timestamptz created_at
+        timestamptz resolved_at "null while open"
+    }
 ```
 
 ## Conventions
@@ -133,6 +146,8 @@ schemas would reinstate exactly the coupling the schema split removes.
 | `auth.linked_accounts.user_id` | `users.users.id` | Auth module on link |
 | `attempts.attempts.user_id` | `users.users.id` | Attempts module on start, through `IUserLookup` |
 | `attempts.attempts.task_slug` | `content.tasks.slug` | Attempts module on start, through `ITaskForAttemptLookup` |
+| `attempts.signals.user_id`, `task_slug` | `users.users.id`, `content.tasks.slug` | copied from the attempt the signal is sent from |
+| `attempts.signals.card` | `content.cards.slug` | Attempts module on send: the card is an extra pick in the attempt's stored result |
 
 "Validated by" means through a contract in `Ritocode.Shared/Contracts` — such as `IUserLookup` — never
 by opening the owning module's `DbContext` ([ADR 0007](adr/0007-cross-module-contract-form.md)).
@@ -151,6 +166,8 @@ never deleted, and ingest validates the reference before it writes anything.
 | `ck_attempts_counts_only_when_submitted` | only a submitted attempt counts toward progress |
 | `ck_attempts_score_range` | `score` between 0 and `max_score` |
 | `ux_attempts_first_submission` | at most one attempt per user and task counts toward progress (unique, partial) |
+| `ux_signals_attempt_id_card` | one signal per extra pick of an attempt |
+| `fk_signals_attempts_attempt_id` | a signal names an attempt that exists, in the same schema |
 | `ck_*_<enum column>` | the column holds a value from its enum |
 
 ## Indexes that exist for a specific query
@@ -163,6 +180,7 @@ Beyond primary keys and uniqueness:
 | `attempts (user_id, started_at DESC)` | a user's attempt history, newest first |
 | `attempts (user_id, submitted_at)` | the submit rate limit's count of a user's recent submits |
 | `attempts (user_id, task_slug)` | a user's attempts at one task, and the task catalogue's solved flags |
+| `signals (user_id, created_at)` | the signal rate limit's count of a user's recent signals |
 
 ## Working with the schema
 

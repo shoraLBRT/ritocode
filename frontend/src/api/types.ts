@@ -162,6 +162,18 @@ export interface Attempt {
   readonly result: AttemptResult | null;
   /** The author's note per finding, by card, and the lesson — kept with the attempt on submit. */
   readonly review: { readonly notes: Readonly<Record<string, string>>; readonly lesson: string | null } | null;
+  /** The extra picks the learner has sent a signal for (SPEC §4.8). */
+  readonly signalledCards: readonly string[];
+}
+
+/** `POST /api/v1/signals`: a learner sure a card is present though the key does not list it. */
+export interface Signal {
+  readonly id: string;
+  readonly attempt: string;
+  readonly task: string;
+  readonly card: string;
+  readonly comment: string | null;
+  readonly createdAt: string;
 }
 
 export interface AttemptResult {
