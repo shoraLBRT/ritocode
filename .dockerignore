@@ -1,0 +1,18 @@
+# The images build from the repository root (deploy/*.Dockerfile). Only sources go in: build output,
+# dependencies and local configuration are made or supplied inside the image.
+**/bin/
+**/obj/
+**/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/coverage/
+frontend/.env
+.env
+.git/
+.github/
+.claude/
+.vs/
+.idea/
+tests/
+docs/
+content-export.json

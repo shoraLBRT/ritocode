@@ -1,0 +1,22 @@
+# Serves the frontend's static build (frontend/README.md, "The prerendered pages"): `/` as the
+# landing page, then the path, the path as a prerendered page, and the application's shell. Plain HTTP inside the Compose
+# network; the edge terminates TLS.
+{
+	admin off
+	auto_https off
+}
+
+:80 {
+	root * /srv
+	encode zstd gzip
+
+	# Vite names every asset by its content, so an asset never changes under its name.
+	@assets path /assets/*
+	header @assets Cache-Control "public, max-age=31536000, immutable"
+
+	# `/` is the rendered landing page; try_files alone would take the root for a missing file and
+	# serve the shell. Caddy runs rewrite before try_files.
+	rewrite / /index.html
+	try_files {path} {path}.html /spa.html
+	file_server
+}

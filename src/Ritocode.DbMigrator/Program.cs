@@ -5,7 +5,9 @@ using Ritocode.Api.Setup;
 using Ritocode.DbMigrator;
 using Ritocode.Shared.Modules;
 
-var builder = Host.CreateApplicationBuilder(args);
+// Rooted where the migrator's own files are, not where it is started from: in the release image the
+// API's appsettings.json sits in the working directory, one level above this one's.
+var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings { Args = args, ContentRootPath = AppContext.BaseDirectory });
 
 // The same module list the API host composes, so the migrator can never apply a different set
 // of schemas than the host expects.
