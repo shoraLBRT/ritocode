@@ -1,7 +1,7 @@
 /**
  * The wire types the backend actually serves, transcribed from the C# records behind
- * `/api/v1`. They are hand-written rather than generated: the surface is the catalog, the
- * workspace and its files, plus meta, and a generator would put a running backend on the critical
+ * `/api/v1`. They are hand-written rather than generated: the surface is the catalog plus
+ * meta, and a generator would put a running backend on the critical
  * path of a frontend build.
  * When that stops being true, generating from the OpenAPI document the API already produces
  * (`Api:EnableOpenApi`) replaces this file without changing anything that imports it.
@@ -57,68 +57,4 @@ export interface ModuleInfo {
 export interface PageQuery {
   readonly page?: number;
   readonly pageSize?: number;
-}
-
-/** The caller's working copy of one problem version. There is no owner in it: the owner is the caller. */
-export interface Workspace {
-  readonly id: string;
-  readonly problemVersionId: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-}
-
-/** One file of a workspace. `path` is workspace-relative with `/` separators — what a read takes back. */
-export interface WorkspaceFileEntry {
-  readonly path: string;
-  /** Bytes, not characters. */
-  readonly sizeBytes: number;
-  /** Whether the problem lets the user change this file. A save of any other file is refused. */
-  readonly editable: boolean;
-}
-
-/**
- * The whole tree, ordered by path — deliberately not a `Page<T>`: an editor cannot use half a file
- * list, and a package's limits bound it at 2000 entries.
- */
-export interface WorkspaceFileTree {
-  readonly files: readonly WorkspaceFileEntry[];
-}
-
-/** One file as text. A byte-order mark and line endings are preserved, so saving it back changes nothing. */
-export interface WorkspaceFile {
-  readonly path: string;
-  readonly sizeBytes: number;
-  readonly content: string;
-  /** SHA-256 of the file's bytes. Sent back as `baseRevision` when this copy is saved. */
-  readonly revision: string;
-}
-
-/** What a save answers: the file's new size, and the revision the next save of it sends. */
-export interface SavedWorkspaceFile {
-  readonly path: string;
-  readonly sizeBytes: number;
-  readonly revision: string;
-}
-
-/**
- * Where an attempt is in its lifecycle. `completed` and `failed` are terminal; `failed` means the
- * pipeline could not run to the end — infrastructure, not a wrong answer, which is a score.
- */
-export type SubmissionStatus = 'queued' | 'running' | 'completed' | 'failed';
-
-/** One attempt at a workspace, graded against the tree as it was when it was submitted. */
-export interface Submission {
-  readonly id: string;
-  readonly workspaceId: string;
-  readonly status: SubmissionStatus;
-  /** 0-100 once `completed`; null before, and null for a `failed` attempt. */
-  readonly score: number | null;
-  readonly createdAt: string;
-  /** Set exactly when the status is terminal. */
-  readonly completedAt: string | null;
-}
-
-/** Paging inputs plus an optional workspace, for the attempt history. */
-export interface SubmissionQuery extends PageQuery {
-  readonly workspaceId?: string;
 }

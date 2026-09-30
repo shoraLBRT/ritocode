@@ -4,12 +4,8 @@ export { ApiError, isApiError, parseProblemBody } from './errors';
 export type { ApiErrorKind, ApiProblemBody } from './errors';
 export {
   getProblem,
-  getWorkspace,
-  getWorkspaceFile,
   listModules,
   listProblems,
-  listWorkspaceFiles,
-  openWorkspace,
 } from './endpoints';
 export { DEFAULT_API_BASE_URL, resolveApiBaseUrl } from './config';
 export { ApiClientContext, useApiClient } from './ApiClientContext';
