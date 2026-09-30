@@ -11,6 +11,7 @@ a module cannot reach another module's data through EF at all.
 | `users` | Users | `users` |
 | `auth` | Auth | `linked_accounts` |
 | `content` | Content | `taxonomy`, `cards`, `materials`, `tasks` |
+| `attempts` | Attempts | `attempts` |
 
 Each schema also holds its own `__migrations_history`, so module migrations are independent.
 
@@ -27,6 +28,8 @@ Solid lines are real foreign keys. Dashed lines are references that carry **no**
 erDiagram
     USERS ||..o{ LINKED_ACCOUNTS : "user_id (no FK)"
     MATERIALS ||..o{ TASKS : "material (no FK)"
+    USERS ||..o{ ATTEMPTS : "user_id (no FK)"
+    TASKS ||..o{ ATTEMPTS : "task_slug (no FK)"
 
     USERS {
         uuid id PK
@@ -81,6 +84,21 @@ erDiagram
         text content_revision
         timestamptz updated_at
     }
+
+    ATTEMPTS {
+        uuid id PK
+        uuid user_id "no FK"
+        text task_slug "no FK"
+        timestamptz started_at
+        text step "check: enum"
+        timestamptz submitted_at "null while open"
+        text content_revision "set on submit"
+        jsonb answer "set on submit"
+        jsonb result "set on submit, never rewritten"
+        int score "set on submit"
+        int max_score "set on submit"
+        bool counts_toward_progress "the first submitted attempt at a task"
+    }
 ```
 
 ## Conventions
@@ -112,8 +130,10 @@ schemas would reinstate exactly the coupling the schema split removes.
 | Column | Points at | Validated by |
 | --- | --- | --- |
 | `auth.linked_accounts.user_id` | `users.users.id` | Auth module on link |
+| `attempts.attempts.user_id` | `users.users.id` | Attempts module on start, through `IUserLookup` |
+| `attempts.attempts.task_slug` | `content.tasks.slug` | Attempts module on start, through `ITaskForAttemptLookup` |
 
-"Validated by" means through a contract in `Ritocode.Shared/Contracts` — here `IUserLookup` — never
+"Validated by" means through a contract in `Ritocode.Shared/Contracts` — such as `IUserLookup` — never
 by opening the owning module's `DbContext` ([ADR 0007](adr/0007-cross-module-contract-form.md)).
 
 `content.tasks.material` points inside its own schema and still has no constraint: a material is
@@ -126,6 +146,10 @@ never deleted, and ingest validates the reference before it writes anything.
 | `ck_taxonomy_singleton` | the taxonomy is one row, id 1 |
 | `ck_cards_weight_range` | `weight` between 1 and 3 |
 | `ck_tasks_difficulty` | `difficulty` is easy, medium or hard |
+| `ck_attempts_submitted_whole` | an attempt's submit time, revision, answer, result and scores are set together or not at all |
+| `ck_attempts_counts_only_when_submitted` | only a submitted attempt counts toward progress |
+| `ck_attempts_score_range` | `score` between 0 and `max_score` |
+| `ux_attempts_first_submission` | at most one attempt per user and task counts toward progress (unique, partial) |
 | `ck_*_<enum column>` | the column holds a value from its enum |
 
 ## Indexes that exist for a specific query
@@ -135,6 +159,9 @@ Beyond primary keys and uniqueness:
 | Index | Serves |
 | --- | --- |
 | `tasks (material)` | the other tasks over the same material — "the same code in another context" |
+| `attempts (user_id, started_at DESC)` | a user's attempt history, newest first |
+| `attempts (user_id, submitted_at)` | the submit rate limit's count of a user's recent submits |
+| `attempts (user_id, task_slug)` | a user's attempts at one task, and the task catalogue's solved flags |
 
 ## Working with the schema
 

@@ -30,17 +30,19 @@ public enum CardOutcome
 }
 
 /// <summary>
-/// One card of the review and the points it brought. <see cref="Treatment"/> is set for a found card
+/// One card of the review and the points it brought. <see cref="KeyLeaves"/> — the author's leaves —
+/// is set for every card of the key, found or missed, and <see cref="Treatment"/> for a found card
 /// only: an extra card's leaves are not scored, there being no key to compare them with.
 /// </summary>
-public sealed record CardScore(string Card, CardOutcome Outcome, int Points, TreatmentScore? Treatment);
+public sealed record CardScore(
+    string Card,
+    CardOutcome Outcome,
+    int Points,
+    IReadOnlyList<string>? KeyLeaves,
+    TreatmentScore? Treatment);
 
-/// <summary>The treatment of a found card: the picked leaves split by the key, and the key's own leaves.</summary>
-public sealed record TreatmentScore(
-    bool Matched,
-    IReadOnlyList<string> MatchedLeaves,
-    IReadOnlyList<string> WrongLeaves,
-    IReadOnlyList<string> KeyLeaves);
+/// <summary>The treatment of a found card: the picked leaves, split by whether the key lists them.</summary>
+public sealed record TreatmentScore(bool Matched, IReadOnlyList<string> MatchedLeaves, IReadOnlyList<string> WrongLeaves);
 
 /// <summary>
 /// The scoring of a diagnosis (docs/SPEC.md §5): a pure function of the answer, the answer key with
@@ -69,13 +71,13 @@ public static class DiagnosisScoring
 
             lines.Add(picks.TryGetValue(finding.Card, out var pick)
                 ? Found(finding, pick, parameters)
-                : new CardScore(finding.Card, CardOutcome.Missed, -parameters.Missed * finding.Weight, null));
+                : new CardScore(finding.Card, CardOutcome.Missed, -parameters.Missed * finding.Weight, KeyLeaves(finding), null));
         }
 
         lines.AddRange(answer.Picks
             .Where(pick => !findings.ContainsKey(pick.Card))
             .OrderBy(pick => pick.Card, StringComparer.Ordinal)
-            .Select(pick => new CardScore(pick.Card, CardOutcome.Extra, -parameters.Extra, null)));
+            .Select(pick => new CardScore(pick.Card, CardOutcome.Extra, -parameters.Extra, null, null)));
 
         var raw = lines.Sum(line => line.Points);
         var maximum = key.Sum(finding => (parameters.Found + parameters.TreatmentMatched) * finding.Weight);
@@ -99,8 +101,12 @@ public static class DiagnosisScoring
             finding.Card,
             CardOutcome.Found,
             points,
-            new TreatmentScore(matched.Count > 0, matched, wrong, [.. keyLeaves.Order(StringComparer.Ordinal)]));
+            KeyLeaves(finding),
+            new TreatmentScore(matched.Count > 0, matched, wrong));
     }
+
+    private static List<string> KeyLeaves(KeyFinding finding) =>
+        [.. finding.Leaves.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)];
 
     private static Dictionary<string, T> ByCard<T>(IEnumerable<T> items, Func<T, string> card, string parameter)
     {

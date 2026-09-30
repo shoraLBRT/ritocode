@@ -33,8 +33,12 @@ public static class ApiSetupExtensions
         // every client keep a copy of this enum's member order, and a member inserted in the middle
         // would silently change what existing clients read. The database stores these as text for
         // the same reason; camelCase matches how a problem manifest writes them.
+        // Timestamps go out in UTC with an explicit Z (ADR 0003), not the serializer's +00:00.
         builder.Services.ConfigureHttpJsonOptions(options =>
-            options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)));
+        {
+            options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
+            options.SerializerOptions.Converters.Add(new UtcTimestampJsonConverter());
+        });
 
         builder.Services.AddProblemDetails();
         builder.Services.AddExceptionHandler<AppExceptionHandler>();

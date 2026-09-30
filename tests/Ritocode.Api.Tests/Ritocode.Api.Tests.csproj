@@ -14,6 +14,15 @@
     <ProjectReference Include="../Ritocode.TestSupport/Ritocode.TestSupport.csproj" />
   </ItemGroup>
 
+  <!--
+    Content for the attempt tests: the Content module's reference fixture over the committed taxonomy,
+    the same tree its own tests load, so a task, a key and weights exist to score against.
+  -->
+  <ItemGroup>
+    <Content Include="../Ritocode.Modules.Content.Tests/ContentFixtures/reference/**/*" LinkBase="ContentFixtures/reference" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../content/taxonomy/**/*" LinkBase="ContentFixtures/reference/taxonomy" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>

@@ -3,8 +3,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Ritocode.Modules.Content.Catalogue;
+using Ritocode.Modules.Content.Contracts;
 using Ritocode.Modules.Content.Ingest;
 using Ritocode.Modules.Content.Persistence;
+using Ritocode.Shared.Contracts.Content;
 using Ritocode.Shared.Modules;
 using Ritocode.Shared.Persistence;
 
@@ -37,6 +39,9 @@ public sealed class ContentModule : IModule
 
         services.AddScoped<IContentIngest, ContentIngest>();
         services.AddScoped<IContentCatalogue, ContentCatalogue>();
+
+        // The answer key and the weights leave this module through here only (ADR 0007).
+        services.AddScoped<ITaskForAttemptLookup, TaskForAttemptLookup>();
 
         // TryAdd: the clock is host infrastructure any module may want.
         services.TryAddSingleton(TimeProvider.System);
