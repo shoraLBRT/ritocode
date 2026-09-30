@@ -64,6 +64,10 @@ function api({ signedIn = true, openAttempt = false } = {}) {
     if (path.endsWith('/submit')) {
       return Promise.resolve(jsonResponse(submitted));
     }
+    if (path === '/problems') {
+      // Asked for by the review the check lands on — never by the task screen itself.
+      return Promise.resolve(jsonResponse({ classes: [], cards: [] }));
+    }
     if (path === '/attempts/attempt-1') {
       return Promise.resolve(jsonResponse(submitted));
     }
@@ -121,7 +125,7 @@ describe('the task screen', () => {
       url: 'http://api.test/api/v1/attempts/attempt-1/submit',
       body: { picks: [{ card: 'money-in-float', leaves: ['manual.representation'] }] },
     });
-    expect(screen.getByText(ru.result.missed)).toBeInTheDocument();
+    expect(screen.getByText(ru.review.missed)).toBeInTheDocument();
   });
 
   it('checks an answer that picked nothing', async () => {

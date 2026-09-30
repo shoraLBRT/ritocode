@@ -4,7 +4,7 @@ import { HomePage } from './pages/HomePage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { ProblemsPage } from './pages/ProblemsPage';
 import { TasksPage } from './pages/TasksPage';
-import { AttemptResultPage } from './pages/task/AttemptResultPage';
+import { ReviewPage } from './pages/task/ReviewPage';
 import { TaskPage } from './pages/task/TaskPage';
 import { RequireSignIn } from './session';
 
@@ -26,7 +26,7 @@ export const routes: RouteObject[] = [
       { path: 'tasks/:slug', Component: TaskPage },
       {
         Component: RequireSignIn,
-        children: [{ path: 'tasks/:slug/attempts/:id', Component: AttemptResultPage }],
+        children: [{ path: 'tasks/:slug/attempts/:id', Component: ReviewPage }],
       },
       { path: 'problems', Component: ProblemsPage },
       { path: '*', Component: NotFoundPage },

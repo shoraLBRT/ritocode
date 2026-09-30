@@ -47,13 +47,19 @@ internal sealed class TaskForAttemptLookup(ContentDbContext context) : ITaskForA
 
         var leaves = taxonomy is null ? [] : ContentJson.Read<Taxonomy>(taxonomy.Document).LeafIds.ToList();
 
+        // The review's words, which leave with the key and only with it.
+        var text = ContentJson.Read<Dictionary<string, TaskText>>(task.Texts).GetValueOrDefault(ContentRules.DefaultLocale);
+
         return new TaskForAttempt(
             task.Slug,
             task.UnpublishedAt is null,
             task.ContentRevision,
             [.. findings.Select(finding => new TaskFinding(finding.Card, Weight(finding.Card), finding.Leaves))],
             [.. offered.Order(StringComparer.Ordinal)],
-            leaves);
+            leaves,
+            text?.Notes.ToDictionary(note => note.Key, note => note.Value.Trim(), StringComparer.Ordinal)
+                ?? new Dictionary<string, string>(StringComparer.Ordinal),
+            text?.Lesson?.Trim());
 
         // Validation refuses a key naming a card that does not exist, and a card is never deleted.
         int Weight(string card) => weights.TryGetValue(card, out var weight)

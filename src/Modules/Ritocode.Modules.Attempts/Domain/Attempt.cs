@@ -34,6 +34,13 @@ public sealed class Attempt
     /// <summary>The score line by line, with the key revealed, as JSON. Set on submit, never rewritten.</summary>
     public string? Result { get; private set; }
 
+    /// <summary>
+    /// The author's words for the review — a note per finding and the lesson — as JSON, taken with the
+    /// key on submit so the review always matches what was scored. Null on attempts submitted before
+    /// it was kept.
+    /// </summary>
+    public string? Review { get; private set; }
+
     public int? Score { get; private set; }
 
     public int? MaxScore { get; private set; }
@@ -76,6 +83,7 @@ public sealed class Attempt
         string contentRevision,
         string answer,
         string result,
+        string review,
         int score,
         int maxScore,
         bool countsTowardProgress)
@@ -86,6 +94,7 @@ public sealed class Attempt
         ContentRevision = contentRevision;
         Answer = answer;
         Result = result;
+        Review = review;
         Score = score;
         MaxScore = maxScore;
         CountsTowardProgress = countsTowardProgress;

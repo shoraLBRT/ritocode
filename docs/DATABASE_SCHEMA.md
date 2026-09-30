@@ -95,6 +95,7 @@ erDiagram
         text content_revision "set on submit"
         jsonb answer "set on submit"
         jsonb result "set on submit, never rewritten"
+        jsonb review "notes and lesson, kept on submit"
         int score "set on submit"
         int max_score "set on submit"
         bool counts_toward_progress "the first submitted attempt at a task"

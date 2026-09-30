@@ -59,7 +59,8 @@ beside the columns: content is read whole, by slug, and never queried by a field
 Owned by the **Attempts** module. One learner's answer to one task, and its result
 ([SPEC.md](SPEC.md) §5.4): the user, the task's slug, when it started, the furthest **step** reached
 (diagnosis or treatment — the journal of §8), and, once **submitted**, the answer, the result with
-the key revealed, the score and its maximum, and the content revision it was scored against. A
+the key revealed, the author's notes and lesson for the review, the score and its maximum, and the
+content revision it was scored against. A
 submitted attempt never changes again: a later change to the task, a card or the scoring parameters
 does not rewrite it. The **first submitted** attempt at a task counts toward progress; every later
 one is **practice**. The task and its key reach Attempts through `ITaskForAttemptLookup`, which

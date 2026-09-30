@@ -160,6 +160,7 @@ internal sealed class AttemptLifecycle(
             task.ContentRevision,
             AttemptsJson.Write(normalised),
             AttemptsJson.Write(score),
+            AttemptsJson.Write(Review(task, score)),
             score.Total,
             score.Maximum,
             countsTowardProgress: first);
@@ -242,7 +243,18 @@ internal sealed class AttemptLifecycle(
         attempt.IsSubmitted && !attempt.CountsTowardProgress,
         attempt.ContentRevision,
         attempt.Answer is null ? null : AttemptsJson.Read<DiagnosisAnswer>(attempt.Answer),
-        attempt.Result is null ? null : AttemptsJson.Read<DiagnosisScore>(attempt.Result));
+        attempt.Result is null ? null : AttemptsJson.Read<DiagnosisScore>(attempt.Result),
+        attempt.Review is null ? null : AttemptsJson.Read<AttemptReview>(attempt.Review));
+
+    /// <summary>The notes for the findings of this key, and the lesson — kept as they were when it was scored.</summary>
+    private static AttemptReview Review(TaskForAttempt task, DiagnosisScore score)
+    {
+        var findings = score.Cards.Where(line => line.Outcome != CardOutcome.Extra).Select(line => line.Card).ToHashSet(StringComparer.Ordinal);
+
+        return new AttemptReview(
+            task.Notes.Where(note => findings.Contains(note.Key)).ToDictionary(note => note.Key, note => note.Value, StringComparer.Ordinal),
+            task.Lesson);
+    }
 
     /// <summary>The answer as stored: picks by card, each pick's leaves distinct and in order.</summary>
     private static DiagnosisAnswer Normalise(DiagnosisAnswer answer) => new(

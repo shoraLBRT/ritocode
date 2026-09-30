@@ -50,7 +50,7 @@ src/
   hooks/       useApiResource — one request, four states, no cache
   components/  the layout, the loading / error / empty panels, and Markdown for card text
   pages/       one component per route: home, /tasks, /problems, not found;
-               task/ is the task screen and the result it lands on
+               task/ is the task screen and the review it lands on
   routes.tsx   the route table, as data
   test/        render helpers and response builders shaped like the real API
 ```
@@ -84,9 +84,9 @@ the first. The bodies in `src/test/responses.ts` are copied from the verificatio
   until [#6](https://github.com/shoraLBRT/ritocode/issues/6) and [#7](https://github.com/shoraLBRT/ritocode/issues/7)
   bring sessions and sign-in; `RequireSignIn` tells a signed-out visitor the page is closed, and
   the button to sign in arrives with #7.
-- **The review.** Checking an answer lands on `/tasks/<slug>/attempts/<id>`, which shows the score
-  and a line per card until the review of [#29](https://github.com/shoraLBRT/ritocode/issues/29)
-  replaces it. Signing in to check, and coming back to the task, is #127.
+- **Signals and signing in to check.** The review's *I'm sure it is here* button is
+  [#129](https://github.com/shoraLBRT/ritocode/issues/129); signing in on *Check* and coming back to
+  the task is #127.
 - **Prerendering.** `/` and `/problems` are prerendered for search engines in #132.
 - **A data-fetching library, a state manager and a design system.** Nothing in the slice needs a
   cache, and a design system invented here would be replaced by stage 6.

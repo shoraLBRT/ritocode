@@ -47,6 +47,7 @@ internal sealed class AttemptConfiguration : IEntityTypeConfiguration<Attempt>
         builder.Property(attempt => attempt.ContentRevision).HasMaxLength(64);
         builder.Property(attempt => attempt.Answer).HasColumnType("jsonb");
         builder.Property(attempt => attempt.Result).HasColumnType("jsonb");
+        builder.Property(attempt => attempt.Review).HasColumnType("jsonb");
 
         // A user's history, newest first.
         builder.HasIndex(attempt => new { attempt.UserId, attempt.StartedAt }).IsDescending(false, true);

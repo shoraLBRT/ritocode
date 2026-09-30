@@ -43,6 +43,10 @@ public sealed class TaskForAttemptLookupTests(PostgresTestServer postgres) : IAs
         // An easy task offers its shortlist, which over four cards is all of them.
         Assert.Equal(["hardcoded-config", "money-in-float", "secrets-in-repo", "swallowed-error"], task.OfferedCards);
         Assert.Equal(29, task.Leaves.Count);
+
+        // The review's words travel with the key.
+        Assert.Equal(["money-in-float"], task.Notes.Keys);
+        Assert.StartsWith("Масштаб маленький", task.Lesson, StringComparison.Ordinal);
         Assert.Contains("accept.fits-context", task.Leaves);
     }
 
