@@ -7,6 +7,7 @@ breaks in AI-written code and a trainer that teaches people to recognise it
 
 **Work is taken from [docs/ROADMAP.md](docs/ROADMAP.md)**, lowest open stage first;
 [docs/PROJECT_STATE.md](docs/PROJECT_STATE.md) says what exists and how to verify a change. The
-`session` skill runs one issue end to end.
+maintainer's general `session` command runs one issue end to end; it is not in this repository and
+knows nothing about it, so everything a session needs here is in these documents.
 
 See [AGENTS.md](AGENTS.md) for how to work in this repository.

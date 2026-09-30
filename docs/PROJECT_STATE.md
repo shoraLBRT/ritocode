@@ -15,14 +15,24 @@ start from nothing.
 
 ## Session workflow
 
-The `session` skill in `.claude/skills/session/` carries the full loop. In short:
+The maintainer's general `session` command carries the loop; it lives outside this repository and
+reads what is specific to Ritocode from here and from [AGENTS.md](../AGENTS.md). In short:
 
 1. `git fetch origin main`, then read `CLAUDE.md`, `AGENTS.md`, this file and `ROADMAP.md` from
-   `origin/main`.
+   `origin/main` — in a worktree `main` is checked out elsewhere.
 2. Take the first open issue of the lowest open stage in `ROADMAP.md` whose dependencies are met.
-3. Branch off `origin/main`, one issue per branch.
-4. Build it with its tests; run everything under [Verification](#verification).
-5. Open a PR naming the issue, comment on the issue, and update this file in the same PR.
+   `type:content` issues and the maintainer's own [#134](https://github.com/shoraLBRT/ritocode/issues/134)
+   are not taken unless the maintainer asks.
+3. Before building, check [SPEC.md](SPEC.md) §13 and [Open questions](#open-questions). A decision
+   they do not make goes to the maintainer, not into code.
+4. Branch off `origin/main`, one issue per branch. Build it with its tests; run everything under
+   [Verification](#verification).
+5. Open a PR naming the issue — `Closes #N` only when it is finished — comment on the issue, and
+   update this file in the same PR: **What exists**, **Next up**, **Last updated**, the baseline,
+   the smoke checks if endpoints changed. When a stage's exit criterion has been shown to work, move
+   **Current stage** on.
+
+The maintainer merges, unless they have started the session with a command that allows merging.
 
 ---
 
