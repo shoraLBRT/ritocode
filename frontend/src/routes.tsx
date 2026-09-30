@@ -4,6 +4,9 @@ import { HomePage } from './pages/HomePage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { ProblemsPage } from './pages/ProblemsPage';
 import { TasksPage } from './pages/TasksPage';
+import { AttemptResultPage } from './pages/task/AttemptResultPage';
+import { TaskPage } from './pages/task/TaskPage';
+import { RequireSignIn } from './session';
 
 /**
  * The route table, as data.
@@ -20,6 +23,11 @@ export const routes: RouteObject[] = [
     children: [
       { index: true, Component: HomePage },
       { path: 'tasks', Component: TasksPage },
+      { path: 'tasks/:slug', Component: TaskPage },
+      {
+        Component: RequireSignIn,
+        children: [{ path: 'tasks/:slug/attempts/:id', Component: AttemptResultPage }],
+      },
       { path: 'problems', Component: ProblemsPage },
       { path: '*', Component: NotFoundPage },
     ],

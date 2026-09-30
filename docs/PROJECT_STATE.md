@@ -58,6 +58,7 @@ Content.
 | Attempts ([#20](https://github.com/shoraLBRT/ritocode/issues/20), [#125](https://github.com/shoraLBRT/ritocode/issues/125)) | **Scoring**: `DiagnosisScoring.Score`, a pure function of the answer, the key with the card weights, and the parameters of SPEC §5.2 (`Attempts:Scoring`, validated on start); the total floored at zero, the maximum, whether the answer is correct, and a line per card — found with its treatment, missed or extra — with the author's leaves for every card of the key. **Attempts**: the `attempts` schema; `POST /attempts` (a published task; 201), `PATCH /attempts/{id}` (the step reached, forward only), `POST /attempts/{id}/submit` (validated against the cards the task offers and the leaves of the tree, scored, stored with the content revision; the first submitted attempt at a task counts, later ones are practice, a partial unique index settles a race), `GET /attempts/{id}`, `GET /attempts?task=` (a page, newest first). A submitted attempt is never changed; a test re-ingests changed content and compares the stored result byte for byte. Submitting is capped per user (`Attempts:RateLimit`, 10 in 10 minutes, `429 attempt_rate_limited`). The key and weights come from Content through `ITaskForAttemptLookup`; `GET /tasks` carries `solved` for a signed-in caller through `ISubmittedTaskLookup`, which Attempts answers | `src/Modules/Ritocode.Modules.Attempts`, `src/Ritocode.Shared/Contracts` |
 | Frontend shell ([#26](https://github.com/shoraLBRT/ritocode/issues/26)) | React, Vite and TypeScript; the API client that owns the error envelope; layout, routes, loading, error and empty states. A **translation catalogue** of its own (`src/i18n`: typed dotted keys, `{name}` placeholders, Russian plurals through `Intl.PluralRules`, `<html lang="ru">`), every string moved into it, and an ESLint rule that fails on text written in JSX. The **signed-in state** from `/me` (`src/session`: loading, signed in, signed out on a 401, error) in the header, and `RequireSignIn`, a layout route for pages that need a learner. A **phone-width layout**, checked at 375 px: no horizontal scroll, the header wraps | `frontend/` |
 | Catalogue pages ([#27](https://github.com/shoraLBRT/ritocode/issues/27)) | `/tasks`: title, difficulty, the time from the difficulty (SPEC §3.4), and for a signed-in learner a solved mark; filters by difficulty and — signed in — by solved; no class tags; the API's order. Read in one request (`pageSize=100`) and filtered in the page. `/problems`: one page, cards grouped by class in the taxonomy's order and shown in full, their sections rendered by `Markdown` — the project's own renderer for the subset cards use, React elements only, no `innerHTML`; search over name, summary and keywords, ignoring case and ё; an anchor per card, and `/problems#<slug>` scrolls to it once the cards arrive. Both checked at 1280 and 375 px | `frontend/src/pages`, `frontend/src/components/Markdown.tsx` |
+| Task screen ([#126](https://github.com/shoraLBRT/ritocode/issues/126)) | `/tasks/{slug}`: context and brief (rendered as Markdown), the material — overview, file tree with line counts, the selected file with line numbers and Python highlighting from the project's own tokenizer (`components/python.ts`) — and the answer, side by side on a desktop and three tabs below 64 rem. Step 1: the offered cards by name and summary, grouped by class (`GET /tasks/{slug}` now carries the class names, so the screen never asks for `/problems`), with search; step 2: the whole tree per picked card, branches as disclosure widgets, leaves as checkboxes; back to step 1 keeps the picks; *Check* needs a leaf on every picked card and a signed-in learner. A signed-in learner works in the newest open attempt at the task, or a new one; reaching step 2 is recorded on it. Checking lands on `/tasks/{slug}/attempts/{id}`, which for now shows the score and a line per card — the review is #29. Solved end to end at 1280 and 375 px | `frontend/src/pages/task` |
 | CI | Backend build, test, formatting, migrations and drift; frontend lint, build and test. Nothing is shipped yet | `.github/workflows/` |
 
 Removed in #119: the Workspaces, Evaluations, Submissions and Progress modules, the sandbox runner,
@@ -69,11 +70,10 @@ storage with MinIO, and the frontend's old problem pages. All of it remains read
 
 From [ROADMAP.md](ROADMAP.md), in order:
 
-1. S3, beside the content track: the task screen
-   ([#126](https://github.com/shoraLBRT/ritocode/issues/126)) — material viewer, diagnosis and
-   treatment over the attempt endpoints — then the review screen
-   ([#29](https://github.com/shoraLBRT/ritocode/issues/29)). S3's exit criterion is shown once both
-   work under the development identity, on desktop and at phone width.
+1. S3, beside the content track: the review screen
+   ([#29](https://github.com/shoraLBRT/ritocode/issues/29)), which replaces the minimal result page
+   of #126. S3's exit criterion — solve a task on desktop and at phone width, see the score and the
+   review — is shown once it works under the development identity.
 2. The content track is the maintainer's, with the two skills: 55–60 cards
    ([#124](https://github.com/shoraLBRT/ritocode/issues/124)) and the 20 tasks
    ([#42](https://github.com/shoraLBRT/ritocode/issues/42)).
@@ -91,8 +91,9 @@ future session would otherwise have to rediscover.
 - **An attempt's result holds the score and the key, not the task's notes and lesson.** The review
   (#29) needs both; it either reads them from content when it renders — they may then have changed
   since the attempt — or #29 adds them to the stored result on submit. Decide in #29.
-- **Every `POST /attempts` starts a new attempt.** Opening a task twice leaves an open attempt
-  behind; the task screen (#126) decides whether to resume an open one from `GET /attempts?task=`.
+- **Every `POST /attempts` starts a new attempt**, so the task screen resumes the newest open attempt
+  at the task (`GET /attempts?task=&pageSize=1`) before starting one. Under React's StrictMode in
+  development the lookup runs twice and can start two; production renders once.
 - **An unpublished task can still be submitted** by someone who started it before it left
   `content/`, and cannot be started. "Solved" on the catalogue means at least one submitted attempt.
 - Ingest has no production entry point yet: a development host seeds `content/` on start, stamped
@@ -170,7 +171,7 @@ compose stack is PostgreSQL only.
 | `Ritocode.Api.Tests` | 57 |
 | `Ritocode.Modules.Content.Tests` | 68 |
 | `Ritocode.Modules.Attempts.Tests` | 15 |
-| Frontend (vitest) | 74 |
+| Frontend (vitest) | 97 |
 
 The count is a ratchet: if it drops, the PR says which tests went and why.
 

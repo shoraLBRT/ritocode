@@ -242,6 +242,235 @@ code {
   margin: 0.25rem 0;
 }
 
+.button--primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--surface);
+  font-weight: 600;
+}
+
+/* The task screen: three areas side by side on a desktop, three tabs at phone width. */
+.task-screen__title {
+  margin-top: 0;
+}
+
+.task-tabs {
+  display: none;
+}
+
+.task-screen__areas {
+  display: grid;
+  grid-template-columns: minmax(14rem, 1fr) minmax(0, 2fr) minmax(18rem, 1.3fr);
+  gap: calc(var(--gap) * 1.5);
+  align-items: start;
+}
+
+.task-screen__area {
+  min-width: 0;
+}
+
+.task-screen__area > h2:first-child {
+  margin-top: 0;
+}
+
+.task-screen__brief {
+  margin: 0;
+  padding: 0.5rem var(--gap);
+  border-left: 3px solid var(--accent);
+  background: var(--surface-muted);
+}
+
+.task-screen__brief p {
+  margin: 0.25rem 0;
+}
+
+.task-screen__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem var(--gap);
+  margin-top: var(--gap);
+}
+
+.task-screen__hint {
+  color: var(--danger);
+  font-size: 0.9rem;
+}
+
+.material__overview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem var(--gap);
+  margin: 0 0 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.material__files {
+  list-style: none;
+  margin: 0 0 0.5rem;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.material__file {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.material__file[aria-current='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.material__lines {
+  color: var(--text-muted);
+}
+
+.code {
+  margin: 0;
+  padding: 0.75rem 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-muted);
+  font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  overflow-wrap: normal;
+}
+
+.code__line {
+  display: block;
+  min-height: 1.5em;
+  white-space: pre;
+}
+
+.code__number {
+  display: inline-block;
+  width: 3.5ch;
+  margin-right: 1ch;
+  padding-left: 0.75rem;
+  color: var(--text-muted);
+  text-align: right;
+  user-select: none;
+}
+
+.code__token--keyword { color: #a626a4; }
+.code__token--builtin { color: #0184bc; }
+.code__token--definition { color: #4078f2; font-weight: 600; }
+.code__token--string { color: #50a14f; }
+.code__token--number { color: #986801; }
+.code__token--comment { color: var(--text-muted); font-style: italic; }
+.code__token--decorator { color: #c18401; }
+
+@media (prefers-color-scheme: dark) {
+  .code__token--keyword { color: #c678dd; }
+  .code__token--builtin { color: #56b6c2; }
+  .code__token--definition { color: #61afef; }
+  .code__token--string { color: #98c379; }
+  .code__token--number { color: #d19a66; }
+  .code__token--decorator { color: #e5c07b; }
+}
+
+.choice-group {
+  margin: var(--gap) 0 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.choice-group > legend {
+  padding: 0 0.35rem;
+  font-weight: 600;
+}
+
+.choice {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  padding: 0.4rem 0;
+  cursor: pointer;
+}
+
+.choice input {
+  margin-top: 0.3rem;
+  flex: none;
+}
+
+.choice__name {
+  display: block;
+  font-weight: 600;
+}
+
+.choice__summary {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.choice--leaf {
+  padding: 0.2rem 0 0.2rem 1rem;
+}
+
+.branch > summary {
+  padding: 0.3rem 0;
+  cursor: pointer;
+}
+
+.result__score {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0.5rem 0;
+}
+
+@media (max-width: 64rem) {
+  .task-tabs {
+    display: flex;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    margin: 0 0 var(--gap);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .task-tabs__tab {
+    flex: 1;
+    padding: 0.6rem 0.5rem;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: none;
+    color: var(--text-muted);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .task-tabs__tab[aria-selected='true'] {
+    border-bottom-color: var(--accent);
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .task-screen__areas {
+    display: block;
+  }
+
+  .task-screen__area:not(.task-screen__area--active) {
+    display: none;
+  }
+}
+
 /*
  * Phone width (SPEC §9.4). The header wraps — brand and navigation, then who is signed in on a
  * line of its own — and the page keeps a narrow margin instead of the desktop one.
