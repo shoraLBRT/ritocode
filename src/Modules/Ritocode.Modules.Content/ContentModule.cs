@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Ritocode.Modules.Content.Catalogue;
 using Ritocode.Modules.Content.Ingest;
 using Ritocode.Modules.Content.Persistence;
 using Ritocode.Shared.Modules;
@@ -14,7 +15,7 @@ namespace Ritocode.Modules.Content;
 /// </summary>
 /// <remarks>
 /// Owns the <c>content</c> schema, the content format in <c>Format</c> (docs/CONTENT_FORMAT.md) and
-/// the ingest that loads it. The read APIs are #9.
+/// the ingest that loads it, and the public reads of the catalogue and the tasks.
 /// </remarks>
 public sealed class ContentModule : IModule
 {
@@ -35,6 +36,7 @@ public sealed class ContentModule : IModule
             .ValidateOnStart();
 
         services.AddScoped<IContentIngest, ContentIngest>();
+        services.AddScoped<IContentCatalogue, ContentCatalogue>();
 
         // TryAdd: the clock is host infrastructure any module may want.
         services.TryAddSingleton(TimeProvider.System);
@@ -44,6 +46,8 @@ public sealed class ContentModule : IModule
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints)
     {
-        // Intentionally empty until the read APIs of #9.
+        ArgumentNullException.ThrowIfNull(endpoints);
+
+        endpoints.MapCatalogueEndpoints();
     }
 }

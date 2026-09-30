@@ -121,10 +121,13 @@ public sealed class AnonymousRequestTests(AnonymousTestApi api) : IClassFixture<
     [InlineData("/health/live")]
     [InlineData("/health/ready")]
     [InlineData("/api/v1/meta/modules")]
+    [InlineData("/api/v1/problems")]
+    [InlineData("/api/v1/treatments")]
+    [InlineData("/api/v1/tasks")]
     public async Task EndpointsThatSayAllowAnonymous_SurviveTheFallbackPolicy(string path)
     {
         // The fallback policy protects anything that states no requirement, which is the point of
-        // having one. These three state one, and a change that quietly loses an AllowAnonymous would
+        // having one. These state one, and a change that quietly loses an AllowAnonymous would
         // otherwise only be noticed by whoever opened the catalog while signed out.
         var response = await api.Client.GetAsync(new Uri(path, UriKind.Relative), TestContext.Current.CancellationToken);
 
