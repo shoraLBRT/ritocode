@@ -1,5 +1,10 @@
 # Problem Package Specification
 
+> **Superseded — do not plan work from this file.** It describes the product Ritocode was
+> before 2026-09-30. What Ritocode is now: [../docs/CONCEPT.md](../docs/CONCEPT.md), decided in
+> [ADR 0010](../docs/adr/0010-diagnosis-of-ai-written-code.md). This file is rewritten or retired
+> when the specification lands.
+
 A **problem package** is the unit in which training content is authored, reviewed and shipped. It
 holds everything needed to put a task in front of a user and to reach a verdict on their answer:
 the prose, the code they start from, which files they may change, and the validator pipeline that

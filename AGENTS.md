@@ -1,5 +1,10 @@
 # AGENTS.md
 
+> **Read [docs/CONCEPT.md](docs/CONCEPT.md) first.** The product changed on 2026-09-30
+> ([ADR 0010](docs/adr/0010-diagnosis-of-ai-written-code.md)). The *Project goal* and *Priority*
+> sections below, and the plan they point at, describe the previous product. Everything else on
+> this page — the non-negotiables, the working rules — still holds.
+
 This file tells an AI agent how to work in the Ritocode repository.
 
 ## Start here
