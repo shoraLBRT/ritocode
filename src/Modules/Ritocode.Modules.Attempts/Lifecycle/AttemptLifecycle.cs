@@ -183,7 +183,22 @@ internal sealed class AttemptLifecycle(
     {
         var attempt = await context.FindOwnedAsync(userId, attemptId, cancellationToken).ConfigureAwait(false);
 
-        return attempt is null ? AttemptNotFound() : View(attempt);
+        if (attempt is null)
+        {
+            return AttemptNotFound();
+        }
+
+        // Only a submitted attempt has extra picks to signal; the review reads which were.
+        var signalled = attempt.IsSubmitted
+            ? await context.SignalsOf(userId)
+                .Where(signal => signal.AttemptId == attemptId)
+                .Select(signal => signal.Card)
+                .OrderBy(card => card)
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false)
+            : [];
+
+        return View(attempt, signalled);
     }
 
     public async Task<Page<AttemptSummaryView>> ListAsync(Guid userId, string? taskSlug, PageRequest request, CancellationToken cancellationToken)
@@ -234,7 +249,7 @@ internal sealed class AttemptLifecycle(
     private static AppError AlreadySubmitted() =>
         AppError.Conflict(AlreadySubmittedCode, "The attempt has been submitted; start a new one to answer again.");
 
-    private static AttemptView View(Attempt attempt) => new(
+    private static AttemptView View(Attempt attempt, IReadOnlyList<string>? signalledCards = null) => new(
         attempt.Id,
         attempt.TaskSlug,
         attempt.StartedAt,
@@ -244,7 +259,8 @@ internal sealed class AttemptLifecycle(
         attempt.ContentRevision,
         attempt.Answer is null ? null : AttemptsJson.Read<DiagnosisAnswer>(attempt.Answer),
         attempt.Result is null ? null : AttemptsJson.Read<DiagnosisScore>(attempt.Result),
-        attempt.Review is null ? null : AttemptsJson.Read<AttemptReview>(attempt.Review));
+        attempt.Review is null ? null : AttemptsJson.Read<AttemptReview>(attempt.Review),
+        signalledCards ?? []);
 
     /// <summary>The notes for the findings of this key, and the lesson — kept as they were when it was scored.</summary>
     private static AttemptReview Review(TaskForAttempt task, DiagnosisScore score)

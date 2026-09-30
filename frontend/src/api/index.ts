@@ -13,6 +13,7 @@ export {
   listModules,
   listTasks,
   recordStep,
+  sendSignal,
   startAttempt,
   submitAttempt,
 } from './endpoints';
@@ -41,6 +42,7 @@ export type {
   ProblemCatalogue,
   ProblemClass,
   Progress,
+  Signal,
   TaskDetail,
   TaskSummary,
   TreatmentBranch,

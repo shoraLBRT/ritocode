@@ -101,3 +101,12 @@ public sealed class RateLimitedContentTestApi(PostgresTestServer postgres) : Con
         ["Attempts:RateLimit:MaxSubmissions"] = "2",
     };
 }
+
+/// <summary>As <see cref="ContentTestApi"/>, with a signal limit of two, so the third is refused.</summary>
+public sealed class SignalRateLimitedContentTestApi(PostgresTestServer postgres) : ContentTestApi(postgres)
+{
+    protected override IReadOnlyDictionary<string, string?>? Settings { get; } = new Dictionary<string, string?>
+    {
+        ["Attempts:SignalRateLimit:MaxSignals"] = "2",
+    };
+}

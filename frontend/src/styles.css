@@ -502,6 +502,44 @@ code {
   margin: 0.5rem 0;
 }
 
+/* The signal under an extra pick (SPEC §4.8): a button, then a one-line comment. */
+.signal {
+  margin: 0.75rem 0 0;
+}
+
+.signal--open {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.signal__label {
+  flex-basis: 100%;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.signal__comment {
+  flex: 1 1 16rem;
+  min-width: 0;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+.signal__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.signal--sent {
+  color: var(--text-muted);
+}
+
 /* Progress (SPEC §4.7): the classes as a list, then the cards as a table grouped by class. */
 .progress-classes {
   list-style: none;
