@@ -6,20 +6,13 @@
   </Folder>
   <Folder Name="/src/Modules/">
     <Project Path="src/Modules/Ritocode.Modules.Auth/Ritocode.Modules.Auth.csproj" />
-    <Project Path="src/Modules/Ritocode.Modules.Evaluations/Ritocode.Modules.Evaluations.csproj" />
     <Project Path="src/Modules/Ritocode.Modules.Problems/Ritocode.Modules.Problems.csproj" />
-    <Project Path="src/Modules/Ritocode.Modules.Progress/Ritocode.Modules.Progress.csproj" />
-    <Project Path="src/Modules/Ritocode.Modules.Submissions/Ritocode.Modules.Submissions.csproj" />
     <Project Path="src/Modules/Ritocode.Modules.Users/Ritocode.Modules.Users.csproj" />
-    <Project Path="src/Modules/Ritocode.Modules.Workspaces/Ritocode.Modules.Workspaces.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Ritocode.Api.Tests/Ritocode.Api.Tests.csproj" />
     <Project Path="tests/Ritocode.Architecture.Tests/Ritocode.Architecture.Tests.csproj" />
-    <Project Path="tests/Ritocode.Modules.Evaluations.Tests/Ritocode.Modules.Evaluations.Tests.csproj" />
     <Project Path="tests/Ritocode.Modules.Problems.Tests/Ritocode.Modules.Problems.Tests.csproj" />
-    <Project Path="tests/Ritocode.Modules.Submissions.Tests/Ritocode.Modules.Submissions.Tests.csproj" />
-    <Project Path="tests/Ritocode.Modules.Workspaces.Tests/Ritocode.Modules.Workspaces.Tests.csproj" />
     <Project Path="tests/Ritocode.Shared.Tests/Ritocode.Shared.Tests.csproj" />
     <Project Path="tests/Ritocode.TestSupport/Ritocode.TestSupport.csproj" />
   </Folder>

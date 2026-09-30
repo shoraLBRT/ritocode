@@ -15,7 +15,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)]
-    [ValidateSet('Users', 'Auth', 'Problems', 'Workspaces', 'Submissions')]
+    [ValidateSet('Users', 'Auth', 'Problems')]
     [string] $Module,
 
     [Parameter(Mandatory)]

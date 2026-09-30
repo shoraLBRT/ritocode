@@ -1,8 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Ritocode.Api.Tests.Infrastructure;
-using Ritocode.Shared.Contracts.Problems;
 using Ritocode.Shared.Contracts.Users;
-using Ritocode.Shared.Contracts.Workspaces;
 using Ritocode.Shared.Identity;
 
 namespace Ritocode.Api.Tests.Contracts;
@@ -14,7 +12,7 @@ namespace Ritocode.Api.Tests.Contracts;
 /// <remarks>
 /// The architecture tests prove each contract is registered once by its owner; they never resolve
 /// one. This is where a registration that compiles and cannot be constructed — a lifetime mismatch,
-/// a dependency nobody registered — fails before the first workspace endpoint does.
+/// a dependency nobody registered — fails before the first endpoint that consumes it does.
 /// </remarks>
 public sealed class ContractResolutionTests(TestApi api) : IClassFixture<TestApi>
 {
@@ -23,7 +21,7 @@ public sealed class ContractResolutionTests(TestApi api) : IClassFixture<TestApi
     [Fact]
     public async Task UserLookup_FindsTheSeededDevelopmentIdentity()
     {
-        // The two halves of the identity seam agreeing, seen from the side #10 will see it from: the
+        // The two halves of the identity seam agreeing, seen from the side a consumer module sees it from: the
         // user the claim names is a user another module can confirm exists.
         await using var scope = api.Services.CreateAsyncScope();
         var lookup = scope.ServiceProvider.GetRequiredService<IUserLookup>();
@@ -44,40 +42,5 @@ public sealed class ContractResolutionTests(TestApi api) : IClassFixture<TestApi
         var user = await lookup.FindAsync(Guid.CreateVersion7(), TestContext.Current.CancellationToken);
 
         Assert.Null(user);
-    }
-
-    [Fact]
-    public async Task ProblemVersionLookup_ResolvesAndAnswersNullForAVersionWithNoRow()
-    {
-        // Content seeding is off in this host, so there is no version to find; what is proved is
-        // that the contract constructs from the composed container and queries the real schema.
-        await using var scope = api.Services.CreateAsyncScope();
-        var lookup = scope.ServiceProvider.GetRequiredService<IProblemVersionLookup>();
-
-        var version = await lookup.FindAsync(Guid.CreateVersion7(), TestContext.Current.CancellationToken);
-
-        Assert.Null(version);
-    }
-
-    [Fact]
-    public async Task WorkspaceAllowanceLookup_ResolvesAndAnswersNullForAVersionWithNoRow()
-    {
-        await using var scope = api.Services.CreateAsyncScope();
-        var lookup = scope.ServiceProvider.GetRequiredService<IWorkspaceAllowanceLookup>();
-
-        var allowance = await lookup.FindAsync(Guid.CreateVersion7(), TestContext.Current.CancellationToken);
-
-        Assert.Null(allowance);
-    }
-
-    [Fact]
-    public async Task OwnedWorkspaceLookup_ResolvesAndAnswersNullForAWorkspaceWithNoRow()
-    {
-        await using var scope = api.Services.CreateAsyncScope();
-        var lookup = scope.ServiceProvider.GetRequiredService<IOwnedWorkspaceLookup>();
-
-        var workspace = await lookup.FindAsync(SeededIdentity.UserId, Guid.CreateVersion7(), TestContext.Current.CancellationToken);
-
-        Assert.Null(workspace);
     }
 }

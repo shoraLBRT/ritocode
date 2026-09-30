@@ -1,29 +1,22 @@
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Ritocode.Modules.Submissions.Domain;
-using Ritocode.Modules.Submissions.Lifecycle;
-using Ritocode.Modules.Submissions.Persistence;
-using Ritocode.Modules.Submissions.Queue;
-using Ritocode.Modules.Workspaces.Domain;
-using Ritocode.Modules.Workspaces.Lifecycle;
-using Ritocode.Modules.Workspaces.Persistence;
 
 namespace Ritocode.Architecture.Tests;
 
 /// <summary>
-/// Executable form of the ownership row in docs/adr/0005-vertical-slice-before-breadth.md's forbidden
-/// list: a workspace or a submission is never served without checking it belongs to the caller.
+/// Executable form of the ownership rule of docs/SPEC.md §10.1: a user's row is never served without
+/// checking, inside the query, that it belongs to the caller.
 /// </summary>
 /// <remarks>
 /// <para>
 /// The check is kept where it cannot be forgotten by keeping it out of the endpoints: a user's rows are
 /// reached only through a lookup that puts the owner inside the query, and another user's row is then
 /// the same absent row as a missing one — a 404, never a 403 (ADR 0003). This test fails when code in
-/// either module reaches those rows anywhere else. An EF global query filter was the alternative, and
-/// was not chosen: it puts the current user inside a <see cref="DbContext"/>, which the queue worker of
-/// #15 — serving no user at all — and every test that writes another user's row would have to switch
-/// off, and a switch that exists is the thing that gets flipped.
+/// an owning module reaches those rows anywhere else. An EF global query filter was the alternative, and
+/// was not chosen: it puts the current user inside a <see cref="DbContext"/>, which every background job
+/// serving no user and every test that writes another user's row would have to switch off, and a switch
+/// that exists is the thing that gets flipped.
 /// </para>
 /// <para>
 /// "Reaching" a row is naming a member of a context whose result or type argument is one of its
@@ -35,47 +28,33 @@ namespace Ritocode.Architecture.Tests;
 /// </remarks>
 public sealed class OwnershipRuleTests
 {
-    /// <summary>The contexts whose rows belong to a user. Every entity either one maps is guarded.</summary>
-    private static readonly Type[] OwnedContexts = [typeof(WorkspacesDbContext), typeof(SubmissionsDbContext)];
+    /// <summary>The contexts whose rows belong to a user. Every entity one of them maps is guarded.</summary>
+    /// <remarks>
+    /// Empty between the removal of the previous product (#119) and the Attempts module (#125), which
+    /// lists its context here. Until then the module-facing tests pass over nothing; the reader itself is
+    /// still proved, against <see cref="ProofContext"/>, by
+    /// <see cref="TheReader_SeesEveryShapeOfReachingAUsersRows"/>.
+    /// </remarks>
+    private static readonly Type[] OwnedContexts = [];
 
     /// <summary>
     /// Where a user's rows may be reached, and why. A new entry is a claim a reviewer reads; the reason
     /// is the part that has to be true.
     /// </summary>
-    private static readonly Allowance[] Allowances =
-    [
-        new(
-            "Ritocode.Modules.Workspaces.Persistence.OwnedWorkspaces",
-            Method: null,
-            "Every lookup there takes the owner and puts it inside the query."),
-        new(
-            typeof(WorkspaceLifecycle).FullName!,
-            nameof(WorkspaceLifecycle.OpenAsync),
-            "Finds the caller's workspace by owner and version, and adds the row it creates for that owner."),
-        new(
-            "Ritocode.Modules.Submissions.Persistence.OwnedSubmissions",
-            Method: null,
-            "Every lookup there takes the owner and puts it inside the query."),
-        new(
-            typeof(SubmissionLifecycle).FullName!,
-            nameof(SubmissionLifecycle.SubmitAsync),
-            "Adds the row it creates for its caller, on a workspace IOwnedWorkspaceLookup found by that same owner."),
-        new(
-            typeof(SubmissionDispatcher).FullName!,
-            Method: null,
-            "The queue claims by status and records on the claim it holds; it serves no user, so no owner applies (ADR 0009 §1)."),
-    ];
+    private static readonly Allowance[] Allowances = [];
 
     private static readonly HashSet<Type> GuardedEntities = [.. OwnedContexts.SelectMany(EntitiesMappedBy)];
 
+    private static readonly HashSet<Type> ProofEntities = [.. EntitiesMappedBy(typeof(ProofContext))];
+
     [Fact]
-    public void TheRule_GuardsWorkspacesAndSubmissions_SoItIsNotVacuous()
+    public void EveryContext_MapsItsEntities_SoTheRuleIsNotVacuous()
     {
         // Every assertion below is "for each guarded entity". A context that mapped nothing, or a model
         // that failed to build into an empty one, would make them pass over nothing.
-        Assert.Contains(typeof(Workspace), GuardedEntities);
-        Assert.Contains(typeof(Submission), GuardedEntities);
-        Assert.Contains(typeof(SubmissionReport), GuardedEntities);
+        Assert.All(OwnedContexts, context => Assert.NotEmpty(EntitiesMappedBy(context)));
+        Assert.Contains(typeof(ProofContext.OwnedRow), ProofEntities);
+        Assert.Contains(typeof(ProofContext.OwnedNote), ProofEntities);
     }
 
     [Fact]
@@ -90,9 +69,9 @@ public sealed class OwnershipRuleTests
 
         Assert.True(
             violations.Length == 0,
-            "A workspace or submission row is reached outside a lookup that puts the owner in the query. "
-            + "Go through OwnedWorkspaces (or the Submissions equivalent), or add an allowance here that says why "
-            + $"the owner is not needed. Violations: {string.Join("; ", violations)}");
+            "A user's row is reached outside a lookup that puts the owner in the query. Go through the "
+            + "module's owner-scoped lookup, or add an allowance here that says why the owner is not needed. "
+            + $"Violations: {string.Join("; ", violations)}");
     }
 
     [Fact]
@@ -118,7 +97,9 @@ public sealed class OwnershipRuleTests
             .Select(method => method.Name)
             .Order(StringComparer.Ordinal);
 
-        var seen = AccessesIn(typeof(UnguardedReads).Assembly.GetTypes().Where(type => IsWithin(typeof(UnguardedReads), type)))
+        var seen = AccessesIn(
+                typeof(UnguardedReads).Assembly.GetTypes().Where(type => IsWithin(typeof(UnguardedReads), type)),
+                ProofEntities)
             .Select(access => access.Method)
             .Distinct()
             .Order(StringComparer.Ordinal);
@@ -127,27 +108,29 @@ public sealed class OwnershipRuleTests
     }
 
     private static IEnumerable<Access> ModuleAccesses() =>
-        AccessesIn(OwnedContexts.Select(context => context.Assembly).Distinct().SelectMany(assembly => assembly.GetTypes()));
+        AccessesIn(
+            OwnedContexts.Select(context => context.Assembly).Distinct().SelectMany(assembly => assembly.GetTypes()),
+            GuardedEntities);
 
-    private static IEnumerable<Access> AccessesIn(IEnumerable<Type> types) =>
+    private static IEnumerable<Access> AccessesIn(IEnumerable<Type> types, IReadOnlySet<Type> guarded) =>
         types
             // A context declares its own sets; that is the one place naming them is the definition.
             .Where(type => !typeof(DbContext).IsAssignableFrom(type))
             .SelectMany(MethodBodyReferences.BodiesIn)
             .SelectMany(body => MethodBodyReferences.Of(body)
-                .Where(ReachesAGuardedEntity)
+                .Where(member => Reaches(member, guarded))
                 .Select(member =>
                 {
                     var (type, method) = MethodBodyReferences.SourceOf(body);
                     return new Access(type, method, member);
                 }));
 
-    private static bool ReachesAGuardedEntity(MethodBase member)
+    private static bool Reaches(MethodBase member, IReadOnlySet<Type> guarded)
     {
         var typeArguments = member.IsGenericMethod ? member.GetGenericArguments() : [];
         var result = member is MethodInfo method ? method.ReturnType : null;
 
-        if (!typeArguments.Any(Mentions) && (result is null || !Mentions(result)))
+        if (!typeArguments.Any(type => Mentions(type, guarded)) && (result is null || !Mentions(result, guarded)))
         {
             return false;
         }
@@ -156,10 +139,10 @@ public sealed class OwnershipRuleTests
                || member.GetParameters() is [{ ParameterType: var first }, ..] && first == typeof(DatabaseFacade);
     }
 
-    private static bool Mentions(Type type) =>
-        GuardedEntities.Contains(type)
-        || (type.HasElementType && Mentions(type.GetElementType()!))
-        || (type.IsGenericType && type.GetGenericArguments().Any(Mentions));
+    private static bool Mentions(Type type, IReadOnlySet<Type> guarded) =>
+        guarded.Contains(type)
+        || (type.HasElementType && Mentions(type.GetElementType()!, guarded))
+        || (type.IsGenericType && type.GetGenericArguments().Any(argument => Mentions(argument, guarded)));
 
     private static bool IsWithin(Type outer, Type type)
     {

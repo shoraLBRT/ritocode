@@ -19,11 +19,6 @@ public sealed class User
 
     public DateTimeOffset CreatedAt { get; set; }
 
-    /// <summary>Experience points. Never negative; recalculated by the Progress module.</summary>
-    public int Xp { get; set; }
-
-    public TrustLevel TrustLevel { get; set; }
-
     /// <summary>
     /// Creates a user with the invariants the database expects: a v7 identifier, normalised
     /// email and username, and a UTC creation timestamp.
@@ -36,8 +31,6 @@ public sealed class User
         Email = Normalise(email),
         Username = Normalise(username),
         CreatedAt = createdAt.ToUniversalTime(),
-        Xp = 0,
-        TrustLevel = TrustLevel.New,
     };
 
     private static string Normalise(string value) =>
