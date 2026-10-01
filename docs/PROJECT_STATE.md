@@ -115,10 +115,10 @@ From [ROADMAP.md](ROADMAP.md), in order:
    ([#124](https://github.com/shoraLBRT/ritocode/issues/124)) and the 20 tasks
    ([#42](https://github.com/shoraLBRT/ritocode/issues/42)). On 2026-10-01 the maintainer handed
    the catalogue to a `session-full` run, which drafted all 56 cards and merged them on green CI;
-   the maintainer edits them from here. Next on the track: re-run the blind smoke test of
-   `flower-shop-daily-revenue` against the full catalogue (see the open question on smoke tests) —
-   it could not run in the session that wrote the cards, whose `claude -p` was not signed in — then
-   the tasks, which stay the maintainer's.
+   the maintainer edits them from here. The same run then took the tasks of #42: 5 of 20 exist —
+   the demo task, `team-reminders-for-myself` and `team-reminders-for-support` (easy, over
+   `team-reminders`), `clinic-booking-city-network` and `clinic-booking-dentist` (medium, over
+   `clinic-booking`). Each new one passed a blind smoke test, reported in its pull request.
 
 The maintainer's own [#134](https://github.com/shoraLBRT/ritocode/issues/134) — domain, VPS, OAuth
 apps, privacy text — runs in parallel and gates S7.
@@ -249,8 +249,15 @@ future session would otherwise have to rediscover.
 - **Smoke tests go stale as the catalogue grows.** A task is smoke-tested against the cards that
   exist when it is written; an easy task's shortlist and any other task's full list change as cards
   are added, and a new card may name a problem an old material already has. Re-run the smoke test
-  over existing tasks once #124 has filled the catalogue. `flower-shop-daily-revenue` was tested
-  against three cards, which is a weak test.
+  over existing tasks once #124 has filled the catalogue. `flower-shop-daily-revenue` was re-run
+  against the full catalogue on 2026-10-02 (#42's first batch): the answer found both findings and
+  also picked `hardcoded-config` (`manual.extract-config`) and `missing-timeout`
+  (`accept.fits-context`); `naive-datetime` is not on its shortlist and was named outside the list.
+  Its key is unchanged — the maintainer's call, and the e2e test counts its two findings.
+- **A card that is fine here is still in the key** (SPEC §3.3, the `author-task` skill, the smoke
+  prompt): a present problem is listed with an `accept.*` leaf. `CONTENT_FORMAT.md` §6's example
+  says the opposite — a hardcoded SMTP host acceptable in its context is "left out of the key" — and
+  should be brought in line.
 - A module's test context should be configured as the host configures one. The host's contexts
   retry transient failures, and a retrying strategy refuses a transaction opened by hand — the smoke
   run of #121 caught exactly that, which a test context without retries had passed.
