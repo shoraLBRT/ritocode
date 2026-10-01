@@ -10,10 +10,14 @@ export {
   getTask,
   getTreatments,
   isLocalPath,
+  listAdminAttempts,
+  listAdminSignals,
+  listAdminUsers,
   listAttempts,
   listModules,
   listTasks,
   recordStep,
+  resolveSignal,
   sendSignal,
   signInUrl,
   signOut,
@@ -26,6 +30,12 @@ export { DEFAULT_API_BASE_URL, resolveApiBaseUrl } from './config';
 export { ApiClientContext, useApiClient } from './ApiClientContext';
 export { ApiClientProvider } from './ApiClientProvider';
 export type {
+  AdminAttempt,
+  AdminAttemptStatus,
+  AdminLearner,
+  AdminSignal,
+  AdminSignalStatus,
+  AdminUser,
   Attempt,
   AttemptResult,
   CardProgress,

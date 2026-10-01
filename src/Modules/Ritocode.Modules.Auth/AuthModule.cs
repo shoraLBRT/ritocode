@@ -3,10 +3,12 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Ritocode.Modules.Auth.Contracts;
 using Ritocode.Modules.Auth.Identity;
 using Ritocode.Modules.Auth.Persistence;
 using Ritocode.Modules.Auth.Session;
 using Ritocode.Modules.Auth.SignIn;
+using Ritocode.Shared.Contracts.Auth;
 using Ritocode.Shared.Modules;
 using Ritocode.Shared.Persistence;
 
@@ -44,6 +46,9 @@ public sealed class AuthModule : IModule
             .Bind(configuration.GetSection(SignInOptions.SectionName));
 
         services.AddScoped<AccountLinker>();
+
+        // The admin area's list of users names each user's providers (ADR 0007).
+        services.AddScoped<ILinkedProviderLookup, LinkedProviderLookup>();
 
         // TryAdd, as the other modules do: the clock is host infrastructure.
         services.TryAddSingleton(TimeProvider.System);

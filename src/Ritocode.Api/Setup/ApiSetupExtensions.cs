@@ -70,7 +70,9 @@ public static class ApiSetupExtensions
         // which is the failure mode worth designing against. Endpoints meant to stay open say
         // AllowAnonymous where they are mapped, and every one that exists today already does.
         builder.Services.AddAuthorizationBuilder()
-            .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
+            .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build())
+            // The admin area (SPEC §6.2). Who is an admin is the Users module's handler's to say.
+            .AddPolicy(AdminPolicy.Name, AdminPolicy.Build());
 
         // Validators are registered by the module that owns the request type, inside
         // IModule.RegisterServices. WithValidation<T>() resolves IValidator<T> from the container,
@@ -142,6 +144,7 @@ public static class ApiSetupExtensions
         var api = app.MapGroup(options.BasePath);
         api.MapMetaEndpoints();
         api.MapModules(ModuleRegistry.All);
+        api.MapNoSuchAddressFallback();
         app.MapModuleHostEndpoints(ModuleRegistry.All);
 
         return app;

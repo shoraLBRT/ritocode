@@ -1,7 +1,9 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Ritocode.Modules.Users.Admin;
 using Ritocode.Modules.Users.Contracts;
 using Ritocode.Modules.Users.Identity;
 using Ritocode.Modules.Users.Persistence;
@@ -17,7 +19,10 @@ namespace Ritocode.Modules.Users;
 /// <remarks>
 /// Owns the <c>users</c> schema, and with it the row behind the seeded development identity the
 /// Auth module's scheme asserts. Answers <c>IUserLookup</c> for the modules that store a user
-/// reference, and <c>IUserAccounts</c> for the Auth module signing someone in. No endpoints yet — those arrive with issue #25.
+/// reference, <c>IUserAccounts</c> for the Auth module signing someone in, and
+/// <c>IUserContactLookup</c> for the admin area. Says who is an admin — named in configuration by
+/// e-mail (docs/SPEC.md §6.2) — by meeting the admin policy's requirement, and serves the admin
+/// area's list of users.
 /// </remarks>
 public sealed class UsersModule : IModule
 {
@@ -36,6 +41,17 @@ public sealed class UsersModule : IModule
         // the context it reads.
         services.AddScoped<IUserLookup, UserLookup>();
         services.AddScoped<IUserAccounts, UserAccounts>();
+        services.AddScoped<IUserContactLookup, UserContactLookup>();
+
+        services.AddOptions<AdminOptions>()
+            .Bind(configuration.GetSection(AdminOptions.SectionName))
+            .Validate(
+                options => options.Emails.All(email => !string.IsNullOrWhiteSpace(email) && email.Contains('@', StringComparison.Ordinal)),
+                $"{AdminOptions.SectionName}:Emails must hold e-mail addresses only.")
+            .ValidateOnStart();
+
+        // Scoped: it reads the caller's address from this module's context.
+        services.AddScoped<IAuthorizationHandler, AdminAuthorizationHandler>();
         services.TryAddSingleton(TimeProvider.System);
 
         services.AddHostedService<DevelopmentIdentitySeeder>();
@@ -43,6 +59,8 @@ public sealed class UsersModule : IModule
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints)
     {
-        // Intentionally empty: this module exposes no endpoints yet.
+        ArgumentNullException.ThrowIfNull(endpoints);
+
+        endpoints.MapAdminUserEndpoints();
     }
 }

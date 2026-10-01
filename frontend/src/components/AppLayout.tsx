@@ -22,8 +22,10 @@ export function AppLayout() {
   useDocumentMeta();
   const location = useLocation();
   const navigate = useNavigate();
-  // Progress is a signed-in page, so it is offered only to a signed-in learner.
-  const signedIn = useSession().status === 'signedIn';
+  // Progress is a signed-in page, so it is offered only to a signed-in learner; the admin area only to an admin.
+  const session = useSession();
+  const signedIn = session.status === 'signedIn';
+  const admin = session.status === 'signedIn' && session.user.admin;
 
   const [returned] = useState(() => readSignInReturn(location.pathname, location.search));
   const [signInError, setSignInError] = useState<SignInError | null>(returned.error);
@@ -65,6 +67,11 @@ export function AppLayout() {
           {signedIn && (
             <NavLink to="/progress" className={navClass}>
               {t('nav.progress')}
+            </NavLink>
+          )}
+          {admin && (
+            <NavLink to="/admin" className={navClass}>
+              {t('nav.admin')}
             </NavLink>
           )}
         </nav>

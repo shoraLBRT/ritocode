@@ -110,3 +110,21 @@ public sealed class SignalRateLimitedContentTestApi(PostgresTestServer postgres)
         ["Attempts:SignalRateLimit:MaxSignals"] = "2",
     };
 }
+
+/// <summary>As <see cref="ContentTestApi"/>, with the development identity's address named an admin.</summary>
+public sealed class AdminContentTestApi(PostgresTestServer postgres) : ContentTestApi(postgres)
+{
+    protected override IReadOnlyDictionary<string, string?>? Settings { get; } = new Dictionary<string, string?>
+    {
+        ["Users:Admin:Emails:0"] = "  Developer@Ritocode.Local ",
+    };
+}
+
+/// <summary>As <see cref="ContentTestApi"/>, with an admin who is not the development identity, so the caller is not one.</summary>
+public sealed class NonAdminContentTestApi(PostgresTestServer postgres) : ContentTestApi(postgres)
+{
+    protected override IReadOnlyDictionary<string, string?>? Settings { get; } = new Dictionary<string, string?>
+    {
+        ["Users:Admin:Emails:0"] = "admin@example.test",
+    };
+}

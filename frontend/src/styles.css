@@ -646,6 +646,79 @@ code {
   letter-spacing: 0.03em;
 }
 
+/* The admin area (SPEC §6.2): a row of its sections, then wide tables that scroll in their own region. */
+.admin-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin-bottom: var(--gap);
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.admin-nav__link {
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.admin-nav__link--active {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.admin-table {
+  border-collapse: collapse;
+  font-size: 0.95rem;
+  overflow-wrap: normal;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 0.4rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.admin-table td.admin-table__text {
+  min-width: 14rem;
+  max-width: 28rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.admin-table td.admin-table__number {
+  text-align: right;
+}
+
+/* An attempt never submitted: the rows the maintainer reads for where learners gave up. */
+.admin-table__open td {
+  background: var(--surface-muted);
+}
+
+.admin-table__error {
+  display: block;
+  color: var(--danger);
+  margin-top: 0.25rem;
+  white-space: normal;
+  font-size: 0.85rem;
+}
+
+.admin-muted {
+  color: var(--text-muted);
+}
+
+.admin-pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin-top: var(--gap);
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
 @media (max-width: 64rem) {
   .task-tabs {
     display: flex;

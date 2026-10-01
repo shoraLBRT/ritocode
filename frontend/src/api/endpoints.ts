@@ -1,5 +1,10 @@
 import type { ApiClient } from './client';
 import type {
+  AdminAttempt,
+  AdminAttemptStatus,
+  AdminSignal,
+  AdminSignalStatus,
+  AdminUser,
   Attempt,
   AttemptStep,
   AttemptSummary,
@@ -87,6 +92,34 @@ export function getAttempt(client: ApiClient, id: string, signal?: AbortSignal):
  */
 export function sendSignal(client: ApiClient, attempt: string, card: string, comment: string): Promise<Signal> {
   return client.request<Signal>('/signals', { method: 'POST', body: { attempt, card, comment } });
+}
+
+/** `GET /admin/signals` — signals, open or resolved, newest first. Admins only; anyone else gets a 404. */
+export function listAdminSignals(
+  client: ApiClient,
+  query: PageQuery & { readonly status?: AdminSignalStatus } = {},
+  signal?: AbortSignal,
+): Promise<Page<AdminSignal>> {
+  return client.request<Page<AdminSignal>>('/admin/signals', { query: { ...query }, ...(signal ? { signal } : {}) });
+}
+
+/** `POST /admin/signals/{id}/resolve` — marks a signal resolved; resolving it again changes nothing. */
+export function resolveSignal(client: ApiClient, id: string): Promise<AdminSignal> {
+  return client.request<AdminSignal>(`/admin/signals/${encodeURIComponent(id)}/resolve`, { method: 'POST' });
+}
+
+/** `GET /admin/users` — every user, newest first, with their providers and counts. Admins only. */
+export function listAdminUsers(client: ApiClient, query: PageQuery = {}, signal?: AbortSignal): Promise<Page<AdminUser>> {
+  return client.request<Page<AdminUser>>('/admin/users', { query: { ...query }, ...(signal ? { signal } : {}) });
+}
+
+/** `GET /admin/attempts` — every user's attempts, newest first, optionally open or submitted only, or one learner's. Admins only. */
+export function listAdminAttempts(
+  client: ApiClient,
+  query: PageQuery & { readonly status?: AdminAttemptStatus; readonly user?: string } = {},
+  signal?: AbortSignal,
+): Promise<Page<AdminAttempt>> {
+  return client.request<Page<AdminAttempt>>('/admin/attempts', { query: { ...query }, ...(signal ? { signal } : {}) });
 }
 
 /** The providers a learner can sign in with (docs/SPEC.md §6.1), in the order they are offered. */
