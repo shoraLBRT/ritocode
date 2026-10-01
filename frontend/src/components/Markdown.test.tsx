@@ -28,6 +28,17 @@ describe('Markdown', () => {
     );
   });
 
+  it('renders ## and ### as headings, each ending the block above it', () => {
+    expect(html('Вступление.\n## Что мы храним\n- адрес почты\n### Сколько\nПока аккаунт **жив**.')).toBe(
+      '<p>Вступление.</p><h2>Что мы храним</h2><ul><li>адрес почты</li></ul><h3>Сколько</h3>'
+        + '<p>Пока аккаунт <strong>жив</strong>.</p>',
+    );
+  });
+
+  it('reads a single # and four of them as the text they are', () => {
+    expect(html('# один\n\n#### четыре\n\n##без пробела')).toBe('<p># один</p><p>#### четыре</p><p>##без пробела</p>');
+  });
+
   it('leaves emphasis marks inside code alone', () => {
     expect(html('`**not bold**`')).toBe('<p><code>**not bold**</code></p>');
   });

@@ -103,6 +103,18 @@ describe('the prerendered problem catalogue', () => {
   });
 });
 
+describe('the prerendered privacy policy', () => {
+  const html = page('privacy.html');
+
+  it('holds the policy file, its title, description and canonical address', () => {
+    expect(html).toContain(`<h1>${ru.privacy.title}</h1>`);
+    expect(html).toContain('<h2>Что сайт получает при входе</h2>');
+    expect(html).toContain(`<title>${ru.meta.privacy.title}</title>`);
+    expect(html).toContain(`content="${ru.meta.privacy.description}"`);
+    expect(html).toContain('<link rel="canonical" href="https://ritocode.example/privacy" />');
+  });
+});
+
 describe('what else the build writes', () => {
   it('keeps the untouched shell for every other route', () => {
     expect(page('spa.html')).toBe(template);
@@ -111,6 +123,7 @@ describe('what else the build writes', () => {
   it('lists the public pages in the sitemap, and points robots at it', () => {
     expect(page('sitemap.xml')).toContain('<loc>https://ritocode.example/</loc>');
     expect(page('sitemap.xml')).toContain('<loc>https://ritocode.example/problems</loc>');
+    expect(page('sitemap.xml')).toContain('<loc>https://ritocode.example/privacy</loc>');
     expect(page('robots.txt')).toContain('Sitemap: https://ritocode.example/sitemap.xml');
   });
 

@@ -120,6 +120,10 @@ code {
 }
 
 .app__footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.25rem var(--gap);
   padding: var(--gap) calc(var(--gap) * 1.5);
   border-top: 1px solid var(--border);
   color: var(--text-muted);
@@ -779,6 +783,8 @@ code {
   position: absolute;
   right: 0;
   z-index: 2;
+  width: max-content;
+  max-width: min(24rem, calc(100vw - 2 * var(--gap)));
   margin-top: 0.25rem;
   padding: 0.75rem;
   border: 1px solid var(--border);
@@ -797,6 +803,13 @@ code {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+.sign-in-notice {
+  max-width: 24rem;
+  margin: 0.5rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.875rem;
 }
 
 .sign-in-links .button {
@@ -858,14 +871,22 @@ code {
     gap: 0.25rem var(--gap);
   }
 
+  /* The menu spans the session's row, not the button's width: the notice in it needs the room. */
   .app__session {
+    position: relative;
     flex-basis: 100%;
     margin-left: 0;
   }
 
+  .app__sign-in {
+    position: static;
+  }
+
   .app__sign-in-menu {
-    right: auto;
     left: 0;
+    right: 0;
+    width: auto;
+    max-width: none;
   }
 
   .notice--error {
@@ -896,6 +917,10 @@ pre {
 
 .page > h1 {
   margin-top: 0;
+}
+
+.privacy {
+  max-width: 46rem;
 }
 
 .page__lead {

@@ -40,18 +40,21 @@ Once, by the maintainer (#134 provides the server, the domain and the OAuth apps
    `/google`), your sign-in address as `ADMIN_EMAIL`. `chmod 600 production.env`.
 4. **server** For the off-server backup copy: create the bucket and its access key at the provider,
    run `rclone config` to add a remote for it, and set `BACKUP_REMOTE` (e.g. `backups:ritocode-backups`).
-5. **local** Release `main` — the [release](#release) below. The first one creates the volumes,
+5. **local** Replace the placeholder in `frontend/src/site/privacy.ru.md` with the privacy policy's
+   text (#134) and merge it: `/privacy` renders that file, and every sign-in offer links to it.
+6. **local** Release `main` — the [release](#release) below. The first one creates the volumes,
    Umami's database, the schemas and the content.
-6. Open `https://UMAMI_DOMAIN`, sign in with Umami's default account (`admin` / `umami`) and **change
+7. Open `https://UMAMI_DOMAIN`, sign in with Umami's default account (`admin` / `umami`) and **change
    its password at once**. Add the site; set the repository variables `UMAMI_SCRIPT_URL`
    (`https://UMAMI_DOMAIN/script.js`) and `UMAMI_WEBSITE_ID` (GitHub → Settings → Variables), and
    `SITE_ORIGIN` (`https://SITE_DOMAIN`). The web image takes them at build time, so release once more
    after the next push to `main`.
-7. **server** Schedule the backup: `crontab -e`, then
+8. **server** Schedule the backup: `crontab -e`, then
    `15 3 * * * cd ~/ritocode && ./backup.sh >> ~/ritocode-backup.log 2>&1`.
-8. Sign in with GitHub and with Google; open `/admin` — it is there only for `ADMIN_EMAIL`.
-9. Turn on [monitoring](#monitoring): set the repository variable `MONITOR_ORIGINS` to
-   `https://SITE_DOMAIN https://UMAMI_DOMAIN`.
+9. Sign in with GitHub and with Google; open `/admin` — it is there only for `ADMIN_EMAIL`. Each
+   sign-in offer carries the notice linking `/privacy`.
+10. Turn on [monitoring](#monitoring): set the repository variable `MONITOR_ORIGINS` to
+    `https://SITE_DOMAIN https://UMAMI_DOMAIN`.
 
 ## Release
 
