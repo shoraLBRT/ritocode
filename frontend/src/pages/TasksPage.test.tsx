@@ -30,7 +30,8 @@ function api(items: object[], { signedIn = true } = {}) {
 }
 
 async function list() {
-  return within(await screen.findByRole('list'));
+  // The page's list, not the header's: a signed-out header lists the sign-in providers.
+  return within(await within(screen.getByRole('main')).findByRole('list'));
 }
 
 describe('the task catalogue', () => {

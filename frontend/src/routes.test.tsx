@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { ru } from './i18n';
 import { RequireSignIn } from './session';
 import { renderApp } from './test/render';
@@ -86,6 +86,63 @@ describe('the application shell', () => {
   });
 });
 
+describe('signing in and out from the header', () => {
+  it('offers both providers to a visitor, each returning to the page they are on', async () => {
+    renderApp(api({ signedIn: false }), '/nowhere?q=float#top');
+
+    const header = within(screen.getByRole('banner'));
+    fireEvent.click(await header.findByText(ru.session.signIn));
+
+    const returnUrl = encodeURIComponent('/nowhere?q=float#top');
+    expect(header.getByRole('link', { name: ru.session.signInWith.github })).toHaveAttribute(
+      'href',
+      `http://api.test/auth/login/github?returnUrl=${returnUrl}`,
+    );
+    expect(header.getByRole('link', { name: ru.session.signInWith.google })).toHaveAttribute(
+      'href',
+      `http://api.test/auth/login/google?returnUrl=${returnUrl}`,
+    );
+  });
+
+  it('signs out: ends the session on the server, then shows nobody signed in', async () => {
+    let signedIn = true;
+    const calls: string[] = [];
+    const stub = vi.fn<typeof globalThis.fetch>().mockImplementation((input, init) => {
+      const url = urlOf(input);
+      calls.push(`${init?.method ?? 'GET'} ${url}`);
+      if (url.endsWith('/auth/logout')) {
+        signedIn = false;
+        return Promise.resolve(new Response(null, { status: 204 }));
+      }
+      if (url.endsWith('/me')) {
+        return Promise.resolve(signedIn ? jsonResponse(developer) : problemResponse(401, 'unauthenticated', 'x'));
+      }
+      return Promise.resolve(jsonResponse([]));
+    });
+    renderApp(stub);
+
+    fireEvent.click(await screen.findByRole('button', { name: ru.session.signOut }));
+
+    expect(await screen.findByText(ru.session.signedOut)).toBeInTheDocument();
+    expect(calls).toContain('POST http://api.test/auth/logout');
+    expect(screen.queryByRole('link', { name: ru.nav.progress })).not.toBeInTheDocument();
+  });
+
+  it('says why a sign-in reached nobody, until dismissed', async () => {
+    renderApp(api({ signedIn: false }), '/nowhere?signInError=provider_already_linked');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(ru.session.signInError.provider_already_linked);
+    fireEvent.click(screen.getByRole('button', { name: ru.session.dismiss }));
+    expect(screen.queryByText(ru.session.signInError.provider_already_linked)).not.toBeInTheDocument();
+  });
+
+  it('reads an unknown sign-in error as a provider failure', async () => {
+    renderApp(api({ signedIn: false }), '/?signInError=something_new');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(ru.session.signInError.provider_failed);
+  });
+});
+
 describe('a route that needs a signed-in learner', () => {
   const table = [{ path: '/', Component: RequireSignIn, children: [{ index: true, element: <p>the protected page</p> }] }];
 
@@ -100,6 +157,17 @@ describe('a route that needs a signed-in learner', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: ru.session.requiredTitle })).toBeInTheDocument();
     expect(screen.queryByText('the protected page')).not.toBeInTheDocument();
+  });
+
+  it('offers the providers, returning to the closed page once signed in', async () => {
+    renderApp(api({ signedIn: false }), '/progress', [
+      { path: '/', Component: RequireSignIn, children: [{ path: 'progress', element: <p>the protected page</p> }] },
+    ]);
+
+    expect(await screen.findByRole('link', { name: ru.session.signInWith.google })).toHaveAttribute(
+      'href',
+      'http://api.test/auth/login/google?returnUrl=%2Fprogress',
+    );
   });
 
   it('waits, rather than guessing, while it does not know yet', () => {

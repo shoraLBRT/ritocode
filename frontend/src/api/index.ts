@@ -9,14 +9,19 @@ export {
   getProgress,
   getTask,
   getTreatments,
+  isLocalPath,
   listAttempts,
   listModules,
   listTasks,
   recordStep,
   sendSignal,
+  signInUrl,
+  signOut,
+  SIGN_IN_PROVIDERS,
   startAttempt,
   submitAttempt,
 } from './endpoints';
+export type { SignInProvider } from './endpoints';
 export { DEFAULT_API_BASE_URL, resolveApiBaseUrl } from './config';
 export { ApiClientContext, useApiClient } from './ApiClientContext';
 export { ApiClientProvider } from './ApiClientProvider';

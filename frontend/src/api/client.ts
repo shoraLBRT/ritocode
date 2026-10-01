@@ -27,6 +27,11 @@ export interface RequestOptions {
   readonly query?: Readonly<Record<string, string | number | boolean | undefined>>;
   readonly body?: unknown;
   readonly signal?: AbortSignal;
+  /**
+   * The path is the host's, not the versioned API's: sign-in and sign-out live outside `/api/v1`
+   * (docs/SPEC.md §9.3), so `/auth/logout` resolves against {@link ApiClient.hostUrl}.
+   */
+  readonly outsideApi?: boolean;
 }
 
 /** Header ADR 0003 correlates a response with its log line by. Echoed back on every response. */
@@ -60,6 +65,15 @@ export class ApiClient {
   }
 
   /**
+   * Where the host serves what lives outside the versioned API — `/auth/login/{provider}`,
+   * `/auth/logout`: the base without its `/api/v1`. Empty when the API is on the page's own origin
+   * and its base is the relative `/api/v1`, so a path stays a path.
+   */
+  get hostUrl(): string {
+    return this.#baseUrl.replace(/\/api\/v1$/, '');
+  }
+
+  /**
    * Performs one request and returns the decoded body.
    *
    * Throws {@link ApiError} for every failure — a transport fault, a status outside 2xx, or a
@@ -67,7 +81,7 @@ export class ApiClient {
    * catches, and branches on `code` when the server explained itself.
    */
   async request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-    const url = this.#resolve(path, options.query);
+    const url = this.#resolve(options.outsideApi === true ? this.hostUrl : this.#baseUrl, path, options.query);
     const hasBody = options.body !== undefined;
     const method = (options.method ?? 'GET').toUpperCase();
     const csrf = SAFE_METHODS.has(method) ? undefined : this.#csrfToken();
@@ -76,6 +90,10 @@ export class ApiClient {
     try {
       response = await this.#fetch(url, {
         method,
+        // The session cookie goes with every request. In development the pages (Vite's port) and
+        // the API are two origins of one site, and a cross-origin fetch sends no cookie without
+        // this; in production they share an origin and it changes nothing.
+        credentials: 'include',
         headers: {
           Accept: 'application/json',
           ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
@@ -102,7 +120,7 @@ export class ApiClient {
     return (await decodeBody(response)) as T;
   }
 
-  #resolve(path: string, query: RequestOptions['query']): string {
+  #resolve(base: string, path: string, query: RequestOptions['query']): string {
     const normalisedPath = path.startsWith('/') ? path : `/${path}`;
     const search = new URLSearchParams();
 
@@ -115,7 +133,7 @@ export class ApiClient {
     }
 
     const suffix = search.size > 0 ? `?${search.toString()}` : '';
-    return `${this.#baseUrl}${normalisedPath}${suffix}`;
+    return `${base}${normalisedPath}${suffix}`;
   }
 }
 

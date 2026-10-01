@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { getTask, getTreatments, listAttempts, recordStep, startAttempt, submitAttempt, useApiClient } from '../../api';
 import type { ApiClient, ApiError, TaskDetail, TreatmentTree } from '../../api';
@@ -7,9 +7,10 @@ import { LoadingState } from '../../components/LoadingState';
 import { Markdown } from '../../components/Markdown';
 import { useApiResource } from '../../hooks/useApiResource';
 import { useT } from '../../i18n';
-import { useSession } from '../../session';
+import { checkReturnPath, SignInLinks, useCheckRequest, useSession } from '../../session';
 import { canCheck, cardsWithoutLeaves, toggleCard, toggleLeaf } from './answer';
 import type { Answer } from './answer';
+import { clearDraft, draftStorage, restoreDraft, saveDraft } from './draft';
 import { DiagnosisStep } from './DiagnosisStep';
 import { MaterialViewer } from './MaterialViewer';
 import { TreatmentStep } from './TreatmentStep';
@@ -23,8 +24,12 @@ type Area = 'context' | 'code' | 'answer';
  *
  * It reads the task and the treatment tree, never a card's full text. A signed-in learner works in
  * an attempt: the newest open one at this task, or a new one, and the steps reached are recorded
- * on it. Checking needs a signed-in learner; the flow that signs a visitor in and brings them back
- * is #127.
+ * on it.
+ *
+ * Anyone can work through both steps; checking needs a signed-in learner (SPEC §4.6). The answer
+ * is kept in the browser as it changes (`draft.ts`). *Check* while signed out offers the providers,
+ * which return to this task asking for a check; the kept answer is then restored and submitted,
+ * and the review opens. If the answer did not survive, the task opens at its start with a note.
  */
 export function TaskPage() {
   const { slug = '' } = useParams();
@@ -53,16 +58,29 @@ function TaskScreen({ task, tree }: { task: TaskDetail; tree: TreatmentTree }) {
   const client = useApiClient();
   const session = useSession();
   const navigate = useNavigate();
+  const path = `/tasks/${task.slug}`;
+  const { requested: checkRequested, consume: consumeCheck } = useCheckRequest(path);
+
+  // Read once: what the browser kept for this task, and whether it was asked to check it.
+  const [storage] = useState(draftStorage);
+  const [restored] = useState(() => restoreDraft(storage, task, tree));
+  const [answerLost] = useState(() => checkRequested && restored === null);
 
   const [area, setArea] = useState<Area>('context');
-  const [step, setStep] = useState<1 | 2>(1);
-  const [answer, setAnswer] = useState<Answer>([]);
+  const [step, setStep] = useState<1 | 2>(restored?.step ?? 1);
+  const [answer, setAnswer] = useState<Answer>(restored?.answer ?? []);
   const [checking, setChecking] = useState(false);
   const [failure, setFailure] = useState<ApiError | null>(null);
+  const [signInPrompt, setSignInPrompt] = useState<{ readonly kept: boolean } | null>(null);
   const attemptId = useAttempt(client, task.slug, session.status === 'signedIn');
 
   const missing = cardsWithoutLeaves(answer).map((card) => task.cards.find((each) => each.slug === card)?.name ?? card);
   const signedIn = session.status === 'signedIn';
+  const signedOut = session.status === 'signedOut';
+
+  useEffect(() => {
+    saveDraft(storage, task.slug, { answer, step });
+  }, [storage, task.slug, answer, step]);
 
   // Step 2 reached goes into the journal (SPEC §8) once there is an attempt to record it on — the
   // learner may get there before the attempt has been found or started. A failure to record it
@@ -79,21 +97,56 @@ function TaskScreen({ task, tree }: { task: TaskDetail; tree: TreatmentTree }) {
     setStep(2);
   };
 
-  const check = async () => {
-    if (attemptId === null) {
+  const submit = useCallback(
+    async (attempt: string, picks: Answer) => {
+      const submitted = await submitAttempt(client, attempt, picks);
+      clearDraft(storage, task.slug);
+      await navigate(`/tasks/${task.slug}/attempts/${submitted.id}`);
+    },
+    [client, navigate, storage, task.slug],
+  );
+
+  // Back from signing in to check: the kept answer is submitted as it was, once there is an
+  // attempt to submit it on. Nothing to submit, or nobody signed in after all, and the request
+  // is simply dropped — the answer, if any, waits on the screen.
+  const autoChecked = useRef(false);
+  useEffect(() => {
+    if (!checkRequested || autoChecked.current || session.status === 'loading') {
       return;
     }
 
-    setChecking(true);
-    setFailure(null);
-
-    try {
-      const attempt = await submitAttempt(client, attemptId, answer);
-      await navigate(`/tasks/${task.slug}/attempts/${attempt.id}`);
-    } catch (cause) {
-      setFailure(cause as ApiError);
-      setChecking(false);
+    if (restored === null || !canCheck(restored.answer) || !signedIn) {
+      autoChecked.current = true;
+      consumeCheck();
+      return;
     }
+
+    if (attemptId !== null) {
+      autoChecked.current = true;
+      submit(attemptId, restored.answer).then(consumeCheck, (cause: unknown) => {
+        setFailure(cause as ApiError);
+        consumeCheck();
+      });
+    }
+  }, [checkRequested, consumeCheck, session.status, signedIn, restored, attemptId, submit]);
+
+  // While that check is on its way, the screen says so as if *Check* had been pressed.
+  const autoChecking = checkRequested && restored !== null && canCheck(restored.answer) && session.status !== 'signedOut' && session.status !== 'error';
+  const busy = checking || autoChecking;
+
+  const pressCheck = () => {
+    if (signedIn && attemptId !== null) {
+      setChecking(true);
+      setFailure(null);
+      submit(attemptId, answer).catch((cause: unknown) => {
+        setFailure(cause as ApiError);
+        setChecking(false);
+      });
+      return;
+    }
+
+    // Saved again here, so the prompt can say truthfully whether the answer will survive.
+    setSignInPrompt({ kept: saveDraft(storage, task.slug, { answer, step }) });
   };
 
   const tab = (value: Area, label: string) => (
@@ -113,6 +166,11 @@ function TaskScreen({ task, tree }: { task: TaskDetail; tree: TreatmentTree }) {
   return (
     <section className="task-screen">
       <h1 className="task-screen__title">{task.title}</h1>
+      {answerLost && (
+        <p className="notice" role="status">
+          {t('task.answerLost')}
+        </p>
+      )}
 
       <div className="task-tabs" role="tablist" aria-label={t('task.areas')}>
         {tab('context', t('task.contextTab'))}
@@ -168,7 +226,7 @@ function TaskScreen({ task, tree }: { task: TaskDetail; tree: TreatmentTree }) {
               />
 
               {missing.length > 0 && <p className="task-screen__hint">{t('task.needsLeaf', { cards: missing.join(', ') })}</p>}
-              {!signedIn && <p className="task-screen__hint">{t('task.signInToCheck')}</p>}
+              {signedOut && signInPrompt === null && <p className="task-screen__hint">{t('task.signInToCheck')}</p>}
               {failure !== null && <ErrorState error={failure} />}
 
               <div className="task-screen__actions">
@@ -184,18 +242,41 @@ function TaskScreen({ task, tree }: { task: TaskDetail; tree: TreatmentTree }) {
                 <button
                   type="button"
                   className="button button--primary"
-                  disabled={!canCheck(answer) || !signedIn || attemptId === null || checking}
-                  onClick={() => {
-                    void check();
-                  }}
+                  disabled={!canCheck(answer) || busy || !(signedOut || attemptId !== null)}
+                  onClick={pressCheck}
                 >
-                  {checking ? t('task.checking') : t('task.check')}
+                  {busy ? t('task.checking') : t('task.check')}
                 </button>
               </div>
+
+              {signedOut && signInPrompt !== null && <SignInPrompt returnPath={checkReturnPath(path)} kept={signInPrompt.kept} />}
             </>
           )}
         </section>
       </div>
+    </section>
+  );
+}
+
+/**
+ * Asks a signed-out learner to sign in to check (SPEC §4.6), and says whether their answer will be
+ * waiting. Focus moves to it, so a keyboard or screen-reader user lands where the next step is.
+ */
+function SignInPrompt({ returnPath, kept }: { returnPath: string; kept: boolean }) {
+  const t = useT();
+  const heading = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    heading.current?.focus();
+  }, []);
+
+  return (
+    <section className="sign-in-prompt" aria-labelledby="sign-in-prompt-title">
+      <h3 id="sign-in-prompt-title" ref={heading} tabIndex={-1}>
+        {t('task.signInTitle')}
+      </h3>
+      <p>{kept ? t('task.signInKept') : t('task.signInNotKept')}</p>
+      <SignInLinks returnPath={returnPath} />
     </section>
   );
 }

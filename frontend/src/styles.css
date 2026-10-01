@@ -81,6 +81,10 @@ code {
 }
 
 .app__session {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
   margin-left: auto;
   color: var(--text-muted);
   font-size: 0.875rem;
@@ -679,6 +683,94 @@ code {
   }
 }
 
+/* Signing in and out (SPEC §4.6, §6.1): in the header, on a closed page, and on Check. */
+/* Two classes, so it outranks `.button`, which is declared further down. */
+.button.button--small {
+  padding: 0.2rem 0.6rem;
+  font-size: 0.875rem;
+}
+
+.app__sign-in {
+  position: relative;
+}
+
+.app__sign-in > summary {
+  list-style: none;
+}
+
+.app__sign-in > summary::-webkit-details-marker {
+  display: none;
+}
+
+.app__sign-in-menu {
+  position: absolute;
+  right: 0;
+  z-index: 2;
+  margin-top: 0.25rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.app__session-error {
+  color: var(--danger);
+}
+
+.sign-in-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.sign-in-links .button {
+  display: inline-block;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.sign-in-prompt {
+  margin-top: var(--gap);
+  padding: 0.75rem var(--gap);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+}
+
+.sign-in-prompt > h3 {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+}
+
+.sign-in-prompt > p {
+  margin: 0 0 0.75rem;
+}
+
+/* A sentence above the page about what just happened: a failed sign-in, an answer lost on the way. */
+.notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem var(--gap);
+  margin: 0 0 var(--gap);
+  padding: 0.5rem var(--gap);
+  border-left: 3px solid var(--accent);
+  background: var(--surface-muted);
+}
+
+.notice > p {
+  margin: 0;
+}
+
+.notice--error {
+  margin: var(--gap) calc(var(--gap) * 1.5) 0;
+  border-left-color: var(--danger);
+  background: var(--danger-surface);
+}
+
 /*
  * Phone width (SPEC §9.4). The header wraps — brand and navigation, then who is signed in on a
  * line of its own — and the page keeps a narrow margin instead of the desktop one.
@@ -696,6 +788,15 @@ code {
   .app__session {
     flex-basis: 100%;
     margin-left: 0;
+  }
+
+  .app__sign-in-menu {
+    right: auto;
+    left: 0;
+  }
+
+  .notice--error {
+    margin: 0.75rem var(--gap) 0;
   }
 
   .app__main {

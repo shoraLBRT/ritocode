@@ -6,3 +6,11 @@ import '@testing-library/jest-dom/vitest';
 if (typeof Element !== 'undefined' && !('scrollIntoView' in Element.prototype)) {
   Object.defineProperty(Element.prototype, 'scrollIntoView', { configurable: true, writable: true, value: () => undefined });
 }
+
+// The task screen keeps the answer in session storage (src/pages/task/draft.ts); one test's answer
+// must not be another's starting point.
+if (typeof sessionStorage !== 'undefined') {
+  afterEach(() => {
+    sessionStorage.clear();
+  });
+}
