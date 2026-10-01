@@ -39,6 +39,8 @@ place that knows status codes. The mapping lives in `ErrorStatusCodeMap` and is 
 | `NotFound` | 404 |
 | `Conflict` | 409 |
 | `PreconditionFailed` | 412 |
+| `PayloadTooLarge` | 413 |
+| `UnsupportedMediaType` | 415 |
 | `RateLimited` | 429 |
 | `Unavailable` | 503 |
 | `Unexpected` | 500 |
@@ -68,6 +70,19 @@ Every non-2xx response is RFC 9457 `application/problem+json` with two extension
 
 Unexpected failures always return `code: "internal_error"` with a generic `detail`. The real cause
 goes to the log line carrying the same request id.
+
+A request the framework cannot read is the client's error, not an unexpected one. Endpoint binding
+throws `BadHttpRequestException` in every environment (`RouteHandlerOptions.ThrowOnBadRequest`; the
+framework's default outside Development is a bare 400 with no body), and `AppExceptionHandler` maps
+it by its status, logged at Information like any expected failure:
+
+| Cause | Status | `code` |
+| --- | --- | --- |
+| A body that is not valid UTF-8 JSON, a missing body, a query or route value that does not bind | 400 | `request_invalid` |
+| A body over the server's cap (`Api:MaxRequestBodyBytes`) | 413 | `request_too_large` |
+| A body sent without a JSON content type | 415 | `unsupported_media_type` |
+
+Any other status the exception carries is answered as `request_invalid`.
 
 ### Correlation
 

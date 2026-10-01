@@ -25,6 +25,12 @@ public enum ErrorType
     /// <summary>An If-Match / version precondition did not hold.</summary>
     PreconditionFailed,
 
+    /// <summary>The request body is larger than the server accepts.</summary>
+    PayloadTooLarge,
+
+    /// <summary>The request body is in a media type the endpoint does not read.</summary>
+    UnsupportedMediaType,
+
     /// <summary>The caller exceeded a rate or quota limit.</summary>
     RateLimited,
 
