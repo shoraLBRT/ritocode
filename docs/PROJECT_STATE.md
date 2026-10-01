@@ -116,8 +116,9 @@ From [ROADMAP.md](ROADMAP.md), in order:
    ([#42](https://github.com/shoraLBRT/ritocode/issues/42)). On 2026-10-01 the maintainer handed
    the catalogue to a `session-full` run, which drafted all 56 cards and merged them on green CI;
    the maintainer edits them from here. Next on the track: re-run the blind smoke test of
-   `flower-shop-daily-revenue` against the full catalogue (see the open question on smoke tests),
-   then the tasks, which stay the maintainer's.
+   `flower-shop-daily-revenue` against the full catalogue (see the open question on smoke tests) —
+   it could not run in the session that wrote the cards, whose `claude -p` was not signed in — then
+   the tasks, which stay the maintainer's.
 
 The maintainer's own [#134](https://github.com/shoraLBRT/ritocode/issues/134) — domain, VPS, OAuth
 apps, privacy text — runs in parallel and gates S7.
