@@ -1,0 +1,20 @@
+language: python
+notes: >-
+  A monthly invoicing tool for a design studio: clients and a timesheet from
+  CSV, numbered invoices, text and HTML, e-mailed through SMTP, a JSON
+  registry of what was sent. Money is Decimal and quantized per line, SMTP
+  settings come from the environment with a timeout, a re-run skips clients
+  already invoiced for the month, and numbers are saved only when invoices
+  are sent, each send saves the registry at once, and bad CSV values stop the
+  run - all on purpose. Planted: InvoiceManager loads, numbers,
+  renders, sends and keeps the registry (god-class); the
+  totals are computed in render_html, render_text, run_month and
+  render_v2 (duplicated-code); render_v2.py is a newer copy of the HTML
+  renderer, used for the saved file while the e-mail uses the old one
+  (parallel-v2-file); comments narrate edits - "Now uses", "Updated:",
+  "Changed to" (narrating-comments); _round_legacy and the shutil import
+  are unused (dead-code); render(invoice, html) switches between two
+  renderers on a boolean (flag-argument); the two tests cover only the text
+  invoice on good data (happy-path-only). run_month, about seventy lines,
+  was not read as long-function by smoke runs and is not in the keys. Used by
+  invoice-builder-studio and invoice-builder-last-run.
