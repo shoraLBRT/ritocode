@@ -40,7 +40,7 @@ live in `Ritocode.Shared/Identity`, because endpoints in two modules (Users, Att
 host registers the policy; the **Users** module registers the requirement's handler, because the list
 of admins is its configuration. A module's admin endpoint says `RequireAuthorization(AdminPolicy.Name)`
 and knows nothing else. A signed-in non-admin is refused with the same `404 not_found` that every
-address under `/api/v1` no endpoint serves answers (`NoSuchAddress`, the API's fallback), so the area
+address under `/api/v1` no endpoint serves answers (`NoSuchAddress`, written by `RoutingRefusals`), so the area
 does not confirm it exists; an anonymous caller gets the usual 401. Authorisation runs before the
 endpoint binds its parameters, so a malformed query does not tell a non-admin anything either.
 

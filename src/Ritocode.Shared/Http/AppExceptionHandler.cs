@@ -59,8 +59,8 @@ public sealed partial class AppExceptionHandler(ILogger<AppExceptionHandler> log
     {
         StatusCodes.Status413PayloadTooLarge => new AppError(
             ErrorType.PayloadTooLarge, "request_too_large", "The request body is larger than the server accepts."),
-        StatusCodes.Status415UnsupportedMediaType => new AppError(
-            ErrorType.UnsupportedMediaType, "unsupported_media_type", "The request body must be JSON (application/json)."),
+        // The same answer routing gets for a body in a type the endpoint does not read.
+        StatusCodes.Status415UnsupportedMediaType => RoutingRefusals.UnsupportedMediaType(),
         _ => new AppError(
             ErrorType.Validation, "request_invalid", "The request could not be read: its body is not valid UTF-8 JSON, or a parameter is malformed."),
     };

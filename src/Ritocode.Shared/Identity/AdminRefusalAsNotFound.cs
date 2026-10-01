@@ -30,7 +30,7 @@ internal sealed class AdminRefusalAsNotFound : IAuthorizationMiddlewareResultHan
         var refusedAsNonAdmin = authorizeResult.Forbidden
             && authorizeResult.AuthorizationFailure?.FailedRequirements.OfType<AdminRequirement>().Any() == true;
 
-        // The very result the fallback for an unknown address returns, so the bodies match field for field.
+        // The very error an unknown address is answered with, so the bodies match field for field.
         return refusedAsNonAdmin
             ? ApiProblem.ToResult(NoSuchAddress.Error(), context).ExecuteAsync(context)
             : _default.HandleAsync(next, context, policy, authorizeResult);

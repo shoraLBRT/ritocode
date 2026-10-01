@@ -19,6 +19,9 @@ public enum ErrorType
     /// <summary>The addressed resource does not exist, or is not visible to the caller.</summary>
     NotFound,
 
+    /// <summary>The addressed resource exists but does not take the request's method.</summary>
+    MethodNotAllowed,
+
     /// <summary>The request conflicts with the current state of the resource.</summary>
     Conflict,
 
