@@ -1,0 +1,7 @@
+material: newsletter-signup
+difficulty: easy
+findings:
+  - card: over-engineering
+    leaves: [manual.remove, brief.scale, brief.lifetime, brief.scope]
+  - card: single-implementation-abstraction
+    leaves: [manual.remove, brief.scale, brief.scope]

@@ -1,0 +1,15 @@
+material: price-sync
+difficulty: medium
+findings:
+  - card: missing-timeout
+    leaves: [accept.fits-context, manual.handle-errors]
+  - card: swallowed-exception
+    leaves: [accept.fits-context, manual.handle-errors]
+  - card: fake-data-stub
+    leaves: [accept.fits-context]
+  - card: unvalidated-input
+    leaves: [accept.fits-context]
+  - card: query-in-loop
+    leaves: [accept.fits-context]
+  - card: mock-of-the-subject
+    leaves: [manual.tests]

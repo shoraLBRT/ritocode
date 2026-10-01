@@ -1,0 +1,17 @@
+language: python
+notes: >-
+  An hourly price sync for an online shop: costs from a supplier's API, a
+  markup with a floor, an undercut of competitors, and an UPDATE per product.
+  Money is Decimal, quantized once, on purpose. Planted: the supplier request
+  has no timeout (missing-timeout); every per-product error is swallowed by
+  except Exception: continue, and the count printed at the end still looks
+  right (swallowed-exception); fetch_competitor_prices fetches nothing and
+  returns five known prices and 990.00 for everything else
+  (fake-data-stub); both tests patch pricing.price_for and then call it, so
+  they check their own mock (mock-of-the-subject). An UPDATE per product is
+  query-in-loop, accepted in both keys: smoke runs read it, and thousands of
+  short queries an hour cost seconds. The supplier's JSON is parsed with
+  parse_float=Decimal so a numeric cost never passes through float. Its
+  costs are used unchecked, which smoke runs read as unvalidated-input; both
+  keys list it. Used by
+  price-sync-pet-shop and price-sync-coursework.
