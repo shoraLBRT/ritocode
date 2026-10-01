@@ -1,0 +1,9 @@
+language: python
+notes: >-
+  A Flask endpoint that exports orders as CSV. Planted: the sort column from
+  the query string goes into the SQL through an f-string (sql-injection);
+  every matching order is read with fetchall, no limit or paging
+  (unbounded-load); pandas is used only to write a CSV the csv module writes
+  in three lines (heavy-dependency). Amounts carry their unit in the column
+  name on purpose. Used by orders-report-small-shop and
+  orders-report-marketplace.

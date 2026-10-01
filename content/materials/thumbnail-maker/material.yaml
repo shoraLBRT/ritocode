@@ -1,0 +1,10 @@
+language: python
+notes: >-
+  A script that reads image links from a CSV, downloads each and makes a
+  thumbnail with ImageMagick. Planted: the file name taken from the link goes
+  into a shell command (executing-untrusted-data); certificate checks are
+  off (disabled-protection); the output directory is a fixed server path
+  (hardcoded-config). The links themselves are used unchecked, which smoke
+  runs read as unvalidated-input; both keys list it. The request has a
+  timeout on purpose. Used by
+  thumbnail-maker-marketplace and thumbnail-maker-own-photos.
