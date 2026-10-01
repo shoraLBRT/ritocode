@@ -160,6 +160,27 @@ describe('ApiClient', () => {
     expect((fetchStub.mock.calls[0]?.[1]?.headers as Record<string, string>)[CSRF_HEADER]).toBeUndefined();
   });
 
+  it('sends the session cookie with every request, the API being another origin in development', async () => {
+    const fetchStub = vi.fn<typeof globalThis.fetch>().mockResolvedValue(jsonResponse({ ok: true }));
+
+    await clientWith(fetchStub).request('/me');
+
+    expect(fetchStub.mock.calls[0]?.[1]?.credentials).toBe('include');
+  });
+
+  it('resolves a path outside the versioned API against the host', async () => {
+    const fetchStub = vi.fn<typeof globalThis.fetch>().mockResolvedValue(new Response(null, { status: 204 }));
+
+    await clientWith(fetchStub).request('/auth/logout', { method: 'POST', outsideApi: true });
+
+    expect(fetchStub.mock.calls[0]?.[0]).toBe('http://api.test/auth/logout');
+  });
+
+  it('keeps the host empty when the API is on the page origin', () => {
+    expect(clientWith(vi.fn(), '/api/v1').hostUrl).toBe('');
+    expect(clientWith(vi.fn(), 'http://localhost:5199/api/v1/').hostUrl).toBe('http://localhost:5199');
+  });
+
   it('finds the token among the page cookies', () => {
     expect(csrfTokenFrom('theme=dark; __Host-ritocode-csrf=abc_-123; other=1')).toBe('abc_-123');
     expect(csrfTokenFrom('theme=dark')).toBeUndefined();

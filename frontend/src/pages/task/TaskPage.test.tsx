@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { ru } from '../../i18n';
 import { renderApp } from '../../test/render';
 import { jsonResponse, pageOf, problemResponse } from '../../test/responses';
@@ -161,15 +161,102 @@ describe('the task screen', () => {
     expect(stub.calls.some((call) => call.method === 'POST')).toBe(false);
   });
 
-  it('lets a signed-out visitor work through both steps, but not check', async () => {
+  it('lets a signed-out visitor work through both steps, and asks them to sign in on Check', async () => {
     const stub = api({ signedIn: false });
     await openTask(stub);
 
     fireEvent.click(screen.getByRole('button', { name: ru.task.toStep2 }));
 
     expect(await screen.findByText(ru.task.signInToCheck)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: ru.task.check })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: ru.task.check }));
+
+    const prompt = screen.getByRole('region', { name: ru.task.signInTitle });
+    expect(prompt).toHaveTextContent(ru.task.signInKept);
+    expect(screen.getByRole('heading', { name: ru.task.signInTitle })).toHaveFocus();
+    // Each provider returns to this task, asking for the check.
+    const returnUrl = encodeURIComponent(`/tasks/${task.slug}?check=1`);
+    expect(screen.getAllByRole('link', { name: ru.session.signInWith.github }).map((link) => link.getAttribute('href'))).toContain(
+      `http://api.test/auth/login/github?returnUrl=${returnUrl}`,
+    );
+    expect(screen.getAllByRole('link', { name: ru.session.signInWith.google }).map((link) => link.getAttribute('href'))).toContain(
+      `http://api.test/auth/login/google?returnUrl=${returnUrl}`,
+    );
     expect(stub.calls.some((call) => call.url.includes('/attempts'))).toBe(false);
+  });
+
+  it('checks the answer given signed out once the learner is back from signing in, and opens its review', async () => {
+    // Signed out: the answer is worked through, and Check asks for sign-in.
+    const before = api({ signedIn: false });
+    await openTask(before);
+    fireEvent.click(screen.getByRole('checkbox', { name: /Деньги во float/ }));
+    fireEvent.click(screen.getByRole('button', { name: ru.task.toStep2 }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'исправить представление данных', hidden: true }));
+    fireEvent.click(screen.getByRole('button', { name: ru.task.check }));
+    expect(screen.getByRole('region', { name: ru.task.signInTitle })).toBeInTheDocument();
+    cleanup();
+
+    // The provider returns the browser to the address it was given: a new page load, signed in.
+    const after = api();
+    renderApp(after.fetch, `/tasks/${task.slug}?check=1`);
+
+    expect(await screen.findByText('36 из 90')).toBeInTheDocument();
+    const submits = after.calls.filter((call) => call.url.endsWith('/submit'));
+    expect(submits).toEqual([
+      {
+        method: 'POST',
+        url: 'http://api.test/api/v1/attempts/attempt-1/submit',
+        body: { picks: [{ card: 'money-in-float', leaves: ['manual.representation'] }] },
+      },
+    ]);
+    // Checked, the answer is no longer kept.
+    expect(sessionStorage.length).toBe(0);
+  });
+
+  it('opens the task at its start with a note when the browser lost the answer during sign-in', async () => {
+    const stub = api();
+    renderApp(stub.fetch, `/tasks/${task.slug}?check=1`);
+    await screen.findByRole('heading', { level: 1, name: task.title });
+
+    expect(screen.getByText(ru.task.answerLost)).toHaveAttribute('role', 'status');
+    expect(screen.getByRole('heading', { level: 2, name: ru.task.step1 })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(stub.calls.some((call) => call.method === 'POST' && call.url.endsWith('/attempts'))).toBe(true);
+    });
+    expect(stub.calls.some((call) => call.url.endsWith('/submit'))).toBe(false);
+  });
+
+  it('keeps the answer but does not check it when the sign-in failed', async () => {
+    const before = api({ signedIn: false });
+    await openTask(before);
+    fireEvent.click(screen.getByRole('checkbox', { name: /Класс-бог/ }));
+    fireEvent.click(screen.getByRole('button', { name: ru.task.toStep2 }));
+    cleanup();
+
+    const after = api({ signedIn: false });
+    renderApp(after.fetch, `/tasks/${task.slug}?check=1&signInError=email_unverified`);
+    await screen.findByRole('heading', { level: 1, name: task.title });
+
+    expect(screen.getByRole('alert')).toHaveTextContent(ru.session.signInError.email_unverified);
+    // Back on step 2 with the pick, ready to try another provider.
+    expect(screen.getByRole('heading', { level: 2, name: ru.task.step2 })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Класс-бог' })).toBeInTheDocument();
+    expect(screen.queryByText(ru.task.answerLost)).not.toBeInTheDocument();
+    expect(after.calls.some((call) => call.url.includes('/attempts'))).toBe(false);
+  });
+
+  it('keeps the answer through a reload', async () => {
+    await openTask(api());
+    fireEvent.click(screen.getByRole('checkbox', { name: /Класс-бог/ }));
+    fireEvent.click(screen.getByRole('button', { name: ru.task.toStep2 }));
+    cleanup();
+
+    const stub = api();
+    await openTask(stub);
+
+    expect(screen.getByRole('heading', { level: 2, name: ru.task.step2 })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Класс-бог' })).toBeInTheDocument();
+    // A kept answer is never checked without the learner asking.
+    expect(stub.calls.some((call) => call.url.endsWith('/submit'))).toBe(false);
   });
 
   it('never asks for a card in full', async () => {
