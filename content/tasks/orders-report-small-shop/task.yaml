@@ -1,0 +1,9 @@
+material: orders-report
+difficulty: easy
+findings:
+  - card: sql-injection
+    leaves: [manual.validate, auto.linter, rule.conventions]
+  - card: unbounded-load
+    leaves: [accept.fits-context]
+  - card: heavy-dependency
+    leaves: [manual.remove, accept.not-worth-it]

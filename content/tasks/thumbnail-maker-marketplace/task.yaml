@@ -1,0 +1,11 @@
+material: thumbnail-maker
+difficulty: easy
+findings:
+  - card: executing-untrusted-data
+    leaves: [manual.validate, auto.linter, rule.forbidden]
+  - card: disabled-protection
+    leaves: [manual.remove, auto.linter, rule.forbidden]
+  - card: unvalidated-input
+    leaves: [manual.validate]
+  - card: hardcoded-config
+    leaves: [manual.extract-config]

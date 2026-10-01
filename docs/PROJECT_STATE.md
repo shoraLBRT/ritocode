@@ -115,12 +115,15 @@ From [ROADMAP.md](ROADMAP.md), in order:
    ([#124](https://github.com/shoraLBRT/ritocode/issues/124)) and the 20 tasks
    ([#42](https://github.com/shoraLBRT/ritocode/issues/42)). On 2026-10-01 the maintainer handed
    the catalogue to a `session-full` run, which drafted all 56 cards and merged them on green CI;
-   the maintainer edits them from here. The same run then took the tasks of #42: 9 of 20 exist —
+   the maintainer edits them from here. The same run then took the tasks of #42: 14 of 20 exist —
    the demo task, `team-reminders-for-myself` and `team-reminders-for-support` (easy, over
    `team-reminders`), `clinic-booking-city-network` and `clinic-booking-dentist` (medium, over
    `clinic-booking`), `price-sync-pet-shop` and `price-sync-coursework` (medium, over `price-sync`),
-   `newsletter-signup-bakery` and `newsletter-signup-agency-kit` (easy, over `newsletter-signup`).
-   Each new one passed a blind smoke test, reported in its pull request.
+   `newsletter-signup-bakery` and `newsletter-signup-agency-kit` (easy, over `newsletter-signup`),
+   `contact-dedupe-ngo` (easy, clean — no findings), `orders-report-small-shop` and
+   `orders-report-marketplace` (easy, over `orders-report`), `thumbnail-maker-marketplace` and
+   `thumbnail-maker-own-photos` (easy, over `thumbnail-maker`). Each new one passed a blind smoke
+   test, reported in its pull request.
 
 The maintainer's own [#134](https://github.com/shoraLBRT/ritocode/issues/134) — domain, VPS, OAuth
 apps, privacy text — runs in parallel and gates S7.
