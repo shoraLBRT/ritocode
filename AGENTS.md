@@ -19,6 +19,8 @@ Then, as needed:
   [`docs/DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md) — the system, its entities and its tables.
 - [`docs/CONTENT_FORMAT.md`](docs/CONTENT_FORMAT.md) — how problem cards, materials and tasks are
   written under `content/`.
+- [`docs/RUNBOOK.md`](docs/RUNBOOK.md) — running production: release, roll back, restore, secrets,
+  logs, admins, content.
 
 ## Where the work comes from
 
