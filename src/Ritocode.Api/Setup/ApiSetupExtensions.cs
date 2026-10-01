@@ -150,6 +150,10 @@ public static class ApiSetupExtensions
         app.UseMiddleware<SecurityHeadersMiddleware>();
         app.UseExceptionHandler();
 
+        // Routing's own 405 and 415, and an unknown address under the API, get the unified error body
+        // as well: they are written before any endpoint runs, so the exception handler never sees them.
+        app.UseRoutingRefusalBodies(options.BasePath);
+
         if (options.AllowedOrigins.Count > 0)
         {
             app.UseCors(CorsPolicyName);
@@ -184,7 +188,6 @@ public static class ApiSetupExtensions
         var api = app.MapGroup(options.BasePath);
         api.MapMetaEndpoints();
         api.MapModules(ModuleRegistry.All);
-        api.MapNoSuchAddressFallback();
         app.MapModuleHostEndpoints(ModuleRegistry.All);
 
         return app;

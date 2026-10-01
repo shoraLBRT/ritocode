@@ -10,6 +10,7 @@ public sealed class ErrorStatusCodeMapTests
     [InlineData(ErrorType.Unauthenticated, 401)]
     [InlineData(ErrorType.Forbidden, 403)]
     [InlineData(ErrorType.NotFound, 404)]
+    [InlineData(ErrorType.MethodNotAllowed, 405)]
     [InlineData(ErrorType.Conflict, 409)]
     [InlineData(ErrorType.PreconditionFailed, 412)]
     [InlineData(ErrorType.PayloadTooLarge, 413)]

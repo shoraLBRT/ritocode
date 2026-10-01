@@ -136,6 +136,69 @@ public sealed class ErrorResponseTests(TestApi api) : IClassFixture<TestApi>
         Assert.Equal("unsupported_media_type", document.RootElement.GetProperty("code").GetString());
     }
 
+    public static TheoryData<string> NonJsonContentTypeTargets => new()
+    {
+        "/__probe/echo",
+        "/api/v1/signals",
+    };
+
+    [Theory]
+    [MemberData(nameof(NonJsonContentTypeTargets))]
+    public async Task ABodyInANonJsonContentType_Is415UnsupportedMediaType(string path)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, path);
+        request.Headers.Add(RequestId.HeaderName, "text-plain-body");
+        request.Content = new StringContent("""{"title":"ok","count":3}""", Encoding.UTF8, "text/plain");
+
+        var response = await api.Client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.UnsupportedMediaType, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+
+        using var document = await ReadJsonAsync(response);
+        Assert.Equal("unsupported_media_type", document.RootElement.GetProperty("code").GetString());
+        Assert.Equal(415, document.RootElement.GetProperty("status").GetInt32());
+        Assert.Equal(path, document.RootElement.GetProperty("instance").GetString());
+        Assert.Equal("text-plain-body", document.RootElement.GetProperty("requestId").GetString());
+    }
+
+    public static TheoryData<string, string, string> WrongMethodTargets => new()
+    {
+        { "GET", "/api/v1/signals", "POST" },
+        { "DELETE", "/__probe/echo", "POST" },
+    };
+
+    [Theory]
+    [MemberData(nameof(WrongMethodTargets))]
+    public async Task AWrongMethodOnAnExistingRoute_Is405MethodNotAllowed(string method, string path, string allowed)
+    {
+        using var request = new HttpRequestMessage(new HttpMethod(method), path);
+        request.Headers.Add(RequestId.HeaderName, "wrong-method");
+
+        var response = await api.Client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.MethodNotAllowed, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal([allowed], response.Content.Headers.Allow);
+
+        using var document = await ReadJsonAsync(response);
+        Assert.Equal("method_not_allowed", document.RootElement.GetProperty("code").GetString());
+        Assert.Equal(405, document.RootElement.GetProperty("status").GetInt32());
+        Assert.Equal(path, document.RootElement.GetProperty("instance").GetString());
+        Assert.Equal("wrong-method", document.RootElement.GetProperty("requestId").GetString());
+    }
+
+    [Fact]
+    public async Task AnAddressUnderTheApiThatServesNothing_IsStill404NotFound()
+    {
+        var response = await api.Client.DeleteAsync(new Uri("/api/v1/no-such-thing", UriKind.Relative), TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+
+        using var document = await ReadJsonAsync(response);
+        Assert.Equal(NoSuchAddress.Code, document.RootElement.GetProperty("code").GetString());
+    }
+
     [Fact]
     public async Task AQueryValueOfTheWrongType_Is400RequestInvalid()
     {

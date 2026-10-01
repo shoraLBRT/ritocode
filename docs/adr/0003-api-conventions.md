@@ -37,6 +37,7 @@ place that knows status codes. The mapping lives in `ErrorStatusCodeMap` and is 
 | `Unauthenticated` | 401 |
 | `Forbidden` | 403 |
 | `NotFound` | 404 |
+| `MethodNotAllowed` | 405 |
 | `Conflict` | 409 |
 | `PreconditionFailed` | 412 |
 | `PayloadTooLarge` | 413 |
@@ -83,6 +84,23 @@ it by its status, logged at Information like any expected failure:
 | A body sent without a JSON content type | 415 | `unsupported_media_type` |
 
 Any other status the exception carries is answered as `request_invalid`.
+
+Routing refuses some requests before any endpoint runs, and throws nothing, so the exception handler
+never sees them. Its matcher policies write an empty response; status-code pages
+(`RoutingRefusals.UseRoutingRefusalBodies`) give it the unified body, through the same
+`ApiProblem.WriteAsync`. Only an empty response with one of these statuses is touched; an endpoint's
+own error already has its body.
+
+| Cause | Status | `code` |
+| --- | --- | --- |
+| A method the route does not take (`GET /api/v1/signals`); routing's `Allow` header stays | 405 | `method_not_allowed` |
+| A body in a content type the endpoint does not read (`text/plain`) | 415 | `unsupported_media_type` |
+| An address under `Api:BasePath` that no route serves | 404 | `not_found` |
+
+The unknown address is answered there, not by a catch-all fallback endpoint: a fallback takes every
+method and content type, so routing preferred it to its own 405 and 415, and a known path with the
+wrong method came back as a 404. With no endpoint, the fallback authorisation policy still answers an
+anonymous caller with 401. Outside the base path an unknown address stays an empty 404.
 
 ### Correlation
 
