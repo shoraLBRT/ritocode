@@ -33,6 +33,9 @@ RUN apt-get update \
 COPY --from=build /out/api ./
 COPY --from=build /out/migrator ./migrator/
 
+# The content of this commit, which the release ingests with the migrator's `ingest` command (#136).
+COPY content/ ./content/
+
 # Where the production Compose file mounts the data-protection key ring. Owned by the app's user, so a
 # new named volume, which takes the image's ownership, is writable by it.
 RUN mkdir /keys && chown "$APP_UID" /keys

@@ -339,3 +339,25 @@ public sealed class AnonymousAdminEndpointTests(AnonymousTestApi api) : IClassFi
         Assert.Equal("unauthenticated", body.RootElement.GetProperty("code").GetString());
     }
 }
+
+/// <summary>The list of admins as configuration hands it over.</summary>
+public sealed class AdminOptionsTests
+{
+    [Fact]
+    public void ABlankEntry_NamesNobody_AndDoesNotStopTheHost()
+    {
+        // What the production Compose file passes when ADMIN_EMAIL is left empty.
+        var options = new Ritocode.Modules.Users.Admin.AdminOptions { Emails = ["", "  "] };
+
+        Assert.True(options.IsValid());
+        Assert.False(options.Names(""));
+        Assert.False(options.Names("anyone@example.test"));
+    }
+
+    [Fact]
+    public void AnEntryThatIsNotAnAddress_IsRefused()
+    {
+        Assert.False(new Ritocode.Modules.Users.Admin.AdminOptions { Emails = ["admin"] }.IsValid());
+        Assert.True(new Ritocode.Modules.Users.Admin.AdminOptions { Emails = [" Admin@Example.Test "] }.Names("admin@example.test"));
+    }
+}
