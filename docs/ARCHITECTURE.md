@@ -18,9 +18,9 @@ only through a contract in `src/Ritocode.Shared/Contracts`
 | Module | Owns | State |
 | --- | --- | --- |
 | **Auth** | Sign-in with GitHub and Google, sessions, linked accounts | The identity seam, the development identity ([ADR 0008](adr/0008-authentication-seam.md)) and `GET /me` exist; real sign-in is [#6](https://github.com/shoraLBRT/ritocode/issues/6) and [#7](https://github.com/shoraLBRT/ritocode/issues/7) |
-| **Users** | Users; who is an admin comes from configuration | Exists; answers `IUserLookup` |
+| **Users** | Users; who is an admin comes from configuration | Exists; answers `IUserLookup`, `IUserAccounts` and `IUserContactLookup`; meets the admin policy's requirement from `Users:Admin:Emails`; serves `GET /admin/users` ([#130](https://github.com/shoraLBRT/ritocode/issues/130)) |
 | **Content** | Problem cards, the treatment tree, materials, tasks and answer keys; ingest from `content/` and validation; the catalogue reads | Exists: the format and validation (#120), the `content` schema and ingest (#121), and the public reads (#9) |
-| **Attempts** | Attempts, scoring, progress, signals | Exists: scoring ([#20](https://github.com/shoraLBRT/ritocode/issues/20)), the `attempts` schema with start, step, submit, read and history ([#125](https://github.com/shoraLBRT/ritocode/issues/125)), progress ([#24](https://github.com/shoraLBRT/ritocode/issues/24)), and signals ([#129](https://github.com/shoraLBRT/ritocode/issues/129)) |
+| **Attempts** | Attempts, scoring, progress, signals | Exists: scoring ([#20](https://github.com/shoraLBRT/ritocode/issues/20)), the `attempts` schema with start, step, submit, read and history ([#125](https://github.com/shoraLBRT/ritocode/issues/125)), progress ([#24](https://github.com/shoraLBRT/ritocode/issues/24)), signals ([#129](https://github.com/shoraLBRT/ritocode/issues/129)), and the admin area's signals and attempts ([#130](https://github.com/shoraLBRT/ritocode/issues/130)) |
 
 The host, `src/Ritocode.Api`, is the composition root: the only project that references every
 module, listed once in `Setup/ModuleRegistry.cs`. `src/Ritocode.DbMigrator` applies every module's
@@ -34,6 +34,15 @@ and `learner-view` prints a task exactly as a learner receives it, for the blind
 `src/Ritocode.Shared` holds what every module uses and none owns: the unified error body and
 `Result<T>`, paging, request correlation, the persistence base, the identity seam (`ICurrentUser`),
 and the cross-module contracts.
+
+**The admin policy** (SPEC §6.2) is shared the same way: `AdminPolicy` and its `AdminRequirement`
+live in `Ritocode.Shared/Identity`, because endpoints in two modules (Users, Attempts) carry it; the
+host registers the policy; the **Users** module registers the requirement's handler, because the list
+of admins is its configuration. A module's admin endpoint says `RequireAuthorization(AdminPolicy.Name)`
+and knows nothing else. A signed-in non-admin is refused with the same `404 not_found` that every
+address under `/api/v1` no endpoint serves answers (`NoSuchAddress`, the API's fallback), so the area
+does not confirm it exists; an anonymous caller gets the usual 401. Authorisation runs before the
+endpoint binds its parameters, so a malformed query does not tell a non-admin anything either.
 
 ## Storage
 

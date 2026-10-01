@@ -5,11 +5,12 @@ in the same pull request as the work it describes — a session that skips this 
 start from nothing.
 
 - **Last updated:** 2026-10-01
-- **Current stage:** S4 · Accounts — S3 closed with #29: under the development identity a task is
-  opened from the catalogue, solved on a desktop and at 375 px, and its score and review read. S4's
-  exit criterion is shown against a stand-in provider (#127): a signed-out learner presses *Check*,
-  signs in and lands on the review of that answer; the round trip against real GitHub and Google
-  waits on the OAuth apps of #134, and the privacy page (#128) on its text. The
+- **Current stage:** S5 · Progress, signals, admin — its exit criterion is shown (#130): progress by
+  class and card, a signal sent from a review appearing in the admin area and resolved there, and the
+  admin lists of users and attempts, checked in a browser at 1280 and 375 px. Left in S5: the security
+  baseline ([#35](https://github.com/shoraLBRT/ritocode/issues/35)). S4's exit criterion is shown
+  against a stand-in provider (#127); the round trip against real GitHub and Google waits on the
+  OAuth apps of #134, and the privacy page (#128) on its text. The
   content track of S2 ([#124](https://github.com/shoraLBRT/ritocode/issues/124),
   [#42](https://github.com/shoraLBRT/ritocode/issues/42)) stays open and is the maintainer's — see
   [ROADMAP.md](ROADMAP.md)
@@ -64,6 +65,7 @@ Content.
 | Attempts ([#20](https://github.com/shoraLBRT/ritocode/issues/20), [#125](https://github.com/shoraLBRT/ritocode/issues/125)) | **Scoring**: `DiagnosisScoring.Score`, a pure function of the answer, the key with the card weights, and the parameters of SPEC §5.2 (`Attempts:Scoring`, validated on start); the total floored at zero, the maximum, whether the answer is correct, and a line per card — found with its treatment, missed or extra — with the author's leaves for every card of the key. **Attempts**: the `attempts` schema; `POST /attempts` (a published task; 201), `PATCH /attempts/{id}` (the step reached, forward only), `POST /attempts/{id}/submit` (validated against the cards the task offers and the leaves of the tree, scored, stored with the content revision; the first submitted attempt at a task counts, later ones are practice, a partial unique index settles a race), `GET /attempts/{id}`, `GET /attempts?task=` (a page, newest first). A submitted attempt is never changed; a test re-ingests changed content and compares the stored result byte for byte. Submitting is capped per user (`Attempts:RateLimit`, 10 in 10 minutes, `429 attempt_rate_limited`). The key and weights come from Content through `ITaskForAttemptLookup`; `GET /tasks` carries `solved` for a signed-in caller through `ISubmittedTaskLookup`, which Attempts answers | `src/Modules/Ritocode.Modules.Attempts`, `src/Ritocode.Shared/Contracts` |
 | Progress ([#24](https://github.com/shoraLBRT/ritocode/issues/24), [#30](https://github.com/shoraLBRT/ritocode/issues/30)) | `GET /api/v1/me/progress`: from the caller's **first** attempts only, computed on read by a pure `ProgressCalculator` — per class (every class, in taxonomy order): findings met, found, found and treated right; per card: met, found, missed, picked when absent, treated right; and how many tasks it is built from. Classes and cards carry their names (#30): the class of each card and both names come from Content through `ICardClassLookup` (retired cards included; a card Content does not know is named by its slug, with no class). **The page** `/progress`, signed in, in the header for a signed-in learner: the six classes with their counts, then a table of the cards grouped by class, each linking to `/problems#<slug>`; the table scrolls in its own region on a phone, the card column staying put. A learner with no first attempt is pointed to `/tasks`. Checked at 1280 and 375 px, with and without attempts A test submits first and practice attempts and another user's, and shows practice and others change nothing | `src/Modules/Ritocode.Modules.Attempts/Progress`, `frontend/src/pages/ProgressPage.tsx` |
 | Signals ([#129](https://github.com/shoraLBRT/ritocode/issues/129)) | The `attempts.signals` table and `POST /api/v1/signals` (`{ attempt, card, comment? }`, 201): sent only from an **extra pick** of the caller's own **submitted** attempt — another user's attempt is a 404 like a missing one, an open attempt is `409 attempt_not_submitted` whatever the card (so it cannot probe the key), a card that is not an extra pick is `400` on `card`, a second signal for the same pick is `409 signal_already_sent` (a unique index settles a race). The comment is trimmed, blank is none, at most 500 characters. Capped per user (`Attempts:SignalRateLimit`, 10 in 10 minutes, `429 signal_rate_limited`). The attempt is read untracked and never written; `GET /attempts/{id}` lists `signalledCards`. Reached through `OwnedSignals`, the ownership rule's new allowance. **In the review**, each extra pick has *Я уверен, что это здесь*: a one-line comment, send or cancel, then "sent, the score does not change"; a pick signalled before shows as sent. Checked in a browser at 1280 and 375 px | `src/Modules/Ritocode.Modules.Attempts/Signals`, `frontend/src/pages/task/SignalControl.tsx` |
+| Admin area ([#130](https://github.com/shoraLBRT/ritocode/issues/130)) | SPEC §6.2. Admins are named by address in `Users:Admin:Emails` (the development identity in `appsettings.Development.json`). **The policy**: `AdminPolicy` in Shared, its requirement met by the Users module's `AdminAuthorizationHandler` (the caller's stored address against the list); `GET /me` carries `admin` from the same policy. A signed-in non-admin gets the **same `404 not_found`** as any address under `/api/v1` that serves nothing — the API now has a fallback giving such an address the unified body (`NoSuchAddress`), and `AdminRefusalAsNotFound` returns that very result; signed out, 401. **Endpoints**: `GET /admin/signals?status=open\|resolved` and `POST /admin/signals/{id}/resolve` (idempotent; `404 signal_not_found`) and `GET /admin/attempts?status=all\|open\|submitted&user=` in Attempts — every user's rows through `EveryonesRows`, the ownership rule's new allowance; `GET /admin/users` in Users — newest first, with providers from Auth (`ILinkedProviderLookup`) and attempts and tasks solved from Attempts (`IAttemptTallyLookup`); learners' addresses reach Attempts through `IUserContactLookup`. All paged; a bad filter is `400` naming every bad parameter. **Pages** `/admin/signals`, `/admin/users`, `/admin/attempts` under `RequireAdmin` (anyone else sees the not-found page); filters and page in the address; a user's attempt count links to their attempts; an open attempt shows the step it stopped at. *Админка* in the header for an admin. Checked in a browser at 1280 and 375 px: a signal sent from a review listed and resolved, an attempt abandoned at step 2 found in the open attempts | `src/Modules/Ritocode.Modules.Attempts/Admin`, `src/Modules/Ritocode.Modules.Users/Admin`, `src/Ritocode.Shared/Identity/AdminPolicy.cs`, `frontend/src/pages/admin` |
 | Landing ([#131](https://github.com/shoraLBRT/ritocode/issues/131)) | `/`: what Ritocode is and who it is for, from [CONCEPT.md](CONCEPT.md) — the lead, how a task goes in three steps, proportion, the defect in the brief, the catalogue — and the ways in: a **demo task**, `/tasks`, `/problems`. The demo is an easy task named at build time by `VITE_DEMO_TASK` (default `flower-shop-daily-revenue`), read in `main.tsx` and handed down as `SiteConfig`, as the API address is. The page asks the API for nothing, so #132 can prerender it; the shell's old proof-of-life call to `/meta/modules` is gone from it. Checked at 1280 and 375 px; the demo opens signed out | `frontend/src/pages/HomePage.tsx`, `frontend/src/site` |
 | Prerendered public pages ([#132](https://github.com/shoraLBRT/ritocode/issues/132)) | `content export <file> [path]` writes the problem catalogue exactly as `GET /problems` serves it — one mapping, `ProblemCatalogueMapping`, now behind both, and a test holds the export to the API's body. `npm run build:static` (`CONTENT_EXPORT`, `SITE_ORIGIN`) renders `/` and `/problems` with React's server renderer into `dist/index.html` and `dist/problems.html` — every card in full with its anchor — each with its title, description and canonical address, plus `spa.html` (the shell for every other route), `sitemap.xml` and `robots.txt`. Titles and descriptions come from one table (`site/pageMeta.ts`) that the application also applies on every route change. The application renders over the static markup once loaded. CI job *Prerender public pages* runs the export and the build and checks every card is on the page. Checked in a browser: the raw HTML holds every card and anchor, and the application takes over and scrolls to `#money-in-float` | `src/Ritocode.ContentTool`, `frontend/src/prerender`, `frontend/scripts/prerender.mjs` |
 | Frontend shell ([#26](https://github.com/shoraLBRT/ritocode/issues/26)) | React, Vite and TypeScript; the API client that owns the error envelope; layout, routes, loading, error and empty states. A **translation catalogue** of its own (`src/i18n`: typed dotted keys, `{name}` placeholders, Russian plurals through `Intl.PluralRules`, `<html lang="ru">`), every string moved into it, and an ESLint rule that fails on text written in JSX. The **signed-in state** from `/me` (`src/session`: loading, signed in, signed out on a 401, error) in the header, and `RequireSignIn`, a layout route for pages that need a learner. A **phone-width layout**, checked at 375 px: no horizontal scroll, the header wraps | `frontend/` |
@@ -83,12 +85,11 @@ storage with MinIO, and the frontend's old problem pages. All of it remains read
 
 From [ROADMAP.md](ROADMAP.md), in order:
 
-1. S4's engineering is done: sessions (#6), sign-in (#7) and signed-out solving (#127), the last
-   checked in a browser against a stand-in provider. Left in S4: the real round trip against GitHub
-   and Google (the OAuth apps of #134) and the privacy page ([#128](https://github.com/shoraLBRT/ritocode/issues/128)),
-   which needs the policy text and adds the sign-in notice SPEC §6.1 asks for — beside the provider
-   links of `SignInLinks`. Next is S5's admin area ([#130](https://github.com/shoraLBRT/ritocode/issues/130))
-   and security baseline ([#35](https://github.com/shoraLBRT/ritocode/issues/35)). Maintainer-provided resources (OAuth
+1. S5's admin area is done (#130). Next is S5's security baseline
+   ([#35](https://github.com/shoraLBRT/ritocode/issues/35)), which now has the admin area to cover.
+   Left in S4: the real round trip against GitHub and Google (the OAuth apps of #134) and the privacy
+   page ([#128](https://github.com/shoraLBRT/ritocode/issues/128)), which needs the policy text and
+   adds the sign-in notice SPEC §6.1 asks for — beside the provider links of `SignInLinks`. Maintainer-provided resources (OAuth
    apps, VPS, domain, policy text) block only an issue's final real check, not its engineering:
    build with fakes, a local `docker compose` or a placeholder, and name the real check as left.
    Umami ([#133](https://github.com/shoraLBRT/ritocode/issues/133)) is unblocked by #127 — "check
@@ -110,6 +111,19 @@ apps, privacy text — runs in parallel and gates S7.
 
 Decisions the specification left open are listed in [SPEC.md](SPEC.md) §13. Add here anything a
 future session would otherwise have to rediscover.
+
+- **An unknown address under `/api/v1` now answers `404 not_found` with the unified body** (#130),
+  where routing alone gave an empty 404: the admin area's refusal has to look exactly like it. A side
+  effect of the fallback: a known path with the wrong method (`GET /api/v1/signals`) is now that 404
+  too, not a 405. Nothing in the API or the pages relied on a 405.
+- **Admins are read from configuration on every admin request** (#130): the handler loads the
+  caller's address and compares it with `Users:Admin:Emails`, ignoring case. Adding or removing an
+  admin is a configuration change and a restart; production sets the list through the environment
+  (`Users__Admin__Emails__0`), which #135 must do for the maintainer's address.
+- **The admin lists read every user's rows with no index for their order** (#130):
+  `GET /admin/attempts` sorts all attempts by `started_at`, `GET /admin/signals` all signals by
+  `created_at`. At the MVP's few users that is nothing; add an index on `attempts (started_at)` if the
+  list ever slows.
 
 - **A new identity without a verified address cannot sign in** (#7). SPEC §6.1 says such an address
   never links; it is also never used to create a user, so every user has a verified address — which
@@ -254,10 +268,10 @@ compose stack is PostgreSQL only.
 | --- | --- |
 | `Ritocode.Architecture.Tests` | 13 |
 | `Ritocode.Shared.Tests` | 51 |
-| `Ritocode.Api.Tests` | 99 |
+| `Ritocode.Api.Tests` | 116 |
 | `Ritocode.Modules.Content.Tests` | 71 |
 | `Ritocode.Modules.Attempts.Tests` | 19 |
-| Frontend (vitest) | 166 |
+| Frontend (vitest) | 176 |
 
 The count is a ratchet: if it drops, the PR says which tests went and why.
 
@@ -275,7 +289,7 @@ In Development (`ASPNETCORE_ENVIRONMENT=Development`) the host seeds `content/` 
 | `GET /health/live` | `200`, `{"status":"Healthy","checks":[]}` |
 | `GET /health/ready` | `200`, one check per module schema |
 | `GET /api/v1/meta/modules` | `200`, four modules: Auth, Users, Content, Attempts |
-| `GET /api/v1/me` | `200`, `{"id":"0199aa00-…","username":"developer"}` under the development identity; `401 unauthenticated` without it |
+| `GET /api/v1/me` | `200`, `{"id":"0199aa00-…","username":"developer","admin":true}` under the development identity (an admin in Development); `401 unauthenticated` without it |
 | `POST /auth/logout` | `204`, two `Set-Cookie` headers clearing `__Host-ritocode-session` and `__Host-ritocode-csrf` |
 | `GET /auth/login/github?returnUrl=/tasks` | `302` to GitHub with `state` and `code_challenge` when `Auth:GitHub` is configured; `404 provider_not_found` when it is not; `400` with `errors.returnUrl` for `returnUrl=https://…` |
 | `GET /api/v1/problems` | `200`, `{ classes, cards }` — the six classes once content is seeded |
@@ -287,4 +301,9 @@ In Development (`ASPNETCORE_ENVIRONMENT=Development`) the host seeds `content/` 
 | `GET /api/v1/tasks` after a submit | `200`, that task has `solved: true` |
 | `POST /api/v1/signals` with `{"attempt":"<a submitted attempt>","card":"<one of its extra picks>"}` | `201`, the signal; again → `409`, `code: "signal_already_sent"`; a found card → `400`, `errors.card` |
 | `GET /api/v1/me/progress` | `200`, `{ tasks, classes, cards }` — six classes, cards only once met or picked, each class and card with its `name` |
+| `GET /api/v1/admin/signals` | `200`, a page of open signals, each with `cardName` and `learner.email`; `?status=resolved` the resolved ones; `?status=x` → `400`, `errors.status` |
+| `POST /api/v1/admin/signals/{id}/resolve` | `200`, the signal with `resolvedAt`; again → the same `resolvedAt`; an unknown id → `404 signal_not_found` |
+| `GET /api/v1/admin/users` | `200`, a page of users, newest first, each with `providers`, `attempts`, `tasksSolved` |
+| `GET /api/v1/admin/attempts?status=open` | `200`, a page of attempts never submitted, each with the `step` it stopped at |
+| any admin address, for a non-admin | `404`, `code: "not_found"`, as `GET /api/v1/no-such-thing` |
 | any response | carries an `X-Request-Id` header |
