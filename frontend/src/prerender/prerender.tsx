@@ -6,6 +6,7 @@ import { AppLayout } from '../components/AppLayout';
 import { I18nProvider, ru, translate } from '../i18n';
 import type { Translate } from '../i18n';
 import { HomePage } from '../pages/HomePage';
+import { PrivacyPage } from '../pages/PrivacyPage';
 import { StaticProblemsPage } from '../pages/ProblemsPage';
 import { SessionProvider } from '../session';
 import { PRERENDERED_PATHS, SiteConfigContext, pageMeta } from '../site';
@@ -31,7 +32,7 @@ const EMPTY_ROOT = '<div id="root"></div>';
 
 /**
  * The public pages as static HTML, for search engines that do not run JavaScript — Yandex among them
- * (docs/SPEC.md §4.1): `/` and `/problems`, every card in full with its anchor, each with its title,
+ * (docs/SPEC.md §4.1): `/`, `/problems` with every card in full and its anchor, and `/privacy`, each with its title,
  * description and canonical address; `sitemap.xml` and `robots.txt`; and `spa.html`, the untouched
  * shell every other route is served. Once the bundle loads, the application renders over the static
  * markup and takes over.
@@ -92,6 +93,7 @@ function Page({ path, content, config }: { path: string; content: ContentExport;
                 <Route path="/" element={<AppLayout />}>
                   <Route index element={<HomePage />} />
                   <Route path="problems" element={<StaticProblemsPage catalogue={content.problems} />} />
+                  <Route path="privacy" element={<PrivacyPage />} />
                 </Route>
               </Routes>
             </StaticRouter>

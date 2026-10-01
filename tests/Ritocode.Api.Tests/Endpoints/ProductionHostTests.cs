@@ -27,6 +27,15 @@ public sealed class ProductionHostTests(ProxiedTestApi api) : IClassFixture<Prox
     }
 
     [Fact]
+    public async Task WithNoAddressesConfigured_SignInGoesToTheProvidersOwn()
+    {
+        using var response = await api.Client.GetAsync("/auth/login/github?returnUrl=/tasks", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal("https://github.com/login/oauth/authorize", response.Headers.Location!.GetLeftPart(UriPartial.Path));
+    }
+
+    [Fact]
     public void TheKeyRing_IsKeptInTheConfiguredDirectory()
     {
         var protector = api.Services.GetRequiredService<IDataProtectionProvider>().CreateProtector("probe");

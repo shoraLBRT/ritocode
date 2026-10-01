@@ -3,7 +3,9 @@ import type { ReactNode } from 'react';
 /**
  * Renders the Markdown a problem card's sections are written in (docs/CONTENT_FORMAT.md §4) as
  * React elements: paragraphs, bulleted and numbered lists, `code`, **bold**, *emphasis* and
- * [links](https://…). That subset is what cards are written in.
+ * [links](https://…). That subset is what cards are written in. Headings `##` and `###` render as
+ * `h2` and `h3`, for the privacy policy (#128); a card's sections are already split at `##`, so its
+ * text never holds one.
  *
  * Its own rather than a library's: the subset is small, it never goes through `innerHTML` — so no
  * sanitiser is needed and nothing in a card can become markup — and it renders on a server as it
@@ -15,11 +17,13 @@ export function Markdown({ source }: { source: string }) {
 }
 
 type Block =
+  | { readonly kind: 'heading'; readonly level: 2 | 3; readonly text: string }
   | { readonly kind: 'paragraph'; readonly text: string }
   | { readonly kind: 'list'; readonly ordered: boolean; readonly items: readonly string[] };
 
 const bullet = /^\s*[-*]\s+/;
 const numbered = /^\s*\d+[.)]\s+/;
+const heading = /^(##|###)\s+(.*\S)\s*$/;
 
 function blocks(source: string): Block[] {
   const result: Block[] = [];
@@ -39,9 +43,13 @@ function blocks(source: string): Block[] {
 
   for (const line of source.replace(/\r\n/g, '\n').split('\n')) {
     const marker = bullet.exec(line) ?? numbered.exec(line);
+    const title = heading.exec(line);
 
     if (line.trim() === '') {
       flush();
+    } else if (title !== null) {
+      flush();
+      result.push({ kind: 'heading', level: title[1] === '##' ? 2 : 3, text: title[2] ?? '' });
     } else if (marker !== null) {
       const ordered = numbered.test(line);
 
@@ -68,6 +76,10 @@ function blocks(source: string): Block[] {
 }
 
 function renderBlock(block: Block, key: number): ReactNode {
+  if (block.kind === 'heading') {
+    return block.level === 2 ? <h2 key={key}>{inline(block.text)}</h2> : <h3 key={key}>{inline(block.text)}</h3>;
+  }
+
   if (block.kind === 'paragraph') {
     return <p key={key}>{inline(block.text)}</p>;
   }

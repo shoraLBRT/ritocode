@@ -40,16 +40,21 @@ Once, by the maintainer (#134 provides the server, the domain and the OAuth apps
    `/google`), your sign-in address as `ADMIN_EMAIL`. `chmod 600 production.env`.
 4. **server** For the off-server backup copy: create the bucket and its access key at the provider,
    run `rclone config` to add a remote for it, and set `BACKUP_REMOTE` (e.g. `backups:ritocode-backups`).
-5. **local** Release `main` — the [release](#release) below. The first one creates the volumes,
+5. **local** Replace the placeholder in `frontend/src/site/privacy.ru.md` with the privacy policy's
+   text (#134) and merge it: `/privacy` renders that file, and every sign-in offer links to it.
+6. **local** Release `main` — the [release](#release) below. The first one creates the volumes,
    Umami's database, the schemas and the content.
-6. Open `https://UMAMI_DOMAIN`, sign in with Umami's default account (`admin` / `umami`) and **change
+7. Open `https://UMAMI_DOMAIN`, sign in with Umami's default account (`admin` / `umami`) and **change
    its password at once**. Add the site; set the repository variables `UMAMI_SCRIPT_URL`
    (`https://UMAMI_DOMAIN/script.js`) and `UMAMI_WEBSITE_ID` (GitHub → Settings → Variables), and
    `SITE_ORIGIN` (`https://SITE_DOMAIN`). The web image takes them at build time, so release once more
    after the next push to `main`.
-7. **server** Schedule the backup: `crontab -e`, then
+8. **server** Schedule the backup: `crontab -e`, then
    `15 3 * * * cd ~/ritocode && ./backup.sh >> ~/ritocode-backup.log 2>&1`.
-8. Sign in with GitHub and with Google; open `/admin` — it is there only for `ADMIN_EMAIL`.
+9. Sign in with GitHub and with Google; open `/admin` — it is there only for `ADMIN_EMAIL`. Each
+   sign-in offer carries the notice linking `/privacy`.
+10. Turn on [monitoring](#monitoring): set the repository variable `MONITOR_ORIGINS` to
+    `https://SITE_DOMAIN https://UMAMI_DOMAIN`.
 
 ## Release
 
@@ -126,6 +131,34 @@ dc logs --no-log-prefix api | jq -c 'select(any(.Scopes[]?; .RequestId == "<id>"
 
 The other services: `dc logs caddy`, `umami`, `postgres`. Docker keeps 5 × 10 MB per service. How the
 API's lines are shaped: [deploy/README.md](../deploy/README.md#logs).
+
+## Monitoring
+
+The *Monitor* workflow ([ADR 0013](adr/0013-uptime-monitoring.md)) runs every five minutes from
+GitHub, outside the server. It checks the addresses in the repository variable `MONITOR_ORIGINS`
+(GitHub → Settings → Variables; the site first): the site's `/health/ready` answers `Healthy` —
+Caddy, the API and PostgreSQL are up — and every address's certificate is valid and more than 14 days
+from expiry. Empty, nothing is checked; clear it to silence monitoring during planned work.
+
+**The alert** is an issue labelled `monitoring-alert` that mentions you, so GitHub notifies you by
+e-mail and in the app. It shows the failing checks and links the run. While it is open a comment is
+added only when what fails changes. When every check passes again the workflow comments and closes it.
+
+| It says | Look at |
+| --- | --- |
+| `FAIL health`, `curl: (7)` or a timeout | The server or Caddy: `dc ps`, then `dc logs --since 15m caddy`. The VPS's console if SSH fails too. |
+| `FAIL health`, `returned error: 502` | The API is down behind Caddy: `dc ps api`, `dc logs --since 15m api`, `dc up -d api`. |
+| `FAIL health`, `returned error: 503` | The API is up and a database check fails: `dc ps postgres`, `dc logs --since 15m postgres`, disk space (`df -h`). |
+| `FAIL certificate`, `expires within 14 days` or `expired` | Caddy has failed to renew for two weeks or more: `dc logs caddy \| grep -i -E "acme\|certificate"`. Usually DNS or port 80 closed. |
+| `FAIL reachable` (Umami's address) | `dc ps umami`, `dc logs --since 15m umami`. |
+
+**Try it** without waiting for a failure: *Actions* → *Monitor* → *Run workflow*, with
+`https://expired.badssl.com` as the addresses. It opens an alert; the next scheduled run, on the real
+addresses, closes it.
+
+Two limits of a scheduled workflow: GitHub can start a run several minutes late when it is busy, and
+it **disables the schedule after 60 days without a commit** to the repository — it e-mails a warning
+first; re-enable it under *Actions* → *Monitor*.
 
 ## Add an admin
 

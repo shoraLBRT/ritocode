@@ -138,3 +138,11 @@ logging:
     max-size: "10m"
     max-file: "5"
 ```
+
+## Monitoring
+
+Nothing on the server: the uptime check runs from GitHub every five minutes
+(`.github/workflows/monitor.yml`, [ADR 0013](../docs/adr/0013-uptime-monitoring.md)) against
+`/health/ready` through Caddy, and against the certificates of the addresses in the repository
+variable `MONITOR_ORIGINS`. An alert is an issue labelled `monitoring-alert`. What to look at when one
+opens: [RUNBOOK.md](../docs/RUNBOOK.md#monitoring).
