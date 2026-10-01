@@ -80,6 +80,14 @@ public sealed class OwnershipRuleTests
     }
 
     [Fact]
+    public void AttemptsAndSignals_AreBothGuarded()
+    {
+        // SPEC §10.1 names both: ownership is checked inside every query that reads an attempt or a signal.
+        Assert.Contains(typeof(Ritocode.Modules.Attempts.Domain.Attempt), GuardedEntities);
+        Assert.Contains(typeof(Ritocode.Modules.Attempts.Domain.Signal), GuardedEntities);
+    }
+
+    [Fact]
     public void AUsersRows_AreReachedOnlyWhereTheOwnerIsInTheQuery()
     {
         var violations = ModuleAccesses()
