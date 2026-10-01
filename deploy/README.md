@@ -1,8 +1,8 @@
 # Deploy
 
 What runs in production and how it is built ([SPEC.md](../docs/SPEC.md) §9.5): the images, the
-production Compose file of [#135](https://github.com/shoraLBRT/ritocode/issues/135), and the logs.
-The release command and backups arrive with [#136](https://github.com/shoraLBRT/ritocode/issues/136).
+production Compose file of [#135](https://github.com/shoraLBRT/ritocode/issues/135), the release,
+backups and restore of [#136](https://github.com/shoraLBRT/ritocode/issues/136), and the logs.
 
 ## Images
 
@@ -47,23 +47,63 @@ of its own in that PostgreSQL. Only Caddy publishes ports (80 and 443).
   CREATE DATABASE umami OWNER umami;`. Register the site in Umami's own pages, then set the
   repository variables `UMAMI_SCRIPT_URL` (`https://UMAMI_DOMAIN/script.js`) and `UMAMI_WEBSITE_ID`,
   which the web image is built with (#133).
-- **Migrations** run from the API image as the one-off `migrate` service:
-  `docker compose -f compose.production.yml --env-file production.env run --rm migrate`. The release
-  command of #136 runs it, then content ingest, then restarts the API.
+- **Migrations and content** run from the API image as the one-off `migrate` service: `migrate`
+  applies migrations, `migrate ingest content <commit>` ingests the `content/` the image was built
+  with, stamped with the commit. A release runs both.
+- **Images** come from `RITOCODE_REGISTRY` (GHCR by default; a mirror if GHCR is slow from the server,
+  ADR 0011) at `RITOCODE_VERSION`.
 
-First start on a new server, from `deploy/`:
+## Release
 
-```bash
-docker compose -f compose.production.yml --env-file production.env pull
-```
-
-```bash
-docker compose -f compose.production.yml --env-file production.env run --rm migrate
-```
+From a clean checkout, one command (the server needs Docker, the files of `deploy/` it is sent, and
+its own `production.env`):
 
 ```bash
-docker compose -f compose.production.yml --env-file production.env up -d
+RITOCODE_SERVER=deploy@server ./scripts/release.sh
 ```
+
+It releases `origin/main` (or the commit given as its argument), whose images the release-images
+workflow has built: it copies that commit's `deploy/` to `~/ritocode` on the server and runs
+`deploy/release.sh <commit>` there — pull the images, apply migrations, ingest the content with the
+commit, start the services on the new images, wait for `/health/ready`. **Rolling back is releasing
+the previous commit.** A migration is never undone by a rollback; one that must be reversed needs a
+new migration.
+
+On the server itself the same release is `./release.sh <full commit>` from `~/ritocode`.
+
+## Backups
+
+`backup.sh` dumps both databases — the product's and Umami's — in PostgreSQL's custom format to
+`BACKUP_DIR` (`/var/backups/ritocode`), keeps seven days of them, and copies each new dump off the
+server with `rclone` to `BACKUP_REMOTE`. Run it daily from cron on the server:
+
+```
+15 3 * * * cd /home/deploy/ritocode && ./backup.sh >> /var/log/ritocode-backup.log 2>&1
+```
+
+**Where the off-server copy goes** (decided in #136): an S3-compatible bucket at a Russian provider
+— Selectel or Timeweb Cloud object storage — in another region from the server, through an `rclone`
+remote configured on the server (`rclone config`), with the bucket's own lifecycle rule keeping 30
+days. It keeps the data in Russia (SPEC §9.5, 152-FZ), costs a few roubles a month at this size, and
+is not lost with the server. `BACKUP_REMOTE` is the remote and bucket, e.g. `backups:ritocode-backups`;
+left empty, dumps stay on the server only. Creating the bucket and its key is the maintainer's
+(#134).
+
+## Restore
+
+```bash
+./restore.sh ritocode /var/backups/ritocode/ritocode-<stamp>.dump
+```
+
+It stops the API, drops the database and makes it again empty, restores the dump into it and starts
+the API — everything written since the dump is lost. `./restore.sh umami <dump>` does the same for
+Umami. A dump from the remote is fetched first with `rclone copy BACKUP_REMOTE/ritocode/<file> .`.
+
+**Performed once** (#136), on a local run of this stack: a release ingested the content; `backup.sh`
+dumped both databases; `docker compose down -v` removed every volume; PostgreSQL started on an empty
+volume (no `content` schema); `restore.sh ritocode` restored the dump; the site served the catalogue
+(the same three cards), the task, the landing page and a healthy `/health/ready`. Repeat it on the
+server once it exists, and after any change to these scripts.
 
 ## Logs
 

@@ -13,6 +13,8 @@
 #   docker compose -f compose.production.yml --env-file production.env up -d
 #
 # RITOCODE_VERSION picks the images: a full commit, as a release names it (#136), or `main`.
+# RITOCODE_REGISTRY is where they are pulled from: GHCR by default, a mirror if GHCR is slow from the
+# server (ADR 0011).
 
 name: ritocode-production
 
@@ -49,7 +51,7 @@ services:
     logging: *logging
 
   api:
-    image: ghcr.io/shoralbrt/ritocode-api:${RITOCODE_VERSION:-main}
+    image: ${RITOCODE_REGISTRY:-ghcr.io/shoralbrt}/ritocode-api:${RITOCODE_VERSION:-main}
     restart: unless-stopped
     environment:
       <<: *api-environment
@@ -71,7 +73,7 @@ services:
     logging: *logging
 
   migrate:
-    image: ghcr.io/shoralbrt/ritocode-api:${RITOCODE_VERSION:-main}
+    image: ${RITOCODE_REGISTRY:-ghcr.io/shoralbrt}/ritocode-api:${RITOCODE_VERSION:-main}
     profiles: ["release"]
     entrypoint: ["dotnet", "migrator/Ritocode.DbMigrator.dll"]
     environment:
@@ -82,7 +84,7 @@ services:
     logging: *logging
 
   web:
-    image: ghcr.io/shoralbrt/ritocode-web:${RITOCODE_VERSION:-main}
+    image: ${RITOCODE_REGISTRY:-ghcr.io/shoralbrt}/ritocode-web:${RITOCODE_VERSION:-main}
     restart: unless-stopped
     logging: *logging
 

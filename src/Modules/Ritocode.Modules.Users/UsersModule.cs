@@ -45,9 +45,7 @@ public sealed class UsersModule : IModule
 
         services.AddOptions<AdminOptions>()
             .Bind(configuration.GetSection(AdminOptions.SectionName))
-            .Validate(
-                options => options.Emails.All(email => !string.IsNullOrWhiteSpace(email) && email.Contains('@', StringComparison.Ordinal)),
-                $"{AdminOptions.SectionName}:Emails must hold e-mail addresses only.")
+            .Validate(options => options.IsValid(), $"{AdminOptions.SectionName}:Emails must hold e-mail addresses only.")
             .ValidateOnStart();
 
         // Scoped: it reads the caller's address from this module's context.

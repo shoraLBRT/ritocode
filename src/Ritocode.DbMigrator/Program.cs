@@ -19,9 +19,13 @@ var runner = new MigrationRunner(
     host.Services,
     host.Services.GetRequiredService<ILogger<MigrationRunner>>());
 
-return MigratorCommandParser.Parse(args) switch
+return args switch
 {
-    MigratorCommand.Apply => await runner.ApplyAsync(),
-    MigratorCommand.Status => await runner.ReportStatusAsync(),
-    _ => MigratorCommandParser.PrintUsage(),
+    ["ingest", var root, var revision] => await ContentIngestCommand.RunAsync(host.Services, root, revision),
+    _ => MigratorCommandParser.Parse(args) switch
+    {
+        MigratorCommand.Apply => await runner.ApplyAsync(),
+        MigratorCommand.Status => await runner.ReportStatusAsync(),
+        _ => MigratorCommandParser.PrintUsage(),
+    },
 };
