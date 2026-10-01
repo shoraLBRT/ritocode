@@ -1,0 +1,11 @@
+material: clinic-booking
+difficulty: medium
+findings:
+  - card: missing-ownership-check
+    leaves: [manual.validate, brief.requirements, rule.conventions, auto.architecture]
+  - card: check-then-act-race
+    leaves: [accept.fits-context, accept.not-worth-it]
+  - card: naive-datetime
+    leaves: [accept.fits-context]
+  - card: happy-path-only
+    leaves: [manual.tests, rule.tests]

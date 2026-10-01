@@ -1,0 +1,9 @@
+material: team-reminders
+difficulty: easy
+findings:
+  - card: state-in-process-memory
+    leaves: [accept.fits-context]
+  - card: naive-datetime
+    leaves: [accept.fits-context]
+  - card: unvalidated-input
+    leaves: [accept.fits-context]
