@@ -201,6 +201,10 @@ OWASP: hardcoded credentials · CWE-798
 Sections are Markdown. An unknown heading at the second level is an error, so a typo in a heading
 never silently drops a field. The order of sections is free.
 
+The front matter is YAML, so a value that contains `: ` goes in quotes — `keywords: [noqa, "type:
+ignore"]`, `name: "…: …"`. Unquoted, YAML reads it as a key and a value, and `content validate`
+reports the field, the line and the value to quote.
+
 The summary is what the learner sees in step 1, together with the name. It must say how the problem
 is **recognised**, and, when a neighbouring card is close, what this card is **not**.
 
