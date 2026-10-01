@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
+import { track } from '../../analytics';
 import { getTask, getTreatments, listAttempts, recordStep, startAttempt, submitAttempt, useApiClient } from '../../api';
 import type { ApiClient, ApiError, TaskDetail, TreatmentTree } from '../../api';
 import { ErrorState } from '../../components/ErrorState';
@@ -82,6 +83,15 @@ function TaskScreen({ task, tree }: { task: TaskDetail; tree: TreatmentTree }) {
     saveDraft(storage, task.slug, { answer, step });
   }, [storage, task.slug, answer, step]);
 
+  // Once per task screen, StrictMode's second effect run included.
+  const opened = useRef(false);
+  useEffect(() => {
+    if (!opened.current) {
+      opened.current = true;
+      track('task-opened', { task: task.slug, difficulty: task.difficulty });
+    }
+  }, [task.slug, task.difficulty]);
+
   // Step 2 reached goes into the journal (SPEC §8) once there is an attempt to record it on — the
   // learner may get there before the attempt has been found or started. A failure to record it
   // must not stop them.
@@ -94,12 +104,14 @@ function TaskScreen({ task, tree }: { task: TaskDetail; tree: TreatmentTree }) {
   }, [client, step, attemptId]);
 
   const toStep2 = () => {
+    track('step-2-reached', { task: task.slug });
     setStep(2);
   };
 
   const submit = useCallback(
     async (attempt: string, picks: Answer) => {
       const submitted = await submitAttempt(client, attempt, picks);
+      track('attempt-submitted', { task: task.slug });
       clearDraft(storage, task.slug);
       await navigate(`/tasks/${task.slug}/attempts/${submitted.id}`);
     },
@@ -144,6 +156,9 @@ function TaskScreen({ task, tree }: { task: TaskDetail; tree: TreatmentTree }) {
       });
       return;
     }
+
+    // Where signed-out visitors drop off is what Umami is for (SPEC §8).
+    track('check-signed-out', { task: task.slug });
 
     // Saved again here, so the prompt can say truthfully whether the answer will survive.
     setSignInPrompt({ kept: saveDraft(storage, task.slug, { answer, step }) });

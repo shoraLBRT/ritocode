@@ -280,3 +280,38 @@ describe('the task screen', () => {
     expect(screen.getByRole('heading', { level: 2, name: ru.task.material }).closest('section')).toHaveClass('task-screen__area--active');
   });
 });
+
+describe('the task screen counts', () => {
+  it('the task opened once, step 2 reached, and the attempt submitted, by task only', async () => {
+    const umami = { track: vi.fn() };
+    window.umami = umami;
+    await openTask(api());
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /Деньги во float/ }));
+    fireEvent.click(screen.getByRole('button', { name: ru.task.toStep2 }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'исправить представление данных', hidden: true }));
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: ru.task.check })).toBeEnabled();
+    });
+    fireEvent.click(screen.getByRole('button', { name: ru.task.check }));
+    expect(await screen.findByText('36 из 90')).toBeInTheDocument();
+
+    expect(umami.track.mock.calls).toEqual([
+      ['task-opened', { task: task.slug, difficulty: task.difficulty }],
+      ['step-2-reached', { task: task.slug }],
+      ['attempt-submitted', { task: task.slug }],
+    ]);
+  });
+
+  it('Check pressed while signed out', async () => {
+    const umami = { track: vi.fn() };
+    window.umami = umami;
+    await openTask(api({ signedIn: false }));
+
+    fireEvent.click(screen.getByRole('button', { name: ru.task.toStep2 }));
+    fireEvent.click(await screen.findByRole('button', { name: ru.task.check }));
+
+    expect(umami.track).toHaveBeenCalledWith('check-signed-out', { task: task.slug });
+    expect(umami.track).not.toHaveBeenCalledWith('attempt-submitted', expect.anything());
+  });
+});

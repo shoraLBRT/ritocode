@@ -185,6 +185,8 @@ function signalCalls(stub: ReturnType<typeof api>) {
 
 describe('a signal from an extra pick', () => {
   it('opens a one-line comment under the extra pick only, and sends it for that pick', async () => {
+    const umami = { track: vi.fn() };
+    window.umami = umami;
     const stub = api(scored);
     renderApp(stub, `/tasks/${task.slug}/attempts/attempt-1`);
     await screen.findByRole('heading', { level: 1, name: ru.review.title });
@@ -206,6 +208,9 @@ describe('a signal from an extra pick', () => {
 
     // The score is the one it was.
     expect(screen.getByText('29 из 90')).toBeInTheDocument();
+
+    // Counted by the card alone: the comment stays with the author.
+    expect(umami.track).toHaveBeenCalledWith('signal-sent', { card: 'god-class' });
   });
 
   it('can be cancelled without sending anything', async () => {
