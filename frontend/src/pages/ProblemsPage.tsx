@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useLocation } from 'react-router';
+import { track } from '../analytics';
 import { getProblemCatalogue, useApiClient } from '../api';
 import type { ProblemCard, ProblemCatalogue } from '../api';
 import { EmptyState } from '../components/EmptyState';
@@ -72,6 +73,7 @@ function CatalogueOrEmpty({ catalogue }: { catalogue: ProblemCatalogue }) {
 function Catalogue({ catalogue }: { catalogue: ProblemCatalogue }) {
   const t = useT();
   const [query, setQuery] = useState('');
+  const searched = useRef(false);
 
   const terms = normalise(query).split(/\s+/).filter((term) => term.length > 0);
   const shown = catalogue.cards.filter((card) => matches(card, terms));
@@ -86,6 +88,11 @@ function Catalogue({ catalogue }: { catalogue: ProblemCatalogue }) {
             value={query}
             placeholder={t('problems.searchPlaceholder')}
             onChange={(event) => {
+              // Counted once a visit, on the first thing typed — never what was typed.
+              if (!searched.current && event.target.value.trim() !== '') {
+                searched.current = true;
+                track('catalogue-search');
+              }
               setQuery(event.target.value);
             }}
           />

@@ -1,5 +1,6 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import type { ReactNode } from 'react';
+import { takeSignInStarted, track } from '../analytics';
 import { getMe, signOut, useApiClient } from '../api';
 import { useApiResource } from '../hooks/useApiResource';
 import { SessionContext } from './SessionContext';
@@ -32,6 +33,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         return state.error.isUnauthenticated ? { status: 'signedOut' } : { status: 'error', error: state.error, retry: reload };
     }
   }, [state, reload, endSession]);
+
+  // Back from a provider: signed in, the sign-in is counted (SPEC §8); signed out, it failed, and the
+  // note is dropped all the same.
+  useEffect(() => {
+    if (session.status === 'signedIn' || session.status === 'signedOut') {
+      const provider = takeSignInStarted();
+
+      if (provider !== null && session.status === 'signedIn') {
+        track('sign-in-completed', { provider });
+      }
+    }
+  }, [session.status]);
 
   return <SessionContext.Provider value={session}>{children}</SessionContext.Provider>;
 }
