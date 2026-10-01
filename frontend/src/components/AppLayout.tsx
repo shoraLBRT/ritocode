@@ -101,6 +101,7 @@ export function AppLayout() {
 
       <footer className="app__footer">
         <span>{t('app.tagline')}</span>
+        <Link to="/privacy">{t('app.privacy')}</Link>
       </footer>
     </div>
   );
@@ -152,8 +153,9 @@ function SessionStatus({ returnPath }: { returnPath: string }) {
       return (
         <div className="app__session">
           <span>{t('session.signedOut')}</span>
-          {/* A native disclosure: opens from the keyboard and closes again with no script of its own. */}
-          <details className="app__sign-in">
+          {/* A native disclosure: opens from the keyboard and closes again with no script of its own.
+              Keyed by the page, so following the privacy link in it closes it. */}
+          <details className="app__sign-in" key={returnPath}>
             <summary className="button button--small button--primary">{t('session.signIn')}</summary>
             <div className="app__sign-in-menu">
               <SignInLinks returnPath={returnPath} />
