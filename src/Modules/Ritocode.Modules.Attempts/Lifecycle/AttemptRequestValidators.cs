@@ -34,6 +34,9 @@ internal sealed class SubmitAttemptRequestValidator : AbstractValidator<SubmitAt
     /// <summary>More than the whole treatment tree.</summary>
     public const int MaxLeaves = 50;
 
+    /// <summary>A leaf is <c>branch.leaf</c>, two slugs (docs/CONTENT_FORMAT.md §2).</summary>
+    public const int LeafMaxLength = 2 * AttemptConfiguration.SlugMaxLength + 1;
+
     public SubmitAttemptRequestValidator()
     {
         RuleFor(request => request.Picks)
@@ -53,7 +56,7 @@ internal sealed class SubmitAttemptRequestValidator : AbstractValidator<SubmitAt
                 .Must(leaves => leaves!.Count <= MaxLeaves).WithMessage($"At most {MaxLeaves} leaves per card.")
                 .When(item => item!.Leaves is not null, ApplyConditionTo.CurrentValidator);
 
-            pick.RuleForEach(item => item!.Leaves).NotEmpty();
+            pick.RuleForEach(item => item!.Leaves).NotEmpty().MaximumLength(LeafMaxLength);
         });
     }
 }

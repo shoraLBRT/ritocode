@@ -82,6 +82,9 @@ public static class ApiSetupExtensions
 
         var apiOptions = builder.Configuration.GetSection(ApiOptions.SectionName).Get<ApiOptions>() ?? new ApiOptions();
 
+        // A body larger than any request the product makes is refused by the server before it is read.
+        builder.WebHost.ConfigureKestrel(kestrel => kestrel.Limits.MaxRequestBodySize = apiOptions.MaxRequestBodyBytes);
+
         if (apiOptions.AllowedOrigins.Count > 0)
         {
             builder.Services.AddCors(options => options.AddPolicy(CorsPolicyName, policy => policy
@@ -108,6 +111,9 @@ public static class ApiSetupExtensions
 
         // Correlation runs first so every later log line and error body carries the request id.
         app.UseMiddleware<RequestIdMiddleware>();
+
+        // Registered before the exception handler, so the headers reach a 500 too.
+        app.UseMiddleware<SecurityHeadersMiddleware>();
         app.UseExceptionHandler();
 
         if (options.AllowedOrigins.Count > 0)

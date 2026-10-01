@@ -44,6 +44,12 @@ address under `/api/v1` no endpoint serves answers (`NoSuchAddress`, the API's f
 does not confirm it exists; an anonymous caller gets the usual 401. Authorisation runs before the
 endpoint binds its parameters, so a malformed query does not tell a non-admin anything either.
 
+**The host's own security** (SPEC §10.1, #35): every response carries the headers the API is
+responsible for (`SecurityHeadersMiddleware`); Kestrel reads no body over `Api:MaxRequestBodyBytes`;
+CSRF is checked for every request on the session cookie (`CsrfProtectionMiddleware`). Tests sweep the
+host's routing, so a new state-changing endpoint is covered by the CSRF test and a new `/admin`
+endpoint must carry the admin policy.
+
 ## Storage
 
 PostgreSQL only, one schema per module ([DATABASE_SCHEMA.md](DATABASE_SCHEMA.md)). Content is small
