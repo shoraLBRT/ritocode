@@ -240,9 +240,10 @@ future session would otherwise have to rediscover.
 - **Summaries name their neighbours by name** (#124): «Проверка и действие врозь» is named in two
   other summaries, «Ослабленный тест» in two. Renaming a card means searching `content/problems` for
   its old name in «…» and changing those summaries with it; nothing checks it.
-- **Two cards of the full catalogue can be read in the demo task's material**: `hardcoded-config`
-  (the host in `DATABASE_URL`) and `naive-datetime` (`created_at::date` takes the database's time
-  zone). Neither is in its key; whether either belongs there, with `accept.fits-context` or otherwise,
+- **Three cards of the full catalogue can be read in the demo task's material**: `hardcoded-config`
+  (the host in `DATABASE_URL`), `missing-timeout` (`psycopg.connect` with no timeout) and
+  `naive-datetime` (`created_at::date` takes the database's time zone); the first two are on its
+  shortlist. Neither is in its key; whether either belongs there, with `accept.fits-context` or otherwise,
   is the maintainer's call. The smoke test against the full catalogue will show whether a learner
   picks them.
 - **Smoke tests go stale as the catalogue grows.** A task is smoke-tested against the cards that
