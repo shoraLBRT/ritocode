@@ -27,7 +27,9 @@ test('a visitor solves a task signed out, signs in on Check, and sees the review
   });
 
   await test.step('picks a card at step 1', async () => {
-    await page.getByRole('checkbox', { name: card }).check();
+    // A checkbox is named by the card's name and then its summary, and another card's summary may
+    // name this card, so the name is matched from its start.
+    await page.getByRole('checkbox', { name: new RegExp(`^${card}`) }).check();
     await page.getByRole('button', { name: t('task.toStep2') }).click();
   });
 
