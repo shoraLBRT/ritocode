@@ -1,0 +1,17 @@
+material: invoice-builder
+difficulty: hard
+findings:
+  - card: god-class
+    leaves: [accept.fits-context, accept.not-worth-it]
+  - card: duplicated-code
+    leaves: [accept.fits-context, accept.not-worth-it]
+  - card: parallel-v2-file
+    leaves: [accept.fits-context, accept.not-worth-it, manual.dedupe]
+  - card: narrating-comments
+    leaves: [accept.fits-context, accept.not-worth-it]
+  - card: dead-code
+    leaves: [accept.fits-context, accept.not-worth-it]
+  - card: flag-argument
+    leaves: [accept.fits-context, accept.not-worth-it]
+  - card: happy-path-only
+    leaves: [accept.fits-context, accept.not-worth-it]

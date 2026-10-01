@@ -4,7 +4,7 @@
 in the same pull request as the work it describes — a session that skips this makes the next one
 start from nothing.
 
-- **Last updated:** 2026-10-01
+- **Last updated:** 2026-10-02
 - **Current stage:** S7 · Production — its engineering can be built against a local stack (#135's
   Compose file, #136's release command, #34's monitor, #41); the real checks wait on the VPS and domain of #134.
   S6 closed with #133: `/` and `/problems` read without JavaScript (#132), and every listed event
@@ -14,9 +14,10 @@ start from nothing.
   security baseline has a test for each of its items. S4's exit criterion is shown
   against a stand-in provider (#127); the round trip against real GitHub and Google waits on the
   OAuth apps of #134, and the privacy page (#128) — built over a placeholder — on its text. The
-  content track of S2 ([#124](https://github.com/shoraLBRT/ritocode/issues/124),
-  [#42](https://github.com/shoraLBRT/ritocode/issues/42)) stays open and is the maintainer's — see
-  [ROADMAP.md](ROADMAP.md)
+  content track of S2 is drafted in full: 56 cards ([#124](https://github.com/shoraLBRT/ritocode/issues/124))
+  and 20 tasks ([#42](https://github.com/shoraLBRT/ritocode/issues/42)), each new task through a
+  blind smoke test — drafts the maintainer edits; S2's exit criterion was shown by them. S8's
+  trial (#137) now waits only on S7
 - **Board:** <https://github.com/users/shoraLBRT/projects/3> — issues are the source of truth for
   what is done
 - **What the product is:** [CONCEPT.md](CONCEPT.md); what gets built: [SPEC.md](SPEC.md)
@@ -115,7 +116,7 @@ From [ROADMAP.md](ROADMAP.md), in order:
    ([#124](https://github.com/shoraLBRT/ritocode/issues/124)) and the 20 tasks
    ([#42](https://github.com/shoraLBRT/ritocode/issues/42)). On 2026-10-01 the maintainer handed
    the catalogue to a `session-full` run, which drafted all 56 cards and merged them on green CI;
-   the maintainer edits them from here. The same run then took the tasks of #42: 18 of 20 exist —
+   the maintainer edits them from here. The same run then took the tasks of #42; they exist —
    the demo task, `team-reminders-for-myself` and `team-reminders-for-support` (easy, over
    `team-reminders`), `clinic-booking-city-network` and `clinic-booking-dentist` (medium, over
    `clinic-booking`), `price-sync-pet-shop` and `price-sync-coursework` (medium, over `price-sync`),
@@ -124,8 +125,12 @@ From [ROADMAP.md](ROADMAP.md), in order:
    `orders-report-marketplace` (easy, over `orders-report`), `thumbnail-maker-marketplace` and
    `thumbnail-maker-own-photos` (easy, over `thumbnail-maker`), `payment-webhook-online-school` and
    `payment-webhook-hackathon` (medium, over `payment-webhook`), `subscription-billing-saas` and
-   `subscription-billing-climbing-gym` (medium, over `subscription-billing`). Each new one passed a
-   blind smoke test, reported in its pull request.
+   `subscription-billing-climbing-gym` (medium, over `subscription-billing`), `invoice-builder-studio`
+   and `invoice-builder-last-run` (hard, over `invoice-builder`) — 20 of 20. Each new one passed a
+   blind smoke test, reported in its pull request. The keys use 34 distinct cards (SPEC §3.2 aims at
+   25–35); SPEC's "at least twice" holds for all but four, each in one key: `secrets-in-repo` and
+   `money-in-float` (the demo task), `over-engineering` (a verdict card, absent where the layers are
+   justified) and `naive-calendar-math` (absent where 30 days is the rule).
 
 The maintainer's own [#134](https://github.com/shoraLBRT/ritocode/issues/134) — domain, VPS, OAuth
 apps, privacy text — runs in parallel and gates S7.
