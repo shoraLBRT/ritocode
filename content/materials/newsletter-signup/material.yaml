@@ -1,0 +1,11 @@
+language: python
+notes: >-
+  A newsletter sign-up endpoint in one Flask file, built as a repository
+  interface with one SQLite implementation, a normalizer class, a service and
+  a factory. The behaviour itself is sound: the address is trimmed,
+  lower-cased and checked, and a repeat is ignored by INSERT OR IGNORE, so
+  there is no check-then-act race. Planted: the layers (over-engineering) and
+  the abstract repository with a single implementation
+  (single-implementation-abstraction). Used by newsletter-signup-bakery,
+  where both are problems, and newsletter-signup-agency-kit, where the
+  architecture is justified and over-engineering is not in the key.
