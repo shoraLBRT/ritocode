@@ -82,7 +82,8 @@ Content.
 | Catalogue pages ([#27](https://github.com/shoraLBRT/ritocode/issues/27)) | `/tasks`: title, difficulty, the time from the difficulty (SPEC §3.4), and for a signed-in learner a solved mark; filters by difficulty and — signed in — by solved; no class tags; the API's order. Read in one request (`pageSize=100`) and filtered in the page. `/problems`: one page, cards grouped by class in the taxonomy's order and shown in full, their sections rendered by `Markdown` — the project's own renderer for the subset cards use, React elements only, no `innerHTML`; search over name, summary and keywords, ignoring case and ё; an anchor per card, and `/problems#<slug>` scrolls to it once the cards arrive. Both checked at 1280 and 375 px | `frontend/src/pages`, `frontend/src/components/Markdown.tsx` |
 | Task screen ([#126](https://github.com/shoraLBRT/ritocode/issues/126)) | `/tasks/{slug}`: context and brief (rendered as Markdown), the material — overview, file tree with line counts, the selected file with line numbers and Python highlighting from the project's own tokenizer (`components/python.ts`) — and the answer, side by side on a desktop and three tabs below 64 rem. Step 1: the offered cards by name and summary, grouped by class (`GET /tasks/{slug}` now carries the class names, so the screen never asks for `/problems`), with search; step 2: the whole tree per picked card, branches as disclosure widgets, leaves as checkboxes; back to step 1 keeps the picks; *Check* needs a leaf on every picked card and a signed-in learner. A signed-in learner works in the newest open attempt at the task, or a new one; reaching step 2 is recorded on it. Checking lands on the review. Solved end to end at 1280 and 375 px | `frontend/src/pages/task` |
 | Review ([#29](https://github.com/shoraLBRT/ritocode/issues/29)) | `/tasks/{slug}/attempts/{id}`, owner only: the score in points with its composition (found of present, extra picks, matched treatments); every finding of the key, found or missed, with the learner's leaves beside the author's, the author's note and the full card on expanding; every extra pick with its card; the lesson; the other tasks over the same material; *Try again*. A clean task says its outcome in words. Found, missed and extra each carry a mark and a word. The notes and the lesson are kept with the attempt on submit (`attempts.review`), so the review matches the key it was scored against | `frontend/src/pages/task/ReviewPage.tsx` |
-| CI | Backend build, test, formatting, migrations and drift; content validation; frontend lint, build and test; the prerendered pages; the monitor's alert test. The *Monitor* workflow is not CI: it checks the production site on a schedule | `.github/workflows/` |
+| End-to-end test ([#39](https://github.com/shoraLBRT/ritocode/issues/39)) | `e2e/`, Playwright with Chromium: a visitor opens the demo task signed out, picks a card and a leaf, presses *Check*, signs in with GitHub, lands on the review of that answer (`Найдено 1 из 2 …`) and finds it in `/progress`, card by card. Playwright starts three servers: `fake-provider.mjs`, a stand-in for GitHub's OAuth app that sends the browser straight back with a code, checks the PKCE verifier, and makes a new person for every sign-in; `start-api.mjs`, which creates and migrates a database of its own (`ritocode_e2e`) in the compose PostgreSQL, then runs the API in Development with the development identity off and GitHub pointed at the fake through the new `Auth:GitHub:AuthorizationEndpoint`, `TokenEndpoint` and `UserInformationEndpoint` (empty — always in production — means the provider's own); and the production build of the pages under `vite preview`. Texts come from the pages' catalogue. CI job *Learning flow* (`e2e.yml`) on every pull request and push to `main`. Shown to fail at the right step when the provider reports an unverified address | `e2e/`, `.github/workflows/e2e.yml`, `src/Modules/Ritocode.Modules.Auth/SignIn` |
+| CI | Backend build, test, formatting, migrations and drift; content validation; frontend lint, build and test; the prerendered pages; the monitor's alert test; the end-to-end learning flow. The *Monitor* workflow is not CI: it checks the production site on a schedule | `.github/workflows/` |
 | Release images ([#31](https://github.com/shoraLBRT/ritocode/issues/31)) | On every push to `main`, `ghcr.io/shoralbrt/ritocode-api` (the API, with the migrator at `migrator/Ritocode.DbMigrator.dll`) and `ghcr.io/shoralbrt/ritocode-web` (the static build of #132, served by Caddy on port 80 with its `try_files` rule), tagged with the full commit and `main`, public — [ADR 0011](adr/0011-release-images.md), **Proposed**. Built without pushing on every pull request. The web image takes the site's address from the repository variable `SITE_ORIGIN`, a placeholder until #134 | `deploy/`, `.github/workflows/release-images.yml` |
 | Logs ([#33](https://github.com/shoraLBRT/ritocode/issues/33)) | The API logs one JSON object per line (the console's `json` formatter, UTC, scopes included) outside Development. Every line of a request carries its request id — the `X-Request-Id` — and, signed in, the user id (`UserLogScopeMiddleware`, after authentication), nothing else about the person. One summary line per request from ASP.NET's HTTP logging: method, path, status, duration — no headers, query or body — before authorisation, so a refused request is logged too. SQL is quiet in production (`Warning`), verbose in development. Levels from `Logging:LogLevel`. How to find a request's lines, and the rotation #135 must configure: [deploy/README.md](../deploy/README.md). Tests capture the host's log lines (`CapturedLogs`) and find a request's by its id | `src/Ritocode.Shared`, `src/Ritocode.Api/appsettings.json`, `deploy/README.md` |
 
@@ -98,8 +99,9 @@ From [ROADMAP.md](ROADMAP.md), in order:
 1. S5 and S6 are done. In S7 the production stack (#135), the release with backups
    ([#136](https://github.com/shoraLBRT/ritocode/issues/136)) and monitoring
    ([#34](https://github.com/shoraLBRT/ritocode/issues/34)) exist, each open until its real check
-   runs on the VPS and domain of #134; the runbook (#41) says how to run them. Next: the end-to-end
-   test of S8 ([#39](https://github.com/shoraLBRT/ritocode/issues/39)), which S5 unblocked. Left in
+   runs on the VPS and domain of #134; the runbook (#41) says how to run them. The end-to-end test of
+   S8 ([#39](https://github.com/shoraLBRT/ritocode/issues/39)) runs in CI. What is left for a coding
+   session waits on #134 or on content; the trial of S8 (#137) waits on the catalogue and tasks. Left in
    S4: the real round trip against GitHub and Google (the OAuth apps of #134), and the policy's text
    in the privacy page ([#128](https://github.com/shoraLBRT/ritocode/issues/128)), which with its
    sign-in notice exists over a placeholder. Maintainer-provided
@@ -179,6 +181,13 @@ future session would otherwise have to rediscover.
   secrets go in `Auth:GitHub:ClientId` / `ClientSecret` and `Auth:Google:…`, through user secrets or
   the environment, never the repository.
 
+- **The end-to-end test reads the demo task** (#39): it picks `secrets-in-repo` with
+  `auto.secrets` in `flower-shop-daily-revenue` and expects one of two findings found. Changing that
+  task's key, or those cards' names, means changing `e2e/learning-flow.spec.ts` with it. Only GitHub
+  is exercised; Google's round trip is the same handler with another profile, covered by `SignInTests`.
+- **Playwright starts its web servers before its global setup**, so the database is prepared by
+  `e2e/start-api.mjs`, and Playwright waits for the demo task rather than `/health/ready`: content is
+  seeded after the host reports ready.
 - **The privacy policy lives in the frontend, not in `content/`** (#128): `frontend/src/site/privacy.ru.md`.
   The issue says "with the site's content"; `content/` is the training content, under CC BY-SA and
   read by the content tool's format, and the policy is neither. The site's own text is the frontend's
@@ -271,6 +280,14 @@ dotnet run --project src/Ritocode.ContentTool -- export content-export.json cont
 cd frontend && CONTENT_EXPORT=../content-export.json SITE_ORIGIN=https://ritocode.example npm run build:static
 ```
 
+The end-to-end test, from `e2e/`, with the compose PostgreSQL up (`./scripts/dev-up.sh`) and
+nothing on ports 5173, 5199 or 5299 — stop a running dev API and Vite first. Once:
+`npm ci && npx playwright install chromium`. Then:
+
+```bash
+cd e2e && npm test
+```
+
 The drift check runs against the compose stack. `db-verify-no-drift.sh` and `dotnet ef` read
 `Database__ConnectionString` from the environment; `dev-up` prints it.
 
@@ -298,11 +315,12 @@ compose stack is PostgreSQL only.
 | --- | --- |
 | `Ritocode.Architecture.Tests` | 14 |
 | `Ritocode.Shared.Tests` | 51 |
-| `Ritocode.Api.Tests` | 127 |
+| `Ritocode.Api.Tests` | 128 |
 | `Ritocode.Modules.Content.Tests` | 71 |
 | `Ritocode.Modules.Attempts.Tests` | 19 |
 | Frontend (vitest) | 193 |
 | `scripts/monitor-test.sh` | 9 |
+| End-to-end (`e2e/`) | 1 |
 
 The count is a ratchet: if it drops, the PR says which tests went and why.
 

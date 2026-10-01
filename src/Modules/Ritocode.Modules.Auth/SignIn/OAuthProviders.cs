@@ -62,23 +62,26 @@ internal static partial class OAuthProviders
 
                 if (scheme == GitHub)
                 {
-                    options.AuthorizationEndpoint = "https://github.com/login/oauth/authorize";
-                    options.TokenEndpoint = "https://github.com/login/oauth/access_token";
-                    options.UserInformationEndpoint = "https://api.github.com/user";
+                    options.AuthorizationEndpoint = Or(client.AuthorizationEndpoint, "https://github.com/login/oauth/authorize");
+                    options.TokenEndpoint = Or(client.TokenEndpoint, "https://github.com/login/oauth/access_token");
+                    options.UserInformationEndpoint = Or(client.UserInformationEndpoint, "https://api.github.com/user");
                     options.Scope.Add("read:user");
                     options.Scope.Add("user:email");
                 }
                 else
                 {
-                    options.AuthorizationEndpoint = "https://accounts.google.com/o/oauth2/v2/auth";
-                    options.TokenEndpoint = "https://oauth2.googleapis.com/token";
-                    options.UserInformationEndpoint = "https://openidconnect.googleapis.com/v1/userinfo";
+                    options.AuthorizationEndpoint = Or(client.AuthorizationEndpoint, "https://accounts.google.com/o/oauth2/v2/auth");
+                    options.TokenEndpoint = Or(client.TokenEndpoint, "https://oauth2.googleapis.com/token");
+                    options.UserInformationEndpoint = Or(client.UserInformationEndpoint, "https://openidconnect.googleapis.com/v1/userinfo");
                     options.Scope.Add("openid");
                     options.Scope.Add("email");
                 }
             });
         }
     }
+
+    private static string Or(string configured, string providers) =>
+        string.IsNullOrWhiteSpace(configured) ? providers : configured;
 
     /// <summary>Whether <paramref name="provider"/> names a registered scheme, and which.</summary>
     public static async Task<string?> FindSchemeAsync(IAuthenticationSchemeProvider schemes, string provider)

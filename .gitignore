@@ -74,3 +74,7 @@ content-export.json
 
 # The production secrets live on the server only (deploy/production.env.example).
 deploy/production.env
+
+# The end-to-end test (#39)
+e2e/test-results/
+e2e/playwright-report/
