@@ -1,0 +1,126 @@
+# Production: one server, everything on it (docs/SPEC.md §9.5).
+#
+#   caddy     the edge — TLS from Let's Encrypt, HTTP to HTTPS, the site's headers (deploy/Caddyfile)
+#   api       ghcr.io/shoralbrt/ritocode-api, behind the edge only
+#   web       ghcr.io/shoralbrt/ritocode-web, the static build, behind the edge only
+#   postgres  the product's database and Umami's, on a persistent volume
+#   umami     analytics, cookie-less (SPEC §8), at UMAMI_DOMAIN
+#   migrate   the migrator from the API image, run by a release, never left running
+#
+# Run from deploy/ on the server, with the secrets in production.env beside it (never in the
+# repository; production.env.example lists them):
+#
+#   docker compose -f compose.production.yml --env-file production.env up -d
+#
+# RITOCODE_VERSION picks the images: a full commit, as a release names it (#136), or `main`.
+
+name: ritocode-production
+
+x-logging: &logging
+  # Docker rotates the logs, so the disk never fills (deploy/README.md, "Logs").
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+x-api-environment: &api-environment
+  Database__ConnectionString: "Host=postgres;Port=5432;Database=ritocode;Username=ritocode;Password=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}"
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN:?set SITE_DOMAIN}
+      UMAMI_DOMAIN: ${UMAMI_DOMAIN:?set UMAMI_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificates and the ACME account: lost, they are issued again, within Let's Encrypt's limits.
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - api
+      - web
+      - umami
+    logging: *logging
+
+  api:
+    image: ghcr.io/shoralbrt/ritocode-api:${RITOCODE_VERSION:-main}
+    restart: unless-stopped
+    environment:
+      <<: *api-environment
+      ASPNETCORE_ENVIRONMENT: Production
+      # The edge terminates TLS and forwards the scheme; the API is reachable through it alone.
+      Api__BehindProxy: "true"
+      # The key ring that protects sign-in in flight survives a release.
+      Api__DataProtectionKeysDirectory: /keys
+      Auth__GitHub__ClientId: ${GITHUB_CLIENT_ID:-}
+      Auth__GitHub__ClientSecret: ${GITHUB_CLIENT_SECRET:-}
+      Auth__Google__ClientId: ${GOOGLE_CLIENT_ID:-}
+      Auth__Google__ClientSecret: ${GOOGLE_CLIENT_SECRET:-}
+      Users__Admin__Emails__0: ${ADMIN_EMAIL:-}
+    volumes:
+      - api-keys:/keys
+    depends_on:
+      postgres:
+        condition: service_healthy
+    logging: *logging
+
+  migrate:
+    image: ghcr.io/shoralbrt/ritocode-api:${RITOCODE_VERSION:-main}
+    profiles: ["release"]
+    entrypoint: ["dotnet", "migrator/Ritocode.DbMigrator.dll"]
+    environment:
+      <<: *api-environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+    logging: *logging
+
+  web:
+    image: ghcr.io/shoralbrt/ritocode-web:${RITOCODE_VERSION:-main}
+    restart: unless-stopped
+    logging: *logging
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ritocode
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ritocode
+      # The same collation as development and CI, so text sorts identically everywhere.
+      POSTGRES_INITDB_ARGS: "--locale-provider=icu --icu-locale=en-US --encoding=UTF8"
+      # Read by postgres-init/ on the volume's first start: Umami's role and database.
+      UMAMI_DB_PASSWORD: ${UMAMI_DB_PASSWORD:?set UMAMI_DB_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ritocode -d ritocode"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    logging: *logging
+
+  umami:
+    image: ghcr.io/umami-software/umami:postgresql-latest
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: "postgresql://umami:${UMAMI_DB_PASSWORD:?set UMAMI_DB_PASSWORD}@postgres:5432/umami"
+      APP_SECRET: ${UMAMI_APP_SECRET:?set UMAMI_APP_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    logging: *logging
+
+volumes:
+  caddy-data:
+  caddy-config:
+  api-keys:
+  postgres-data:

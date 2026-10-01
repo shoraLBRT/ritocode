@@ -33,6 +33,10 @@ RUN apt-get update \
 COPY --from=build /out/api ./
 COPY --from=build /out/migrator ./migrator/
 
+# Where the production Compose file mounts the data-protection key ring. Owned by the app's user, so a
+# new named volume, which takes the image's ownership, is writable by it.
+RUN mkdir /keys && chown "$APP_UID" /keys
+
 # The non-root user the .NET images provide; the port is theirs too (ASPNETCORE_HTTP_PORTS=8080).
 USER $APP_UID
 EXPOSE 8080
