@@ -21,8 +21,10 @@ start from nothing.
 
 ## Session workflow
 
-The maintainer's general `session` command carries the loop; it lives outside this repository and
-reads what is specific to Ritocode from here and from [AGENTS.md](../AGENTS.md). In short:
+The [habze](https://github.com/shoraLBRT/habze) skills carry the loop — `session` (one issue, no
+merge), `session-reserve` and `session-full` (issue after issue, merging each PR on green CI). They
+live outside this repository and read what is specific to Ritocode from here and from
+[AGENTS.md](../AGENTS.md). In short:
 
 1. `git fetch origin main`, then read `CLAUDE.md`, `AGENTS.md`, this file and `ROADMAP.md` from
    `origin/main` — in a worktree `main` is checked out elsewhere.
@@ -38,7 +40,30 @@ reads what is specific to Ritocode from here and from [AGENTS.md](../AGENTS.md).
    the smoke checks if endpoints changed. When a stage's exit criterion has been shown to work, move
    **Current stage** on.
 
-The maintainer merges, unless they have started the session with a command that allows merging.
+The maintainer merges, unless the session was started with `session-reserve` or `session-full`;
+even then a PR touching `.github/workflows/`, `.claude/`, `CLAUDE.md` or `AGENTS.md` waits for the
+maintainer ([AGENTS.md](../AGENTS.md)).
+
+### habze adoption
+
+Ritocode is where the way of working was born, and [habze](https://github.com/shoraLBRT/habze) now
+holds it for every project. Adoption is [shoraLBRT/habze#13](https://github.com/shoraLBRT/habze/issues/13),
+blocked by habze's own `STANDARD.md`, skills and `adopt-standard`. Measured against habze's SPEC §2–3
+on 2026-10-01:
+
+| Requirement | Ritocode | Left |
+| --- | --- | --- |
+| Documents: README, CLAUDE, AGENTS, product description, ROADMAP, PROJECT_STATE | All present | `CLAUDE.md` names no standard version — none exists yet |
+| Rules of §3–4 in `AGENTS.md`: eligibility, trust, stop and ask, protected paths, branch names, merging | Written | — |
+| Stages as milestones `S<n> · <name>` | Yes | — |
+| Board fields Status, Priority, Size | Priority and Size used ([board](https://github.com/users/shoraLBRT/projects/3)) | Not checked from a session: the cloud proxy blocks Projects v2 (#146) |
+| Priority as the board field only | Also labels `priority:P0…P2` | Drop the labels when the board takes over the order |
+| Dependencies as native "blocked by" | Prose in `ROADMAP.md` (*Depends on*) | Move to native relations; `ROADMAP.md` keeps goals and exit criteria |
+| Labels `type:bug`, `needs:maintainer`, `accepted` | Missing (`type:research` exists) | Create from habze's labels file (habze#2) |
+| Issue forms and PR template | None | From habze (habze#2) |
+| `main` protected, CI required | Not checked from a session | Check, or let habze's conformance check say (habze#10) |
+| The skills reach cloud sessions | No — they live on the maintainer's machine only, removed from here in #145 | Delivery (habze#8); a cloud session here cannot run `/session-full` until then |
+| Cloud routine | Findings in [#146](https://github.com/shoraLBRT/ritocode/issues/146) | habze's routine guide (habze#9) |
 
 ---
 
