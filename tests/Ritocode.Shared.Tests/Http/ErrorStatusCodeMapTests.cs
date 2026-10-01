@@ -12,6 +12,8 @@ public sealed class ErrorStatusCodeMapTests
     [InlineData(ErrorType.NotFound, 404)]
     [InlineData(ErrorType.Conflict, 409)]
     [InlineData(ErrorType.PreconditionFailed, 412)]
+    [InlineData(ErrorType.PayloadTooLarge, 413)]
+    [InlineData(ErrorType.UnsupportedMediaType, 415)]
     [InlineData(ErrorType.RateLimited, 429)]
     [InlineData(ErrorType.Unavailable, 503)]
     [InlineData(ErrorType.Unexpected, 500)]

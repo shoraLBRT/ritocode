@@ -58,6 +58,12 @@ public static class ApiSetupExtensions
         builder.Services.AddProblemDetails();
         builder.Services.AddExceptionHandler<AppExceptionHandler>();
 
+        // A request an endpoint cannot bind — a body that is not UTF-8 JSON, a query value of the
+        // wrong type, the wrong content type — throws to the handler above, which answers it in the
+        // unified error body. The framework throws only in Development and otherwise writes a bare
+        // 400 with no body at all, which ADR 0003 does not allow.
+        builder.Services.Configure<RouteHandlerOptions>(options => options.ThrowOnBadRequest = true);
+
         builder.Services.AddHealthChecks();
 
         // The identity seam is host infrastructure: ICurrentUser is what every
