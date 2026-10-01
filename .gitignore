@@ -71,3 +71,6 @@ frontend/dist/
 frontend/dist-ssr/
 frontend/coverage/
 content-export.json
+
+# The production secrets live on the server only (deploy/production.env.example).
+deploy/production.env

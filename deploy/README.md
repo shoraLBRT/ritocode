@@ -1,9 +1,8 @@
 # Deploy
 
-What runs in production and how it is built ([SPEC.md](../docs/SPEC.md) §9.5). The production
-Compose file and the release command arrive with
-[#135](https://github.com/shoraLBRT/ritocode/issues/135) and
-[#136](https://github.com/shoraLBRT/ritocode/issues/136).
+What runs in production and how it is built ([SPEC.md](../docs/SPEC.md) §9.5): the images, the
+production Compose file of [#135](https://github.com/shoraLBRT/ritocode/issues/135), and the logs.
+The release command and backups arrive with [#136](https://github.com/shoraLBRT/ritocode/issues/136).
 
 ## Images
 
@@ -18,6 +17,53 @@ and `main`, public on GitHub Container Registry ([ADR 0011](../docs/adr/0011-rel
 Both read their configuration from the environment: `Database__ConnectionString` for the API and the
 migrator. The web image takes the site's address at build time from the repository variable
 `SITE_ORIGIN`.
+
+## Production
+
+`compose.production.yml` runs everything on the one server: **Caddy** at the edge (`Caddyfile`),
+the **API** and the **web** image behind it, **PostgreSQL** on a volume, and **Umami** with a database
+of its own in that PostgreSQL. Only Caddy publishes ports (80 and 443).
+
+| Path | Goes to |
+| --- | --- |
+| `https://SITE_DOMAIN/api/*`, `/auth/*`, `/health/*` | the API, port 8080 |
+| anything else on `SITE_DOMAIN` | the web image, port 80 |
+| `https://UMAMI_DOMAIN` | Umami, port 3000 |
+
+- **TLS and HTTP → HTTPS** are Caddy's own: it gets both certificates from Let's Encrypt once the DNS
+  records point at the server, and keeps them in the `caddy-data` volume.
+- **Headers.** The edge adds HSTS, `nosniff`, frame denial, a referrer policy and a permissions policy
+  to everything, and a content policy to the pages that allows Umami's script and its `/api/send`.
+  The API sets its own stricter ones on its responses (#35).
+- **Secrets** live in `production.env` beside the Compose file on the server, never in the repository;
+  `production.env.example` lists them. The API gets the database, the OAuth apps of #134 and the
+  admin's address from it.
+- **Behind the proxy.** The API runs with `Api__BehindProxy=true`, so it takes the edge's forwarded
+  scheme: the sign-in callback is `https://SITE_DOMAIN/auth/callback/{github,google}`. Its
+  data-protection key ring is in the `api-keys` volume (`Api__DataProtectionKeysDirectory`), so a
+  release does not fail a sign-in in flight.
+- **Umami's database** is made by `postgres-init/10-umami.sh` when the PostgreSQL volume is first
+  created. On a volume that already exists, make it by hand: `CREATE ROLE umami LOGIN PASSWORD '…';
+  CREATE DATABASE umami OWNER umami;`. Register the site in Umami's own pages, then set the
+  repository variables `UMAMI_SCRIPT_URL` (`https://UMAMI_DOMAIN/script.js`) and `UMAMI_WEBSITE_ID`,
+  which the web image is built with (#133).
+- **Migrations** run from the API image as the one-off `migrate` service:
+  `docker compose -f compose.production.yml --env-file production.env run --rm migrate`. The release
+  command of #136 runs it, then content ingest, then restarts the API.
+
+First start on a new server, from `deploy/`:
+
+```bash
+docker compose -f compose.production.yml --env-file production.env pull
+```
+
+```bash
+docker compose -f compose.production.yml --env-file production.env run --rm migrate
+```
+
+```bash
+docker compose -f compose.production.yml --env-file production.env up -d
+```
 
 ## Logs
 
