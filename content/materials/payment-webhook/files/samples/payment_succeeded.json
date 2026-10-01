@@ -1,0 +1,16 @@
+{
+  "type": "payment.succeeded",
+  "payment": {
+    "id": "pay_7f3c1e90",
+    "amount": 150000,
+    "currency": "RUB",
+    "payer": {
+      "name": "Irina Volkova",
+      "email": "irina.volkova@example.com",
+      "phone": "+70000000000"
+    },
+    "metadata": {
+      "account_id": "4821"
+    }
+  }
+}

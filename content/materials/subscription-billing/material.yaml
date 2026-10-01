@@ -1,0 +1,15 @@
+language: python
+notes: >-
+  Subscription renewal: charge every due subscription through a payment
+  gateway and move paid_until a period forward, with a README and tests.
+  Planted: requests.post(..., retries=3) - requests has no such argument and
+  the call raises TypeError (invented-api); the one test that would show it is
+  skipped as "flaky on CI" (weakened-test); the README promises charges on
+  the same day of the month, three retries and e-mailed receipts, none of
+  which exist (stale-documentation); the tests cover only date arithmetic
+  and a successful charge (happy-path-only); the period is 30 days
+  (naive-calendar-math) - a verdict relative to context: in the gym's task 30
+  days is the rule, the card is not in its key.
+  The charge carries an idempotency key on purpose. Run here: one test
+  passes, one is skipped, and unskipped it fails with the TypeError. Used by subscription-billing-saas and
+  subscription-billing-climbing-gym.

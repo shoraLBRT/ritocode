@@ -1,0 +1,9 @@
+material: payment-webhook
+difficulty: medium
+findings:
+  - card: non-idempotent-operation
+    leaves: [manual.invariant, brief.requirements]
+  - card: sensitive-data-in-logs
+    leaves: [manual.remove, rule.conventions]
+  - card: unnamed-units
+    leaves: [manual.representation, brief.requirements]
