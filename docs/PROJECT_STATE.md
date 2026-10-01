@@ -54,7 +54,7 @@ Content.
 | Part | State | Where |
 | --- | --- | --- |
 | Modular monolith | Solution, module boundaries enforced by tests, options validated at startup, request id, unified error body, health endpoints, `/api/v1/meta/modules` | `src/`, `tests/Ritocode.Architecture.Tests` |
-| API conventions | [ADR 0003](adr/0003-api-conventions.md): RFC 9457 errors, pagination envelope, validation filter | `src/Ritocode.Shared` |
+| API conventions | [ADR 0003](adr/0003-api-conventions.md): RFC 9457 errors, pagination envelope, validation filter. A request that cannot be read — a body that is not UTF-8 JSON, a query value of the wrong type, a body over the cap or without a JSON content type — is `400 request_invalid`, `413 request_too_large` or `415 unsupported_media_type` in every environment, not a 500 | `src/Ritocode.Shared` |
 | Persistence | PostgreSQL, EF Core per module, one schema each, migrations applied by `Ritocode.DbMigrator`, drift check in CI ([ADR 0004](adr/0004-persistence-and-migrations.md)) | `src/Ritocode.DbMigrator`, `scripts/` |
 | Test harness | One PostgreSQL container per test assembly, one migrated database per test class | `tests/Ritocode.TestSupport` |
 | Identity seam | `ICurrentUser`, real authentication schemes, authenticated by default ([ADR 0008](adr/0008-authentication-seam.md), Accepted). `GET /api/v1/me` answers the caller (id, username) or 401 | `src/Ritocode.Shared/Identity`, `src/Modules/Ritocode.Modules.Auth` |
@@ -314,8 +314,8 @@ compose stack is PostgreSQL only.
 | Suite | Tests |
 | --- | --- |
 | `Ritocode.Architecture.Tests` | 14 |
-| `Ritocode.Shared.Tests` | 51 |
-| `Ritocode.Api.Tests` | 128 |
+| `Ritocode.Shared.Tests` | 57 |
+| `Ritocode.Api.Tests` | 133 |
 | `Ritocode.Modules.Content.Tests` | 71 |
 | `Ritocode.Modules.Attempts.Tests` | 19 |
 | Frontend (vitest) | 193 |
@@ -349,6 +349,7 @@ In Development (`ASPNETCORE_ENVIRONMENT=Development`) the host seeds `content/` 
 | `POST /api/v1/attempts/{id}/submit` with `{"picks":[]}` | `200`, `result` with `total`, `maximum` and a line per card |
 | `GET /api/v1/tasks` after a submit | `200`, that task has `solved: true` |
 | `POST /api/v1/signals` with `{"attempt":"<a submitted attempt>","card":"<one of its extra picks>"}` | `201`, the signal; again → `409`, `code: "signal_already_sent"`; a found card → `400`, `errors.card` |
+| `POST /api/v1/signals` with a body that is not JSON (or a comment in cp1251 bytes) | `400`, `code: "request_invalid"`, logged at Information, not as an unhandled exception |
 | `GET /api/v1/me/progress` | `200`, `{ tasks, classes, cards }` — six classes, cards only once met or picked, each class and card with its `name` |
 | `GET /api/v1/admin/signals` | `200`, a page of open signals, each with `cardName` and `learner.email`; `?status=resolved` the resolved ones; `?status=x` → `400`, `errors.status` |
 | `POST /api/v1/admin/signals/{id}/resolve` | `200`, the signal with `resolvedAt`; again → the same `resolvedAt`; an unknown id → `404 signal_not_found` |
