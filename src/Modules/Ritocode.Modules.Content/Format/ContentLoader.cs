@@ -364,7 +364,7 @@ public static class ContentLoader
             return null;
         }
 
-        var front = ContentYaml.Read<CardFrontMatter>(document.FrontMatter, path, tree.Report);
+        var front = ContentYaml.Read<CardFrontMatter>(document.FrontMatter, path, tree.Report, LocaleDocument.FrontMatterLine);
         var sections = new Dictionary<CardSection, string>();
 
         foreach (var (heading, body) in document.Sections)
@@ -555,7 +555,7 @@ public static class ContentLoader
             return null;
         }
 
-        var front = ContentYaml.Read<TaskFrontMatter>(document.FrontMatter, path, tree.Report);
+        var front = ContentYaml.Read<TaskFrontMatter>(document.FrontMatter, path, tree.Report, LocaleDocument.FrontMatterLine);
 
         foreach (var heading in document.Sections.Keys.Where(heading => !TaskHeadings.Contains(heading)))
         {
