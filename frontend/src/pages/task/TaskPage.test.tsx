@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { ru } from '../../i18n';
 import { renderApp } from '../../test/render';
 import { jsonResponse, pageOf, problemResponse } from '../../test/responses';
@@ -83,16 +83,34 @@ async function openTask(stub: ReturnType<typeof api>) {
   await screen.findByRole('heading', { level: 1, name: task.title });
 }
 
+/** Step 1 is search first: the learner types, then ticks the card that comes up. */
+function pickCard(query: string, name: string) {
+  fireEvent.change(screen.getByLabelText(ru.task.search), { target: { value: query } });
+  fireEvent.click(screen.getByRole('checkbox', { name: new RegExp(`^${name}`) }));
+}
+
+/** Step 2 the same way, for the finding at hand. */
+function pickLeaf(query: string, label: string) {
+  fireEvent.change(screen.getByLabelText(ru.task.leafSearch), { target: { value: query } });
+  fireEvent.click(screen.getByRole('checkbox', { name: new RegExp(`^${label}`) }));
+}
+
+const findings = () => within(screen.getByRole('list', { name: ru.task.findings }));
+
 describe('the task screen', () => {
   it('shows the context, the brief, the material and step 1', async () => {
     await openTask(api());
 
     expect(screen.getByText(task.context)).toBeInTheDocument();
     expect(screen.getByText(task.brief)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /revenue\.py/ })).toHaveAttribute('aria-current', 'true');
+    // The code opens on the first Python file; its neighbours are a button away.
+    expect(screen.getByRole('button', { name: ru.task.chooseFile.replace('{path}', 'revenue.py') })).toBeInTheDocument();
     expect(screen.getByText('TAX_RATE')).toBeInTheDocument();
-    expect(screen.getByText('Зависимости: psycopg')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: ru.task.nextFile.replace('{path}', 'requirements.txt') }));
+    expect(screen.getByRole('button', { name: ru.task.chooseFile.replace('{path}', 'requirements.txt') })).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: ru.task.step1 })).toBeInTheDocument();
+    // The steps stand in the header.
+    expect(within(screen.getByRole('banner')).getByRole('button', { name: /Диагноз/ })).toHaveAttribute('aria-current', 'step');
   });
 
   it('solves a task: picks, treats, checks, and lands on the result', async () => {
@@ -104,7 +122,7 @@ describe('the task screen', () => {
       expect(stub.calls.some((call) => call.method === 'POST' && call.url.endsWith('/attempts'))).toBe(true);
     });
 
-    fireEvent.click(screen.getByRole('checkbox', { name: /Деньги во float/ }));
+    pickCard('копейки', 'Деньги во float');
     fireEvent.click(screen.getByRole('button', { name: ru.task.toStep2 }));
 
     // Step 2 is recorded; the check waits for a leaf on every picked card.
@@ -115,7 +133,7 @@ describe('the task screen', () => {
     expect(check).toBeDisabled();
     expect(screen.getByText('Отметьте хотя бы одно лечение для каждой карточки: Деньги во float.')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('checkbox', { name: 'исправить представление данных', hidden: true }));
+    pickLeaf('представление', 'исправить представление данных');
     expect(check).toBeEnabled();
     fireEvent.click(check);
 
@@ -125,13 +143,13 @@ describe('the task screen', () => {
       url: 'http://api.test/api/v1/attempts/attempt-1/submit',
       body: { picks: [{ card: 'money-in-float', leaves: ['manual.representation'] }] },
     });
-    expect(screen.getByText(ru.review.missed)).toBeInTheDocument();
+    expect(screen.getAllByText(ru.review.missed).length).toBeGreaterThan(0);
   });
 
   it('checks an answer that picked nothing', async () => {
     await openTask(api());
 
-    fireEvent.click(screen.getByRole('button', { name: ru.task.toStep2 }));
+    fireEvent.click(screen.getByRole('button', { name: ru.task.toStep2Clean }));
 
     expect(screen.getByText(ru.task.nothingPicked)).toBeInTheDocument();
     await waitFor(() => {
@@ -142,18 +160,18 @@ describe('the task screen', () => {
   it('goes back to step 1 with the picks kept', async () => {
     await openTask(api());
 
-    fireEvent.click(screen.getByRole('checkbox', { name: /Класс-бог/ }));
+    pickCard('класс', 'Класс-бог');
     fireEvent.click(screen.getByRole('button', { name: ru.task.toStep2 }));
     fireEvent.click(screen.getByRole('button', { name: ru.task.backToStep1 }));
 
-    expect(screen.getByRole('checkbox', { name: /Класс-бог/ })).toBeChecked();
+    expect(within(screen.getByRole('list', { name: ru.task.pickedCards })).getByText('Класс-бог')).toBeInTheDocument();
   });
 
   it('resumes the open attempt at the task rather than starting another', async () => {
     const stub = api({ openAttempt: true });
     await openTask(stub);
 
-    fireEvent.click(screen.getByRole('button', { name: ru.task.toStep2 }));
+    fireEvent.click(screen.getByRole('button', { name: ru.task.toStep2Clean }));
 
     await waitFor(() => {
       expect(stub.calls.some((call) => call.method === 'PATCH' && call.url.endsWith('/attempts/attempt-0'))).toBe(true);
@@ -165,7 +183,7 @@ describe('the task screen', () => {
     const stub = api({ signedIn: false });
     await openTask(stub);
 
-    fireEvent.click(screen.getByRole('button', { name: ru.task.toStep2 }));
+    fireEvent.click(screen.getByRole('button', { name: ru.task.toStep2Clean }));
 
     expect(await screen.findByText(ru.task.signInToCheck)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: ru.task.check }));
@@ -188,9 +206,9 @@ describe('the task screen', () => {
     // Signed out: the answer is worked through, and Check asks for sign-in.
     const before = api({ signedIn: false });
     await openTask(before);
-    fireEvent.click(screen.getByRole('checkbox', { name: /Деньги во float/ }));
+    pickCard('копейки', 'Деньги во float');
     fireEvent.click(screen.getByRole('button', { name: ru.task.toStep2 }));
-    fireEvent.click(screen.getByRole('checkbox', { name: 'исправить представление данных', hidden: true }));
+    pickLeaf('представление', 'исправить представление данных');
     fireEvent.click(screen.getByRole('button', { name: ru.task.check }));
     expect(screen.getByRole('region', { name: ru.task.signInTitle })).toBeInTheDocument();
     cleanup();
@@ -228,7 +246,7 @@ describe('the task screen', () => {
   it('keeps the answer but does not check it when the sign-in failed', async () => {
     const before = api({ signedIn: false });
     await openTask(before);
-    fireEvent.click(screen.getByRole('checkbox', { name: /Класс-бог/ }));
+    pickCard('класс', 'Класс-бог');
     fireEvent.click(screen.getByRole('button', { name: ru.task.toStep2 }));
     cleanup();
 
@@ -239,14 +257,14 @@ describe('the task screen', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(ru.session.signInError.email_unverified);
     // Back on step 2 with the pick, ready to try another provider.
     expect(screen.getByRole('heading', { level: 2, name: ru.task.step2 })).toBeInTheDocument();
-    expect(screen.getByRole('group', { name: 'Класс-бог' })).toBeInTheDocument();
+    expect(findings().getByText('Класс-бог')).toBeInTheDocument();
     expect(screen.queryByText(ru.task.answerLost)).not.toBeInTheDocument();
     expect(after.calls.some((call) => call.url.includes('/attempts'))).toBe(false);
   });
 
   it('keeps the answer through a reload', async () => {
     await openTask(api());
-    fireEvent.click(screen.getByRole('checkbox', { name: /Класс-бог/ }));
+    pickCard('класс', 'Класс-бог');
     fireEvent.click(screen.getByRole('button', { name: ru.task.toStep2 }));
     cleanup();
 
@@ -254,7 +272,7 @@ describe('the task screen', () => {
     await openTask(stub);
 
     expect(screen.getByRole('heading', { level: 2, name: ru.task.step2 })).toBeInTheDocument();
-    expect(screen.getByRole('group', { name: 'Класс-бог' })).toBeInTheDocument();
+    expect(findings().getByText('Класс-бог')).toBeInTheDocument();
     // A kept answer is never checked without the learner asking.
     expect(stub.calls.some((call) => call.url.endsWith('/submit'))).toBe(false);
   });
@@ -262,7 +280,7 @@ describe('the task screen', () => {
   it('never asks for a card in full', async () => {
     const stub = api();
     await openTask(stub);
-    fireEvent.click(screen.getByRole('button', { name: ru.task.toStep2 }));
+    fireEvent.click(screen.getByRole('button', { name: ru.task.toStep2Clean }));
 
     await waitFor(() => {
       expect(stub.calls.some((call) => call.method === 'PATCH')).toBe(true);
@@ -277,7 +295,7 @@ describe('the task screen', () => {
     fireEvent.click(code);
 
     expect(code).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('heading', { level: 2, name: ru.task.material }).closest('section')).toHaveClass('task-screen__area--active');
+    expect(screen.getByRole('heading', { level: 2, name: ru.task.material }).closest('.workspace')).toHaveAttribute('data-area', 'code');
   });
 });
 
@@ -287,9 +305,9 @@ describe('the task screen counts', () => {
     window.umami = umami;
     await openTask(api());
 
-    fireEvent.click(screen.getByRole('checkbox', { name: /Деньги во float/ }));
+    pickCard('копейки', 'Деньги во float');
     fireEvent.click(screen.getByRole('button', { name: ru.task.toStep2 }));
-    fireEvent.click(screen.getByRole('checkbox', { name: 'исправить представление данных', hidden: true }));
+    pickLeaf('представление', 'исправить представление данных');
     await waitFor(() => {
       expect(screen.getByRole('button', { name: ru.task.check })).toBeEnabled();
     });
@@ -308,7 +326,7 @@ describe('the task screen counts', () => {
     window.umami = umami;
     await openTask(api({ signedIn: false }));
 
-    fireEvent.click(screen.getByRole('button', { name: ru.task.toStep2 }));
+    fireEvent.click(screen.getByRole('button', { name: ru.task.toStep2Clean }));
     fireEvent.click(await screen.findByRole('button', { name: ru.task.check }));
 
     expect(umami.track).toHaveBeenCalledWith('check-signed-out', { task: task.slug });

@@ -16,6 +16,7 @@ and the old one is marked `Superseded by NNNN` rather than edited.
 | [0011](0011-release-images.md) | Release images on GitHub Container Registry | Accepted |
 | [0012](0012-sessions.md) | Sessions: an opaque token in a cookie, the session in a table | Accepted |
 | [0013](0013-uptime-monitoring.md) | Uptime monitoring from a scheduled GitHub workflow | Proposed |
+| [0014](0014-visual-identity-and-task-workspace.md) | Visual identity and the task workspace | Accepted |
 
 ## Removed
 

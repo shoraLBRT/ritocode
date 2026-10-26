@@ -15,7 +15,6 @@ const t = (key: MessageKey, params?: MessageParams) => translate(ru, 'ru', key, 
 const task = 'flower-shop-daily-revenue';
 // One of the task's two findings, with one of the author's leaves for it.
 const card = 'Секреты в репозитории';
-const branch = 'Автоматическая проверка';
 const leaf = 'сканер секретов';
 // The other finding, which this answer misses.
 const missedCard = 'Деньги во float';
@@ -27,16 +26,18 @@ test('a visitor solves a task signed out, signs in on Check, and sees the review
   });
 
   await test.step('picks a card at step 1', async () => {
-    // A checkbox is named by the card's name and then its summary, and another card's summary may
+    // Step 1 is search first: the learner describes what they see, and the card comes up. A
+    // checkbox is named by the card's name and then its summary, and another card's summary may
     // name this card, so the name is matched from its start.
+    await page.getByLabel(t('task.search')).fill('секреты');
     await page.getByRole('checkbox', { name: new RegExp(`^${card}`) }).check();
     await page.getByRole('button', { name: t('task.toStep2') }).click();
   });
 
   await test.step('picks a treatment at step 2', async () => {
-    const pick = page.getByRole('group', { name: card });
-    await pick.getByText(branch, { exact: true }).click();
-    await pick.getByRole('checkbox', { name: leaf }).check();
+    await expect(page.getByRole('list', { name: t('task.findings') })).toContainText(card);
+    await page.getByLabel(t('task.leafSearch')).fill('сканер');
+    await page.getByRole('checkbox', { name: new RegExp(`^${leaf}`) }).check();
   });
 
   await test.step('presses Check and is asked to sign in', async () => {
@@ -55,7 +56,8 @@ test('a visitor solves a task signed out, signs in on Check, and sees the review
   });
 
   await test.step('sees the attempt in the progress', async () => {
-    await page.getByRole('link', { name: t('nav.progress') }).click();
+    // The review is a workspace: the steps own its header, so the progress is reached by its address.
+    await page.goto('/progress');
     await expect(page.getByRole('heading', { level: 1, name: t('progress.title') })).toBeVisible();
     await expect(page.getByText(t('progress.tasks', { count: 1 }))).toBeVisible();
 

@@ -85,40 +85,36 @@ function api(attempt: object, taskBody: object = task, signal: () => Response = 
 
 async function openReview(attempt: object, taskBody?: object) {
   renderApp(api(attempt, taskBody), `/tasks/${task.slug}/attempts/attempt-1`);
-  await screen.findByRole('heading', { level: 1, name: ru.review.title });
+  await screen.findByRole('heading', { level: 2, name: ru.review.title });
 }
 
+/** Chooses a line of the result in the sidebar and returns it in full, as shown beside it. */
 function line(name: string): HTMLElement {
-  const heading = screen.getByRole('heading', { level: 3, name: new RegExp(name) });
-  const article = heading.closest('article');
-
-  if (article === null) {
-    throw new Error(`No review line for ${name}.`);
-  }
-
-  return article;
+  fireEvent.click(screen.getByRole('button', { name: new RegExp(name) }));
+  return screen.getByRole('article', { name });
 }
 
 describe('the review', () => {
-  it('gives the score in points, with its composition', async () => {
+  it('gives the score in points, with its composition, in the third step', async () => {
     await openReview(scored);
 
     expect(screen.getByText('29 из 90')).toBeInTheDocument();
     expect(screen.getByText('Найдено 1 из 2 · лишних выборов: 1 · лечение совпало: 1')).toBeInTheDocument();
+    expect(within(screen.getByRole('banner')).getByRole('button', { name: /Разбор/ })).toHaveAttribute('aria-current', 'step');
   });
 
-  it('shows a found card with the learner’s leaves beside the author’s, by a mark and a word', async () => {
+  it('opens on the first line, and shows a found card with the learner’s leaves beside the author’s, by a mark and a word', async () => {
     await openReview(scored);
-    const found = within(line('Секреты в репозитории'));
+    const found = within(screen.getByRole('article', { name: 'Секреты в репозитории' }));
 
     expect(found.getByText(ru.review.found)).toBeInTheDocument();
     expect(found.getByText(ru.review.foundMark)).toBeInTheDocument();
     expect(found.getByText('43 балла')).toBeInTheDocument();
-    expect(found.getByText('в этом контексте это нормально, исправить представление данных')).toBeInTheDocument();
-    expect(found.getByText('исправить представление данных')).toBeInTheDocument();
+    expect(found.getByText('в этом контексте это нормально')).toBeInTheDocument();
+    expect(found.getAllByText('исправить представление данных')).toHaveLength(2);
   });
 
-  it('shows a missed card with the author’s leaves and note, and the full card on expanding', async () => {
+  it('shows a missed card with the author’s leaves, the note and the full card', async () => {
     await openReview(scored);
     const missed = within(line('Деньги во float'));
 
@@ -127,10 +123,7 @@ describe('the review', () => {
     expect(missed.queryByText(ru.review.yourLeaves)).not.toBeInTheDocument();
     expect(missed.getByText(ru.review.authorLeaves)).toBeInTheDocument();
     expect(missed.getByText('Копейки расходятся с бухгалтерией.')).toBeInTheDocument();
-
-    const card = missed.getByText(ru.review.fullCard).closest('details');
-    expect(card).not.toBeNull();
-    expect(within(card as HTMLElement).getByText('Никогда.')).toBeInTheDocument();
+    expect(missed.getByText('Никогда.')).toBeInTheDocument();
   });
 
   it('shows an extra pick as not in this task’s answer, with its card and no author’s leaves', async () => {
@@ -141,8 +134,17 @@ describe('the review', () => {
     expect(extra.getByText(ru.review.extraMark)).toBeInTheDocument();
     expect(extra.getByText('-3 балла')).toBeInTheDocument();
     expect(extra.queryByText(ru.review.authorLeaves)).not.toBeInTheDocument();
-    expect(extra.getByText(ru.review.fullCard)).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 2, name: ru.review.extras })).toBeInTheDocument();
+    expect(extra.getByText('Доступ у всех.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: ru.review.extras })).toBeInTheDocument();
+  });
+
+  it('shows the code again on asking', async () => {
+    await openReview(scored);
+
+    fireEvent.click(screen.getByRole('button', { name: ru.review.codeTab }));
+
+    expect(screen.getByText('TAX_RATE')).toBeInTheDocument();
+    expect(screen.queryByRole('article')).not.toBeInTheDocument();
   });
 
   it('closes with the lesson, the same code in another context, and trying again', async () => {
@@ -159,7 +161,7 @@ describe('the review', () => {
 
     expect(screen.getByText('0 из 0')).toBeInTheDocument();
     expect(screen.getByText(ru.review.cleanNothing)).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { level: 2, name: ru.review.findings })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: ru.review.findings })).not.toBeInTheDocument();
   });
 
   it('says a clean task had nothing to find when the learner picked something anyway', async () => {
@@ -189,11 +191,12 @@ describe('a signal from an extra pick', () => {
     window.umami = umami;
     const stub = api(scored);
     renderApp(stub, `/tasks/${task.slug}/attempts/attempt-1`);
-    await screen.findByRole('heading', { level: 1, name: ru.review.title });
+    await screen.findByRole('heading', { level: 2, name: ru.review.title });
 
     // Only the extra pick offers it: a found or missed card is already in the key.
-    expect(screen.getAllByRole('button', { name: ru.review.signal })).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: ru.review.signal })).not.toBeInTheDocument();
     const extra = within(line('Класс-бог'));
+    expect(screen.getAllByRole('button', { name: ru.review.signal })).toHaveLength(1);
 
     fireEvent.click(extra.getByRole('button', { name: ru.review.signal }));
     fireEvent.change(extra.getByLabelText(ru.review.signalComment), { target: { value: 'Класс на 400 строк в app.py' } });
@@ -216,7 +219,7 @@ describe('a signal from an extra pick', () => {
   it('can be cancelled without sending anything', async () => {
     const stub = api(scored);
     renderApp(stub, `/tasks/${task.slug}/attempts/attempt-1`);
-    await screen.findByRole('heading', { level: 1, name: ru.review.title });
+    await screen.findByRole('heading', { level: 2, name: ru.review.title });
     const extra = within(line('Класс-бог'));
 
     fireEvent.click(extra.getByRole('button', { name: ru.review.signal }));
@@ -235,7 +238,7 @@ describe('a signal from an extra pick', () => {
 
   it('takes a signal the API already has as sent', async () => {
     renderApp(api(scored, task, () => problemResponse(409, 'signal_already_sent', 'Already.')), `/tasks/${task.slug}/attempts/attempt-1`);
-    await screen.findByRole('heading', { level: 1, name: ru.review.title });
+    await screen.findByRole('heading', { level: 2, name: ru.review.title });
     const extra = within(line('Класс-бог'));
     fireEvent.click(extra.getByRole('button', { name: ru.review.signal }));
     fireEvent.click(extra.getByRole('button', { name: ru.review.signalSend }));
@@ -244,7 +247,7 @@ describe('a signal from an extra pick', () => {
 
   it('keeps the comment and says why when sending fails', async () => {
     renderApp(api(scored, task, () => problemResponse(429, 'signal_rate_limited', 'At most 10 signals.')), `/tasks/${task.slug}/attempts/attempt-1`);
-    await screen.findByRole('heading', { level: 1, name: ru.review.title });
+    await screen.findByRole('heading', { level: 2, name: ru.review.title });
     const extra = within(line('Класс-бог'));
     fireEvent.click(extra.getByRole('button', { name: ru.review.signal }));
     fireEvent.change(extra.getByLabelText(ru.review.signalComment), { target: { value: 'здесь' } });

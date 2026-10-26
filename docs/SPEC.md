@@ -269,15 +269,20 @@ tasks: they would give the answer away. Ordered by difficulty, then by publicati
 
 ### 4.4 Solving a task
 
-The screen has three areas: **context and brief**, **material**, and **the answer**. On a phone they
-become three tabs — Context, Code, Answer.
+The screen is a workspace ([DESIGN.md](DESIGN.md), [ADR 0014](adr/0014-visual-identity-and-task-workspace.md)):
+the three steps in the header; a sidebar with the **context** — the brief always shown, the rest of
+the context on expanding — and **the answer**, the step at hand; the **material** beside it. On a
+phone they become three tabs — Context, Code, Answer.
 
-**Material viewer.** A file tree with a line count per file, then the selected file with syntax
-highlighting and line numbers. Above the tree, an overview generated at ingest: total lines, file
-count, and the dependencies the project declares. Read-only.
+**Material viewer.** The open file's path is a button that opens the file tree, with a line count
+per file and an overview generated at ingest — total lines and file count; buttons lead to the
+previous and the next file. Syntax highlighting and line numbers; read-only. The dependencies the
+project declares are part of the overview the API serves, but the screen does not show them.
 
 **Step 1 — Diagnosis: what do you see?** The learner picks cards from the catalogue — only name and
-summary are shown — by searching or by browsing the six groups. The question is "what do you see
+summary are shown. **Search comes first**: they describe in their own words what they see, and the
+cards that share a word appear as they type, ranked, the matched words marked; class filters narrow
+them. Browsing the six groups stays possible, folded and deliberately quiet. The question is "what do you see
 here that should be named", not "what is wrong": a god class that is fine in this context is still
 a god class, and whether to leave it is step 2's decision.
 
@@ -287,13 +292,18 @@ a god class, and whether to leave it is step 2's decision.
   every learner sees the same list. The author does nothing to produce it.
 - Picking nothing is a valid answer. On a clean task it is the right one.
 
-**Step 2 — Treatment: what do you do with it here?** For each picked card, the whole treatment tree.
-The learner opens one or more branches and ticks one or more leaves in each. Every picked card needs
+**Step 2 — Treatment: what do you do with it here?** For each picked card in turn — the picked
+cards listed with their state — the whole treatment tree, searched the way the cards are or opened
+branch by branch; each leaf says where its measure lives. The learner ticks one or more leaves in
+one or more branches. Every picked card needs
 at least one leaf before the answer can be checked. The learner can go back to step 1 at any time.
 
 **Check.** The answer is submitted and scored (§5), and the review opens.
 
 ### 4.5 Review
+
+The review opens in the task's workspace with the third step current: the score and every line in
+the sidebar, the chosen line in full beside it — or the code again.
 
 - **Score** in points, with its composition beneath: findings found out of findings present, extra
   picks, treatments that matched.

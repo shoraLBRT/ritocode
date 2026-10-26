@@ -5,23 +5,26 @@ import { getTask, getTreatments, listAttempts, recordStep, startAttempt, submitA
 import type { ApiClient, ApiError, TaskDetail, TreatmentTree } from '../../api';
 import { ErrorState } from '../../components/ErrorState';
 import { LoadingState } from '../../components/LoadingState';
-import { Markdown } from '../../components/Markdown';
 import { useApiResource } from '../../hooks/useApiResource';
 import { useT } from '../../i18n';
 import { checkReturnPath, SignInLinks, useCheckRequest, useSession } from '../../session';
 import { canCheck, cardsWithoutLeaves, toggleCard, toggleLeaf } from './answer';
 import type { Answer } from './answer';
 import { clearDraft, draftStorage, restoreDraft, saveDraft } from './draft';
+import { ContextPanel } from './ContextPanel';
 import { DiagnosisStep } from './DiagnosisStep';
 import { MaterialViewer } from './MaterialViewer';
+import { Icon } from './parts';
+import { StepBar } from './StepBar';
 import { TreatmentStep } from './TreatmentStep';
 
 type Area = 'context' | 'code' | 'answer';
 
 /**
- * `/tasks/{slug}` — solving a task (docs/SPEC.md §4.4). Three areas — context and brief, material,
- * answer — side by side on a desktop and three tabs at phone width. The answer is two steps: pick
- * the cards you see, then the treatment for each.
+ * `/tasks/{slug}` — solving a task (docs/SPEC.md §4.4, docs/DESIGN.md). A workspace: the steps in
+ * the header; a sidebar with the context — the brief always, the rest on expanding — and the step
+ * at hand; the code beside it. At phone width the context, the code and the answer are three tabs.
+ * The answer is two steps: pick the cards you see, then the treatment for each.
  *
  * It reads the task and the treatment tree, never a card's full text. A signed-in learner works in
  * an attempt: the newest open one at this task, or a new one, and the steps reached are recorded
@@ -69,6 +72,7 @@ function TaskScreen({ task, tree }: { task: TaskDetail; tree: TreatmentTree }) {
 
   const [area, setArea] = useState<Area>('context');
   const [step, setStep] = useState<1 | 2>(restored?.step ?? 1);
+  const [contextOpen, setContextOpen] = useState(step === 1);
   const [answer, setAnswer] = useState<Answer>(restored?.answer ?? []);
   const [checking, setChecking] = useState(false);
   const [failure, setFailure] = useState<ApiError | null>(null);
@@ -106,6 +110,8 @@ function TaskScreen({ task, tree }: { task: TaskDetail; tree: TreatmentTree }) {
   const toStep2 = () => {
     track('step-2-reached', { task: task.slug });
     setStep(2);
+    setContextOpen(false);
+    setArea('answer');
   };
 
   const submit = useCallback(
@@ -169,7 +175,7 @@ function TaskScreen({ task, tree }: { task: TaskDetail; tree: TreatmentTree }) {
       type="button"
       role="tab"
       aria-selected={area === value}
-      className="task-tabs__tab"
+      className="workspace__tab"
       onClick={() => {
         setArea(value);
       }}
@@ -178,97 +184,106 @@ function TaskScreen({ task, tree }: { task: TaskDetail; tree: TreatmentTree }) {
     </button>
   );
 
+  const treated = answer.filter((pick) => pick.leaves.length > 0).length;
+  const checkButton = (
+    <button
+      type="button"
+      className="button button--primary"
+      disabled={!canCheck(answer) || busy || !(signedOut || attemptId !== null)}
+      onClick={pressCheck}
+    >
+      {busy ? t('task.checking') : t('task.check')}
+      <Icon name="arrow" />
+    </button>
+  );
+
   return (
-    <section className="task-screen">
-      <h1 className="task-screen__title">{task.title}</h1>
+    <section className="workspace" data-area={area}>
+      <StepBar
+        step={step}
+        picked={answer.length}
+        treated={treated}
+        onStep={(target) => {
+          setStep(target);
+        }}
+      />
+
       {answerLost && (
-        <p className="notice" role="status">
+        <p className="notice workspace__notice" role="status">
           {t('task.answerLost')}
         </p>
       )}
 
-      <div className="task-tabs" role="tablist" aria-label={t('task.areas')}>
+      <div className="workspace__tabs" role="tablist" aria-label={t('task.areas')}>
         {tab('context', t('task.contextTab'))}
         {tab('code', t('task.codeTab'))}
         {tab('answer', t('task.answerTab'))}
       </div>
 
-      <div className="task-screen__areas">
-        <section className={areaClass('context', area)} aria-labelledby="task-context">
-          <h2 id="task-context">{t('task.context')}</h2>
-          {/* Prose written in the content files, a list of facts allowed (CONTENT_FORMAT §6). */}
-          <Markdown source={task.context} />
-          <h2>{t('task.brief')}</h2>
-          <blockquote className="task-screen__brief">
-            <Markdown source={task.brief} />
-          </blockquote>
-        </section>
+      <div className="workspace__side">
+        <div className="workspace__area workspace__area--context">
+          <ContextPanel
+            task={task}
+            open={contextOpen}
+            onToggle={() => {
+              setContextOpen(!contextOpen);
+            }}
+          />
+        </div>
 
-        <section className={areaClass('code', area)} aria-labelledby="task-material">
-          <h2 id="task-material">{t('task.material')}</h2>
-          <MaterialViewer material={task.material} />
-        </section>
-
-        <section className={areaClass('answer', area)} aria-labelledby="task-answer">
+        <section className="panel workspace__area workspace__area--answer" aria-label={t('task.answerTab')}>
           {step === 1 ? (
-            <>
-              <h2 id="task-answer">{t('task.step1')}</h2>
-              <DiagnosisStep
-                classes={task.classes}
-                cards={task.cards}
-                answer={answer}
-                onToggle={(card) => {
-                  setAnswer((current) => toggleCard(current, card));
-                }}
-              />
-              <div className="task-screen__actions">
-                <span className="page__note">{t('task.picked', { count: answer.length })}</span>
-                <button type="button" className="button button--primary" onClick={toStep2}>
-                  {t('task.toStep2')}
-                </button>
-              </div>
-            </>
+            <DiagnosisStep
+              classes={task.classes}
+              cards={task.cards}
+              answer={answer}
+              onToggle={(card) => {
+                setAnswer((current) => toggleCard(current, card));
+              }}
+              onNext={toStep2}
+            />
           ) : (
-            <>
-              <h2 id="task-answer">{t('task.step2')}</h2>
-              <TreatmentStep
-                cards={task.cards}
-                tree={tree}
-                answer={answer}
-                onToggleLeaf={(card, leaf) => {
-                  setAnswer((current) => toggleLeaf(current, card, leaf));
+            <TreatmentStep
+              cards={task.cards}
+              tree={tree}
+              answer={answer}
+              onToggleLeaf={(card, leaf) => {
+                setAnswer((current) => toggleLeaf(current, card, leaf));
+              }}
+              action={checkButton}
+              notice={
+                <>
+                  {missing.length > 0 && <p className="step__hint">{t('task.needsLeaf', { cards: missing.join(', ') })}</p>}
+                  {signedOut && signInPrompt === null && <p className="step__hint step__hint--quiet">{t('task.signInToCheck')}</p>}
+                  {failure !== null && <ErrorState error={failure} />}
+                  {signedOut && signInPrompt !== null && <SignInPrompt returnPath={checkReturnPath(path)} kept={signInPrompt.kept} />}
+                </>
+              }
+            />
+          )}
+
+          {step === 2 && (
+            <div className="step__back">
+              <button
+                type="button"
+                className="link-button"
+                onClick={() => {
+                  setStep(1);
                 }}
-              />
-
-              {missing.length > 0 && <p className="task-screen__hint">{t('task.needsLeaf', { cards: missing.join(', ') })}</p>}
-              {signedOut && signInPrompt === null && <p className="task-screen__hint">{t('task.signInToCheck')}</p>}
-              {failure !== null && <ErrorState error={failure} />}
-
-              <div className="task-screen__actions">
-                <button
-                  type="button"
-                  className="button"
-                  onClick={() => {
-                    setStep(1);
-                  }}
-                >
-                  {t('task.backToStep1')}
-                </button>
-                <button
-                  type="button"
-                  className="button button--primary"
-                  disabled={!canCheck(answer) || busy || !(signedOut || attemptId !== null)}
-                  onClick={pressCheck}
-                >
-                  {busy ? t('task.checking') : t('task.check')}
-                </button>
-              </div>
-
-              {signedOut && signInPrompt !== null && <SignInPrompt returnPath={checkReturnPath(path)} kept={signInPrompt.kept} />}
-            </>
+              >
+                {t('task.backToStep1')}
+              </button>
+            </div>
           )}
         </section>
       </div>
+
+      <section className="panel workspace__pane workspace__area workspace__area--code" aria-labelledby="task-material">
+        <h2 id="task-material" className="visually-hidden">
+          {t('task.material')}
+        </h2>
+        <MaterialViewer material={task.material} />
+      </section>
     </section>
   );
 }
@@ -332,8 +347,4 @@ function useAttempt(client: ApiClient, task: string, signedIn: boolean): string 
   }, [client, task, signedIn]);
 
   return attemptId;
-}
-
-function areaClass(value: Area, active: Area): string {
-  return value === active ? 'task-screen__area task-screen__area--active' : 'task-screen__area';
 }
