@@ -17,6 +17,8 @@ Then, as needed:
 - [`docs/AGENT_GUIDELINES.md`](docs/AGENT_GUIDELINES.md) — how to write code here.
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/DOMAIN_MODEL.md`](docs/DOMAIN_MODEL.md),
   [`docs/DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md) — the system, its entities and its tables.
+- [`docs/DESIGN.md`](docs/DESIGN.md) — the look (palette, type, tokens) and the task workspace;
+  read it before building or restyling a page.
 - [`docs/CONTENT_FORMAT.md`](docs/CONTENT_FORMAT.md) — how problem cards, materials and tasks are
   written under `content/`.
 - [`docs/RUNBOOK.md`](docs/RUNBOOK.md) — running production: release, roll back, restore, secrets,

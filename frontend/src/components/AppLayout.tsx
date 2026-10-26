@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router';
+import { Link, NavLink, Outlet, useLocation, useMatch, useNavigate } from 'react-router';
 import { useT } from '../i18n';
 import { readSignInReturn, SignInLinks, SignInReturnContext, useSession, withoutSignInReturn } from '../session';
 import type { SignInError, SignInReturnState } from '../session';
 import { useDocumentMeta } from '../site';
+import { ThemeToggle } from '../theme';
+import { HeaderSlotContext } from './HeaderSlot';
 
 /**
  * The frame every route renders inside: a header with the primary navigation and who is signed
@@ -13,6 +15,11 @@ import { useDocumentMeta } from '../site';
  * It also receives the browser back from a sign-in (`src/session/signInReturn.ts`): read once, on
  * the first render — a return is a full page load — and taken out of the address. A failure is
  * shown above the page; a task's request to be checked is handed to the task through context.
+ *
+ * The header has three parts: the brand and the navigation, a centre a page may fill — the task
+ * screen puts its steps there (`HeaderSlot`) — and the theme and the session. On the task screen
+ * and its review the frame becomes a workspace (docs/DESIGN.md): the navigation steps aside so the
+ * steps own the header, and the page fills the window instead of a reading column.
  *
  * At phone width the header wraps rather than scrolls: brand and navigation on the first line,
  * the session below them (styles.css).
@@ -43,39 +50,30 @@ export function AppLayout() {
   }, []);
 
   const signInReturn: SignInReturnState = { checkRequestedAt, consumeCheck };
+  const solving = useMatch('/tasks/:slug') !== null;
+  const reviewing = useMatch('/tasks/:slug/attempts/:id') !== null;
+  const workspace = solving || reviewing;
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
 
   return (
-    <div className="app">
+    <div className={workspace ? 'app app--workspace' : 'app'}>
       <a className="skip-link" href="#main">
         {t('app.skipToContent')}
       </a>
 
       <header className="app__header">
-        <Link className="app__brand" to="/">
-          {t('app.name')}
-        </Link>
-        <nav className="app__nav" aria-label={t('nav.label')}>
-          <NavLink to="/" end className={navClass}>
-            {t('nav.home')}
-          </NavLink>
-          <NavLink to="/tasks" className={navClass}>
-            {t('nav.tasks')}
-          </NavLink>
-          <NavLink to="/problems" className={navClass}>
-            {t('nav.problems')}
-          </NavLink>
-          {signedIn && (
-            <NavLink to="/progress" className={navClass}>
-              {t('nav.progress')}
-            </NavLink>
-          )}
-          {admin && (
-            <NavLink to="/admin" className={navClass}>
-              {t('nav.admin')}
-            </NavLink>
-          )}
-        </nav>
-        <SessionStatus returnPath={location.pathname + withoutSignInReturn(location.search) + location.hash} />
+        <div className="app__header-start">
+          <Link className="app__brand" to="/">
+            <span className="app__mark" aria-hidden="true" />
+            {t('app.name')}
+          </Link>
+          {!workspace && <Navigation signedIn={signedIn} admin={admin} />}
+        </div>
+        <div className="app__header-center" ref={setSlot} />
+        <div className="app__header-end">
+          <ThemeToggle />
+          <SessionStatus returnPath={location.pathname + withoutSignInReturn(location.search) + location.hash} />
+        </div>
       </header>
 
       {signInError !== null && (
@@ -95,7 +93,9 @@ export function AppLayout() {
 
       <main className="app__main" id="main">
         <SignInReturnContext value={signInReturn}>
-          <Outlet />
+          <HeaderSlotContext value={slot}>
+            <Outlet />
+          </HeaderSlotContext>
         </SignInReturnContext>
       </main>
 
@@ -104,6 +104,35 @@ export function AppLayout() {
         <Link to="/privacy">{t('app.privacy')}</Link>
       </footer>
     </div>
+  );
+}
+
+/** The primary navigation; progress only for a signed-in learner, the admin area only for an admin. */
+function Navigation({ signedIn, admin }: { signedIn: boolean; admin: boolean }) {
+  const t = useT();
+
+  return (
+    <nav className="app__nav" aria-label={t('nav.label')}>
+      <NavLink to="/" end className={navClass}>
+        {t('nav.home')}
+      </NavLink>
+      <NavLink to="/tasks" className={navClass}>
+        {t('nav.tasks')}
+      </NavLink>
+      <NavLink to="/problems" className={navClass}>
+        {t('nav.problems')}
+      </NavLink>
+      {signedIn && (
+        <NavLink to="/progress" className={navClass}>
+          {t('nav.progress')}
+        </NavLink>
+      )}
+      {admin && (
+        <NavLink to="/admin" className={navClass}>
+          {t('nav.admin')}
+        </NavLink>
+      )}
+    </nav>
   );
 }
 
