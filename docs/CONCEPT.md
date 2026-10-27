@@ -5,9 +5,10 @@
 The decision to change the product, and the paths rejected on the way, are in
 [ADR 0010](adr/0010-diagnosis-of-ai-written-code.md).
 
-- **Last updated:** 2026-09-30 — cut back to what the maintainer confirmed while the specification
-  was written. The earlier version promised a take-home "recipe" as the product's test of success;
-  that was never agreed and is now a later iteration in [`SPEC.md`](SPEC.md) §12.
+- **Last updated:** 2026-10-28 — §2: the audience is junior developers who build with AI agents,
+  no longer vibe coders ([ADR 0015](adr/0015-arena-home-and-junior-audience.md)). Before that,
+  2026-09-30: cut back to what the maintainer confirmed while the specification was written; the
+  take-home "recipe" was never agreed and is a later iteration in [`SPEC.md`](SPEC.md) §12.
 - **Prototype of the mechanics:** <https://claude.ai/artifact/NgUY8CZZcDnbgApen2nf6S> — it predates
   the specification, and where the two differ, the specification wins.
 
@@ -25,8 +26,13 @@ answer a learner picks, and the explanation they read afterwards.
 
 ## 2. Who it is for
 
-**Vibe coders**: people who build software by instructing agents and know little about
-architecture. The content starts from the basics.
+**Junior developers who build with AI agents**: people who learn and work through agents, can read
+the code an agent wrote, rarely read all of it, and have little background in architecture yet. They
+can tell what a function does; they cannot yet tell what it will cost. The content starts from the
+basics of design, not of programming.
+
+Until 2026-10-28 this section named vibe coders. A task is reading code, and someone who cannot read
+code cannot solve one — [ADR 0015](adr/0015-arena-home-and-junior-audience.md).
 
 ## 3. Why it exists
 

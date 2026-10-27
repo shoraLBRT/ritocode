@@ -49,12 +49,22 @@
   --class-domain: #2f7d5a;
   --class-domain-tint: #dff0e6;
 
+  /* The arena (DESIGN.md › The arena): the one spotlight card on a page, and the activity scale. */
+  --spotlight: #25275e;
+  --spotlight-ink: #ffffff;
+  --spotlight-muted: #c9cbf5;
+  --heat-1: #cfd1f2;
+  --heat-2: #a3a7e6;
+  --heat-3: #7277cc;
+  --heat-4: #4a4fb0;
+
   --shadow: 0 1px 2px rgb(24 24 31 / 5%), 0 6px 20px rgb(24 24 31 / 6%);
   --shadow-pop: 0 18px 44px rgb(24 24 31 / 20%);
   --font-sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Code', 'Consolas', monospace;
   --radius: 10px;
   --radius-card: 14px;
+  --radius-panel: 18px;
   --gap: 1rem;
 }
 
@@ -100,6 +110,14 @@
   --class-false-confidence-tint: #3a1e2c;
   --class-domain: #77c9a0;
   --class-domain-tint: #163224;
+
+  --spotlight: #2b2d70;
+  --spotlight-ink: #ffffff;
+  --spotlight-muted: #c9cbf5;
+  --heat-1: #2a2c5a;
+  --heat-2: #474ca3;
+  --heat-3: #7479d8;
+  --heat-4: #9ea3f5;
 
   --shadow: 0 1px 2px rgb(0 0 0 / 40%);
   --shadow-pop: 0 18px 44px rgb(0 0 0 / 60%);
@@ -1054,4 +1072,482 @@ pre {
   background: var(--surface-muted);
   white-space: pre-wrap;
   font-family: inherit;
+}
+
+/*
+ * The arena (DESIGN.md › The arena, ADR 0015): the components the home page is built from, and the
+ * catalogue, task list and progress pages after it. Buttons, code, icons and the header are the
+ * shared `.button`, `.code`, `.icon` and `.app__*` above; these are only what the arena adds.
+ */
+
+.rc-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.rc-panel__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* A filter of two to five exclusive options, such as difficulty. */
+.rc-tabs {
+  display: inline-flex;
+  gap: 2px;
+  padding: 4px;
+  border-radius: var(--radius);
+  background: var(--surface-sunken);
+}
+
+.rc-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.rc-tab:hover {
+  color: var(--text);
+}
+
+.rc-tab[aria-pressed='true'] {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgb(24 24 31 / 12%);
+}
+
+.rc-tab__count {
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* A display setting that applies at once; the label says what turns on. */
+.rc-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.rc-toggle__track {
+  position: relative;
+  flex: none;
+  width: 34px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--border-strong);
+  transition: background-color 0.15s;
+}
+
+.rc-toggle__track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgb(24 24 31 / 25%);
+  transition: transform 0.15s;
+}
+
+.rc-toggle[aria-pressed='true'] .rc-toggle__track {
+  background: var(--accent);
+}
+
+.rc-toggle[aria-pressed='true'] .rc-toggle__track::after {
+  transform: translateX(14px);
+}
+
+/* The header's search over tasks and problems, with its shortcut. */
+.rc-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 8px 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface-muted);
+  color: var(--text-faint);
+}
+
+.rc-search:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.rc-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.rc-kbd {
+  padding: 1px 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+}
+
+/* Difficulty reads like a state: easy is good, medium a warning, hard the danger colour. */
+.rc-difficulty {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.rc-difficulty--easy { background: var(--good-surface); color: var(--good); }
+.rc-difficulty--medium { background: var(--warn-surface); color: var(--warn); }
+.rc-difficulty--hard { background: var(--danger-surface); color: var(--danger); }
+
+/* A problem class, coloured by its `k-{class}`. */
+.rc-class {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 5px;
+  background: var(--ks, var(--surface-sunken));
+  color: var(--k, var(--text-muted));
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.rc-class::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+  background: currentColor;
+}
+
+/* What stands where classes are hidden. */
+.rc-spoiler {
+  display: inline-block;
+  width: 88px;
+  height: 20px;
+  border-radius: 5px;
+  background: repeating-linear-gradient(-45deg, var(--surface-sunken) 0 6px, var(--surface-muted) 6px 12px);
+}
+
+.rc-status {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+}
+
+.rc-status--done { background: var(--good-surface); color: var(--good); }
+.rc-status--tried { background: var(--warn-surface); color: var(--warn); }
+.rc-status--todo { border: 1.5px dashed var(--border-strong); }
+
+.rc-status--tried::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.rc-stat {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--surface-sunken);
+}
+
+.rc-stat__value {
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 1.625rem;
+  font-weight: 600;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+.rc-stat__label {
+  color: var(--text-faint);
+  font-size: 0.8rem;
+}
+
+.rc-task-table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.rc-task-table th {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-muted);
+  color: var(--text-faint);
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-align: left;
+}
+
+.rc-task-table td {
+  padding: 12px 8px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  vertical-align: middle;
+}
+
+.rc-task-table th:first-child,
+.rc-task-table td:first-child {
+  padding-left: 18px;
+}
+
+.rc-task-table th:last-child,
+.rc-task-table td:last-child {
+  padding-right: 18px;
+}
+
+.rc-task-table tbody tr:hover {
+  background: var(--accent-soft);
+}
+
+.rc-task-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.rc-task-table__title {
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.rc-task-table__title:hover {
+  color: var(--accent);
+}
+
+.rc-task-table__material {
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.rc-task-table__number {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The daily task: the page's one spotlight. */
+.rc-daily {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 28px;
+  border-radius: var(--radius-panel);
+  background: var(--spotlight);
+  color: var(--spotlight-ink);
+}
+
+.rc-daily__top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--spotlight-muted);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.rc-daily__title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.rc-daily__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rc-daily__chip {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 8px;
+  background: rgb(255 255 255 / 12%);
+  font-size: 0.8rem;
+}
+
+.rc-daily__code {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: rgb(0 0 0 / 28%);
+  color: var(--spotlight-muted);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  overflow-x: auto;
+}
+
+.rc-daily__action {
+  border-color: var(--spotlight-ink);
+  background: var(--spotlight-ink);
+  color: var(--spotlight);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* Progress: the share of the catalogue mastered as a ring, each class as a bar (`--p`, 0–100). */
+.rc-ring {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 104px;
+  height: 104px;
+  border-radius: 50%;
+  background: conic-gradient(var(--accent) calc(var(--p, 0) * 1%), var(--surface-sunken) 0);
+}
+
+.rc-ring__hole {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--surface);
+}
+
+.rc-ring__value {
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 1.375rem;
+  font-weight: 600;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.rc-ring__of {
+  color: var(--text-faint);
+  font-size: 0.7rem;
+}
+
+.rc-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--surface-sunken);
+  overflow: hidden;
+}
+
+.rc-bar::after {
+  content: '';
+  display: block;
+  width: calc(var(--p, 0) * 1%);
+  height: 100%;
+  border-radius: inherit;
+  background: var(--k, var(--accent));
+}
+
+/* Activity: a column per week, a row per day, five levels. */
+.rc-heat {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  grid-template-rows: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.rc-heat__cell {
+  aspect-ratio: 1;
+  border-radius: 3px;
+  background: var(--surface-sunken);
+}
+
+.rc-heat__cell[data-level='1'] { background: var(--heat-1); }
+.rc-heat__cell[data-level='2'] { background: var(--heat-2); }
+.rc-heat__cell[data-level='3'] { background: var(--heat-3); }
+.rc-heat__cell[data-level='4'] { background: var(--heat-4); }
+
+.rc-streak {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: var(--warn-surface);
+  color: var(--warn);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.rc-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rc-toggle__track,
+  .rc-toggle__track::after {
+    transition: none;
+  }
 }
