@@ -243,7 +243,7 @@ Localisation is built in from the first commit; only the Russian content is writ
 
 | Route | Page | Access |
 | --- | --- | --- |
-| `/` | Landing: what Ritocode is, a link to a demo task and to the problem catalogue | public |
+| `/` | Home, the arena: what Ritocode teaches, the daily task, the task list, progress (below) | public |
 | `/problems` | Problem catalogue, one page, every card in full, anchor per card (`/problems#secrets-in-repo`) | public |
 | `/tasks` | Task catalogue | public |
 | `/tasks/{slug}` | Solving a task | public to solve; sign-in to check |
@@ -256,6 +256,24 @@ Localisation is built in from the first commit; only the Russian content is writ
 Yandex, which matters for a Russian-language audience. They are prerendered to static HTML at build
 time from the content export; the single-page application takes over once loaded. This revisits
 ADR 0001's "revisit if catalog SEO becomes a goal" without adding a server-rendering layer.
+
+**The home page is an arena** ([ADR 0015](adr/0015-arena-home-and-junior-audience.md),
+[DESIGN.md](DESIGN.md) › The arena; decided by the maintainer on 2026-10-28 in
+[#190](https://github.com/shoraLBRT/ritocode/issues/190)):
+
+- **The lead** says what the product teaches — to see the problems in code an agent wrote — with the
+  real counts of tasks, problems and classes. Its wording is still to be worked out; until then it is
+  a placeholder on that idea.
+- **The daily task.** One task a day, changing at midnight Moscow time. For a signed-in learner it is
+  chosen among the tasks they have not solved; for a guest, and for a learner who has solved them
+  all, among all tasks. The choice is a pure function of the date and the list, so everyone in the
+  same state sees the same task and the prerendered page is stable.
+- **The task list**, as in §4.3: title, expected time, difficulty, and for a signed-in learner
+  whether it is solved — the first eight, with difficulty tabs and a link to `/tasks`. No class tags.
+- **Progress** for a signed-in learner: found out of met, by class (§4.7), the **streak** and
+  the **activity** of the last twelve weeks. A guest sees a sign-in prompt there.
+- **Without JavaScript** the prerendered page carries the lead, the catalogue's counts and how a task
+  goes; the content export has no tasks, so the daily task and the list are filled in by the application.
 
 ### 4.2 Problem catalogue
 
@@ -342,6 +360,12 @@ Built from **first attempts only** (§5.4):
 - **Per class** — how many findings of that class were found out of those met, and how many found
   ones were treated right.
 - **Per card** — met, found, missed, picked when absent, treated right.
+
+Two counts of practice, from **every** attempt, not only first ones:
+
+- **Activity** — the number of attempts submitted on each day, Moscow time.
+- **Streak** — how many days in a row, up to today, have at least one submitted attempt. A day
+  without one breaks it; today still counts as kept until it ends.
 
 No XP, no levels, no leaderboard.
 

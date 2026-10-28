@@ -37,18 +37,18 @@ function api({ signedIn = true } = {}) {
 
 describe('the application shell', () => {
   it('renders the layout chrome around every route', async () => {
-    renderApp(api());
+    renderApp(api(), '/privacy');
 
     expect(screen.getByRole('navigation', { name: ru.nav.label })).toBeInTheDocument();
     expect(screen.getByRole('main')).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByRole('heading', { level: 1, name: ru.app.name })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1, name: ru.privacy.title })).toBeInTheDocument();
     });
   });
 
   it('declares the page to be in Russian', () => {
     document.documentElement.lang = '';
-    renderApp(api());
+    renderApp(api(), '/privacy');
 
     expect(document.documentElement.lang).toBe('ru');
   });
@@ -74,13 +74,13 @@ describe('the application shell', () => {
   });
 
   it('names the signed-in learner in the header', async () => {
-    renderApp(api());
+    renderApp(api(), '/privacy');
 
     expect(await screen.findByText('Вы вошли как developer')).toBeInTheDocument();
   });
 
   it('says in the header when nobody is signed in', async () => {
-    renderApp(api({ signedIn: false }));
+    renderApp(api({ signedIn: false }), '/privacy');
 
     expect(await screen.findByText(ru.session.signedOut)).toBeInTheDocument();
   });
@@ -150,7 +150,7 @@ describe('signing in and out from the header', () => {
       }
       return Promise.resolve(jsonResponse([]));
     });
-    renderApp(stub);
+    renderApp(stub, '/privacy');
 
     fireEvent.click(await screen.findByRole('button', { name: ru.session.signOut }));
 
