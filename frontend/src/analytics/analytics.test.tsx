@@ -85,7 +85,7 @@ describe('a completed sign-in', () => {
     window.umami = umami;
     noteSignInStarted('google');
 
-    renderApp(api(true), '/');
+    renderApp(api(true), '/privacy');
 
     expect(await screen.findByText(ru.session.signedInAs.replace('{username}', 'developer'))).toBeInTheDocument();
     expect(umami.track).toHaveBeenCalledWith('sign-in-completed', { provider: 'google' });
@@ -97,7 +97,7 @@ describe('a completed sign-in', () => {
     window.umami = umami;
     noteSignInStarted('google');
 
-    renderApp(api(false), '/');
+    renderApp(api(false), '/privacy');
 
     expect(await screen.findByText(ru.session.signedOut)).toBeInTheDocument();
     expect(umami.track).not.toHaveBeenCalledWith('sign-in-completed', expect.anything());
@@ -105,7 +105,7 @@ describe('a completed sign-in', () => {
   });
 
   it('starts when a provider link is followed', async () => {
-    renderApp(api(false), '/');
+    renderApp(api(false), '/privacy');
 
     fireEvent.click(await screen.findByText(ru.session.signIn));
     const link = screen.getAllByRole('link', { name: ru.session.signInWith.github })[0];

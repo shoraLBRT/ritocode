@@ -64,10 +64,13 @@ avoids gendered past-tense forms («найдено 2 из 3», not «ты наш
 - CONCEPT.md §2, SPEC.md §2.1, the reading-speed note of SPEC §3.4 and decision 1 of SPEC's
   decision log now name junior developers. The cards and tasks are not rewritten: they already start
   from design basics, and the reading-speed estimates were to be calibrated anyway.
-- The arena draws an opt-in "show classes" toggle in the task table, which SPEC §4.3 forbids
-  (*no class tags on tasks*). The rule stands until the maintainer decides otherwise in #190.
-- A daily task, a streak and activity are new features: they need SPEC text and, for the streak,
-  a reading of attempt dates the Attempts module already keeps. No schema change is foreseen.
+- The concept drew an opt-in "show classes" toggle in the task table. SPEC §4.3 forbids class tags
+  on tasks, and the maintainer kept that rule (#190): the arena's task list has no classes.
+- A daily task, a streak and activity are new features, specified in SPEC §4.1 and §4.7 (#190):
+  the daily task changes at midnight Moscow time and prefers unsolved tasks; a day without an
+  attempt breaks the streak. They read attempt dates the Attempts module already keeps; no schema
+  change is foreseen.
 - `/` must stay readable without JavaScript (SPEC §4.1): the prerendered arena shows the lead, the
-  counts and the task list; the personal parts are filled in by the application.
+  catalogue's counts and how a task goes; the tasks and the personal parts are filled in by the
+  application, since the content export carries no tasks.
 - The existing interface text says «вы». It moves to «ты» page by page, as each page is rebuilt.
