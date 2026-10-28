@@ -4,7 +4,7 @@
 in the same pull request as the work it describes — a session that skips this makes the next one
 start from nothing.
 
-- **Last updated:** 2026-10-27
+- **Last updated:** 2026-10-28
 - **Current stage:** S7 · Production — its engineering can be built against a local stack (#135's
   Compose file, #136's release command, #34's monitor, #41); the real checks wait on the VPS and domain of #134.
   S6 closed with #133: `/` and `/problems` read without JavaScript (#132), and every listed event
@@ -137,9 +137,14 @@ The maintainer's own [#134](https://github.com/shoraLBRT/ritocode/issues/134) �
 apps, privacy text — runs in parallel and gates S7.
 
 Outside the stages, on the maintainer's request: the look and the task workspace of
-[#188](https://github.com/shoraLBRT/ritocode/issues/188) exist ([DESIGN.md](DESIGN.md)). The other
-pages — home, the catalogues, progress, admin — took the new tokens but not a layout of their own;
-redesigning them is the natural next design step, and needs the maintainer's say on each.
+[#188](https://github.com/shoraLBRT/ritocode/issues/188) exist ([DESIGN.md](DESIGN.md)). On
+2026-10-28 the maintainer chose the home page — an **arena** in the manner of LeetCode — and changed
+the audience to junior developers who build with AI agents
+([ADR 0015](adr/0015-arena-home-and-junior-audience.md); CONCEPT §2, SPEC §2.1). The arena's tokens
+and `rc-` component classes are in `styles.css` and DESIGN.md › The arena, not yet used by any page.
+Next: build `/` from them ([#190](https://github.com/shoraLBRT/ritocode/issues/190)), after the
+maintainer answers its four questions (classes on tasks against SPEC §4.3, the daily task, the
+streak, the hero copy); then the catalogues and progress, each in its own issue.
 
 ## Open questions
 

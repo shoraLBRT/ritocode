@@ -47,9 +47,11 @@ In C#, a task is `DiagnosisTask`, so that it never collides with `System.Threadi
 
 ### 2.1 Who it is for
 
-**Vibe coders** — people who build software by instructing agents and know little about
-architecture. The content therefore starts from the basics: problem cards are written for someone
-who has never heard the word "coupling", and easy tasks are short enough to finish in five minutes.
+**Junior developers who build with AI agents** — people who can read the code an agent wrote but
+rarely read all of it, and know little about architecture
+([ADR 0015](adr/0015-arena-home-and-junior-audience.md); until 2026-10-28, vibe coders). The
+content therefore starts from the basics of design: problem cards are written for someone who has
+never heard the word "coupling", and easy tasks are short enough to finish in five minutes.
 
 The product teaches them to look at what an agent produced, name what is wrong, and know what it is
 treated with — a better brief, a rule in the repository, an automatic check, a fix by hand, or
@@ -179,8 +181,8 @@ Material is the code the learner reads.
 - **One material serves one to four tasks.** Tasks over the same material differ in context, so
   their answer keys differ.
 
-**Size follows difficulty.** Estimates assume a vibe coder reads simple Python for understanding at
-20–30 lines a minute — slower than skimming, faster than line-by-line review (7–8 lines a minute).
+**Size follows difficulty.** Estimates assume a junior developer reads simple Python for understanding
+at 20–30 lines a minute — slower than skimming, faster than line-by-line review (7–8 lines a minute).
 They are **estimates to be calibrated** from recorded attempt times (§8).
 
 | Difficulty | Reading | Total lines, at most | Files | Whole task |
@@ -703,7 +705,7 @@ All decided by the maintainer on 2026-09-30, in answer to questions put while pr
 
 | # | Decision |
 | --- | --- |
-| 1 | Audience: vibe coders with little architecture knowledge; content starts from the basics. |
+| 1 | Audience: vibe coders with little architecture knowledge; content starts from the basics. Superseded on 2026-10-28 by [ADR 0015](adr/0015-arena-home-and-junior-audience.md): junior developers who build with AI agents. |
 | 2 | Step 1 asks what the learner sees; the context moves the treatment. The context is visible from the start. |
 | 3 | No traps. Found +10, missed −2 to −5; the economics are tuned separately. The whole catalogue is not labelled per material — too costly for authors. |
 | 4 | Locations of findings wait for a later version; the MVP keeps the simple card. |
