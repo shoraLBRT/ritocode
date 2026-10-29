@@ -28,11 +28,6 @@ code — is being reshaped for this one; what it was is kept at the tag `pre-dia
 ASP.NET Core on .NET 10 as a modular monolith, PostgreSQL, and React with Vite and TypeScript
 ([ADR 0001](docs/adr/0001-technology-stack.md)).
 
-## Contributing
-
-The repository is built largely by AI agents working from the roadmap. If you are one, start with
-[AGENTS.md](AGENTS.md).
-
 ## License
 
 Code: MIT. Content under `content/` is licensed separately — see
