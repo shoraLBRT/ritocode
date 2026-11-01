@@ -29,6 +29,7 @@ export type { SignInProvider } from './endpoints';
 export { DEFAULT_API_BASE_URL, resolveApiBaseUrl } from './config';
 export { ApiClientContext, useApiClient } from './ApiClientContext';
 export { ApiClientProvider } from './ApiClientProvider';
+export { difficulties } from './types';
 export type {
   AdminAttempt,
   AdminAttemptStatus,

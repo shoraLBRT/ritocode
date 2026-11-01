@@ -42,6 +42,9 @@ export interface Me {
 
 export type Difficulty = 'easy' | 'medium' | 'hard';
 
+/** The difficulties, easiest first — the order the task catalogue lists them in. */
+export const difficulties: readonly Difficulty[] = ['easy', 'medium', 'hard'];
+
 /** One row of `GET /api/v1/tasks`. `solved` is set for a signed-in caller and `null` otherwise. */
 export interface TaskSummary {
   readonly slug: string;

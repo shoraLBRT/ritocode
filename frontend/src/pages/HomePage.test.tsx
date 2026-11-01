@@ -99,12 +99,14 @@ describe('the arena', () => {
 
     const table = await screen.findByRole('table');
     expect(within(table).getAllByRole('row')).toHaveLength(5);
-    expect(within(table).queryByRole('columnheader', { name: ru.home.table.status })).not.toBeInTheDocument();
+    expect(within(table).queryByRole('columnheader', { name: ru.taskTable.status })).not.toBeInTheDocument();
 
-    within(screen.getByRole('group', { name: ru.home.table.filter })).getByRole('button', { name: /Сложная/ }).click();
+    within(screen.getByRole('group', { name: ru.tasks.difficultyFilter })).getByRole('button', { name: /Сложная/ }).click();
 
     expect(await within(table).findByRole('link', { name: 'Счета дизайн-студии' })).toBeInTheDocument();
     expect(within(table).getAllByRole('row')).toHaveLength(2);
+    // The rest of the list opens on the same tab.
+    expect(screen.getByRole('link', { name: ru.home.table.more })).toHaveAttribute('href', '/tasks?difficulty=hard');
   });
 
   it('asks a guest to sign in instead of showing progress', async () => {
@@ -117,8 +119,8 @@ describe('the arena', () => {
   it('shows a signed-in learner what is solved, their progress by class and their activity', async () => {
     renderApp(api({ signedIn: true }), '/');
 
-    expect(await screen.findByRole('columnheader', { name: ru.home.table.status })).toBeInTheDocument();
-    expect(await screen.findByRole('img', { name: ru.home.table.solved })).toBeInTheDocument();
+    expect(await screen.findByRole('columnheader', { name: ru.taskTable.status })).toBeInTheDocument();
+    expect(await screen.findByRole('img', { name: ru.taskTable.solved })).toBeInTheDocument();
     expect(await screen.findByText(ru.home.progress.note)).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Найдено 1 из 2' })).toBeInTheDocument();
     expect(await screen.findByText(ru.home.activity.noStreak)).toBeInTheDocument();

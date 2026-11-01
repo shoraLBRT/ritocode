@@ -29,9 +29,14 @@ function api(items: object[], { signedIn = true } = {}) {
   });
 }
 
-async function list() {
-  // The page's list, not the header's: a signed-out header lists the sign-in providers.
-  return within(await within(screen.getByRole('main')).findByRole('list'));
+/** The table's body rows, once the tasks have arrived. */
+async function rows() {
+  const table = await screen.findByRole('table');
+  return within(table).getAllByRole('row').slice(1);
+}
+
+function tab(group: string, name: RegExp) {
+  return within(screen.getByRole('group', { name: group })).getByRole('button', { name });
 }
 
 describe('the task catalogue', () => {
@@ -39,10 +44,10 @@ describe('the task catalogue', () => {
     const stub = api(tasks);
     renderApp(stub, '/tasks');
 
-    const items = (await list()).getAllByRole('listitem');
-    expect(items).toHaveLength(3);
-    expect(items[2]).toHaveTextContent(ru.tasks.difficulty.hard);
-    expect(items[2]).toHaveTextContent(ru.tasks.time.hard);
+    const body = await rows();
+    expect(body).toHaveLength(3);
+    expect(body[2]).toHaveTextContent(ru.tasks.difficulty.hard);
+    expect(body[2]).toHaveTextContent(ru.tasks.time.hard);
     expect(screen.getByRole('link', { name: 'Выручка цветочного магазина' })).toHaveAttribute('href', '/tasks/flower-shop');
 
     // The whole catalogue in one request.
@@ -52,35 +57,53 @@ describe('the task catalogue', () => {
   it('marks the tasks a signed-in learner solved, and filters by it', async () => {
     renderApp(api(tasks), '/tasks');
 
-    const solvedBadges = (await list()).getAllByText(ru.tasks.solved);
-    expect(solvedBadges).toHaveLength(1);
+    expect(await screen.findByRole('columnheader', { name: ru.taskTable.status })).toBeInTheDocument();
+    expect(screen.getAllByRole('img', { name: ru.taskTable.solved })).toHaveLength(1);
+    expect(tab(ru.tasks.statusFilter, /Нерешённые/)).toHaveTextContent('2');
 
-    fireEvent.change(screen.getByLabelText(ru.tasks.solvedFilter), { target: { value: 'unsolved' } });
+    fireEvent.click(tab(ru.tasks.statusFilter, /Нерешённые/));
 
-    expect((await list()).getAllByRole('listitem').map((item) => item.textContent)).not.toContain(
-      expect.stringContaining('Выручка цветочного магазина'),
-    );
+    expect(await rows()).toHaveLength(2);
+    expect(screen.queryByRole('link', { name: 'Выручка цветочного магазина' })).not.toBeInTheDocument();
     expect(screen.getByText('2 задачи')).toBeInTheDocument();
   });
 
-  it('filters by difficulty, and says when nothing is left', async () => {
+  it('filters by difficulty, counting each tab, and says when nothing is left', async () => {
     renderApp(api(tasks), '/tasks');
-    await list();
+    await rows();
 
-    fireEvent.change(screen.getByLabelText(ru.tasks.difficultyFilter), { target: { value: 'hard' } });
-    expect((await list()).getAllByRole('listitem')).toHaveLength(1);
+    expect(tab(ru.tasks.difficultyFilter, /Лёгкая/)).toHaveTextContent('2');
+    expect(tab(ru.tasks.difficultyFilter, /Средняя/)).toHaveTextContent('0');
+
+    fireEvent.click(tab(ru.tasks.difficultyFilter, /Сложная/));
+    expect(await rows()).toHaveLength(1);
     expect(screen.getByText('1 задача')).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText(ru.tasks.difficultyFilter), { target: { value: 'medium' } });
+    fireEvent.click(tab(ru.tasks.difficultyFilter, /Средняя/));
     expect(await screen.findByText(ru.tasks.noMatch)).toBeInTheDocument();
   });
 
-  it('offers no solved filter to a signed-out visitor, whom the API tells nothing about it', async () => {
-    renderApp(api(tasks.map((task) => ({ ...task, solved: null })), { signedIn: false }), '/tasks');
+  it('opens with the filters the address names, ignoring values it does not know', async () => {
+    renderApp(api(tasks), '/tasks?difficulty=easy&status=solved');
 
-    expect((await list()).getAllByRole('listitem')).toHaveLength(3);
-    expect(screen.queryByLabelText(ru.tasks.solvedFilter)).not.toBeInTheDocument();
-    expect(screen.queryByText(ru.tasks.solved)).not.toBeInTheDocument();
+    expect(await rows()).toHaveLength(1);
+    expect(tab(ru.tasks.difficultyFilter, /Лёгкая/)).toHaveAttribute('aria-pressed', 'true');
+    expect(tab(ru.tasks.statusFilter, /Решённые/)).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('shows every task when the address names a filter that does not exist', async () => {
+    renderApp(api(tasks), '/tasks?difficulty=impossible&status=maybe');
+
+    expect(await rows()).toHaveLength(3);
+    expect(tab(ru.tasks.difficultyFilter, new RegExp(`^${ru.tasks.all}`))).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('offers no status to a signed-out visitor, whom the API tells nothing about it', async () => {
+    renderApp(api(tasks.map((task) => ({ ...task, solved: null })), { signedIn: false }), '/tasks?status=solved');
+
+    expect(await rows()).toHaveLength(3);
+    expect(screen.queryByRole('group', { name: ru.tasks.statusFilter })).not.toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: ru.taskTable.status })).not.toBeInTheDocument();
   });
 
   it('says so when there are no tasks yet', async () => {
