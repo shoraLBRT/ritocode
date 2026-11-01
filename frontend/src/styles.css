@@ -407,14 +407,15 @@ code {
   margin: 0.25rem 0;
 }
 
-.button--primary {
+/* Two classes, so it outranks `.button`, which is declared further down. */
+.button.button--primary {
   border-color: var(--accent);
   background: var(--accent);
   color: var(--accent-ink);
   font-weight: 600;
 }
 
-.button--primary:hover {
+.button.button--primary:hover {
   filter: brightness(1.07);
 }
 
@@ -456,28 +457,228 @@ code {
 .code__token--decorator { color: var(--text-faint); }
 
 /* The landing page (SPEC §4.1): a short hero with the ways in, then prose. */
-.landing {
-  max-width: 46rem;
+/* The home page's layout (DESIGN.md › The home page): the lead and the daily task, then the task
+   table with an aside of progress and activity, which drops under the table on a phone. */
+.rc-arena {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
-.landing__lead {
-  font-size: 1.2rem;
+.rc-arena__top {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 20px;
 }
 
-.landing__actions {
+.rc-arena__hero {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 32px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.rc-arena__hero h1 {
+  margin: 0;
+  font-size: 2.1rem;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.rc-arena__lead {
+  max-width: 40rem;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 1.05rem;
+  line-height: 1.6;
+}
+
+.rc-arena__stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.rc-arena__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  margin-top: calc(var(--gap) * 1.5);
 }
 
-.landing__actions .button {
+.rc-arena__actions .button {
+  min-height: 2.5rem;
   padding: 0.5rem 1rem;
   text-decoration: none;
 }
 
-.landing__steps li + li {
-  margin-top: 0.5rem;
+.rc-arena__main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.rc-arena__tasks {
+  flex: 999 1 560px;
+  min-width: 0;
+}
+
+.rc-arena__aside {
+  display: flex;
+  flex: 1 1 300px;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.rc-arena__aside:empty {
+  display: none;
+}
+
+.rc-arena__card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.rc-arena__card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.rc-arena__panel-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.rc-arena__note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.rc-arena__empty {
+  margin: 0;
+  padding: 18px;
+  color: var(--text-muted);
+}
+
+.rc-arena__more {
+  padding: 12px 18px;
+  border-top: 1px solid var(--border);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.rc-arena__more a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.rc-arena__ring-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.rc-arena__bars {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8rem;
+}
+
+.rc-arena__bar-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 5px;
+  color: var(--text-muted);
+}
+
+.rc-arena__bar-count {
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.rc-arena__streak {
+  margin: 0;
+}
+
+.rc-arena__how h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.15rem;
+}
+
+.rc-arena__how ol {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+.rc-arena__how li {
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
+  counter-increment: step;
+}
+
+.rc-arena__how li::before {
+  content: counter(step);
+  display: block;
+  margin-bottom: 6px;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.rc-panel__bar .rc-arena__panel-title {
+  margin-right: auto;
+}
+
+@media (max-width: 64rem) {
+  .rc-arena__top {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 30rem) {
+  .rc-arena__hero {
+    padding: 20px;
+  }
+
+  .rc-arena__hero h1 {
+    font-size: 1.6rem;
+  }
+
+  .rc-arena__stats {
+    gap: 8px;
+  }
 }
 
 /* The signal under an extra pick (SPEC §4.8): a button, then a one-line comment. */
@@ -1101,6 +1302,7 @@ pre {
 /* A filter of two to five exclusive options, such as difficulty. */
 .rc-tabs {
   display: inline-flex;
+  max-width: 100%;
   gap: 2px;
   padding: 4px;
   border-radius: var(--radius);
@@ -1109,7 +1311,9 @@ pre {
 
 .rc-tab {
   display: inline-flex;
+  flex: none;
   align-items: center;
+  white-space: nowrap;
   gap: 6px;
   height: 32px;
   padding: 0 12px;
@@ -1265,15 +1469,6 @@ pre {
   background: currentColor;
 }
 
-/* What stands where classes are hidden. */
-.rc-spoiler {
-  display: inline-block;
-  width: 88px;
-  height: 20px;
-  border-radius: 5px;
-  background: repeating-linear-gradient(-45deg, var(--surface-sunken) 0 6px, var(--surface-muted) 6px 12px);
-}
-
 .rc-status {
   display: inline-flex;
   flex: none;
@@ -1318,13 +1513,14 @@ pre {
 
 .rc-task-table {
   width: 100%;
-  min-width: 640px;
+  min-width: 26rem;
   border-collapse: collapse;
   font-size: 0.875rem;
 }
 
 .rc-task-table th {
   padding: 10px 8px;
+  white-space: nowrap;
   border-bottom: 1px solid var(--border);
   background: var(--surface-muted);
   color: var(--text-faint);
@@ -1368,16 +1564,32 @@ pre {
   color: var(--accent);
 }
 
-.rc-task-table__material {
-  color: var(--text-faint);
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  white-space: nowrap;
-}
-
 .rc-task-table__number {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
+}
+
+.rc-task-table__time {
+  white-space: nowrap;
+}
+
+/* On a phone the time goes: the difficulty already says it. */
+@media (max-width: 30rem) {
+  .rc-tabs {
+    flex-wrap: wrap;
+  }
+
+  .rc-tab {
+    padding: 0 8px;
+  }
+
+  .rc-task-table {
+    min-width: 0;
+  }
+
+  .rc-task-table__time {
+    display: none;
+  }
 }
 
 /* The daily task: the page's one spotlight. */
@@ -1483,6 +1695,7 @@ pre {
 }
 
 .rc-bar {
+  display: block;
   height: 6px;
   border-radius: 999px;
   background: var(--surface-sunken);

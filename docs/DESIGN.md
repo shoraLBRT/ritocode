@@ -138,14 +138,14 @@ above. What the site already had stays as it is.
 | Toggle | `button.rc-toggle[aria-pressed]` › `.rc-toggle__track` | a display setting that applies at once |
 | Search | `label.rc-search` › `input`, `.rc-kbd` | the header's search over tasks and problems |
 | Difficulty | `.rc-difficulty--easy` / `--medium` / `--hard` | always a word, on the state colours |
-| Problem class | `.rc-class.k-{class}`; `.rc-spoiler` where classes are hidden | the class colour is for classes only |
+| Problem class | `.rc-class.k-{class}` | the class colour is for classes only; never on a task |
 | Status | `.rc-status--done` / `--tried` / `--todo` | with an `aria-label` in words |
 | Stat | `.rc-stat` › `.rc-stat__value`, `.rc-stat__label` | real counts only |
-| Task table | `table.rc-task-table`, `__title`, `__material`, `__number` | status · title · material · findings · difficulty; scrolls in `.table-scroll` |
+| Task table | `table.rc-task-table`, `__title`, `__time`, `__number` | status (signed in) · title · time · difficulty; the time column goes on a phone; scrolls in `.table-scroll` |
 | Daily task | `.rc-daily` › `__top`, `__title`, `__meta`, `__chip`, `__code`, `__action` | one per page |
 | Progress | `.rc-ring` (`--p`), `.rc-ring__hole`, `__value`, `__of`; `.rc-bar.k-{class}` (`--p`) | `--p` is a percentage, 0–100 |
 | Activity | `.rc-heat` › `.rc-heat__cell[data-level=0–4]` | a column per week; `aria-hidden`, the streak says it in words |
 | Streak, avatar | `.rc-streak`, `.rc-avatar` | the header's right end |
 
-A task with no findings shows «чисто?» in the findings column, not 0. Classes stay off the task
-list (SPEC §4.3); the arena's opt-in toggle for them waits on the maintainer's answer in #190.
+The list shows no number of findings: a clean task would read as «0» and give itself away. Classes
+never appear on the task list (SPEC §4.3) — the concept's opt-in toggle for them was turned down in #190.

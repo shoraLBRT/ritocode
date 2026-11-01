@@ -5,7 +5,7 @@ import type { ProblemCatalogue } from '../api';
 import { AppLayout } from '../components/AppLayout';
 import { I18nProvider, ru, translate } from '../i18n';
 import type { Translate } from '../i18n';
-import { HomePage } from '../pages/HomePage';
+import { StaticHomePage } from '../pages/HomePage';
 import { PrivacyPage } from '../pages/PrivacyPage';
 import { StaticProblemsPage } from '../pages/ProblemsPage';
 import { SessionProvider } from '../session';
@@ -91,7 +91,7 @@ function Page({ path, content, config }: { path: string; content: ContentExport;
             <StaticRouter location={path}>
               <Routes>
                 <Route path="/" element={<AppLayout />}>
-                  <Route index element={<HomePage />} />
+                  <Route index element={<StaticHomePage catalogue={content.problems} />} />
                   <Route path="problems" element={<StaticProblemsPage catalogue={content.problems} />} />
                   <Route path="privacy" element={<PrivacyPage />} />
                 </Route>
