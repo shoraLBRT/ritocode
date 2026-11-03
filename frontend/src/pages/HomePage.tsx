@@ -1,17 +1,17 @@
 import { useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Link } from 'react-router';
-import { getProblemCatalogue, getProgress, listAttempts, listTasks, useApiClient } from '../api';
+import { difficulties, getProblemCatalogue, getProgress, listAttempts, listTasks, useApiClient } from '../api';
 import type { ApiClient, AttemptSummary, Difficulty, ProblemCatalogue, Progress, TaskSummary } from '../api';
 import { ErrorState } from '../components/ErrorState';
 import { LoadingState } from '../components/LoadingState';
+import { Tabs, TaskTable } from '../components/TaskTable';
 import { useApiResource } from '../hooks/useApiResource';
 import { useT } from '../i18n';
 import { useSession } from '../session';
 import { SignInLinks } from '../session/SignInLinks';
 import { useSiteConfig } from '../site';
 import { activity, activityLevel, activitySince, dailyTask } from './home/arena';
-import { Icon } from './task/parts';
 
 /**
  * `/` — the arena (docs/SPEC.md §4.1, ADR 0015, DESIGN.md › The arena): what Ritocode teaches with
@@ -33,8 +33,6 @@ export function HomePage() {
 export function StaticHomePage({ catalogue }: { catalogue: ProblemCatalogue }) {
   return <Arena catalogue={catalogue} />;
 }
-
-const difficulties: readonly Difficulty[] = ['easy', 'medium', 'hard'];
 
 /** How many tasks the home page lists; the rest are a link away. */
 const LISTED_TASKS = 8;
@@ -86,7 +84,7 @@ function Arena({ catalogue }: { catalogue: ProblemCatalogue | null }) {
         <div className="rc-panel rc-arena__tasks">
           {tasks.state.status === 'loading' && <LoadingState label={t('home.table.loading')} />}
           {tasks.state.status === 'error' && <ErrorState error={tasks.state.error} onRetry={tasks.reload} />}
-          {taskList !== null && <TaskTable tasks={taskList} />}
+          {taskList !== null && <HomeTasks tasks={taskList} />}
         </div>
 
         <aside className="rc-arena__aside">
@@ -158,10 +156,10 @@ function DailyTask({ task, loading }: { task: TaskSummary | null; loading: boole
 }
 
 /**
- * The first tasks of the catalogue, in the API's order, with difficulty tabs. No classes: they would
- * give the answer away (SPEC §4.3). The status column is there only for a signed-in learner.
+ * The first tasks of the catalogue, in the API's order, with difficulty tabs; the rest are on
+ * `/tasks`, which the link opens on the same tab.
  */
-function TaskTable({ tasks }: { tasks: readonly TaskSummary[] }) {
+function HomeTasks({ tasks }: { tasks: readonly TaskSummary[] }) {
   const t = useT();
   const [difficulty, setDifficulty] = useState<Difficulty | 'all'>('all');
 
@@ -169,7 +167,6 @@ function TaskTable({ tasks }: { tasks: readonly TaskSummary[] }) {
     return <p className="rc-arena__empty">{t('home.table.empty')}</p>;
   }
 
-  const signedIn = tasks.some((task) => task.solved !== null);
   const shown = tasks.filter((task) => difficulty === 'all' || task.difficulty === difficulty).slice(0, LISTED_TASKS);
   const count = (value: Difficulty | 'all') => tasks.filter((task) => value === 'all' || task.difficulty === value).length;
 
@@ -177,67 +174,22 @@ function TaskTable({ tasks }: { tasks: readonly TaskSummary[] }) {
     <>
       <div className="rc-panel__bar">
         <h2 className="rc-arena__panel-title">{t('home.table.title')}</h2>
-        <div className="rc-tabs" role="group" aria-label={t('home.table.filter')}>
-          {(['all', ...difficulties] as const).map((value) => (
-            <button
-              key={value}
-              type="button"
-              className="rc-tab"
-              aria-pressed={difficulty === value}
-              onClick={() => {
-                setDifficulty(value);
-              }}
-            >
-              {value === 'all' ? t('home.table.all') : t(`tasks.difficulty.${value}`)}
-              <span className="rc-tab__count">{count(value)}</span>
-            </button>
-          ))}
-        </div>
+        <Tabs
+          label={t('tasks.difficultyFilter')}
+          options={(['all', ...difficulties] as const).map((value) => ({
+            value,
+            label: value === 'all' ? t('tasks.all') : t(`tasks.difficulty.${value}`),
+            count: count(value),
+          }))}
+          value={difficulty}
+          onChange={setDifficulty}
+        />
       </div>
 
-      <div className="table-scroll">
-        <table className="rc-task-table">
-          <thead>
-            <tr>
-              {signedIn && <th scope="col">{t('home.table.status')}</th>}
-              <th scope="col">{t('home.table.task')}</th>
-              <th scope="col" className="rc-task-table__time">
-                {t('home.table.time')}
-              </th>
-              <th scope="col">{t('home.table.difficulty')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {shown.map((task) => (
-              <tr key={task.slug}>
-                {signedIn && (
-                  <td>
-                    {task.solved === true ? (
-                      <span className="rc-status rc-status--done" role="img" aria-label={t('home.table.solved')}>
-                        <Icon name="check" />
-                      </span>
-                    ) : (
-                      <span className="rc-status rc-status--todo" role="img" aria-label={t('home.table.unsolved')} />
-                    )}
-                  </td>
-                )}
-                <td>
-                  <Link className="rc-task-table__title" to={`/tasks/${task.slug}`}>
-                    {task.title}
-                  </Link>
-                </td>
-                <td className="rc-task-table__time">{t(`tasks.time.${task.difficulty}`)}</td>
-                <td>
-                  <span className={`rc-difficulty rc-difficulty--${task.difficulty}`}>{t(`tasks.difficulty.${task.difficulty}`)}</span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <TaskTable tasks={shown} />
 
       <div className="rc-arena__more">
-        <Link to="/tasks">{t('home.table.more')}</Link>
+        <Link to={difficulty === 'all' ? '/tasks' : `/tasks?difficulty=${difficulty}`}>{t('home.table.more')}</Link>
       </div>
     </>
   );

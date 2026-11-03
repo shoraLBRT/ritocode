@@ -323,46 +323,6 @@ code {
   font-size: 0.875rem;
 }
 
-.task-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.task-list__item {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.35rem var(--gap);
-  padding: 0.75rem var(--gap);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
-}
-
-.task-list__title {
-  color: var(--text);
-  font-weight: 600;
-}
-
-.task-list__meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--text-muted);
-  font-size: 0.875rem;
-}
-
-.badge--done {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
 .problem-class {
   margin-top: calc(var(--gap) * 2);
 }
@@ -659,6 +619,35 @@ code {
 
 .rc-panel__bar .rc-arena__panel-title {
   margin-right: auto;
+}
+
+/* A list page in the arena (/tasks): its heading and lead above the panel. */
+.rc-page-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rc-page-head h1 {
+  margin: 0;
+  font-size: 1.75rem;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.rc-page-head p {
+  max-width: 46rem;
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+/* The filters of a list page's panel bar: groups of tabs side by side, wrapping on a phone. */
+.rc-list-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  min-width: 0;
 }
 
 @media (max-width: 64rem) {

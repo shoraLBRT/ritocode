@@ -123,6 +123,21 @@ its token names are its own, and where it differs from this document, this docum
   drops under the table at phone width.
 - Signed out, the same page: the personal parts give way to a sign-in prompt and the demo task.
 
+### The task list
+
+`/tasks` ([#193](https://github.com/shoraLBRT/ritocode/issues/193)) is the home page's task table at
+full length:
+
+- A heading and the lead above the panel (`rc-page-head`), no hero card and no aside.
+- The panel's bar holds the filters (`rc-list-filters`): difficulty tabs, and for a signed-in learner
+  *Все / Нерешённые / Решённые*; each tab's count is what it would show under the other filter. The
+  number of tasks shown sits at the bar's right end.
+- Every task, in the API's order, in the same table as the home page — one component,
+  `components/TaskTable.tsx`. Classes and the number of findings never appear, as on the home page.
+- The filters live in the address (`?difficulty=hard&status=unsolved`), so the way back from a task
+  keeps them; the home page's link to the list carries its difficulty tab.
+- On a phone the tab groups wrap, and the table loses its time column like the home page's.
+
 ### Components
 
 Everything the arena adds is a class prefixed `rc-` in `frontend/src/styles.css`, on the tokens
@@ -141,7 +156,9 @@ above. What the site already had stays as it is.
 | Problem class | `.rc-class.k-{class}` | the class colour is for classes only; never on a task |
 | Status | `.rc-status--done` / `--tried` / `--todo` | with an `aria-label` in words |
 | Stat | `.rc-stat` › `.rc-stat__value`, `.rc-stat__label` | real counts only |
-| Task table | `table.rc-task-table`, `__title`, `__time`, `__number` | status (signed in) · title · time · difficulty; the time column goes on a phone; scrolls in `.table-scroll` |
+| Task table | `table.rc-task-table`, `__title`, `__time`, `__number` | status (signed in) · title · time · difficulty; the time column goes on a phone; scrolls in `.table-scroll`. The `TaskTable` component |
+| List page head | `.rc-page-head` › `h1`, `p` | a list page's heading and lead, above its panel |
+| List filters | `.rc-list-filters` › `.rc-tabs` | the groups of tabs in a list panel's bar, wrapping on a phone |
 | Daily task | `.rc-daily` › `__top`, `__title`, `__meta`, `__chip`, `__code`, `__action` | one per page |
 | Progress | `.rc-ring` (`--p`), `.rc-ring__hole`, `__value`, `__of`; `.rc-bar.k-{class}` (`--p`) | `--p` is a percentage, 0–100 |
 | Activity | `.rc-heat` › `.rc-heat__cell[data-level=0–4]` | a column per week; `aria-hidden`, the streak says it in words |
