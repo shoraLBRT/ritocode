@@ -87,7 +87,7 @@ describe('a completed sign-in', () => {
 
     renderApp(api(true), '/privacy');
 
-    expect(await screen.findByText(ru.session.signedInAs.replace('{username}', 'developer'))).toBeInTheDocument();
+    expect(await screen.findByLabelText(ru.header.profile.replace('{username}', 'developer'))).toBeInTheDocument();
     expect(umami.track).toHaveBeenCalledWith('sign-in-completed', { provider: 'google' });
     expect(sessionStorage.length).toBe(0);
   });
@@ -99,7 +99,7 @@ describe('a completed sign-in', () => {
 
     renderApp(api(false), '/privacy');
 
-    expect(await screen.findByText(ru.session.signedOut)).toBeInTheDocument();
+    expect(await screen.findByText(ru.session.signIn)).toBeInTheDocument();
     expect(umami.track).not.toHaveBeenCalledWith('sign-in-completed', expect.anything());
     expect(sessionStorage.length).toBe(0);
   });

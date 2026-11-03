@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Link } from 'react-router';
-import { difficulties, getProblemCatalogue, getProgress, listAttempts, listTasks, useApiClient } from '../api';
-import type { ApiClient, AttemptSummary, Difficulty, ProblemCatalogue, Progress, TaskSummary } from '../api';
+import { difficulties, getProblemCatalogue, getProgress, listAttemptsSince, listTasks, useApiClient } from '../api';
+import type { AttemptSummary, Difficulty, ProblemCatalogue, Progress, TaskSummary } from '../api';
 import { ErrorState } from '../components/ErrorState';
 import { LoadingState } from '../components/LoadingState';
 import { Tabs, TaskTable } from '../components/TaskTable';
@@ -257,7 +257,7 @@ function ProgressBody({ progress }: { progress: Progress }) {
 function ActivityCard({ now }: { now: Date }) {
   const client = useApiClient();
   const t = useT();
-  const { state, reload } = useApiResource((signal) => recentAttempts(client, activitySince(now), signal), [client, now]);
+  const { state, reload } = useApiResource((signal) => listAttemptsSince(client, activitySince(now), signal), [client, now]);
 
   return (
     <section className="rc-arena__card" aria-labelledby="home-activity">
@@ -305,21 +305,6 @@ function GuestCard() {
       <SignInLinks returnPath="/" />
     </section>
   );
-}
-
-/** The caller's attempts since `since`, newest first, read a hundred at a time until older ones start. */
-async function recentAttempts(client: ApiClient, since: Date, signal: AbortSignal): Promise<AttemptSummary[]> {
-  const attempts: AttemptSummary[] = [];
-
-  for (let page = 1; ; page += 1) {
-    const result = await listAttempts(client, { page, pageSize: 100 }, signal);
-    attempts.push(...result.items);
-    const oldest = result.items.at(-1);
-
-    if (!result.hasNextPage || oldest === undefined || new Date(oldest.startedAt) < since) {
-      return attempts;
-    }
-  }
 }
 
 function percent(part: number, whole: number): number {

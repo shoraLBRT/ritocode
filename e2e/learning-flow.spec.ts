@@ -22,7 +22,7 @@ const missedCard = 'Деньги во float';
 test('a visitor solves a task signed out, signs in on Check, and sees the review and the progress', async ({ page }) => {
   await test.step('opens the task signed out', async () => {
     await page.goto(`/tasks/${task}`);
-    await expect(page.getByText(t('session.signedOut'))).toBeVisible();
+    await expect(page.getByRole('banner').getByText(t('session.signIn'), { exact: true })).toBeVisible();
   });
 
   await test.step('picks a card at step 1', async () => {
@@ -49,7 +49,7 @@ test('a visitor solves a task signed out, signs in on Check, and sees the review
 
   await test.step('comes back signed in, to the review of that answer', async () => {
     await expect(page).toHaveURL(new RegExp(`/tasks/${task}/attempts/[0-9a-f-]{36}$`));
-    await expect(page.getByText(/^Вы вошли как e2e-learner-/)).toBeVisible();
+    await expect(page.getByLabel(/^Профиль e2e-learner-/)).toBeVisible();
     await expect(page.getByText(t('review.composition', { found: 1, present: 2, extra: 0, matched: 1 }))).toBeVisible();
     await expect(page.getByText(card).first()).toBeVisible();
     await expect(page.getByText(missedCard).first()).toBeVisible();

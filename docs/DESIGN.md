@@ -62,7 +62,7 @@ Colour never carries meaning alone: an outcome has a mark and a word, a class it
 
 - **Header**: the brand (a link home) on the left; **the steps** *Диагноз → Лечение → Разбор* at
   the centre, with what is done in each (cards picked, findings treated); the theme toggle and the
-  session on the right. The site navigation is not shown here.
+  session on the right. The sections and the search are not shown here.
 - **Sidebar, 40%**: the **context** card — the title, the agent's brief always, and on expanding the
   path, difficulty and the context itself (open on step 1, folded from step 2 on) — and below it
   **the step at hand**.
@@ -114,8 +114,20 @@ its token names are its own, and where it differs from this document, this docum
 
 ### The home page
 
-- The header: the brand, the sections (Задачи, Каталог проблем, Прогресс), the search, then the
-  streak and the avatar — or *Войти* and *Начать* for a guest.
+- The header, on every page but the task workspace
+  ([#195](https://github.com/shoraLBRT/ritocode/issues/195)): the brand (the way home), the sections
+  (Задачи, Каталог проблем; Прогресс for a learner, Админка for an admin), the search, the theme
+  toggle, then the streak and the avatar — or *Войти* and *Начать* (the demo task) for a guest.
+  - **The search** («Задачи и проблемы», `Ctrl K` / `⌘K` from anywhere) is a combobox: as the
+    learner types, up to five tasks by title and five problems by name, keywords and summary, ranked
+    by the task screen's search, in two groups. Arrow keys move, Enter opens the task or the
+    problem's anchor in `/problems`, Escape closes. The lists are read on the first focus.
+  - **The streak** is «N дн.», named in full for a screen reader; read again on each page change.
+  - **The avatar** is the username's first letter; it opens a menu with the username and *Выйти*.
+    *Войти* opens the providers with the sign-in notice, as before.
+  - At phone width the header wraps: brand and sections, then the toggle and the session, then the
+    search on a line of its own, without the shortcut. The design system's menu for the sections
+    and the search folded to an icon were not needed at 375 px.
 - A row of two: a card with the lead and the real counts (`rc-stat`), and the **daily task**
   (`rc-daily`) — the page's only `--spotlight`.
 - Below, the **task table** (`rc-panel` › `rc-task-table`) with difficulty tabs, and beside it an
@@ -151,7 +163,7 @@ above. What the site already had stays as it is.
 | Panel | `.rc-panel`, `.rc-panel__bar` | a page's large card: the table with its toolbar |
 | Segmented tabs | `.rc-tabs` › `button.rc-tab[aria-pressed]`, `.rc-tab__count` | a filter of 2–5 options, such as difficulty |
 | Toggle | `button.rc-toggle[aria-pressed]` › `.rc-toggle__track` | a display setting that applies at once |
-| Search | `label.rc-search` › `input`, `.rc-kbd` | the header's search over tasks and problems |
+| Search | `label.rc-search` › `input`, `.rc-kbd` | the header's search over tasks and problems (`HeaderSearch`), its list in `.app__search-popup` |
 | Difficulty | `.rc-difficulty--easy` / `--medium` / `--hard` | always a word, on the state colours |
 | Problem class | `.rc-class.k-{class}` | the class colour is for classes only; never on a task |
 | Status | `.rc-status--done` / `--tried` / `--todo` | with an `aria-label` in words |
@@ -162,7 +174,7 @@ above. What the site already had stays as it is.
 | Daily task | `.rc-daily` › `__top`, `__title`, `__meta`, `__chip`, `__code`, `__action` | one per page |
 | Progress | `.rc-ring` (`--p`), `.rc-ring__hole`, `__value`, `__of`; `.rc-bar.k-{class}` (`--p`) | `--p` is a percentage, 0–100 |
 | Activity | `.rc-heat` › `.rc-heat__cell[data-level=0–4]` | a column per week; `aria-hidden`, the streak says it in words |
-| Streak, avatar | `.rc-streak`, `.rc-avatar` | the header's right end |
+| Streak, avatar | `.rc-streak`, `.rc-avatar` | the header's right end (`HeaderStreak`; the avatar opens `.app__menu`) |
 
 The list shows no number of findings: a clean task would read as «0» and give itself away. Classes
 never appear on the task list (SPEC §4.3) — the concept's opt-in toggle for them was turned down in #190.

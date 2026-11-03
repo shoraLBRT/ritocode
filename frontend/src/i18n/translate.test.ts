@@ -11,15 +11,15 @@ const withPlural = {
 
 describe('translate', () => {
   it('reads a message by its dotted key', () => {
-    expect(translate(ru, 'ru', 'nav.home')).toBe(ru.nav.home);
+    expect(translate(ru, 'ru', 'nav.tasks')).toBe(ru.nav.tasks);
   });
 
   it('fills placeholders', () => {
-    expect(translate(ru, 'ru', 'session.signedInAs', { username: 'developer' })).toBe('Вы вошли как developer');
+    expect(translate(ru, 'ru', 'header.profile', { username: 'developer' })).toBe('Профиль developer');
   });
 
   it('leaves a placeholder it was given no value for, so the gap is visible', () => {
-    expect(translate(ru, 'ru', 'session.signedInAs')).toBe('Вы вошли как {username}');
+    expect(translate(ru, 'ru', 'header.profile')).toBe('Профиль {username}');
   });
 
   it('formats a number by the locale', () => {

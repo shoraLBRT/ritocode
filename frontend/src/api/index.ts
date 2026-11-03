@@ -14,6 +14,7 @@ export {
   listAdminSignals,
   listAdminUsers,
   listAttempts,
+  listAttemptsSince,
   listModules,
   listTasks,
   recordStep,
