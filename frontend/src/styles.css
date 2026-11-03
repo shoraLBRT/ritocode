@@ -194,6 +194,15 @@ code {
   justify-content: center;
 }
 
+/* Only the workspace fills the centre; elsewhere the search and the session take the room. */
+.app:not(.app--workspace) .app__header {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.app:not(.app--workspace) .app__header-center {
+  display: none;
+}
+
 .app__header-end {
   display: flex;
   flex-wrap: wrap;
@@ -866,33 +875,104 @@ code {
   font-size: 0.875rem;
 }
 
-.app__sign-in {
+.app__menu {
   position: relative;
 }
 
-.app__sign-in > summary {
+.app__menu > summary {
   list-style: none;
+  cursor: pointer;
 }
 
-.app__sign-in > summary::-webkit-details-marker {
+.app__menu > summary::-webkit-details-marker {
   display: none;
 }
 
-.app__sign-in-menu {
+/* A header menu: the providers for a guest, the username and the way out for a learner. */
+.app__menu-popup {
   position: absolute;
   right: 0;
-  z-index: 2;
+  z-index: 3;
   width: max-content;
+  min-width: 12rem;
   max-width: min(24rem, calc(100vw - 2 * var(--gap)));
   margin-top: 0.25rem;
   padding: 0.75rem;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
+  box-shadow: var(--shadow-pop);
+}
+
+.app__avatar-button {
+  display: block;
+  border-radius: 50%;
+}
+
+.app__menu-user {
+  margin: 0 0 0.5rem;
+  color: var(--text);
+  font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 .app__session-error {
+  margin: 0.5rem 0 0;
   color: var(--danger);
+}
+
+/* The header's search (docs/DESIGN.md › The arena): the field, and below it what it found. */
+.app__search {
+  position: relative;
+  flex: 0 1 280px;
+  min-width: 10rem;
+}
+
+.app__search-popup {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 3;
+  width: max(100%, min(24rem, calc(100vw - 2 * var(--gap))));
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-pop);
+}
+
+.app__search-popup ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.app__search-group {
+  padding: 6px 8px 2px;
+  color: var(--text-faint);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.app__search-option {
+  padding: 6px 8px;
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.app__search-option:hover,
+.app__search-option[aria-selected='true'] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.app__search-note {
+  margin: 0;
+  padding: 6px 8px;
+  color: var(--text-muted);
+  font-size: 0.875rem;
 }
 
 .sign-in-links {
@@ -984,15 +1064,31 @@ code {
     justify-content: flex-start;
   }
 
-  .app__sign-in {
+  .app__menu {
     position: static;
   }
 
-  .app__sign-in-menu {
+  .app__menu-popup {
     left: 0;
     right: 0;
     width: auto;
     max-width: none;
+  }
+
+  /* The search takes a line of its own, below the session; what it found spans that line. */
+  .app__search {
+    order: 1;
+    flex: 1 1 100%;
+  }
+
+  .app__search-popup {
+    left: 0;
+    width: auto;
+  }
+
+  /* A phone has no keyboard to press it on. */
+  .app__search .rc-kbd {
+    display: none;
   }
 
   .notice--error {
@@ -1732,6 +1828,12 @@ pre {
   font-family: var(--font-mono);
   font-size: 0.8rem;
   font-weight: 600;
+}
+
+.rc-streak .icon {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.2;
 }
 
 .rc-avatar {

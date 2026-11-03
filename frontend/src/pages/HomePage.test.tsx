@@ -132,6 +132,6 @@ describe('the arena', () => {
     screen.getByRole('link', { name: ru.home.demo }).click();
 
     expect(await screen.findByRole('heading', { level: 1, name: task.title })).toBeInTheDocument();
-    expect(await screen.findByText(ru.session.signedOut)).toBeInTheDocument();
+    expect(await within(screen.getByRole('banner')).findByText(ru.session.signIn)).toBeInTheDocument();
   });
 });

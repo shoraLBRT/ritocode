@@ -66,6 +66,24 @@ export function listAttempts(
   return client.request<Page<AttemptSummary>>('/attempts', { query: { ...query }, ...(signal ? { signal } : {}) });
 }
 
+/**
+ * The caller's attempts started since `since`, newest first, read a hundred at a time until older
+ * ones start — what the activity map and the streak are counted from.
+ */
+export async function listAttemptsSince(client: ApiClient, since: Date, signal?: AbortSignal): Promise<AttemptSummary[]> {
+  const attempts: AttemptSummary[] = [];
+
+  for (let page = 1; ; page += 1) {
+    const result = await listAttempts(client, { page, pageSize: 100 }, signal);
+    attempts.push(...result.items);
+    const oldest = result.items.at(-1);
+
+    if (!result.hasNextPage || oldest === undefined || new Date(oldest.startedAt) < since) {
+      return attempts;
+    }
+  }
+}
+
 /** `POST /attempts` — starts an attempt at a published task. */
 export function startAttempt(client: ApiClient, task: string): Promise<Attempt> {
   return client.request<Attempt>('/attempts', { method: 'POST', body: { task } });

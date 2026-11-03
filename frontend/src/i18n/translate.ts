@@ -27,7 +27,7 @@ type Widen<T> = {
   readonly [K in keyof T]: T[K] extends string ? string : T[K] extends PluralForms ? PluralForms : Widen<T[K]>;
 };
 
-/** Every key the catalogue has, as a dotted path: `'nav.home'`, `'session.signedInAs'`. */
+/** Every key the catalogue has, as a dotted path: `'nav.tasks'`, `'header.profile'`. */
 export type MessageKey = Paths<typeof ru>;
 
 type Paths<T> = {

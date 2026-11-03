@@ -73,16 +73,32 @@ describe('the application shell', () => {
     expect(screen.getByRole('heading', { level: 1, name: ru.notFound.title })).toBeInTheDocument();
   });
 
-  it('names the signed-in learner in the header', async () => {
+  it('names the signed-in learner in the header, by the avatar and in its menu', async () => {
     renderApp(api(), '/privacy');
 
-    expect(await screen.findByText('Вы вошли как developer')).toBeInTheDocument();
+    const header = within(screen.getByRole('banner'));
+    const avatar = await header.findByLabelText('Профиль developer');
+    expect(avatar).toHaveTextContent('D');
+    expect(avatar.closest('details')).not.toHaveAttribute('open');
+    fireEvent.click(avatar);
+    expect(avatar.closest('details')).toHaveAttribute('open');
+    expect(header.getByText('developer')).toBeInTheDocument();
   });
 
-  it('says in the header when nobody is signed in', async () => {
+  it('offers a visitor a way in and a way to start: the demo task', async () => {
     renderApp(api({ signedIn: false }), '/privacy');
 
-    expect(await screen.findByText(ru.session.signedOut)).toBeInTheDocument();
+    const header = within(screen.getByRole('banner'));
+    expect(await header.findByText(ru.session.signIn)).toBeInTheDocument();
+    expect(header.getByRole('link', { name: ru.header.start })).toHaveAttribute('href', '/tasks/demo-task');
+  });
+
+  it('lists the sections, the brand being the way home', () => {
+    renderApp(api(), '/privacy');
+
+    const nav = within(screen.getByRole('navigation', { name: ru.nav.label }));
+    expect(nav.getAllByRole('link').map((link) => link.textContent)).toEqual([ru.nav.tasks, ru.nav.problems]);
+    expect(screen.getByRole('link', { name: ru.app.name })).toHaveAttribute('href', '/');
   });
 });
 
@@ -152,9 +168,10 @@ describe('signing in and out from the header', () => {
     });
     renderApp(stub, '/privacy');
 
-    fireEvent.click(await screen.findByRole('button', { name: ru.session.signOut }));
+    fireEvent.click(await screen.findByLabelText('Профиль developer'));
+    fireEvent.click(screen.getByRole('button', { name: ru.session.signOut }));
 
-    expect(await screen.findByText(ru.session.signedOut)).toBeInTheDocument();
+    expect(await screen.findByText(ru.session.signIn)).toBeInTheDocument();
     expect(calls).toContain('POST http://api.test/auth/logout');
     expect(screen.queryByRole('link', { name: ru.nav.progress })).not.toBeInTheDocument();
   });
