@@ -4,7 +4,7 @@
 in the same pull request as the work it describes — a session that skips this makes the next one
 start from nothing.
 
-- **Last updated:** 2026-11-03
+- **Last updated:** 2026-11-04
 - **Current stage:** S7 · Production — its engineering can be built against a local stack (#135's
   Compose file, #136's release command, #34's monitor, #41); the real checks wait on the VPS and domain of #134.
   S6 closed with #133: `/` and `/problems` read without JavaScript (#132), and every listed event
@@ -151,7 +151,10 @@ moved on 2026-11-01 ([#193](https://github.com/shoraLBRT/ritocode/issues/193)), 
 and the rest of the interface text moving to «ты» — the header moved on 2026-11-03
 ([#195](https://github.com/shoraLBRT/ritocode/issues/195)), with its search, streak and avatar. DESIGN.md does
 not yet lay out `/problems` or `/progress`: each needs the maintainer's choice of layout before it is
-built.
+built. On 2026-11-04 the maintainer clicked through the arena and the task screen; the feedback is
+eight issues, #197–#204, ordered in [ROADMAP.md](ROADMAP.md) › The arena — they are what a coding
+session takes next, surface contrast (#197) first; the workspace layout, the catalogue and progress
+start with mock-ups.
 
 ## Open questions
 

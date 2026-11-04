@@ -184,3 +184,27 @@ without them.
 #137 is the launch criterion itself: the maintainer and two acquaintances solve the 20 tasks on
 the production site, and the journal of their attempts is used to correct the size bands and the
 scoring parameters in [`SPEC.md`](SPEC.md).
+
+---
+
+## The arena: the maintainer's feedback of 2026-11-04
+
+Not a stage of the MVP's critical path: the polish of the arena (DESIGN.md › The arena, ADR 0014)
+after the maintainer clicked through `/`, `/tasks` and a task. A coding session takes these while
+every open issue of S0–S8 waits on #134 or on content, in the order below. Those marked *design
+first* start with mock-ups for the maintainer and build only once a layout is chosen.
+
+| Issue | Title | Depends on | Priority | Size |
+| --- | --- | --- | --- | --- |
+| [#197](https://github.com/shoraLBRT/ritocode/issues/197) | Surfaces that separate: contrast between page, cards and panels | — | P1 | S |
+| [#198](https://github.com/shoraLBRT/ritocode/issues/198) | Task workspace: rethink the layout so the step at hand gets the room — *design first* | #197 | P1 | L |
+| [#199](https://github.com/shoraLBRT/ritocode/issues/199) | Review: try-again up front, and the header's sections on the workspace | #198 | P1 | S |
+| [#200](https://github.com/shoraLBRT/ritocode/issues/200) | Home page: suggested tasks and problems instead of the full task table | #197 | P1 | M |
+| [#201](https://github.com/shoraLBRT/ritocode/issues/201) | Daily task: a countdown, and a start label for the whole task | — | P2 | XS |
+| [#202](https://github.com/shoraLBRT/ritocode/issues/202) | Problem catalogue as class-coloured cards — *design first* | #197 | P1 | M |
+| [#203](https://github.com/shoraLBRT/ritocode/issues/203) | Progress and admin pages in the arena's style — *design first* | #197 | P2 | M |
+| [#204](https://github.com/shoraLBRT/ritocode/issues/204) | Design: studying problems as a use case with its own progress | — | P2 | M |
+
+- **#197 first**: every later page is built on the surface levels it adds.
+- **#204 is a decision, not code**: it ends in an ADR and the issues it leads to; until then
+  #202 builds the catalogue as a reference.
