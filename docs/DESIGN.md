@@ -106,7 +106,8 @@ its token names are its own, and where it differs from this document, this docum
 
 ### Voice
 
-- The learner is «ты», as a colleague on a review: «Начать диагноз», «Подобрать задачи».
+- The learner is «ты», as a colleague on a review: «Решить задачу», «Что ты видишь в коде?». The
+  whole interface speaks this way since #217; only the privacy policy's own text keeps its register.
 - No gendered past tense: «Найдено 2 из 3», «Задача решена» — never «ты нашёл».
 - A button says what happens. Problem and class names are the catalogue's, word for word; slugs show
   in Plex Mono where a developer benefits from seeing them.

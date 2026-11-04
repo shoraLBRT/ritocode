@@ -131,7 +131,7 @@ describe('the task screen', () => {
     });
     const check = screen.getByRole('button', { name: ru.task.check });
     expect(check).toBeDisabled();
-    expect(screen.getByText('Отметьте хотя бы одно лечение для каждой карточки: Деньги во float.')).toBeInTheDocument();
+    expect(screen.getByText('Отметь хотя бы одно лечение для каждой карточки: Деньги во float.')).toBeInTheDocument();
 
     pickLeaf('представление', 'исправить представление данных');
     expect(check).toBeEnabled();
