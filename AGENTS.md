@@ -9,7 +9,8 @@ This file tells an AI agent how to work in the Ritocode repository.
 2. [`docs/SPEC.md`](docs/SPEC.md) — what gets built, screen by screen and rule by rule.
 3. [`docs/PROJECT_STATE.md`](docs/PROJECT_STATE.md) — what exists, what is next, and the commands
    that verify a change. It is the part that moves.
-4. [`docs/ROADMAP.md`](docs/ROADMAP.md) — the stages, and the order work is taken in.
+4. [GitHub Issues](https://github.com/shoraLBRT/ritocode/issues) — the backlog, its stages and
+   its order. Nothing in the repository repeats it.
 
 Then, as needed:
 
@@ -26,16 +27,26 @@ Then, as needed:
 
 ## Where the work comes from
 
-The backlog is the [project board](https://github.com/users/shoraLBRT/projects/3). Every MVP issue
-is labelled `phase:mvp` and sits in a stage milestone, `S0` to `S8`.
+The backlog lives **only in GitHub** — issues, milestones and the
+[project board](https://github.com/users/shoraLBRT/projects/3); no document in the repository holds
+a list of work. Where a session finds one, it moves the items into issues and removes the list.
+
+- **Stages are milestones**: `S0 · …` to `S8 · …` for the MVP, then *Arena polish*, then *Later*.
+  A milestone's description says its goal, its exit criterion, and the order of its issues when the
+  order matters. A stage is done when its exit criterion has been shown to work — run, clicked
+  through, or tested — not when its issues are closed; then the milestone is closed.
+- **Dependencies are native** *blocked by* relations on the issue.
+- **Take** the first open issue of the lowest open milestone that is not blocked, in the order its
+  description gives. *Arena polish* is taken while every open MVP issue waits on #134 or on content.
+  *Later* is not taken until the maintainer moves an issue out of it.
 
 ```bash
-gh issue list --repo shoraLBRT/ritocode --state open --label phase:mvp --limit 60
+gh api repos/shoraLBRT/ritocode/milestones --jq '.[] | "\(.title): \(.open_issues) open — \(.description)"'
 ```
 
-Issues are the source of truth for what is done. `docs/ROADMAP.md` holds what an issue list cannot:
-the order, the dependencies, and what "done" means for each stage. Take the first open issue of the
-lowest open stage whose dependencies are met.
+```bash
+gh issue list --repo shoraLBRT/ritocode --state open --milestone "S7 · Production"
+```
 
 A coding session does not take `type:content` issues (the catalogue, the tasks) or the maintainer's
 own launch prerequisites ([#134](https://github.com/shoraLBRT/ritocode/issues/134)) unless the

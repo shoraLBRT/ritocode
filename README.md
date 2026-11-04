@@ -15,8 +15,8 @@ is built on.
 
 - **What it is and why:** [docs/CONCEPT.md](docs/CONCEPT.md)
 - **What gets built:** [docs/SPEC.md](docs/SPEC.md)
-- **In what order:** [docs/ROADMAP.md](docs/ROADMAP.md), tracked on the
-  [project board](https://github.com/users/shoraLBRT/projects/3)
+- **What is being built next:** [GitHub Issues](https://github.com/shoraLBRT/ritocode/issues), by
+  milestone, on the [project board](https://github.com/users/shoraLBRT/projects/3)
 - **Where the project stands:** [docs/PROJECT_STATE.md](docs/PROJECT_STATE.md)
 
 The product was redefined on 2026-09-30 ([ADR 0010](docs/adr/0010-diagnosis-of-ai-written-code.md)).

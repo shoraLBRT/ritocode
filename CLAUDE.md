@@ -5,8 +5,11 @@
 breaks in AI-written code and a trainer that teaches people to recognise it
 ([ADR 0010](docs/adr/0010-diagnosis-of-ai-written-code.md)).
 
-**Work is taken from [docs/ROADMAP.md](docs/ROADMAP.md)**, lowest open stage first;
-[docs/PROJECT_STATE.md](docs/PROJECT_STATE.md) says what exists and how to verify a change.
+**Work is taken from [GitHub Issues](https://github.com/shoraLBRT/ritocode/issues)** — the
+backlog's only source of truth: milestones are the stages, native *blocked by* the dependencies,
+the [project board](https://github.com/users/shoraLBRT/projects/3) the order. No backlog is kept in
+the repository. [docs/PROJECT_STATE.md](docs/PROJECT_STATE.md) says what exists and how to verify a
+change.
 
 **Ritocode follows [habze](https://github.com/shoraLBRT/habze)**, the maintainer's way of working
 for every project built by agents: the `session`, `session-reserve` and `session-full` skills, and
