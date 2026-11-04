@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { ru } from '../i18n';
 import { renderApp } from '../test/render';
 import { jsonResponse, problemResponse } from '../test/responses';
@@ -88,8 +88,11 @@ describe('a completed sign-in', () => {
     renderApp(api(true), '/privacy');
 
     expect(await screen.findByLabelText(ru.header.profile.replace('{username}', 'developer'))).toBeInTheDocument();
+    // The note is taken in an effect after the header renders, so wait for it rather than assume it.
+    await waitFor(() => {
+      expect(sessionStorage.length).toBe(0);
+    });
     expect(umami.track).toHaveBeenCalledWith('sign-in-completed', { provider: 'google' });
-    expect(sessionStorage.length).toBe(0);
   });
 
   it('is not counted when the page comes back signed out, and the note is dropped', async () => {
@@ -101,7 +104,10 @@ describe('a completed sign-in', () => {
 
     expect(await screen.findByText(ru.session.signIn)).toBeInTheDocument();
     expect(umami.track).not.toHaveBeenCalledWith('sign-in-completed', expect.anything());
-    expect(sessionStorage.length).toBe(0);
+    // The note is taken in an effect after the header renders, so wait for it rather than assume it.
+    await waitFor(() => {
+      expect(sessionStorage.length).toBe(0);
+    });
   });
 
   it('starts when a provider link is followed', async () => {

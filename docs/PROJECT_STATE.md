@@ -4,7 +4,7 @@
 in the same pull request as the work it describes — a session that skips this makes the next one
 start from nothing.
 
-- **Last updated:** 2026-11-03
+- **Last updated:** 2026-11-04
 - **Current stage:** S7 · Production — its engineering can be built against a local stack (#135's
   Compose file, #136's release command, #34's monitor, #41); the real checks wait on the VPS and domain of #134.
   S6 closed with #133: `/` and `/problems` read without JavaScript (#132), and every listed event
@@ -31,19 +31,20 @@ merge), `session-reserve` and `session-full` (issue after issue, merging each PR
 live outside this repository and read what is specific to Ritocode from here and from
 [AGENTS.md](../AGENTS.md). In short:
 
-1. `git fetch origin main`, then read `CLAUDE.md`, `AGENTS.md`, this file and `ROADMAP.md` from
-   `origin/main` — in a worktree `main` is checked out elsewhere.
-2. Take the first open issue of the lowest open stage in `ROADMAP.md` whose dependencies are met.
-   `type:content` issues and the maintainer's own [#134](https://github.com/shoraLBRT/ritocode/issues/134)
+1. `git fetch origin main`, then read `CLAUDE.md`, `AGENTS.md` and this file from `origin/main` —
+   in a worktree `main` is checked out elsewhere — and the open milestones on GitHub.
+2. Take the first open issue of the lowest open milestone that is not blocked, in the order its
+   description gives ([AGENTS.md](../AGENTS.md) › Where the work comes from). `type:content` issues and the maintainer's own [#134](https://github.com/shoraLBRT/ritocode/issues/134)
    are not taken unless the maintainer asks.
 3. Before building, check [SPEC.md](SPEC.md) §13 and [Open questions](#open-questions). A decision
    they do not make goes to the maintainer, not into code.
 4. Branch off `origin/main`, one issue per branch. Build it with its tests; run everything under
    [Verification](#verification).
 5. Open a PR naming the issue — `Closes #N` only when it is finished — comment on the issue, and
-   update this file in the same PR: **What exists**, **Next up**, **Last updated**, the baseline,
-   the smoke checks if endpoints changed. When a stage's exit criterion has been shown to work, move
-   **Current stage** on.
+   update this file in the same PR: **What exists**, **Where things stand**, **Last updated**, the
+   baseline, the smoke checks if endpoints changed. When a stage's exit criterion has been shown to
+   work, close its milestone and move **Current stage** on. Work found along the way becomes an
+   issue, never a list in a document.
 
 The maintainer merges, unless the session was started with `session-reserve` or `session-full`;
 even then a PR touching `.github/workflows/`, `.claude/`, `CLAUDE.md` or `AGENTS.md` waits for the
@@ -58,12 +59,12 @@ on 2026-10-01:
 
 | Requirement | Ritocode | Left |
 | --- | --- | --- |
-| Documents: README, CLAUDE, AGENTS, product description, ROADMAP, PROJECT_STATE | All present | `CLAUDE.md` names no standard version — none exists yet |
+| Documents: README, CLAUDE, AGENTS, product description, ROADMAP, PROJECT_STATE | All but ROADMAP: the maintainer moved the backlog wholly into GitHub on 2026-11-04 — milestone descriptions hold the goals, exit criteria and order | `CLAUDE.md` names no standard version — none exists yet; habze's SPEC still lists a ROADMAP |
 | Rules of §3–4 in `AGENTS.md`: eligibility, trust, stop and ask, protected paths, branch names, merging | Written | — |
 | Stages as milestones `S<n> · <name>` | Yes | — |
 | Board fields Status, Priority, Size | Priority and Size used ([board](https://github.com/users/shoraLBRT/projects/3)) | Not checked from a session: the cloud proxy blocks Projects v2 (#146) |
 | Priority as the board field only | Also labels `priority:P0…P2` | Drop the labels when the board takes over the order |
-| Dependencies as native "blocked by" | Prose in `ROADMAP.md` (*Depends on*) | Move to native relations; `ROADMAP.md` keeps goals and exit criteria |
+| Dependencies as native "blocked by" | Yes, since 2026-11-04 | — |
 | Labels `type:bug`, `needs:maintainer`, `accepted` | Missing (`type:research` exists) | Create from habze's labels file (habze#2) |
 | Issue forms and PR template | None | From habze (habze#2) |
 | `main` protected, CI required | Not checked from a session | Check, or let habze's conformance check say (habze#10) |
@@ -120,68 +121,65 @@ Removed in #119: the Workspaces, Evaluations, Submissions and Progress modules, 
 storage with MinIO, and the frontend's old problem pages. All of it remains readable at the tag
 `pre-diagnosis`.
 
-## Next up
+## Where things stand
 
-From [ROADMAP.md](ROADMAP.md), in order:
+**The backlog is on GitHub, not here** ([AGENTS.md](../AGENTS.md) › Where the work comes from):
+[milestones](https://github.com/shoraLBRT/ritocode/milestones), native *blocked by* relations, and
+the [board](https://github.com/users/shoraLBRT/projects/3). On 2026-11-04 `ROADMAP.md` was retired
+and every item left in it, in this section and in SPEC §12 became an issue or a milestone
+description. As of that day:
 
-1. S5 and S6 are done. In S7 the production stack (#135), the release with backups
-   ([#136](https://github.com/shoraLBRT/ritocode/issues/136)) and monitoring
-   ([#34](https://github.com/shoraLBRT/ritocode/issues/34)) exist, each open until its real check
-   runs on the VPS and domain of #134; the runbook (#41) says how to run them. The end-to-end test of
-   S8 ([#39](https://github.com/shoraLBRT/ritocode/issues/39)) runs in CI. What is left for a coding
-   session waits on #134 or on content; the trial of S8 (#137) waits on the catalogue and tasks. Left in
-   S4: the real round trip against GitHub and Google (the OAuth apps of #134), and the policy's text
-   in the privacy page ([#128](https://github.com/shoraLBRT/ritocode/issues/128)), which with its
-   sign-in notice exists over a placeholder. Maintainer-provided
-   resources (OAuth apps, VPS, domain, policy text) block only an issue's final real check, not its
-   engineering: build with fakes, a local `docker compose` or a placeholder, and name the real check
-   as left.
-2. S4 · Accounts: sessions (#6), sign-in (#7), signed-out solving (#127) and the privacy page with
-   its sign-in notice (#128) exist. Left: the policy's text, which replaces the placeholder in
-   `frontend/src/site/privacy.ru.md` (#134).
-3. The content track, with the two skills: 55–60 cards
-   ([#124](https://github.com/shoraLBRT/ritocode/issues/124)) and the 20 tasks
-   ([#42](https://github.com/shoraLBRT/ritocode/issues/42)). On 2026-10-01 the maintainer handed
-   the catalogue to a `session-full` run, which drafted all 56 cards and merged them on green CI;
-   the maintainer edits them from here. The same run then took the tasks of #42; they exist —
-   the demo task, `team-reminders-for-myself` and `team-reminders-for-support` (easy, over
-   `team-reminders`), `clinic-booking-city-network` and `clinic-booking-dentist` (medium, over
-   `clinic-booking`), `price-sync-pet-shop` and `price-sync-coursework` (medium, over `price-sync`),
-   `newsletter-signup-bakery` and `newsletter-signup-agency-kit` (easy, over `newsletter-signup`),
-   `contact-dedupe-ngo` (easy, clean — no findings), `orders-report-small-shop` and
-   `orders-report-marketplace` (easy, over `orders-report`), `thumbnail-maker-marketplace` and
-   `thumbnail-maker-own-photos` (easy, over `thumbnail-maker`), `payment-webhook-online-school` and
-   `payment-webhook-hackathon` (medium, over `payment-webhook`), `subscription-billing-saas` and
-   `subscription-billing-climbing-gym` (medium, over `subscription-billing`), `invoice-builder-studio`
-   and `invoice-builder-last-run` (hard, over `invoice-builder`) — 20 of 20. Each new one passed a
-   blind smoke test, reported in its pull request. The keys use 34 distinct cards (SPEC §3.2 aims at
-   25–35); SPEC's "at least twice" holds for all but four, each in one key: `secrets-in-repo` and
-   `money-in-float` (the demo task), `over-engineering` (a verdict card, absent where the layers are
-   justified) and `naive-calendar-math` (absent where 30 days is the rule).
+- **S0–S3, S5, S6** are done and their milestones closed.
+- **S4, S7, S8** wait on the maintainer's [#134](https://github.com/shoraLBRT/ritocode/issues/134)
+  (domain, VPS, OAuth apps, privacy text). Their engineering exists and is checked locally;
+  maintainer-provided resources block only an issue's final real check, not its engineering — build
+  with fakes, a local `docker compose` or a placeholder, and name the real check as left. The one
+  takeable item there is the CONTENT_FORMAT fix
+  ([#218](https://github.com/shoraLBRT/ritocode/issues/218)).
+- **Arena polish** is what a coding session takes next: the maintainer's feedback of 2026-11-04 on
+  the arena and the task screen, surface contrast
+  ([#197](https://github.com/shoraLBRT/ritocode/issues/197)) first; the workspace layout, the
+  catalogue and progress start with mock-ups.
+- **Later** holds the post-MVP iterations that were SPEC §12; not taken until the maintainer moves one.
 
-The maintainer's own [#134](https://github.com/shoraLBRT/ritocode/issues/134) — domain, VPS, OAuth
-apps, privacy text — runs in parallel and gates S7.
+**Content.** The content track, with the two skills: 55–60 cards
+([#124](https://github.com/shoraLBRT/ritocode/issues/124)) and the 20 tasks
+([#42](https://github.com/shoraLBRT/ritocode/issues/42)). On 2026-10-01 the maintainer handed
+the catalogue to a `session-full` run, which drafted all 56 cards and merged them on green CI;
+the maintainer edits them from here. The same run then took the tasks of #42; they exist —
+the demo task, `team-reminders-for-myself` and `team-reminders-for-support` (easy, over
+`team-reminders`), `clinic-booking-city-network` and `clinic-booking-dentist` (medium, over
+`clinic-booking`), `price-sync-pet-shop` and `price-sync-coursework` (medium, over `price-sync`),
+`newsletter-signup-bakery` and `newsletter-signup-agency-kit` (easy, over `newsletter-signup`),
+`contact-dedupe-ngo` (easy, clean — no findings), `orders-report-small-shop` and
+`orders-report-marketplace` (easy, over `orders-report`), `thumbnail-maker-marketplace` and
+`thumbnail-maker-own-photos` (easy, over `thumbnail-maker`), `payment-webhook-online-school` and
+`payment-webhook-hackathon` (medium, over `payment-webhook`), `subscription-billing-saas` and
+`subscription-billing-climbing-gym` (medium, over `subscription-billing`), `invoice-builder-studio`
+and `invoice-builder-last-run` (hard, over `invoice-builder`) — 20 of 20. Each new one passed a
+blind smoke test, reported in its pull request. The keys use 34 distinct cards (SPEC §3.2 aims at
+25–35); SPEC's "at least twice" holds for all but four, each in one key: `secrets-in-repo` and
+`money-in-float` (the demo task), `over-engineering` (a verdict card, absent where the layers are
+justified) and `naive-calendar-math` (absent where 30 days is the rule).
 
-Outside the stages, on the maintainer's request: the look and the task workspace of
-[#188](https://github.com/shoraLBRT/ritocode/issues/188) exist ([DESIGN.md](DESIGN.md)). On
-2026-10-28 the maintainer chose the home page — an **arena** in the manner of LeetCode — and changed
-the audience to junior developers who build with AI agents
-([ADR 0015](adr/0015-arena-home-and-junior-audience.md); CONCEPT §2, SPEC §2.1). The arena's tokens
-and `rc-` component classes are in `styles.css` and DESIGN.md › The arena, and `/` is built from
-them ([#190](https://github.com/shoraLBRT/ritocode/issues/190)): no classes on tasks, the daily task
-unsolved first and changing at midnight, a streak broken by a day without an attempt. Left: the
-hero copy, which the maintainer wants worked out separately (the idea: learning to see the problems
-in code); then `/problems` and `/progress` in the arena's style, each in its own issue — `/tasks`
-moved on 2026-11-01 ([#193](https://github.com/shoraLBRT/ritocode/issues/193)), its lead in «ты» —
-and the rest of the interface text moving to «ты» — the header moved on 2026-11-03
-([#195](https://github.com/shoraLBRT/ritocode/issues/195)), with its search, streak and avatar. DESIGN.md does
-not yet lay out `/problems` or `/progress`: each needs the maintainer's choice of layout before it is
-built.
+**The arena.** On the maintainer's request, outside the stages: the look and the task workspace of
+[#188](https://github.com/shoraLBRT/ritocode/issues/188) ([DESIGN.md](DESIGN.md)). On 2026-10-28 the
+maintainer chose the home page — an **arena** in the manner of LeetCode — and changed the audience to
+junior developers who build with AI agents ([ADR 0015](adr/0015-arena-home-and-junior-audience.md);
+CONCEPT §2, SPEC §2.1). Built on its tokens and `rc-` classes: `/`
+([#190](https://github.com/shoraLBRT/ritocode/issues/190)), `/tasks`
+([#193](https://github.com/shoraLBRT/ritocode/issues/193)) and the header with its search, streak and
+avatar ([#195](https://github.com/shoraLBRT/ritocode/issues/195)). DESIGN.md does not yet lay out
+`/problems` or `/progress`.
 
 ## Open questions
 
 Decisions the specification left open are listed in [SPEC.md](SPEC.md) §13. Add here anything a
 future session would otherwise have to rediscover.
+
+- **What the two catalogues are called** (the maintainer, 2026-11-04): «Задачи» beside «Каталог
+  проблем» feels wrong — perhaps «Каталог задач» and «Каталог проблем», perhaps something else. Not
+  decided; the header, the home page's widgets (#200) and the page titles follow whatever is chosen.
 
 - **Umami's server and site id** (#133, for #135): Umami runs beside the site (SPEC §9.5); its script
   address and the site's id become the repository variables `UMAMI_SCRIPT_URL` and `UMAMI_WEBSITE_ID`,

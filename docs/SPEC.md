@@ -690,20 +690,10 @@ approval before they are carried out.
 
 ## 12. Later iterations
 
-Recorded so they are not lost and not built early.
-
-- **What the learner takes away:** "what to tell the agent next time" on the review, from a new card
-  field; then a personal memo that accumulates across tasks and copies in one go.
-- **Locations:** a finding's file and lines in the key; the learner pointing at them; scoring per
-  instance.
-- **Equivalent leaves** declared once in the treatment tree, so an author need not list both.
-- **Existing projects** as material, and with them class 2 tasks.
-- **Authors' own code** as material, and a label for material taken from a real project.
-- **Other stacks**, and AI translation of a task into the learner's stack.
-- **Adding and editing tasks in the admin area**, which also opens authoring to users.
-- **Community authorship** of cards, with counter-arguments rather than votes.
-- **English**, then other locales.
-- **Difficulty beyond the shortlist** — for example, contexts that must be inferred rather than read.
+Recorded so they are not lost and not built early — as issues in the
+[*Later* milestone](https://github.com/shoraLBRT/ritocode/milestone/11) since 2026-11-04: what the
+learner takes away, locations, equivalent leaves, existing projects, authors' own code, other stacks,
+authoring in the admin area, community authorship, English, difficulty beyond the shortlist.
 
 ---
 
