@@ -17,6 +17,9 @@ Fields:
 - username — stored lower-cased, unique
 - created_at
 
+An **admin** is a user whose address `Users:Admin:Emails` names (SPEC §6.2). It is not stored: there
+is no role column and no role screen, and an address leaves the list by a configuration change.
+
 ## LinkedAccount
 
 Owned by the **Auth** module. Links a Ritocode account to an external identity.
@@ -78,7 +81,9 @@ it" ([SPEC.md](SPEC.md) §4.8): the user, the attempt, its task, the card, an op
 to 500 characters, when it was sent, and when the author resolved it. It is sent only from an
 **extra pick** of the learner's own **submitted** attempt — a card they picked that the key does not
 list — once per pick, and never changes the attempt or its score. The attempt's review lists the
-cards signalled from it. The author reads signals in the admin area (§6.2).
+cards signalled from it. The author reads signals in the admin area (§6.2), open or resolved, and
+**resolves** one there; resolving it again keeps the first time. Resolving is the only change a
+signal ever sees.
 
 ## Scoring
 

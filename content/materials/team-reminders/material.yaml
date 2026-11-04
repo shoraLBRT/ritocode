@@ -1,0 +1,11 @@
+language: python
+notes: >-
+  A Flask service of reminders in one file: add a reminder with a text and a
+  due time, list the ones that are due, mark one done. Planted: reminders kept
+  in a module-level list (state-in-process-memory); the due time parsed with
+  fromisoformat and compared with a naive datetime.now(), so a time sent with
+  an offset breaks the comparison and the server's zone decides what is due
+  (naive-datetime); the request body used without any check of its fields
+  (unvalidated-input). Ids come from itertools.count so the counter is not a
+  read-modify-write race. Used by team-reminders-for-myself, where all three
+  are fine, and team-reminders-for-support, where none is.

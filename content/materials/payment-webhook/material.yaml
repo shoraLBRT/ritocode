@@ -1,0 +1,11 @@
+language: python
+notes: >-
+  A payment provider's webhook in Flask: the signature is checked with
+  hmac.compare_digest, and a successful payment credits an account and
+  records the payment. Planted: a repeated delivery of the same event credits
+  again - nothing is unique on provider_payment_id (non-idempotent-operation);
+  the whole event, with the payer's name, e-mail and phone, is written to the
+  log (sensitive-data-in-logs); the provider sends kopecks, as the sample shows
+  and the context says, and they are added to balance_rub
+  (unnamed-units). The database connection has a timeout on purpose. Used by payment-webhook-online-school and
+  payment-webhook-hackathon.

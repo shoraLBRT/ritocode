@@ -132,6 +132,50 @@ public sealed class ContentValidationTests
         AssertError(content.Load().Report, $"{Card}/card.yaml", "severity");
     }
 
+    [Theory]
+    [InlineData("keywords: [пароль, type: ignore, ключ]", "line 6, column 20: 'keywords': ")]
+    [InlineData("keywords:\n  - пароль\n  - type: ignore", "line 8, column 5: 'keywords': ")]
+    public void AnUnquotedColon_InAKeyword_IsAnError_ThatNamesTheFieldAndSaysToQuoteIt(string keywords, string where)
+    {
+        using var content = TempContent.FromReference().Replace($"{Card}/ru.md", "keywords: [пароль, токен, ключ, credentials]", keywords);
+
+        AssertError(
+            content.Load().Report,
+            $"{Card}/ru.md",
+            $"{where}YAML reads 'type: ignore' as a key and a value, not as text. Put a value that contains ': ' in quotes, as in \"type: ignore\".");
+    }
+
+    [Fact]
+    public void AnUnquotedColon_InAQuotedKeyword_IsFine()
+    {
+        using var content = TempContent.FromReference().Replace($"{Card}/ru.md", "[пароль, токен,", "[пароль, \"type: ignore\",");
+
+        Assert.Empty(content.Load().Report.Errors);
+    }
+
+    [Theory]
+    [InlineData(Card, "name: Секреты в репозитории", "name: Секреты: в репозитории", "line 2, column")]
+    [InlineData(Task, "title: Счёт клиенту по почте", "title: Счёт: клиенту по почте", "line 2, column")]
+    public void AnUnquotedColon_InAText_IsAnError_ThatSaysToQuoteIt(string item, string text, string broken, string where)
+    {
+        using var content = TempContent.FromReference().Replace($"{item}/ru.md", text, broken);
+
+        var (_, report) = content.Load();
+
+        AssertError(report, $"{item}/ru.md", where);
+        AssertError(report, $"{item}/ru.md", $"Put a value that contains ': ' in quotes, as in {broken[..(broken.IndexOf(':') + 2)]}\"{broken[(broken.IndexOf(':') + 2)..]}\".");
+    }
+
+    [Theory]
+    [InlineData("name: Секреты в репозитории", "name: {Секреты: в репозитории}", "'name': YAML reads 'Секреты: в репозитории' as a key and a value")]
+    [InlineData("name: Секреты в репозитории", "name: [Секреты, ключи]", "'name': YAML reads '[Секреты, ключи]' as a list")]
+    public void AMappingOrAList_WhereTextBelongs_IsAnError_ThatNamesTheField(string text, string broken, string fragment)
+    {
+        using var content = TempContent.FromReference().Replace($"{Card}/ru.md", text, broken);
+
+        AssertError(content.Load().Report, $"{Card}/ru.md", fragment);
+    }
+
     [Fact]
     public void AClassNotInTheTaxonomy_IsAnError()
     {

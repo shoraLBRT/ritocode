@@ -15,6 +15,9 @@ and the old one is marked `Superseded by NNNN` rather than edited.
 | [0010](0010-diagnosis-of-ai-written-code.md) | Ritocode teaches diagnosis of AI-written code | Accepted |
 | [0011](0011-release-images.md) | Release images on GitHub Container Registry | Accepted |
 | [0012](0012-sessions.md) | Sessions: an opaque token in a cookie, the session in a table | Accepted |
+| [0013](0013-uptime-monitoring.md) | Uptime monitoring from a scheduled GitHub workflow | Proposed |
+| [0014](0014-visual-identity-and-task-workspace.md) | Visual identity and the task workspace | Accepted |
+| [0015](0015-arena-home-and-junior-audience.md) | The home page is an arena, and the audience is junior developers | Accepted |
 
 ## Removed
 

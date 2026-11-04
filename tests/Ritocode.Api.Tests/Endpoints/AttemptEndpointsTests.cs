@@ -221,6 +221,11 @@ public sealed class AttemptEndpointsTests(ContentTestApi api) : IClassFixture<Co
         };
         using var repeated = await JsonAsync(await PostAsync($"/api/v1/attempts/{id}/submit", twice), HttpStatusCode.BadRequest);
         Assert.True(repeated.RootElement.GetProperty("errors").TryGetProperty("picks", out _));
+
+        // A leaf longer than any identifier the tree can hold is refused by its shape, before the task is read.
+        var long_ = new { picks = new[] { new { card = "secrets-in-repo", leaves = new[] { new string('a', 200) } } } };
+        using var tooLong = await JsonAsync(await PostAsync($"/api/v1/attempts/{id}/submit", long_), HttpStatusCode.BadRequest);
+        Assert.True(tooLong.RootElement.GetProperty("errors").TryGetProperty("picks[0].leaves[0]", out _));
     }
 
     [Fact]

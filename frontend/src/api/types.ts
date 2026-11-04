@@ -36,9 +36,14 @@ export interface ModuleInfo {
 export interface Me {
   readonly id: string;
   readonly username: string;
+  /** Whether the caller may open the admin area (docs/SPEC.md §6.2). */
+  readonly admin: boolean;
 }
 
 export type Difficulty = 'easy' | 'medium' | 'hard';
+
+/** The difficulties, easiest first — the order the task catalogue lists them in. */
+export const difficulties: readonly Difficulty[] = ['easy', 'medium', 'hard'];
 
 /** One row of `GET /api/v1/tasks`. `solved` is set for a signed-in caller and `null` otherwise. */
 export interface TaskSummary {
@@ -242,4 +247,56 @@ export interface CardProgress {
 export interface PageQuery {
   readonly page?: number;
   readonly pageSize?: number;
+}
+
+/** The learner behind an admin row; username and e-mail are null if the user no longer exists. */
+export interface AdminLearner {
+  readonly id: string;
+  readonly username: string | null;
+  readonly email: string | null;
+}
+
+export type AdminSignalStatus = 'open' | 'resolved';
+
+/** One row of `GET /admin/signals`. */
+export interface AdminSignal {
+  readonly id: string;
+  readonly attempt: string;
+  readonly task: string;
+  readonly card: string;
+  readonly cardName: string;
+  readonly learner: AdminLearner;
+  readonly comment: string | null;
+  readonly createdAt: string;
+  readonly resolvedAt: string | null;
+}
+
+/** One row of `GET /admin/users`. */
+export interface AdminUser {
+  readonly id: string;
+  readonly email: string;
+  readonly username: string;
+  /** As the sign-in addresses name them; empty for the development identity. */
+  readonly providers: readonly string[];
+  readonly registeredAt: string;
+  readonly attempts: number;
+  readonly tasksSolved: number;
+}
+
+export type AdminAttemptStatus = 'all' | 'open' | 'submitted';
+
+/** One row of `GET /admin/attempts`. */
+export interface AdminAttempt {
+  readonly id: string;
+  readonly task: string;
+  readonly learner: AdminLearner;
+  readonly startedAt: string;
+  /** The furthest step reached — for an attempt never submitted, where the learner stopped. */
+  readonly step: AttemptStep;
+  readonly submittedAt: string | null;
+  /** True for a submitted attempt that is not the first at its task. */
+  readonly practice: boolean;
+  readonly timeTakenSeconds: number | null;
+  readonly score: number | null;
+  readonly maxScore: number | null;
 }

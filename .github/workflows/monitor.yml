@@ -1,0 +1,77 @@
+name: Monitor
+
+# The uptime check (#34, ADR 0013): every five minutes, from GitHub's runners — outside the server, so
+# a server that is down entirely is noticed too — the site's readiness and the certificates of the
+# addresses in the repository variable MONITOR_ORIGINS (space-separated, the site first). What fails
+# opens one issue labelled monitoring-alert that mentions the owner; recovery closes it
+# (scripts/monitor-alert.sh). Until MONITOR_ORIGINS is set, the scheduled run does nothing.
+#
+# A run that sees the site down still succeeds: the issue is the alert, and a failed run would add an
+# e-mail every five minutes. A run fails only when the check or the alert could not run.
+#
+# On a pull request that touches it, the alert is tested against a fake gh (scripts/monitor-test.sh).
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+    inputs:
+      origins:
+        description: Addresses to check instead of MONITOR_ORIGINS (the site first)
+        required: false
+  pull_request:
+    paths:
+      - scripts/monitor-*.sh
+      - .github/workflows/monitor.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: monitor-${{ github.event_name == 'pull_request' && github.ref || 'site' }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Check the site
+    if: github.event_name != 'pull_request' && (inputs.origins != '' || vars.MONITOR_ORIGINS != '')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: scripts
+
+      - name: Check
+        env:
+          ORIGINS: ${{ inputs.origins || vars.MONITOR_ORIGINS }}
+        run: |
+          set +e
+          # shellcheck disable=SC2086 # the origins are a space-separated list
+          ./scripts/monitor-check.sh $ORIGINS > report.txt
+          status=$?
+          cat report.txt
+          # 0 and 1 are the check's answers; anything else means it could not run.
+          [ "$status" -le 1 ]
+
+      - name: Alert
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MONITOR_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: ./scripts/monitor-alert.sh report.txt
+
+  test:
+    name: Test the alert
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Test
+        run: ./scripts/monitor-test.sh

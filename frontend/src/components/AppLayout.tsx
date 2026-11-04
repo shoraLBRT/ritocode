@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router';
+import { Link, NavLink, Outlet, useLocation, useMatch, useNavigate } from 'react-router';
 import { useT } from '../i18n';
 import { readSignInReturn, SignInLinks, SignInReturnContext, useSession, withoutSignInReturn } from '../session';
 import type { SignInError, SignInReturnState } from '../session';
-import { useDocumentMeta } from '../site';
+import { useDocumentMeta, useSiteConfig } from '../site';
+import { ThemeToggle } from '../theme';
+import { HeaderSearch } from './HeaderSearch';
+import { HeaderSlotContext } from './HeaderSlot';
+import { HeaderStreak } from './HeaderStreak';
 
 /**
  * The frame every route renders inside: a header with the primary navigation and who is signed
@@ -14,16 +18,24 @@ import { useDocumentMeta } from '../site';
  * the first render — a return is a full page load — and taken out of the address. A failure is
  * shown above the page; a task's request to be checked is handed to the task through context.
  *
- * At phone width the header wraps rather than scrolls: brand and navigation on the first line,
- * the session below them (styles.css).
+ * The header has three parts: the brand and the sections, a centre a page may fill — the task
+ * screen puts its steps there (`HeaderSlot`) — and the search, the theme and the session. On the
+ * task screen and its review the frame becomes a workspace (docs/DESIGN.md): the sections and the
+ * search step aside so the steps own the header, and the page fills the window instead of a
+ * reading column.
+ *
+ * At phone width the header wraps rather than scrolls: brand and sections on the first line, the
+ * session below them, the search on a line of its own (styles.css).
  */
 export function AppLayout() {
   const t = useT();
   useDocumentMeta();
   const location = useLocation();
   const navigate = useNavigate();
-  // Progress is a signed-in page, so it is offered only to a signed-in learner.
-  const signedIn = useSession().status === 'signedIn';
+  // Progress is a signed-in page, so it is offered only to a signed-in learner; the admin area only to an admin.
+  const session = useSession();
+  const signedIn = session.status === 'signedIn';
+  const admin = session.status === 'signedIn' && session.user.admin;
 
   const [returned] = useState(() => readSignInReturn(location.pathname, location.search));
   const [signInError, setSignInError] = useState<SignInError | null>(returned.error);
@@ -41,34 +53,31 @@ export function AppLayout() {
   }, []);
 
   const signInReturn: SignInReturnState = { checkRequestedAt, consumeCheck };
+  const solving = useMatch('/tasks/:slug') !== null;
+  const reviewing = useMatch('/tasks/:slug/attempts/:id') !== null;
+  const workspace = solving || reviewing;
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
 
   return (
-    <div className="app">
+    <div className={workspace ? 'app app--workspace' : 'app'}>
       <a className="skip-link" href="#main">
         {t('app.skipToContent')}
       </a>
 
       <header className="app__header">
-        <Link className="app__brand" to="/">
-          {t('app.name')}
-        </Link>
-        <nav className="app__nav" aria-label={t('nav.label')}>
-          <NavLink to="/" end className={navClass}>
-            {t('nav.home')}
-          </NavLink>
-          <NavLink to="/tasks" className={navClass}>
-            {t('nav.tasks')}
-          </NavLink>
-          <NavLink to="/problems" className={navClass}>
-            {t('nav.problems')}
-          </NavLink>
-          {signedIn && (
-            <NavLink to="/progress" className={navClass}>
-              {t('nav.progress')}
-            </NavLink>
-          )}
-        </nav>
-        <SessionStatus returnPath={location.pathname + withoutSignInReturn(location.search) + location.hash} />
+        <div className="app__header-start">
+          <Link className="app__brand" to="/">
+            <span className="app__mark" aria-hidden="true" />
+            {t('app.name')}
+          </Link>
+          {!workspace && <Navigation signedIn={signedIn} admin={admin} />}
+        </div>
+        <div className="app__header-center" ref={setSlot} />
+        <div className="app__header-end">
+          {!workspace && <HeaderSearch />}
+          <ThemeToggle />
+          <SessionStatus returnPath={location.pathname + withoutSignInReturn(location.search) + location.hash} />
+        </div>
       </header>
 
       {signInError !== null && (
@@ -88,24 +97,60 @@ export function AppLayout() {
 
       <main className="app__main" id="main">
         <SignInReturnContext value={signInReturn}>
-          <Outlet />
+          <HeaderSlotContext value={slot}>
+            <Outlet />
+          </HeaderSlotContext>
         </SignInReturnContext>
       </main>
 
       <footer className="app__footer">
         <span>{t('app.tagline')}</span>
+        <Link to="/privacy">{t('app.privacy')}</Link>
       </footer>
     </div>
   );
 }
 
 /**
- * Who is signed in and a way out, or a way in that brings the visitor back to this page. Says
- * nothing while it does not know yet.
+ * The sections (docs/DESIGN.md › The arena); progress only for a signed-in learner, the admin area
+ * only for an admin. The brand is the way home.
+ */
+function Navigation({ signedIn, admin }: { signedIn: boolean; admin: boolean }) {
+  const t = useT();
+
+  return (
+    <nav className="app__nav" aria-label={t('nav.label')}>
+      <NavLink to="/tasks" className={navClass}>
+        {t('nav.tasks')}
+      </NavLink>
+      <NavLink to="/problems" className={navClass}>
+        {t('nav.problems')}
+      </NavLink>
+      {signedIn && (
+        <NavLink to="/progress" className={navClass}>
+          {t('nav.progress')}
+        </NavLink>
+      )}
+      {admin && (
+        <NavLink to="/admin" className={navClass}>
+          {t('nav.admin')}
+        </NavLink>
+      )}
+    </nav>
+  );
+}
+
+/**
+ * The header's right end (docs/DESIGN.md › The arena). Signed in: the streak, and the avatar — the
+ * username's first letter — opening a menu with the username and a way out. A guest: *Войти*,
+ * opening the providers with a way back to this page, and *Начать*, the demo task. Says nothing
+ * while it does not know yet. Each menu is a native disclosure, which opens from the keyboard and
+ * closes again with no script of its own; keyed by the page, so following a link in it closes it.
  */
 function SessionStatus({ returnPath }: { returnPath: string }) {
   const session = useSession();
   const t = useT();
+  const { demoTask } = useSiteConfig();
   const [signingOut, setSigningOut] = useState(false);
   const [failed, setFailed] = useState(false);
 
@@ -113,51 +158,67 @@ function SessionStatus({ returnPath }: { returnPath: string }) {
     case 'signedIn':
       return (
         <div className="app__session">
-          <span>{t('session.signedInAs', { username: session.user.username })}</span>
-          <button
-            type="button"
-            className="button button--small"
-            disabled={signingOut}
-            onClick={() => {
-              setSigningOut(true);
-              setFailed(false);
-              session.signOut().then(
-                () => {
-                  setSigningOut(false);
-                },
-                () => {
-                  setSigningOut(false);
-                  setFailed(true);
-                },
-              );
-            }}
-          >
-            {signingOut ? t('session.signingOut') : t('session.signOut')}
-          </button>
-          {failed && (
-            <span className="app__session-error" role="alert">
-              {t('session.signOutFailed')}
-            </span>
-          )}
+          <HeaderStreak />
+          <details className="app__menu" key={returnPath}>
+            <summary className="app__avatar-button" aria-label={t('header.profile', { username: session.user.username })}>
+              <span className="rc-avatar" aria-hidden="true">
+                {initial(session.user.username)}
+              </span>
+            </summary>
+            <div className="app__menu-popup">
+              <p className="app__menu-user">{session.user.username}</p>
+              <button
+                type="button"
+                className="button button--small"
+                disabled={signingOut}
+                onClick={() => {
+                  setSigningOut(true);
+                  setFailed(false);
+                  session.signOut().then(
+                    () => {
+                      setSigningOut(false);
+                    },
+                    () => {
+                      setSigningOut(false);
+                      setFailed(true);
+                    },
+                  );
+                }}
+              >
+                {signingOut ? t('session.signingOut') : t('session.signOut')}
+              </button>
+              {failed && (
+                <p className="app__session-error" role="alert">
+                  {t('session.signOutFailed')}
+                </p>
+              )}
+            </div>
+          </details>
         </div>
       );
     case 'signedOut':
       return (
         <div className="app__session">
-          <span>{t('session.signedOut')}</span>
-          {/* A native disclosure: opens from the keyboard and closes again with no script of its own. */}
-          <details className="app__sign-in">
-            <summary className="button button--small button--primary">{t('session.signIn')}</summary>
-            <div className="app__sign-in-menu">
+          <details className="app__menu" key={returnPath}>
+            <summary className="button button--small">{t('session.signIn')}</summary>
+            <div className="app__menu-popup">
               <SignInLinks returnPath={returnPath} />
             </div>
           </details>
+          <Link className="button button--small button--primary" to={`/tasks/${demoTask}`}>
+            {t('header.start')}
+          </Link>
         </div>
       );
     case 'loading':
     case 'error':
       return null;
   }
+}
+
+/** The avatar's letter: the username's first, as a person would write it. */
+function initial(username: string): string {
+  return (Array.from(username)[0] ?? '?').toLocaleUpperCase('ru');
 }
 
 function navClass({ isActive }: { isActive: boolean }): string {

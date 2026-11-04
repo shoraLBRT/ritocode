@@ -23,6 +23,20 @@ public sealed class OAuthProviderOptions
 
     public string ClientSecret { get; init; } = string.Empty;
 
+    /// <summary>
+    /// The provider's addresses, when they are not its own: the end-to-end test (#39) points them at a
+    /// fake provider it runs beside the API. Empty — always, in production — means GitHub's or Google's.
+    /// <see cref="UserInformationEndpoint"/> is GitHub's <c>/user</c>; its <c>/user/emails</c> is read
+    /// beside it.
+    /// </summary>
+    public string AuthorizationEndpoint { get; init; } = string.Empty;
+
+    /// <inheritdoc cref="AuthorizationEndpoint"/>
+    public string TokenEndpoint { get; init; } = string.Empty;
+
+    /// <inheritdoc cref="AuthorizationEndpoint"/>
+    public string UserInformationEndpoint { get; init; } = string.Empty;
+
     public bool IsConfigured => !string.IsNullOrWhiteSpace(ClientId) && !string.IsNullOrWhiteSpace(ClientSecret);
 }
 

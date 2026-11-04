@@ -85,6 +85,8 @@ describe('the problem catalogue', () => {
   });
 
   it('searches names, summaries and keywords, ignoring case and ё', async () => {
+    const umami = { track: vi.fn() };
+    window.umami = umami;
     renderApp(api(), '/problems');
     const search = await screen.findByLabelText(ru.problems.search);
 
@@ -101,6 +103,9 @@ describe('the problem catalogue', () => {
 
     fireEvent.change(search, { target: { value: 'ничего такого нет' } });
     expect(screen.getByText(ru.problems.noMatch)).toBeInTheDocument();
+
+    // A search is counted once a visit, and what was typed is not sent.
+    expect(umami.track.mock.calls).toEqual([['catalogue-search', undefined]]);
   });
 
   it('treats ё and е as the same letter', async () => {

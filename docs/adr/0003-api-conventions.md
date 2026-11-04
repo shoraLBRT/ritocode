@@ -37,8 +37,11 @@ place that knows status codes. The mapping lives in `ErrorStatusCodeMap` and is 
 | `Unauthenticated` | 401 |
 | `Forbidden` | 403 |
 | `NotFound` | 404 |
+| `MethodNotAllowed` | 405 |
 | `Conflict` | 409 |
 | `PreconditionFailed` | 412 |
+| `PayloadTooLarge` | 413 |
+| `UnsupportedMediaType` | 415 |
 | `RateLimited` | 429 |
 | `Unavailable` | 503 |
 | `Unexpected` | 500 |
@@ -68,6 +71,36 @@ Every non-2xx response is RFC 9457 `application/problem+json` with two extension
 
 Unexpected failures always return `code: "internal_error"` with a generic `detail`. The real cause
 goes to the log line carrying the same request id.
+
+A request the framework cannot read is the client's error, not an unexpected one. Endpoint binding
+throws `BadHttpRequestException` in every environment (`RouteHandlerOptions.ThrowOnBadRequest`; the
+framework's default outside Development is a bare 400 with no body), and `AppExceptionHandler` maps
+it by its status, logged at Information like any expected failure:
+
+| Cause | Status | `code` |
+| --- | --- | --- |
+| A body that is not valid UTF-8 JSON, a missing body, a query or route value that does not bind | 400 | `request_invalid` |
+| A body over the server's cap (`Api:MaxRequestBodyBytes`) | 413 | `request_too_large` |
+| A body sent without a JSON content type | 415 | `unsupported_media_type` |
+
+Any other status the exception carries is answered as `request_invalid`.
+
+Routing refuses some requests before any endpoint runs, and throws nothing, so the exception handler
+never sees them. Its matcher policies write an empty response; status-code pages
+(`RoutingRefusals.UseRoutingRefusalBodies`) give it the unified body, through the same
+`ApiProblem.WriteAsync`. Only an empty response with one of these statuses is touched; an endpoint's
+own error already has its body.
+
+| Cause | Status | `code` |
+| --- | --- | --- |
+| A method the route does not take (`GET /api/v1/signals`); routing's `Allow` header stays | 405 | `method_not_allowed` |
+| A body in a content type the endpoint does not read (`text/plain`) | 415 | `unsupported_media_type` |
+| An address under `Api:BasePath` that no route serves | 404 | `not_found` |
+
+The unknown address is answered there, not by a catch-all fallback endpoint: a fallback takes every
+method and content type, so routing preferred it to its own 405 and 415, and a known path with the
+wrong method came back as a 404. With no endpoint, the fallback authorisation policy still answers an
+anonymous caller with 401. Outside the base path an unknown address stays an empty 404.
 
 ### Correlation
 

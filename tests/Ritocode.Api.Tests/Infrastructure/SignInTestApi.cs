@@ -9,8 +9,9 @@ using Ritocode.TestSupport;
 namespace Ritocode.Api.Tests.Infrastructure;
 
 /// <summary>
-/// The host with the development identity off and both providers configured, their token and profile
-/// endpoints answered by <see cref="FakeOAuthProvider"/> — the real OAuth handler, state, correlation
+/// The host with the development identity off and both providers configured, their addresses moved to
+/// <c>github.test</c> and <c>google.test</c> by configuration as the end-to-end test moves them (#39),
+/// and their token and profile endpoints answered by <see cref="FakeOAuthProvider"/> — the real OAuth handler, state, correlation
 /// cookie and PKCE included, with nothing leaving the process.
 /// </summary>
 public sealed class SignInTestApi(PostgresTestServer postgres) : IAsyncLifetime
@@ -36,21 +37,19 @@ public sealed class SignInTestApi(PostgresTestServer postgres) : IAsyncLifetime
                 ["Auth:SignIn:AppOrigin"] = string.Empty,
                 ["Auth:GitHub:ClientId"] = "github-client",
                 ["Auth:GitHub:ClientSecret"] = "github-secret",
+                ["Auth:GitHub:AuthorizationEndpoint"] = "https://github.test/authorize",
+                ["Auth:GitHub:TokenEndpoint"] = "https://github.test/token",
+                ["Auth:GitHub:UserInformationEndpoint"] = "https://github.test/user",
                 ["Auth:Google:ClientId"] = "google-client",
                 ["Auth:Google:ClientSecret"] = "google-secret",
+                ["Auth:Google:AuthorizationEndpoint"] = "https://google.test/authorize",
+                ["Auth:Google:TokenEndpoint"] = "https://google.test/token",
+                ["Auth:Google:UserInformationEndpoint"] = "https://google.test/user",
             },
             services =>
             {
-                foreach (var (scheme, host) in new[] { ("github", "github.test"), ("google", "google.test") })
-                {
-                    services.PostConfigure<OAuthOptions>(scheme, options =>
-                    {
-                        options.AuthorizationEndpoint = $"https://{host}/authorize";
-                        options.TokenEndpoint = $"https://{host}/token";
-                        options.UserInformationEndpoint = $"https://{host}/user";
-                        options.Backchannel = new HttpClient(Provider);
-                    });
-                }
+                services.PostConfigure<OAuthOptions>("github", options => options.Backchannel = new HttpClient(Provider));
+                services.PostConfigure<OAuthOptions>("google", options => options.Backchannel = new HttpClient(Provider));
             });
     }
 

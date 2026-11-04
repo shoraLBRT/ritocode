@@ -23,4 +23,27 @@ public sealed class ApiOptions
     /// intentionally published.
     /// </summary>
     public bool EnableOpenApi { get; init; }
+
+    /// <summary>
+    /// The largest request body the server reads, in bytes (docs/SPEC.md §10.1). The largest request a
+    /// learner sends — an answer naming every card with its leaves — is a few kilobytes; the default
+    /// leaves room for that many times over and refuses the rest with a 413 before any of it is read.
+    /// </summary>
+    [Range(1024, 10 * 1024 * 1024)]
+    public long MaxRequestBodyBytes { get; init; } = 64 * 1024;
+
+    /// <summary>
+    /// The API sits behind the production proxy (deploy/Caddyfile), which terminates TLS: the scheme
+    /// and client address it forwards are taken as the request's. Without this, the sign-in callback
+    /// would be built as <c>http://</c>. Every forwarder is trusted, so this is on only where the API is
+    /// reachable through the proxy alone — its own network in the production Compose file.
+    /// </summary>
+    public bool BehindProxy { get; init; }
+
+    /// <summary>
+    /// Where the data-protection key ring is kept, which protects the sign-in state between
+    /// <c>/auth/login</c> and the callback. Empty keeps the framework's default; production points it
+    /// at a volume, so a restart or a release does not fail everyone's sign-in in flight.
+    /// </summary>
+    public string? DataProtectionKeysDirectory { get; init; }
 }

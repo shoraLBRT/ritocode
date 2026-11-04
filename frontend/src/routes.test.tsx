@@ -37,18 +37,18 @@ function api({ signedIn = true } = {}) {
 
 describe('the application shell', () => {
   it('renders the layout chrome around every route', async () => {
-    renderApp(api());
+    renderApp(api(), '/privacy');
 
     expect(screen.getByRole('navigation', { name: ru.nav.label })).toBeInTheDocument();
     expect(screen.getByRole('main')).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByRole('heading', { level: 1, name: ru.app.name })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1, name: ru.privacy.title })).toBeInTheDocument();
     });
   });
 
   it('declares the page to be in Russian', () => {
     document.documentElement.lang = '';
-    renderApp(api());
+    renderApp(api(), '/privacy');
 
     expect(document.documentElement.lang).toBe('ru');
   });
@@ -73,16 +73,49 @@ describe('the application shell', () => {
     expect(screen.getByRole('heading', { level: 1, name: ru.notFound.title })).toBeInTheDocument();
   });
 
-  it('names the signed-in learner in the header', async () => {
-    renderApp(api());
+  it('names the signed-in learner in the header, by the avatar and in its menu', async () => {
+    renderApp(api(), '/privacy');
 
-    expect(await screen.findByText('Вы вошли как developer')).toBeInTheDocument();
+    const header = within(screen.getByRole('banner'));
+    const avatar = await header.findByLabelText('Профиль developer');
+    expect(avatar).toHaveTextContent('D');
+    expect(avatar.closest('details')).not.toHaveAttribute('open');
+    fireEvent.click(avatar);
+    expect(avatar.closest('details')).toHaveAttribute('open');
+    expect(header.getByText('developer')).toBeInTheDocument();
   });
 
-  it('says in the header when nobody is signed in', async () => {
-    renderApp(api({ signedIn: false }));
+  it('offers a visitor a way in and a way to start: the demo task', async () => {
+    renderApp(api({ signedIn: false }), '/privacy');
 
-    expect(await screen.findByText(ru.session.signedOut)).toBeInTheDocument();
+    const header = within(screen.getByRole('banner'));
+    expect(await header.findByText(ru.session.signIn)).toBeInTheDocument();
+    expect(header.getByRole('link', { name: ru.header.start })).toHaveAttribute('href', '/tasks/demo-task');
+  });
+
+  it('lists the sections, the brand being the way home', () => {
+    renderApp(api(), '/privacy');
+
+    const nav = within(screen.getByRole('navigation', { name: ru.nav.label }));
+    expect(nav.getAllByRole('link').map((link) => link.textContent)).toEqual([ru.nav.tasks, ru.nav.problems]);
+    expect(screen.getByRole('link', { name: ru.app.name })).toHaveAttribute('href', '/');
+  });
+});
+
+describe('the privacy policy', () => {
+  it('renders the policy file at /privacy, its sections as headings', async () => {
+    renderApp(api({ signedIn: false }), '/privacy');
+
+    expect(await screen.findByRole('heading', { level: 1, name: ru.privacy.title })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Что сайт получает при входе' })).toBeInTheDocument();
+    expect(document.title).toBe(ru.meta.privacy.title);
+  });
+
+  it('is linked from the footer of every page', async () => {
+    renderApp(api(), '/nowhere');
+
+    const footer = within(screen.getByRole('contentinfo'));
+    expect(await footer.findByRole('link', { name: ru.app.privacy })).toHaveAttribute('href', '/privacy');
   });
 });
 
@@ -104,6 +137,20 @@ describe('signing in and out from the header', () => {
     );
   });
 
+  it('says what signing in hands over, linking the privacy policy, and closes once it is followed', async () => {
+    renderApp(api({ signedIn: false }), '/nowhere');
+
+    const header = within(screen.getByRole('banner'));
+    fireEvent.click(await header.findByText(ru.session.signIn));
+
+    expect(header.getByText(ru.session.privacyNotice, { exact: false })).toBeInTheDocument();
+    expect(header.getByText(ru.session.signIn).closest('details')).toHaveAttribute('open');
+    fireEvent.click(header.getByRole('link', { name: ru.session.privacyLink }));
+
+    expect(await screen.findByRole('heading', { level: 1, name: ru.privacy.title })).toBeInTheDocument();
+    expect(header.getByText(ru.session.signIn).closest('details')).not.toHaveAttribute('open');
+  });
+
   it('signs out: ends the session on the server, then shows nobody signed in', async () => {
     let signedIn = true;
     const calls: string[] = [];
@@ -119,11 +166,12 @@ describe('signing in and out from the header', () => {
       }
       return Promise.resolve(jsonResponse([]));
     });
-    renderApp(stub);
+    renderApp(stub, '/privacy');
 
-    fireEvent.click(await screen.findByRole('button', { name: ru.session.signOut }));
+    fireEvent.click(await screen.findByLabelText('Профиль developer'));
+    fireEvent.click(screen.getByRole('button', { name: ru.session.signOut }));
 
-    expect(await screen.findByText(ru.session.signedOut)).toBeInTheDocument();
+    expect(await screen.findByText(ru.session.signIn)).toBeInTheDocument();
     expect(calls).toContain('POST http://api.test/auth/logout');
     expect(screen.queryByRole('link', { name: ru.nav.progress })).not.toBeInTheDocument();
   });
@@ -157,6 +205,12 @@ describe('a route that needs a signed-in learner', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: ru.session.requiredTitle })).toBeInTheDocument();
     expect(screen.queryByText('the protected page')).not.toBeInTheDocument();
+  });
+
+  it('offers the providers with the privacy notice beside them', async () => {
+    renderApp(api({ signedIn: false }), '/', table);
+
+    expect(await screen.findByRole('link', { name: ru.session.privacyLink })).toHaveAttribute('href', '/privacy');
   });
 
   it('offers the providers, returning to the closed page once signed in', async () => {

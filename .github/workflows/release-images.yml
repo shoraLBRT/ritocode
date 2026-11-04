@@ -71,7 +71,10 @@ jobs:
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
+          # Umami's address and site id are repository variables too, set once its server exists (#135).
           build-args: |
             SITE_ORIGIN=${{ env.SITE_ORIGIN }}
+            VITE_UMAMI_SCRIPT_URL=${{ vars.UMAMI_SCRIPT_URL }}
+            VITE_UMAMI_WEBSITE_ID=${{ vars.UMAMI_WEBSITE_ID }}
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,scope=${{ matrix.image }},mode=max

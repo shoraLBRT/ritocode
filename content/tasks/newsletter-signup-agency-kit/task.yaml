@@ -1,0 +1,5 @@
+material: newsletter-signup
+difficulty: easy
+findings:
+  - card: single-implementation-abstraction
+    leaves: [accept.fits-context]

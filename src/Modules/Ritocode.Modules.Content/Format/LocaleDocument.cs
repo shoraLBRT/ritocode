@@ -7,6 +7,9 @@ namespace Ritocode.Modules.Content.Format;
 /// </summary>
 internal sealed record LocaleDocument(string FrontMatter, IReadOnlyDictionary<string, string> Sections)
 {
+    /// <summary>The line of the file the front matter starts on: the one after the opening fence.</summary>
+    public const int FrontMatterLine = 2;
+
     private const string Fence = "---";
 
     /// <summary>The document, or null with every fault reported against <paramref name="path"/>.</summary>

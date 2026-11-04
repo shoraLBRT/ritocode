@@ -1,0 +1,7 @@
+language: python
+notes: >-
+  A clean material: a CSV de-duplicator by e-mail, written well on purpose -
+  arguments instead of paths, the address trimmed and lower-cased, rows
+  streamed rather than loaded, a missing column reported, rows without an
+  address kept as they are. Nothing is planted. Used by contact-dedupe-ngo,
+  a task with no findings.

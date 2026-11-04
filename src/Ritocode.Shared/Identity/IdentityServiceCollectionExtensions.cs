@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -6,7 +7,7 @@ namespace Ritocode.Shared.Identity;
 public static class IdentityServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers the identity seam: <see cref="ICurrentUser"/>, and the development identity
+    /// Registers the identity seam: <see cref="ICurrentUser"/>, the admin policy's refusal, and the development identity
     /// settings the Auth and Users modules both read.
     /// </summary>
     /// <remarks>
@@ -22,6 +23,9 @@ public static class IdentityServiceCollectionExtensions
 
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUser, HttpContextCurrentUser>();
+
+        // A non-admin refused by the admin policy gets the 404 of an unknown address, not a 403.
+        services.AddSingleton<IAuthorizationMiddlewareResultHandler, AdminRefusalAsNotFound>();
 
         services.AddOptions<DevelopmentIdentityOptions>()
             .Bind(configuration.GetSection(DevelopmentIdentityOptions.SectionName))

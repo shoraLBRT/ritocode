@@ -1,4 +1,5 @@
 import { useId, useState } from 'react';
+import { track } from '../../analytics';
 import { sendSignal, useApiClient } from '../../api';
 import type { ApiError } from '../../api';
 import { ErrorState } from '../../components/ErrorState';
@@ -52,6 +53,7 @@ export function SignalControl({ attempt, card, sent }: { attempt: string; card: 
 
     try {
       await sendSignal(client, attempt, card, comment);
+      track('signal-sent', { card });
       setStage('sent');
     } catch (cause) {
       const error = cause as ApiError;

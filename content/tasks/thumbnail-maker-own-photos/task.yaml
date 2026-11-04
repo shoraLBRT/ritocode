@@ -1,0 +1,11 @@
+material: thumbnail-maker
+difficulty: easy
+findings:
+  - card: executing-untrusted-data
+    leaves: [accept.fits-context, manual.validate]
+  - card: disabled-protection
+    leaves: [accept.fits-context, manual.remove]
+  - card: unvalidated-input
+    leaves: [accept.fits-context]
+  - card: hardcoded-config
+    leaves: [accept.fits-context]

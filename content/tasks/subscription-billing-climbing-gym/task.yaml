@@ -1,0 +1,11 @@
+material: subscription-billing
+difficulty: medium
+findings:
+  - card: invented-api
+    leaves: [manual.tests, rule.tests, auto.types]
+  - card: weakened-test
+    leaves: [manual.tests, rule.tests, auto.test-quality]
+  - card: happy-path-only
+    leaves: [manual.tests, rule.tests]
+  - card: stale-documentation
+    leaves: [manual.remove, rule.conventions]

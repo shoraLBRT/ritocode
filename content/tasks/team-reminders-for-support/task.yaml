@@ -1,0 +1,9 @@
+material: team-reminders
+difficulty: easy
+findings:
+  - card: state-in-process-memory
+    leaves: [brief.requirements, brief.scale]
+  - card: naive-datetime
+    leaves: [manual.representation, brief.requirements]
+  - card: unvalidated-input
+    leaves: [manual.validate]

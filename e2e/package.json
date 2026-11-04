@@ -1,0 +1,12 @@
+{
+  "name": "ritocode-e2e",
+  "private": true,
+  "type": "module",
+  "description": "The end-to-end test of the learning flow (#39): a browser against the API, the built pages and a fake OAuth provider.",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0"
+  }
+}

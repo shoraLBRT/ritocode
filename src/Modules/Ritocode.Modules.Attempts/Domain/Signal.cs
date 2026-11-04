@@ -62,4 +62,10 @@ public sealed class Signal
             CreatedAt = now,
         };
     }
+
+    /// <summary>
+    /// Marks the signal resolved: the author has read it and decided about the task (SPEC §6.2). Resolving
+    /// it again keeps the first time.
+    /// </summary>
+    public void Resolve(DateTimeOffset now) => ResolvedAt ??= now;
 }

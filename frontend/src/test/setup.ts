@@ -14,3 +14,10 @@ if (typeof sessionStorage !== 'undefined') {
     sessionStorage.clear();
   });
 }
+
+// A test that watches analytics events puts a stand-in for Umami's tracker on the window.
+if (typeof window !== 'undefined') {
+  afterEach(() => {
+    delete window.umami;
+  });
+}

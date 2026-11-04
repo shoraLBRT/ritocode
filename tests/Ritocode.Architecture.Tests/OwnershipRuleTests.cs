@@ -58,6 +58,11 @@ public sealed class OwnershipRuleTests
             "Ritocode.Modules.Attempts.Signals.SignalSender",
             "SendAsync",
             "Adds the signal it creates from an attempt it found by owner, and reads nothing directly."),
+        new(
+            "Ritocode.Modules.Attempts.Persistence.EveryonesRows",
+            Method: null,
+            "Every user's rows, for the admin area: called only from AdminReader, whose endpoints are behind "
+            + "the admin policy, and from AttemptTallyLookup, which answers counts and no row."),
     ];
 
     private static readonly HashSet<Type> GuardedEntities = [.. OwnedContexts.SelectMany(EntitiesMappedBy)];
@@ -72,6 +77,14 @@ public sealed class OwnershipRuleTests
         Assert.All(OwnedContexts, context => Assert.NotEmpty(EntitiesMappedBy(context)));
         Assert.Contains(typeof(ProofContext.OwnedRow), ProofEntities);
         Assert.Contains(typeof(ProofContext.OwnedNote), ProofEntities);
+    }
+
+    [Fact]
+    public void AttemptsAndSignals_AreBothGuarded()
+    {
+        // SPEC §10.1 names both: ownership is checked inside every query that reads an attempt or a signal.
+        Assert.Contains(typeof(Ritocode.Modules.Attempts.Domain.Attempt), GuardedEntities);
+        Assert.Contains(typeof(Ritocode.Modules.Attempts.Domain.Signal), GuardedEntities);
     }
 
     [Fact]

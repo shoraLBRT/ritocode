@@ -1,0 +1,17 @@
+material: invoice-builder
+difficulty: hard
+findings:
+  - card: god-class
+    leaves: [manual.split, rule.limits, auto.metrics]
+  - card: duplicated-code
+    leaves: [manual.dedupe, auto.metrics]
+  - card: parallel-v2-file
+    leaves: [manual.remove, manual.dedupe, rule.conventions]
+  - card: narrating-comments
+    leaves: [manual.remove, rule.conventions]
+  - card: dead-code
+    leaves: [manual.remove, auto.linter]
+  - card: flag-argument
+    leaves: [manual.split]
+  - card: happy-path-only
+    leaves: [manual.tests, rule.tests]

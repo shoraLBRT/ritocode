@@ -113,6 +113,10 @@ internal sealed class TestApiHost : IAsyncDisposable
             .WithValidation<EchoRequest>()
             .AllowAnonymous();
 
+        // A typed query value, as the paged endpoints take: one that does not parse fails binding.
+        app.MapGet("/__probe/page", (int? page) => Results.Ok(page))
+            .AllowAnonymous();
+
         // No AllowAnonymous, deliberately: this is the shape every workspace and submission
         // endpoint from stage 3 on will have, and it is what proves the host's fallback policy
         // protects an endpoint that says nothing about authorisation at all.

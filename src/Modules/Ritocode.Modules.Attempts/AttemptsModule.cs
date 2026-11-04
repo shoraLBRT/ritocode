@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Ritocode.Modules.Attempts.Admin;
 using Ritocode.Modules.Attempts.Contracts;
 using Ritocode.Modules.Attempts.Lifecycle;
 using Ritocode.Modules.Attempts.Persistence;
@@ -23,7 +24,8 @@ namespace Ritocode.Modules.Attempts;
 /// <remarks>
 /// Owns the <c>attempts</c> schema. Reads a task and its answer key through
 /// <see cref="Shared.Contracts.Content.ITaskForAttemptLookup"/>, and answers the task catalogue's
-/// solved flags through <see cref="ISubmittedTaskLookup"/>.
+/// solved flags through <see cref="ISubmittedTaskLookup"/> and the admin list of users' counts through
+/// <see cref="IAttemptTallyLookup"/>. Serves the admin area's signals and attempts (SPEC §6.2).
 /// </remarks>
 public sealed class AttemptsModule : IModule
 {
@@ -63,6 +65,9 @@ public sealed class AttemptsModule : IModule
         services.AddScoped<ISignalSender, SignalSender>();
         services.AddScoped<IValidator<SendSignalRequest>, SendSignalRequestValidator>();
 
+        services.AddScoped<IAdminReader, AdminReader>();
+        services.AddScoped<IAttemptTallyLookup, AttemptTallyLookup>();
+
         // TryAdd, as the other modules do: the clock is host infrastructure.
         services.TryAddSingleton(TimeProvider.System);
     }
@@ -74,5 +79,6 @@ public sealed class AttemptsModule : IModule
         endpoints.MapGroup(RoutePrefix).MapAttemptEndpoints();
         endpoints.MapProgressEndpoints();
         endpoints.MapSignalEndpoints();
+        endpoints.MapAdminEndpoints();
     }
 }

@@ -47,9 +47,11 @@ In C#, a task is `DiagnosisTask`, so that it never collides with `System.Threadi
 
 ### 2.1 Who it is for
 
-**Vibe coders** — people who build software by instructing agents and know little about
-architecture. The content therefore starts from the basics: problem cards are written for someone
-who has never heard the word "coupling", and easy tasks are short enough to finish in five minutes.
+**Junior developers who build with AI agents** — people who can read the code an agent wrote but
+rarely read all of it, and know little about architecture
+([ADR 0015](adr/0015-arena-home-and-junior-audience.md); until 2026-10-28, vibe coders). The
+content therefore starts from the basics of design: problem cards are written for someone who has
+never heard the word "coupling", and easy tasks are short enough to finish in five minutes.
 
 The product teaches them to look at what an agent produced, name what is wrong, and know what it is
 treated with — a better brief, a rule in the repository, an automatic check, a fix by hand, or
@@ -179,8 +181,8 @@ Material is the code the learner reads.
 - **One material serves one to four tasks.** Tasks over the same material differ in context, so
   their answer keys differ.
 
-**Size follows difficulty.** Estimates assume a vibe coder reads simple Python for understanding at
-20–30 lines a minute — slower than skimming, faster than line-by-line review (7–8 lines a minute).
+**Size follows difficulty.** Estimates assume a junior developer reads simple Python for understanding
+at 20–30 lines a minute — slower than skimming, faster than line-by-line review (7–8 lines a minute).
 They are **estimates to be calibrated** from recorded attempt times (§8).
 
 | Difficulty | Reading | Total lines, at most | Files | Whole task |
@@ -241,7 +243,7 @@ Localisation is built in from the first commit; only the Russian content is writ
 
 | Route | Page | Access |
 | --- | --- | --- |
-| `/` | Landing: what Ritocode is, a link to a demo task and to the problem catalogue | public |
+| `/` | Home, the arena: what Ritocode teaches, the daily task, the task list, progress (below) | public |
 | `/problems` | Problem catalogue, one page, every card in full, anchor per card (`/problems#secrets-in-repo`) | public |
 | `/tasks` | Task catalogue | public |
 | `/tasks/{slug}` | Solving a task | public to solve; sign-in to check |
@@ -254,6 +256,24 @@ Localisation is built in from the first commit; only the Russian content is writ
 Yandex, which matters for a Russian-language audience. They are prerendered to static HTML at build
 time from the content export; the single-page application takes over once loaded. This revisits
 ADR 0001's "revisit if catalog SEO becomes a goal" without adding a server-rendering layer.
+
+**The home page is an arena** ([ADR 0015](adr/0015-arena-home-and-junior-audience.md),
+[DESIGN.md](DESIGN.md) › The arena; decided by the maintainer on 2026-10-28 in
+[#190](https://github.com/shoraLBRT/ritocode/issues/190)):
+
+- **The lead** says what the product teaches — to see the problems in code an agent wrote — with the
+  real counts of tasks, problems and classes. Its wording is still to be worked out; until then it is
+  a placeholder on that idea.
+- **The daily task.** One task a day, changing at midnight Moscow time. For a signed-in learner it is
+  chosen among the tasks they have not solved; for a guest, and for a learner who has solved them
+  all, among all tasks. The choice is a pure function of the date and the list, so everyone in the
+  same state sees the same task and the prerendered page is stable.
+- **The task list**, as in §4.3: title, expected time, difficulty, and for a signed-in learner
+  whether it is solved — the first eight, with difficulty tabs and a link to `/tasks`. No class tags.
+- **Progress** for a signed-in learner: found out of met, by class (§4.7), the **streak** and
+  the **activity** of the last twelve weeks. A guest sees a sign-in prompt there.
+- **Without JavaScript** the prerendered page carries the lead, the catalogue's counts and how a task
+  goes; the content export has no tasks, so the daily task and the list are filled in by the application.
 
 ### 4.2 Problem catalogue
 
@@ -269,15 +289,20 @@ tasks: they would give the answer away. Ordered by difficulty, then by publicati
 
 ### 4.4 Solving a task
 
-The screen has three areas: **context and brief**, **material**, and **the answer**. On a phone they
-become three tabs — Context, Code, Answer.
+The screen is a workspace ([DESIGN.md](DESIGN.md), [ADR 0014](adr/0014-visual-identity-and-task-workspace.md)):
+the three steps in the header; a sidebar with the **context** — the brief always shown, the rest of
+the context on expanding — and **the answer**, the step at hand; the **material** beside it. On a
+phone they become three tabs — Context, Code, Answer.
 
-**Material viewer.** A file tree with a line count per file, then the selected file with syntax
-highlighting and line numbers. Above the tree, an overview generated at ingest: total lines, file
-count, and the dependencies the project declares. Read-only.
+**Material viewer.** The open file's path is a button that opens the file tree, with a line count
+per file and an overview generated at ingest — total lines and file count; buttons lead to the
+previous and the next file. Syntax highlighting and line numbers; read-only. The dependencies the
+project declares are part of the overview the API serves, but the screen does not show them.
 
 **Step 1 — Diagnosis: what do you see?** The learner picks cards from the catalogue — only name and
-summary are shown — by searching or by browsing the six groups. The question is "what do you see
+summary are shown. **Search comes first**: they describe in their own words what they see, and the
+cards that share a word appear as they type, ranked, the matched words marked; class filters narrow
+them. Browsing the six groups stays possible, folded and deliberately quiet. The question is "what do you see
 here that should be named", not "what is wrong": a god class that is fine in this context is still
 a god class, and whether to leave it is step 2's decision.
 
@@ -287,13 +312,18 @@ a god class, and whether to leave it is step 2's decision.
   every learner sees the same list. The author does nothing to produce it.
 - Picking nothing is a valid answer. On a clean task it is the right one.
 
-**Step 2 — Treatment: what do you do with it here?** For each picked card, the whole treatment tree.
-The learner opens one or more branches and ticks one or more leaves in each. Every picked card needs
+**Step 2 — Treatment: what do you do with it here?** For each picked card in turn — the picked
+cards listed with their state — the whole treatment tree, searched the way the cards are or opened
+branch by branch; each leaf says where its measure lives. The learner ticks one or more leaves in
+one or more branches. Every picked card needs
 at least one leaf before the answer can be checked. The learner can go back to step 1 at any time.
 
 **Check.** The answer is submitted and scored (§5), and the review opens.
 
 ### 4.5 Review
+
+The review opens in the task's workspace with the third step current: the score and every line in
+the sidebar, the chosen line in full beside it — or the code again.
 
 - **Score** in points, with its composition beneath: findings found out of findings present, extra
   picks, treatments that matched.
@@ -330,6 +360,12 @@ Built from **first attempts only** (§5.4):
 - **Per class** — how many findings of that class were found out of those met, and how many found
   ones were treated right.
 - **Per card** — met, found, missed, picked when absent, treated right.
+
+Two counts of practice, from **every** attempt, not only first ones:
+
+- **Activity** — the number of attempts submitted on each day, Moscow time.
+- **Streak** — how many days in a row, up to today, have at least one submitted attempt. A day
+  without one breaks it; today still counts as kept until it ends.
 
 No XP, no levels, no leaderboard.
 
@@ -693,7 +729,7 @@ All decided by the maintainer on 2026-09-30, in answer to questions put while pr
 
 | # | Decision |
 | --- | --- |
-| 1 | Audience: vibe coders with little architecture knowledge; content starts from the basics. |
+| 1 | Audience: vibe coders with little architecture knowledge; content starts from the basics. Superseded on 2026-10-28 by [ADR 0015](adr/0015-arena-home-and-junior-audience.md): junior developers who build with AI agents. |
 | 2 | Step 1 asks what the learner sees; the context moves the treatment. The context is visible from the start. |
 | 3 | No traps. Found +10, missed −2 to −5; the economics are tuned separately. The whole catalogue is not labelled per material — too costly for authors. |
 | 4 | Locations of findings wait for a later version; the MVP keeps the simple card. |

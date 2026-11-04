@@ -1,0 +1,15 @@
+language: python
+notes: >-
+  Online booking for a clinic: Flask and SQLite, patients sign in with a phone
+  and a password, list a doctor's free slots, book one with a complaint, view
+  and cancel an appointment. Planted: viewing and cancelling an appointment
+  check only that someone is signed in, never that the appointment is theirs,
+  and the complaint is medical (missing-ownership-check); booking checks that
+  the slot is free and inserts in a separate step, with no unique constraint
+  (check-then-act-race); the tests cover only the successful paths - no taken
+  slot, no signed-out request, no other patient's appointment
+  (happy-path-only). Slot times are the clinic's wall-clock text on purpose:
+  one clinic, one city - but blind smoke runs read naive-datetime onto it,
+  so both keys list it with accept.fits-context. Configuration and the secret key come from the
+  environment (from_prefixed_env). The material runs: its three tests pass.
+  Used by clinic-booking-city-network and clinic-booking-dentist.

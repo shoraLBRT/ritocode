@@ -1,7 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Ritocode.Api.Tests.Infrastructure;
@@ -57,6 +59,41 @@ public sealed class SessionTests(AnonymousTestApi api) : IClassFixture<Anonymous
         // Through to the endpoint, which answers for the task: there is no content in this host.
         Assert.Equal(HttpStatusCode.NotFound, right.StatusCode);
         Assert.Equal("task_not_found", await CodeAsync(right));
+    }
+
+    /// <summary>
+    /// Every state-changing endpoint the host maps — read from its routing, so one added later is swept
+    /// too — refuses a session request that does not repeat the CSRF token (SPEC §10.1).
+    /// </summary>
+    [Fact]
+    public async Task EveryStateChangingEndpoint_RefusesASessionRequestWithoutTheCsrfToken()
+    {
+        var session = await StartAsync(await CreateUserAsync("csrf-sweep"));
+
+        var endpoints = api.Services.GetRequiredService<EndpointDataSource>().Endpoints
+            .OfType<RouteEndpoint>()
+            .Where(endpoint => endpoint.RoutePattern.RawText is { } path && !path.StartsWith("/__probe", StringComparison.Ordinal))
+            .SelectMany(endpoint => (endpoint.Metadata.GetMetadata<IHttpMethodMetadata>()?.HttpMethods ?? [])
+                .Where(method => !HttpMethods.IsGet(method) && !HttpMethods.IsHead(method) && !HttpMethods.IsOptions(method))
+                .Select(method => (Method: method, Path: Concrete(endpoint.RoutePattern.RawText!))))
+            .Distinct()
+            .ToList();
+
+        // The sweep reaches what it exists for, so it cannot pass over nothing.
+        Assert.Contains(("POST", "/api/v1/attempts"), endpoints);
+        Assert.Contains(endpoints, endpoint => endpoint is ("POST", var path) && path.EndsWith("/submit", StringComparison.Ordinal));
+        Assert.Contains(endpoints, endpoint => endpoint is ("PATCH", var path) && path.StartsWith("/api/v1/attempts/", StringComparison.Ordinal));
+        Assert.Contains(("POST", "/api/v1/signals"), endpoints);
+        Assert.Contains(endpoints, endpoint => endpoint is ("POST", var path) && path.EndsWith("/resolve", StringComparison.Ordinal));
+        Assert.Contains(("POST", "/auth/logout"), endpoints);
+
+        foreach (var (method, path) in endpoints)
+        {
+            using var response = await SendAsync(new HttpMethod(method), path, session, csrf: null, body: new { });
+
+            Assert.True(response.StatusCode == HttpStatusCode.Forbidden, $"{method} {path} answered {(int)response.StatusCode} without the CSRF token.");
+            Assert.Equal(CsrfProtectionMiddleware.InvalidCode, await CodeAsync(response));
+        }
     }
 
     [Fact]
@@ -125,6 +162,13 @@ public sealed class SessionTests(AnonymousTestApi api) : IClassFixture<Anonymous
 
         Assert.DoesNotContain(rows, row => row.TokenHash == session.Token || row.CsrfToken == session.Token);
         Assert.Contains(rows, row => row.TokenHash == UserSession.Hash(session.Token));
+    }
+
+    /// <summary>A route template with every parameter filled in, so it can be requested.</summary>
+    private static string Concrete(string template)
+    {
+        var path = Regex.Replace(template.StartsWith('/') ? template : "/" + template, "{[^}]+}", Guid.CreateVersion7().ToString());
+        return path.Length > 1 ? path.TrimEnd('/') : path;
     }
 
     private async Task<Guid> CreateUserAsync(string username)

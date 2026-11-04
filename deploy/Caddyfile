@@ -1,0 +1,39 @@
+# The edge of the production server (deploy/compose.production.yml): TLS for both domains from
+# Let's Encrypt, HTTP redirected to HTTPS (Caddy does both by itself), the headers that belong to
+# the site as a whole, and the routes. The API sets its own strict headers on its responses (#35);
+# the ones here are for the pages, plus HSTS for everything.
+
+(site_headers) {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+		-Server
+	}
+}
+
+{$SITE_DOMAIN} {
+	import site_headers
+	encode zstd gzip
+
+	# The API: the versioned endpoints, sign-in and its callbacks, the health checks.
+	@api path /api/* /auth/* /health/*
+	handle @api {
+		reverse_proxy api:8080
+	}
+
+	# Everything else is the static build. Its scripts are its own and Umami's; it talks to the API
+	# on this origin and to Umami's /api/send.
+	handle {
+		header Content-Security-Policy "default-src 'self'; script-src 'self' https://{$UMAMI_DOMAIN}; connect-src 'self' https://{$UMAMI_DOMAIN}; img-src 'self' data:; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+		reverse_proxy web:80
+	}
+}
+
+{$UMAMI_DOMAIN} {
+	import site_headers
+	encode zstd gzip
+	reverse_proxy umami:3000
+}

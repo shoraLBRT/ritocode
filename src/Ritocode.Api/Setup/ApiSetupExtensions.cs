@@ -1,7 +1,9 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpLogging;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Options;
 using Ritocode.Api.Configuration;
 using Ritocode.Api.Endpoints;
@@ -56,6 +58,12 @@ public static class ApiSetupExtensions
         builder.Services.AddProblemDetails();
         builder.Services.AddExceptionHandler<AppExceptionHandler>();
 
+        // A request an endpoint cannot bind — a body that is not UTF-8 JSON, a query value of the
+        // wrong type, the wrong content type — throws to the handler above, which answers it in the
+        // unified error body. The framework throws only in Development and otherwise writes a bare
+        // 400 with no body at all, which ADR 0003 does not allow.
+        builder.Services.Configure<RouteHandlerOptions>(options => options.ThrowOnBadRequest = true);
+
         builder.Services.AddHealthChecks();
 
         // The identity seam is host infrastructure: ICurrentUser is what every
@@ -70,7 +78,9 @@ public static class ApiSetupExtensions
         // which is the failure mode worth designing against. Endpoints meant to stay open say
         // AllowAnonymous where they are mapped, and every one that exists today already does.
         builder.Services.AddAuthorizationBuilder()
-            .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
+            .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build())
+            // The admin area (SPEC §6.2). Who is an admin is the Users module's handler's to say.
+            .AddPolicy(AdminPolicy.Name, AdminPolicy.Build());
 
         // Validators are registered by the module that owns the request type, inside
         // IModule.RegisterServices. WithValidation<T>() resolves IValidator<T> from the container,
@@ -79,6 +89,29 @@ public static class ApiSetupExtensions
         builder.Services.AddModules(builder.Configuration, ModuleRegistry.All);
 
         var apiOptions = builder.Configuration.GetSection(ApiOptions.SectionName).Get<ApiOptions>() ?? new ApiOptions();
+
+        // A body larger than any request the product makes is refused by the server before it is read.
+        builder.WebHost.ConfigureKestrel(kestrel => kestrel.Limits.MaxRequestBodySize = apiOptions.MaxRequestBodyBytes);
+
+        // Behind the production proxy: its scheme and the client's address are the request's.
+        if (apiOptions.BehindProxy)
+        {
+            builder.Services.Configure<ForwardedHeadersOptions>(forwarded =>
+            {
+                forwarded.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+                // The proxy's address on the Compose network is not fixed; the network is the boundary.
+                forwarded.KnownIPNetworks.Clear();
+                forwarded.KnownProxies.Clear();
+            });
+        }
+
+        // A key ring that outlives the container, so a release does not fail sign-ins in flight.
+        if (!string.IsNullOrWhiteSpace(apiOptions.DataProtectionKeysDirectory))
+        {
+            builder.Services.AddDataProtection()
+                .SetApplicationName("ritocode")
+                .PersistKeysToFileSystem(new DirectoryInfo(apiOptions.DataProtectionKeysDirectory));
+        }
 
         if (apiOptions.AllowedOrigins.Count > 0)
         {
@@ -104,9 +137,22 @@ public static class ApiSetupExtensions
 
         var options = app.Services.GetRequiredService<IOptions<ApiOptions>>().Value;
 
+        // Before anything reads the scheme or the client's address.
+        if (options.BehindProxy)
+        {
+            app.UseForwardedHeaders();
+        }
+
         // Correlation runs first so every later log line and error body carries the request id.
         app.UseMiddleware<RequestIdMiddleware>();
+
+        // Registered before the exception handler, so the headers reach a 500 too.
+        app.UseMiddleware<SecurityHeadersMiddleware>();
         app.UseExceptionHandler();
+
+        // Routing's own 405 and 415, and an unknown address under the API, get the unified error body
+        // as well: they are written before any endpoint runs, so the exception handler never sees them.
+        app.UseRoutingRefusalBodies(options.BasePath);
 
         if (options.AllowedOrigins.Count > 0)
         {

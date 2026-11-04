@@ -24,6 +24,8 @@ internal static class MigratorCommandParser
 
               dotnet run --project src/Ritocode.DbMigrator            apply pending migrations
               dotnet run --project src/Ritocode.DbMigrator -- status  report pending migrations
+              dotnet run --project src/Ritocode.DbMigrator -- ingest <content-root> <revision>
+                                                                      ingest a content tree, stamped with the revision
 
             The connection string comes from Database:ConnectionString, so it can be supplied by
             appsettings, user secrets, or the Database__ConnectionString environment variable.

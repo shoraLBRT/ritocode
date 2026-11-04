@@ -19,11 +19,20 @@ public enum ErrorType
     /// <summary>The addressed resource does not exist, or is not visible to the caller.</summary>
     NotFound,
 
+    /// <summary>The addressed resource exists but does not take the request's method.</summary>
+    MethodNotAllowed,
+
     /// <summary>The request conflicts with the current state of the resource.</summary>
     Conflict,
 
     /// <summary>An If-Match / version precondition did not hold.</summary>
     PreconditionFailed,
+
+    /// <summary>The request body is larger than the server accepts.</summary>
+    PayloadTooLarge,
+
+    /// <summary>The request body is in a media type the endpoint does not read.</summary>
+    UnsupportedMediaType,
 
     /// <summary>The caller exceeded a rate or quota limit.</summary>
     RateLimited,

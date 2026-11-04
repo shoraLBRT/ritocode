@@ -110,7 +110,10 @@ public sealed class SignInTests(SignInTestApi api) : IClassFixture<SignInTestApi
     [Fact]
     public async Task TheLoginRedirect_CarriesStateAndPkce()
     {
-        using var response = await api.Client.GetAsync("/auth/login/google?returnUrl=/progress", TestContext.Current.CancellationToken);
+        // Not behind a proxy, a forwarded scheme is anyone's to claim and is ignored.
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/auth/login/google?returnUrl=/progress");
+        request.Headers.Add("X-Forwarded-Proto", "https");
+        using var response = await api.Client.SendAsync(request, TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         var query = QueryHelpers.ParseQuery(response.Headers.Location!.Query);
