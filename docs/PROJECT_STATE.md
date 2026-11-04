@@ -140,6 +140,9 @@ description. As of that day:
   the arena and the task screen, surface contrast
   ([#197](https://github.com/shoraLBRT/ritocode/issues/197)) first; the workspace layout, the
   catalogue and progress start with mock-ups.
+- **Studying the problems** ([#204](https://github.com/shoraLBRT/ritocode/issues/204)): [ADR 0016](adr/0016-studying-problems.md)
+  is *Proposed* — a mark and a drill of recognising a card by its signs, no authoring — and waits on
+  the maintainer's decision and its four open questions. Nothing is built until it is accepted.
 - **Later** holds the post-MVP iterations that were SPEC §12; not taken until the maintainer moves one.
 
 **Content.** The content track, with the two skills: 55–60 cards
