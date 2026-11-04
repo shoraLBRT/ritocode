@@ -254,11 +254,19 @@ findings:
     leaves: [auto.secrets, rule.conventions]
   - card: money-in-float
     leaves: [manual.representation]
-  - card: swallowed-error
+  - card: swallowed-exception
     leaves: [manual.handle-errors]
+  - card: hardcoded-config
+    leaves: [accept.fits-context]
 ```
 
 - `findings` may be empty — a clean task is `findings: []`.
+- **The key lists every card present in the code**, including one that is fine in this context:
+  that finding's leaf is then an `accept.*` leaf ([`SPEC.md`](SPEC.md) §3.3, §5.3). Leaving it out
+  would score a learner who saw it and chose to leave it as having made an extra pick. The exception
+  is a card whose name is itself a verdict relative to context — `over-engineering`,
+  `premature-optimization` — which is in the key only when the context makes it a problem
+  ([`SPEC.md`](SPEC.md) §3.5).
 - Each finding names an existing card and **at least one** existing leaf. Several leaves mean *any
   of them is right* ([`SPEC.md`](SPEC.md) §5.2).
 - A card appears at most once per task.
@@ -285,6 +293,10 @@ title: Счёт клиенту по почте
 ### money-in-float
 
 Десять счетов в месяц — а копейки всё равно расходятся с бухгалтерией.
+
+### hardcoded-config
+
+Адрес почтового сервера в коде — нормально для скрипта, который раз в месяц запускает один человек.
 
 ## Lesson
 
@@ -327,10 +339,12 @@ def send_invoice(customer_email, items):
         pass
 ```
 
-The hardcoded SMTP host is not a finding here: in a script one person runs once a month, it is
-acceptable, and the author has left it out of the key. A second task over the same material, with a
-context of a hosted service used by many studios, would list `hardcoded-config` with
-`manual.extract-config` — that is what one material serving several contexts means.
+The hardcoded SMTP host is in the key with `accept.fits-context`: in a script one person runs once
+a month, it is acceptable, and the right answer is to see it and leave it. A learner who picks it
+and leaves it scores as for any finding; one who picks it and extracts it to configuration finds the
+card but not the treatment. A second task over the same material, with a context of a hosted service
+used by many studios, would list `hardcoded-config` with `manual.extract-config` — that is what one
+material serving several contexts means.
 
 ---
 

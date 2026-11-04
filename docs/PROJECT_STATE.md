@@ -133,9 +133,9 @@ description. As of that day:
 - **S4, S7, S8** wait on the maintainer's [#134](https://github.com/shoraLBRT/ritocode/issues/134)
   (domain, VPS, OAuth apps, privacy text). Their engineering exists and is checked locally;
   maintainer-provided resources block only an issue's final real check, not its engineering — build
-  with fakes, a local `docker compose` or a placeholder, and name the real check as left. The one
-  takeable item there is the CONTENT_FORMAT fix
-  ([#218](https://github.com/shoraLBRT/ritocode/issues/218)).
+  with fakes, a local `docker compose` or a placeholder, and name the real check as left. The
+  CONTENT_FORMAT fix ([#218](https://github.com/shoraLBRT/ritocode/issues/218)), the one takeable
+  item there, is done.
 - **Arena polish** is what a coding session takes next: the maintainer's feedback of 2026-11-04 on
   the arena and the task screen, surface contrast
   ([#197](https://github.com/shoraLBRT/ritocode/issues/197)) first; the workspace layout, the
@@ -314,10 +314,12 @@ future session would otherwise have to rediscover.
   also picked `hardcoded-config` (`manual.extract-config`) and `missing-timeout`
   (`accept.fits-context`); `naive-datetime` is not on its shortlist and was named outside the list.
   Its key is unchanged — the maintainer's call, and the e2e test counts its two findings.
-- **A card that is fine here is still in the key** (SPEC §3.3, the `author-task` skill, the smoke
-  prompt): a present problem is listed with an `accept.*` leaf. `CONTENT_FORMAT.md` §6's example
-  says the opposite — a hardcoded SMTP host acceptable in its context is "left out of the key" — and
-  should be brought in line.
+- **A card that is fine here is still in the key** (SPEC §3.3, `CONTENT_FORMAT.md` §6, the
+  `author-task` skill, the smoke prompt): a present problem is listed with an `accept.*` leaf. §6's
+  example lists its hardcoded SMTP host with `accept.fits-context` since #218. The test fixture
+  `ContentFixtures/reference` began as a copy of that example and keeps the older key, without
+  `hardcoded-config`: the API tests use the card as the easy task's extra pick. It is test data, not
+  an example to copy.
 - A module's test context should be configured as the host configures one. The host's contexts
   retry transient failures, and a retrying strategy refuses a transaction opened by hand — the smoke
   run of #121 caught exactly that, which a test context without retries had passed.
