@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Link } from 'react-router';
 import { difficulties, getProblemCatalogue, getProgress, listAttemptsSince, listTasks, useApiClient } from '../api';
@@ -11,7 +11,7 @@ import { useT } from '../i18n';
 import { useSession } from '../session';
 import { SignInLinks } from '../session/SignInLinks';
 import { useSiteConfig } from '../site';
-import { activity, activityLevel, activitySince, dailyTask } from './home/arena';
+import { activity, activityLevel, activitySince, dailyTask, formatCountdown, nextMoscowMidnight } from './home/arena';
 
 /**
  * `/` — the arena (docs/SPEC.md §4.1, ADR 0015, DESIGN.md › The arena): what Ritocode teaches with
@@ -43,8 +43,12 @@ function Arena({ catalogue }: { catalogue: ProblemCatalogue | null }) {
   const session = useSession();
   const { demoTask } = useSiteConfig();
   const tasks = useApiResource((signal) => listTasks(client, { pageSize: 100 }, signal), [client]);
-  // One instant for the whole page, so the daily task and the activity agree on what today is.
-  const now = useMemo(() => new Date(), []);
+  // One instant for the whole page, so the daily task and the activity agree on what today is. It
+  // moves on when the daily task's countdown reaches midnight, and the next day's task takes over.
+  const [now, setNow] = useState(() => new Date());
+  const nextDay = useCallback(() => {
+    setNow(new Date());
+  }, []);
   const taskList = tasks.state.status === 'success' ? tasks.state.data.items : null;
 
   return (
@@ -77,7 +81,12 @@ function Arena({ catalogue }: { catalogue: ProblemCatalogue | null }) {
           </nav>
         </header>
 
-        <DailyTask task={taskList === null ? null : dailyTask(taskList, now)} loading={taskList === null} />
+        <DailyTask
+          task={taskList === null ? null : dailyTask(taskList, now)}
+          loading={taskList === null}
+          now={now}
+          onNextDay={nextDay}
+        />
       </div>
 
       <div className="rc-arena__main">
@@ -119,8 +128,21 @@ function Stat({ value, label }: { value: number; label: string }) {
   );
 }
 
-/** The page's one spotlight: today's task, or a placeholder while the list loads. */
-function DailyTask({ task, loading }: { task: TaskSummary | null; loading: boolean }) {
+/**
+ * The page's one spotlight: today's task, or a placeholder while the list loads. The countdown comes
+ * with the task, so the prerendered page — which has no tasks — never shows a time baked at build.
+ */
+function DailyTask({
+  task,
+  loading,
+  now,
+  onNextDay,
+}: {
+  task: TaskSummary | null;
+  loading: boolean;
+  now: Date;
+  onNextDay: () => void;
+}) {
   const t = useT();
 
   if (task === null) {
@@ -138,7 +160,7 @@ function DailyTask({ task, loading }: { task: TaskSummary | null; loading: boole
     <article className="rc-daily" aria-labelledby="home-daily">
       <div className="rc-daily__top">
         <span>{t('home.daily.label')}</span>
-        <span>{t('home.daily.changes')}</span>
+        <Countdown key={nextMoscowMidnight(now).getTime()} until={nextMoscowMidnight(now)} onZero={onNextDay} />
       </div>
       <h2 id="home-daily" className="rc-daily__title">
         {task.title}
@@ -152,6 +174,43 @@ function DailyTask({ task, loading }: { task: TaskSummary | null; loading: boole
         {t('home.daily.start')}
       </Link>
     </article>
+  );
+}
+
+/**
+ * The time left until `until`, ticking every second; at zero it calls `onZero` once. Not a live
+ * region: a screen reader reads the time when it reaches it, not on every tick.
+ */
+function Countdown({ until, onZero }: { until: Date; onZero: () => void }) {
+  const t = useT();
+  const [left, setLeft] = useState(() => until.getTime() - Date.now());
+  const zero = useRef(onZero);
+
+  useEffect(() => {
+    zero.current = onZero;
+  }, [onZero]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      const ms = until.getTime() - Date.now();
+      setLeft(ms);
+      if (ms <= 0) {
+        window.clearInterval(timer);
+        zero.current();
+      }
+    }, 1000);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [until]);
+
+  const time = formatCountdown(left);
+
+  return (
+    <span className="rc-daily__countdown">
+      {t('home.daily.countdown')} <time dateTime={`PT${time.replace(/^(\d+):(\d+):(\d+)$/, '$1H$2M$3S')}`}>{time}</time>
+    </span>
   );
 }
 

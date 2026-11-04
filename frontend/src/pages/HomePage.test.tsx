@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import { ru } from '../i18n';
 import { renderApp } from '../test/render';
 import { jsonResponse, pageOf, problemResponse } from '../test/responses';
@@ -92,6 +92,37 @@ describe('the arena', () => {
 
     expect(['Выгрузка заказов', 'Пополнение баланса', 'Счета дизайн-студии']).toContain(title);
     expect(within(daily).getByRole('link', { name: ru.home.daily.start })).toBeInTheDocument();
+  });
+
+  it('counts down to Moscow midnight, then shows the task of the next day', async () => {
+    // Only the interval and the clock are faked: the page's requests and testing-library's waiting
+    // keep real timers. Two seconds before midnight in Moscow (21:00 UTC).
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] });
+    vi.setSystemTime(new Date('2026-11-04T20:59:58Z'));
+    try {
+      renderApp(api({ signedIn: true }), '/');
+
+      const daily = await screen.findByRole('article', { name: (name) => name !== '' });
+      const title = () => within(daily).getByRole('heading', { level: 2 }).textContent;
+      const today = title();
+      expect(within(daily).getByText('00:00:02')).toHaveAttribute('dateTime', 'PT00H00M02S');
+      expect(daily).toHaveTextContent(`${ru.home.daily.countdown} 00:00:02`);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1000);
+      });
+      expect(within(daily).getByText('00:00:01')).toBeInTheDocument();
+      expect(title()).toBe(today);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1000);
+      });
+      expect(within(daily).getByText('23:59:59')).toBeInTheDocument();
+      expect(title()).not.toBe(today);
+      expect(['Выгрузка заказов', 'Пополнение баланса', 'Счета дизайн-студии']).toContain(title());
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('lists the tasks without classes, and filters them by difficulty', async () => {

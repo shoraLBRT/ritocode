@@ -1690,8 +1690,9 @@ pre {
 
 .rc-daily__top {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: 12px;
+  gap: 4px 12px;
   color: var(--spotlight-muted);
   font-family: var(--font-mono);
   font-size: 0.75rem;

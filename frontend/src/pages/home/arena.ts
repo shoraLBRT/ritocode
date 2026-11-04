@@ -18,6 +18,21 @@ export function moscowDay(instant: Date): number {
   return Math.floor((instant.getTime() + MOSCOW_OFFSET_MS) / DAY_MS);
 }
 
+/** The instant the next Moscow day starts — when today's task gives way to the next one. */
+export function nextMoscowMidnight(now: Date): Date {
+  return new Date((moscowDay(now) + 1) * DAY_MS - MOSCOW_OFFSET_MS);
+}
+
+/**
+ * The time left as `HH:MM:SS`, counting down by whole seconds the way a clock does: `00:00:00` is
+ * shown for the last second, and a whole day reads `23:59:59`. A negative time reads as zero.
+ */
+export function formatCountdown(ms: number): string {
+  const total = Math.min(DAY_MS / 1000 - 1, Math.max(0, Math.floor(ms / 1000)));
+  const parts = [Math.floor(total / 3600), Math.floor(total / 60) % 60, total % 60];
+  return parts.map((part) => String(part).padStart(2, '0')).join(':');
+}
+
 /**
  * Today's task: chosen by the Moscow day among the tasks the learner has not solved — all of them
  * for a guest, whose `solved` is null, and for a learner who has solved everything. The same list
