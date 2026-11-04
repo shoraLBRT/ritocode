@@ -137,8 +137,11 @@ description. As of that day:
   CONTENT_FORMAT fix ([#218](https://github.com/shoraLBRT/ritocode/issues/218)), the one takeable
   item there, is done.
 - **Arena polish** is what a coding session takes next: the maintainer's feedback of 2026-11-04 on
-  the arena and the task screen, surface contrast
-  ([#197](https://github.com/shoraLBRT/ritocode/issues/197)) first; the workspace layout, the
+  the arena and the task screen. Surface contrast
+  ([#197](https://github.com/shoraLBRT/ritocode/issues/197)) is built — surface levels in the tokens
+  (DESIGN.md › Tokens), applied to the arena and the workspace, AA checked by
+  `src/theme/contrast.test.ts` — and waits on the maintainer's approval of its before/after, which
+  is the issue's acceptance criterion; the issue stays open until then. The workspace layout, the
   catalogue and progress start with mock-ups.
 - **Later** holds the post-MVP iterations that were SPEC §12; not taken until the maintainer moves one.
 
@@ -405,7 +408,7 @@ compose stack is PostgreSQL only.
 | `Ritocode.Api.Tests` | 138 |
 | `Ritocode.Modules.Content.Tests` | 78 |
 | `Ritocode.Modules.Attempts.Tests` | 19 |
-| Frontend (vitest) | 236 |
+| Frontend (vitest) | 334 |
 | `scripts/monitor-test.sh` | 9 |
 | End-to-end (`e2e/`) | 1 |
 

@@ -8,27 +8,33 @@
 :root {
   color-scheme: light;
 
-  --page: #f1f1f4;
+  /*
+   * Surface levels (DESIGN.md › Tokens), each apart from the next without a border: the page, a
+   * card raised on it, an area inset in a card (code, fields), a popup over everything, and the
+   * sunken fill of a track, a tag or a hovered row.
+   */
+  --page: #e6e7ee;
   --surface: #ffffff;
-  --surface-muted: #f7f7fa;
-  --surface-sunken: #e9e9ef;
+  --surface-inset: #f1f2f6;
+  --surface-pop: #ffffff;
+  --surface-sunken: #e2e3eb;
   --text: #18181f;
   --text-muted: #4c4c5a;
-  --text-faint: #6c6c80;
-  --border: #e0e0e8;
+  --text-faint: #5e5e70;
+  --border: #dcdce5;
   --border-strong: #c3c3d0;
   --accent: #4a4fb0;
   --accent-ink: #ffffff;
   --accent-soft: #e6e7f7;
-  --danger: #b2432e;
+  --danger: #a83f2b;
   --danger-surface: #f6e1dc;
-  --good: #2f7a4f;
+  --good: #2a6f47;
   --good-surface: #dfefe5;
-  --warn: #8a5d12;
+  --warn: #845910;
   --warn-surface: #f4ead4;
   --hit: #fbe3a0;
-  --code-surface: #f3f3f7;
-  --code-hover: #eaeaf1;
+  --code-surface: #f1f2f6;
+  --code-hover: #e7e8ef;
   --code-keyword: #4a4fb0;
   --code-builtin: #2f7a6e;
   --code-definition: #a0436e;
@@ -53,13 +59,16 @@
   --spotlight: #25275e;
   --spotlight-ink: #ffffff;
   --spotlight-muted: #c9cbf5;
+  --spotlight-raised: rgb(255 255 255 / 12%);
+  --spotlight-inset: rgb(0 0 0 / 28%);
   --heat-1: #cfd1f2;
   --heat-2: #a3a7e6;
   --heat-3: #7277cc;
   --heat-4: #4a4fb0;
 
-  --shadow: 0 1px 2px rgb(24 24 31 / 5%), 0 6px 20px rgb(24 24 31 / 6%);
-  --shadow-pop: 0 18px 44px rgb(24 24 31 / 20%);
+  --shadow: 0 1px 2px rgb(24 24 31 / 6%), 0 4px 16px rgb(24 24 31 / 7%);
+  --shadow-pop: 0 0 0 1px rgb(24 24 31 / 6%), 0 18px 44px rgb(24 24 31 / 22%);
+  --shadow-control: 0 1px 3px rgb(24 24 31 / 14%);
   --font-sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Code', 'Consolas', monospace;
   --radius: 10px;
@@ -71,15 +80,16 @@
 :root[data-theme='dark'] {
   color-scheme: dark;
 
-  --page: #0f0f14;
-  --surface: #16161d;
-  --surface-muted: #13131a;
-  --surface-sunken: #1f1f29;
+  --page: #0b0b10;
+  --surface: #1d1d28;
+  --surface-inset: #14141c;
+  --surface-pop: #252531;
+  --surface-sunken: #2b2b38;
   --text: #e7e7ef;
-  --text-muted: #a7a7b8;
-  --text-faint: #858598;
-  --border: #282834;
-  --border-strong: #393948;
+  --text-muted: #a9a9ba;
+  --text-faint: #9393a6;
+  --border: #2e2e3b;
+  --border-strong: #45455a;
   --accent: #9ea3f5;
   --accent-ink: #11122c;
   --accent-soft: #232448;
@@ -90,8 +100,8 @@
   --warn: #ddb260;
   --warn-surface: #2f2612;
   --hit: #4a3d14;
-  --code-surface: #0b0b10;
-  --code-hover: #17171f;
+  --code-surface: #14141c;
+  --code-hover: #20202b;
   --code-keyword: #9ea3f5;
   --code-builtin: #6fd0bf;
   --code-definition: #f09ac0;
@@ -119,8 +129,9 @@
   --heat-3: #7479d8;
   --heat-4: #9ea3f5;
 
-  --shadow: 0 1px 2px rgb(0 0 0 / 40%);
-  --shadow-pop: 0 18px 44px rgb(0 0 0 / 60%);
+  --shadow: inset 0 1px 0 rgb(255 255 255 / 4%), 0 1px 2px rgb(0 0 0 / 50%), 0 6px 18px rgb(0 0 0 / 30%);
+  --shadow-pop: inset 0 1px 0 rgb(255 255 255 / 6%), 0 18px 44px rgb(0 0 0 / 65%);
+  --shadow-control: inset 0 1px 0 rgb(255 255 255 / 5%), 0 1px 3px rgb(0 0 0 / 50%);
 }
 
 /* An element of a problem class takes its colour as `--k` and its tint as `--ks`. */
@@ -320,7 +331,7 @@ code {
   padding: 0.35rem 0.6rem;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface);
+  background: var(--surface-inset);
   color: var(--text);
   font: inherit;
   font-size: 1rem;
@@ -703,7 +714,7 @@ code {
   padding: 0.35rem 0.5rem;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface);
+  background: var(--surface-inset);
   color: var(--text);
   font: inherit;
 }
@@ -843,7 +854,7 @@ code {
 
 /* An attempt never submitted: the rows the maintainer reads for where learners gave up. */
 .admin-table__open td {
-  background: var(--surface-muted);
+  background: var(--surface-inset);
 }
 
 .admin-table__error {
@@ -900,7 +911,7 @@ code {
   padding: 0.75rem;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface);
+  background: var(--surface-pop);
   box-shadow: var(--shadow-pop);
 }
 
@@ -937,7 +948,7 @@ code {
   padding: 6px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface);
+  background: var(--surface-pop);
   box-shadow: var(--shadow-pop);
 }
 
@@ -1023,7 +1034,7 @@ code {
   margin: 0 0 var(--gap);
   padding: 0.5rem var(--gap);
   border-left: 3px solid var(--accent);
-  background: var(--surface-muted);
+  background: var(--surface-inset);
 }
 
 .notice > p {
@@ -1139,7 +1150,7 @@ pre {
   padding: var(--gap);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface-muted);
+  background: var(--surface-inset);
 }
 
 .state--loading {
@@ -1355,7 +1366,7 @@ pre {
   padding: var(--gap);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface-muted);
+  background: var(--surface-inset);
   white-space: pre-wrap;
   font-family: inherit;
 }
@@ -1419,7 +1430,7 @@ pre {
 .rc-tab[aria-pressed='true'] {
   background: var(--surface);
   color: var(--text);
-  box-shadow: 0 1px 3px rgb(24 24 31 / 12%);
+  box-shadow: var(--shadow-control);
 }
 
 .rc-tab__count {
@@ -1464,7 +1475,7 @@ pre {
   height: 16px;
   border-radius: 50%;
   background: var(--surface);
-  box-shadow: 0 1px 2px rgb(24 24 31 / 25%);
+  box-shadow: var(--shadow-control);
   transition: transform 0.15s;
 }
 
@@ -1485,7 +1496,7 @@ pre {
   padding: 0 8px 0 12px;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius);
-  background: var(--surface-muted);
+  background: var(--surface-inset);
   color: var(--text-faint);
 }
 
@@ -1607,7 +1618,7 @@ pre {
   padding: 10px 8px;
   white-space: nowrap;
   border-bottom: 1px solid var(--border);
-  background: var(--surface-muted);
+  background: var(--surface-inset);
   color: var(--text-faint);
   font-size: 0.8rem;
   font-weight: 500;
@@ -1719,7 +1730,7 @@ pre {
   height: 24px;
   padding: 0 9px;
   border-radius: 8px;
-  background: rgb(255 255 255 / 12%);
+  background: var(--spotlight-raised);
   font-size: 0.8rem;
 }
 
@@ -1727,7 +1738,7 @@ pre {
   margin: 0;
   padding: 12px 14px;
   border-radius: var(--radius);
-  background: rgb(0 0 0 / 28%);
+  background: var(--spotlight-inset);
   color: var(--spotlight-muted);
   font-family: var(--font-mono);
   font-size: 0.8rem;
