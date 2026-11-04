@@ -161,6 +161,10 @@ start with mock-ups.
 Decisions the specification left open are listed in [SPEC.md](SPEC.md) §13. Add here anything a
 future session would otherwise have to rediscover.
 
+- **What the two catalogues are called** (the maintainer, 2026-11-04): «Задачи» beside «Каталог
+  проблем» feels wrong — perhaps «Каталог задач» and «Каталог проблем», perhaps something else. Not
+  decided; the header, the home page's widgets (#200) and the page titles follow whatever is chosen.
+
 - **Umami's server and site id** (#133, for #135): Umami runs beside the site (SPEC §9.5); its script
   address and the site's id become the repository variables `UMAMI_SCRIPT_URL` and `UMAMI_WEBSITE_ID`,
   which the web image is built with — empty, the site has no analytics. The pages' content policy
