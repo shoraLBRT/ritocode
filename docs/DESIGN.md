@@ -129,7 +129,10 @@ its token names are its own, and where it differs from this document, this docum
     search on a line of its own, without the shortcut. The design system's menu for the sections
     and the search folded to an icon were not needed at 375 px.
 - A row of two: a card with the lead and the real counts (`rc-stat`), and the **daily task**
-  (`rc-daily`) — the page's only `--spotlight`.
+  (`rc-daily`) — the page's only `--spotlight`. Its top line is the label and a countdown to Moscow
+  midnight (`rc-daily__countdown`, a `<time>` ticking each second, not a live region); at zero the
+  next day's task takes the card. The countdown comes with the task, so the prerendered page, which
+  has no tasks, never shows a time fixed at build.
 - Below, the **task table** (`rc-panel` › `rc-task-table`) with difficulty tabs, and beside it an
   aside of 300 px — **progress by class** (`rc-ring`, `rc-bar`) and **activity** (`rc-heat`) — which
   drops under the table at phone width.

@@ -267,7 +267,9 @@ ADR 0001's "revisit if catalog SEO becomes a goal" without adding a server-rende
 - **The daily task.** One task a day, changing at midnight Moscow time. For a signed-in learner it is
   chosen among the tasks they have not solved; for a guest, and for a learner who has solved them
   all, among all tasks. The choice is a pure function of the date and the list, so everyone in the
-  same state sees the same task and the prerendered page is stable.
+  same state sees the same task and the prerendered page is stable. The card counts down to the
+  next one («До новой задачи 05:12:40») and shows it when the count reaches zero; its button names the
+  whole task, «Решить задачу», not its first step.
 - **The task list**, as in §4.3: title, expected time, difficulty, and for a signed-in learner
   whether it is solved — the first eight, with difficulty tabs and a link to `/tasks`. No class tags.
 - **Progress** for a signed-in learner: found out of met, by class (§4.7), the **streak** and

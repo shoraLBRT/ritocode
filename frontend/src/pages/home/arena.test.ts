@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import type { AttemptSummary, TaskSummary } from '../../api';
-import { ACTIVITY_DAYS, activity, activityLevel, activitySince, dailyTask, moscowDay } from './arena';
+import {
+  ACTIVITY_DAYS,
+  activity,
+  activityLevel,
+  activitySince,
+  dailyTask,
+  formatCountdown,
+  moscowDay,
+  nextMoscowMidnight,
+} from './arena';
 
 function taskOf(slug: string, solved: boolean | null): TaskSummary {
   return { slug, title: slug, difficulty: 'easy', solved };
@@ -25,6 +34,23 @@ describe('the Moscow day', () => {
     const after = moscowDay(new Date('2026-10-27T21:00:00Z'));
 
     expect(after - before).toBe(1);
+  });
+});
+
+describe('the countdown to the next daily task', () => {
+  it('ends at the next midnight in Moscow, 21:00 UTC', () => {
+    expect(nextMoscowMidnight(new Date('2026-11-04T18:47:20Z')).toISOString()).toBe('2026-11-04T21:00:00.000Z');
+    expect(nextMoscowMidnight(new Date('2026-11-04T21:00:00Z')).toISOString()).toBe('2026-11-05T21:00:00.000Z');
+    expect(nextMoscowMidnight(new Date('2026-11-04T23:30:00Z')).toISOString()).toBe('2026-11-05T21:00:00.000Z');
+  });
+
+  it('reads as hours, minutes and seconds, counting down like a clock', () => {
+    expect(formatCountdown(((5 * 60 + 12) * 60 + 40) * 1000)).toBe('05:12:40');
+    expect(formatCountdown(24 * 60 * 60 * 1000 - 1)).toBe('23:59:59');
+    expect(formatCountdown(24 * 60 * 60 * 1000)).toBe('23:59:59');
+    expect(formatCountdown(1999)).toBe('00:00:01');
+    expect(formatCountdown(999)).toBe('00:00:00');
+    expect(formatCountdown(-5000)).toBe('00:00:00');
   });
 });
 
