@@ -25,18 +25,28 @@ A component uses tokens only — never a raw colour.
 
 | Token | Light | Dark | Used for |
 | --- | --- | --- | --- |
-| `--page` | `#f1f1f4` | `#0f0f14` | the page behind the cards |
-| `--surface` | `#ffffff` | `#16161d` | cards, panels, fields |
-| `--surface-muted` | `#f7f7fa` | `#13131a` | a field at rest |
-| `--surface-sunken` | `#e9e9ef` | `#1f1f29` | hover, segmented controls, tags |
-| `--text` / `--text-muted` / `--text-faint` | `#18181f` / `#4c4c5a` / `#6c6c80` | `#e7e7ef` / `#a7a7b8` / `#858598` | text, secondary, hints |
-| `--border` / `--border-strong` | `#e0e0e8` / `#c3c3d0` | `#282834` / `#393948` | lines, control outlines |
+| `--page` | `#e6e7ee` | `#0b0b10` | the page behind the cards |
+| `--surface` | `#ffffff` | `#1d1d28` | a card or panel raised on the page; the header |
+| `--surface-inset` | `#f1f2f6` | `#14141c` | an area set into a card: fields, the search, table heads, notices |
+| `--surface-pop` | `#ffffff` | `#252531` | a popup over everything: menus, the search list, the file tree |
+| `--surface-sunken` | `#e2e3eb` | `#2b2b38` | the fill of a track, a tag or a hovered row; segmented controls |
+| `--text` / `--text-muted` / `--text-faint` | `#18181f` / `#4c4c5a` / `#5e5e70` | `#e7e7ef` / `#a9a9ba` / `#9393a6` | text, secondary, hints |
+| `--border` / `--border-strong` | `#dcdce5` / `#c3c3d0` | `#2e2e3b` / `#45455a` | lines, control outlines |
 | `--accent` / `--accent-ink` / `--accent-soft` | `#4a4fb0` / `#fff` / `#e6e7f7` | `#9ea3f5` / `#11122c` / `#232448` | primary actions, the current step, the brief |
 | `--good` / `--warn` / `--danger` (+ `-surface`) | green / amber / clay | lighter versions | found / missed / extra, errors |
 | `--hit` | `#fbe3a0` | `#4a3d14` | the words a search matched |
-| `--code-*` | — | — | the code panel and its highlighting |
+| `--code-*` | — | — | the code panel (on `--code-surface`, an inset level) and its highlighting |
 | `--spotlight` / `--spotlight-ink` / `--spotlight-muted` | `#25275e` / `#fff` / `#c9cbf5` | `#2b2d70` / `#fff` / `#c9cbf5` | the one spotlight card on a page (the daily task) |
+| `--spotlight-raised` / `--spotlight-inset` | white 12 % / black 28 % | the same | a chip and the code on the spotlight |
+| `--shadow` / `--shadow-pop` / `--shadow-control` | soft grey | black, with a faint light top edge | a card, a popup, a pressed tab or a toggle's knob |
 | `--heat-1` … `--heat-4` | `#cfd1f2` … `#4a4fb0` | `#2a2c5a` … `#9ea3f5` | the activity map, above `--surface-sunken` for none |
+
+**Surfaces step apart without borders** ([#197](https://github.com/shoraLBRT/ritocode/issues/197)).
+In light the page is a visible grey under white cards; in dark the levels rise from the page through
+the inset, the card and the popup to the sunken fill, each a step lighter, and a raised card or popup
+carries a faint light top edge. Every text colour meets WCAG AA (4.5:1) on every surface, and each
+surface is apart from the one it sits on — `src/theme/contrast.test.ts` reads the tokens from the
+stylesheet and checks both. A new surface or text token goes into that test.
 
 Radii: `--radius` 10 px for controls, `--radius-card` 14 px for cards, `--radius-panel` 18 px for a
 page's large panels (the task table, the daily task).

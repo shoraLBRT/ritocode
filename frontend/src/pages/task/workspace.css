@@ -296,7 +296,7 @@
   padding: 0 6px 0 12px;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius);
-  background: var(--surface-muted);
+  background: var(--surface-inset);
   color: var(--text-faint);
 }
 
@@ -873,7 +873,7 @@
   padding: 8px;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-card);
-  background: var(--surface);
+  background: var(--surface-pop);
   box-shadow: var(--shadow-pop);
 }
 
