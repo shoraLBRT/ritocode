@@ -243,7 +243,7 @@ Localisation is built in from the first commit; only the Russian content is writ
 
 | Route | Page | Access |
 | --- | --- | --- |
-| `/` | Home, the arena: what Ritocode teaches, the daily task, the task list, progress (below) | public |
+| `/` | Home, the arena: what Ritocode teaches, the daily task, tasks and problems to start from, progress (below) | public |
 | `/problems` | Problem catalogue, one page, every card in full, anchor per card (`/problems#secrets-in-repo`) | public |
 | `/tasks` | Task catalogue | public |
 | `/tasks/{slug}` | Solving a task | public to solve; sign-in to check |
@@ -270,12 +270,19 @@ ADR 0001's "revisit if catalog SEO becomes a goal" without adding a server-rende
   same state sees the same task and the prerendered page is stable. The card counts down to the
   next one («До новой задачи 05:12:40») and shows it when the count reaches zero; its button names the
   whole task, «Решить задачу», not its first step.
-- **The task list**, as in §4.3: title, expected time, difficulty, and for a signed-in learner
-  whether it is solved — the first eight, with difficulty tabs and a link to `/tasks`. No class tags.
+- **A starting point, not a copy of the catalogues** ([#200](https://github.com/shoraLBRT/ritocode/issues/200)):
+  - **Tasks for you** — six tasks in the table of §4.3 (title, expected time, difficulty, solved or
+    not), the learner's unsolved ones first, then solved ones; for a guest a pick of all tasks. The
+    daily task is left out. No class tags and no difficulty filter — that is `/tasks`, a link away.
+  - **Problems to read** — four cards of the catalogue: class, name and summary, each opening at its
+    anchor in `/problems`, and a link to the whole catalogue.
+  - Both are picked in an order fixed by the Moscow day, like the daily task: the same for everyone
+    on the same day, so the prerendered page and the application agree.
 - **Progress** for a signed-in learner: found out of met, by class (§4.7), the **streak** and
   the **activity** of the last twelve weeks. A guest sees a sign-in prompt there.
-- **Without JavaScript** the prerendered page carries the lead, the catalogue's counts and how a task
-  goes; the content export has no tasks, so the daily task and the list are filled in by the application.
+- **Without JavaScript** the prerendered page carries the lead, the catalogue's counts and the
+  problems to read; the content export has no tasks, so the daily task and the suggested tasks are
+  filled in by the application.
 
 ### 4.2 Problem catalogue
 
