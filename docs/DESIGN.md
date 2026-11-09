@@ -144,10 +144,15 @@ its token names are its own, and where it differs from this document, this docum
   midnight (`rc-daily__countdown`, a `<time>` ticking each second, not a live region); at zero the
   next day's task takes the card. The countdown comes with the task, so the prerendered page, which
   has no tasks, never shows a time fixed at build.
-- Below, the **task table** (`rc-panel` › `rc-task-table`) with difficulty tabs, and beside it an
+- Below, two panels: **tasks for you** (`rc-panel` › `rc-task-table`, six tasks, no tabs, *Все
+  задачи →*) and **problems to read** (`rc-arena__problems` › `rc-arena__problem.k-{class}`: four
+  cards in a grid, the class colour as a top edge and in the class chip, the name and the summary,
+  *Все проблемы →*). Beside them an
   aside of 300 px — **progress by class** (`rc-ring`, `rc-bar`) and **activity** (`rc-heat`) — which
   drops under the table at phone width.
-- Signed out, the same page: the personal parts give way to a sign-in prompt and the demo task.
+- Signed out, the same page: the personal parts give way to a sign-in prompt. The hero's first
+  button opens the easy task the page offers: «Начать с лёгкой задачи», not «демо» — any task can
+  be worked signed out.
 
 ### The task list
 

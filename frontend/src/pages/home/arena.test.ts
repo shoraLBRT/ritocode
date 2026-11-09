@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { AttemptSummary, TaskSummary } from '../../api';
+import type { AttemptSummary, ProblemCard, TaskSummary } from '../../api';
 import {
   ACTIVITY_DAYS,
   activity,
@@ -9,6 +9,11 @@ import {
   formatCountdown,
   moscowDay,
   nextMoscowMidnight,
+  shuffleByDay,
+  SUGGESTED_PROBLEMS,
+  SUGGESTED_TASKS,
+  suggestedProblems,
+  suggestedTasks,
 } from './arena';
 
 function taskOf(slug: string, solved: boolean | null): TaskSummary {
@@ -51,6 +56,52 @@ describe('the countdown to the next daily task', () => {
     expect(formatCountdown(1999)).toBe('00:00:01');
     expect(formatCountdown(999)).toBe('00:00:00');
     expect(formatCountdown(-5000)).toBe('00:00:00');
+  });
+});
+
+describe('what the home page suggests', () => {
+  const monday = new Date('2026-11-09T09:00:00Z');
+  const tuesday = new Date('2026-11-10T09:00:00Z');
+  const many = Array.from({ length: 12 }, (_, index): TaskSummary => ({
+    slug: `task-${String(index)}`,
+    title: `Task ${String(index)}`,
+    difficulty: 'easy',
+    solved: index < 4 ? false : index < 8 ? true : null,
+  }));
+
+  it('shuffles by the Moscow day: the same day gives the same order, another day another', () => {
+    const items = Array.from({ length: 20 }, (_, index) => index);
+    const order = shuffleByDay(items, monday, 1);
+
+    expect([...order].sort((a, b) => a - b)).toEqual(items);
+    expect(shuffleByDay(items, new Date('2026-11-09T20:59:59Z'), 1)).toEqual(order);
+    expect(shuffleByDay(items, tuesday, 1)).not.toEqual(order);
+    expect(shuffleByDay(items, monday, 2)).not.toEqual(order);
+  });
+
+  it('suggests unsolved tasks first, leaves out the daily task, and stops at the limit', () => {
+    const learner = many.slice(0, 8);
+    const suggested = suggestedTasks(learner, monday, 'task-0');
+
+    expect(suggested).toHaveLength(SUGGESTED_TASKS);
+    expect(suggested.map((task) => task.slug)).not.toContain('task-0');
+    expect(suggested.slice(0, 3).every((task) => task.solved === false)).toBe(true);
+    expect(suggested.slice(3).every((task) => task.solved === true)).toBe(true);
+  });
+
+  it('gives a guest a pick of all tasks for the day', () => {
+    const guest = many.map((task) => ({ ...task, solved: null }));
+    const suggested = suggestedTasks(guest, monday, null);
+
+    expect(suggested).toHaveLength(SUGGESTED_TASKS);
+    expect(suggestedTasks(guest, monday, null)).toEqual(suggested);
+  });
+
+  it('picks a few problems to read', () => {
+    const cards = Array.from({ length: 10 }, (_, index) => ({ slug: `card-${String(index)}` }) as ProblemCard);
+
+    expect(suggestedProblems(cards, monday)).toHaveLength(SUGGESTED_PROBLEMS);
+    expect(suggestedProblems(cards.slice(0, 2), monday)).toHaveLength(2);
   });
 });
 

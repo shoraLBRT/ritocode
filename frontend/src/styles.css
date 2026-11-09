@@ -503,9 +503,59 @@ code {
   gap: 20px;
 }
 
-.rc-arena__tasks {
+.rc-arena__lists {
+  display: flex;
   flex: 999 1 560px;
+  flex-direction: column;
+  gap: 20px;
   min-width: 0;
+}
+
+/* Problems to read: a card each, the class colour as a top edge and a chip, the name and summary. */
+.rc-arena__problems {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 16px 18px;
+  list-style: none;
+}
+
+.rc-arena__problem {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+  padding: 14px 16px;
+  border-top: 3px solid var(--k, var(--border-strong));
+  border-radius: var(--radius);
+  background: var(--surface-inset);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.rc-arena__problem:hover {
+  background: var(--surface-sunken);
+}
+
+.rc-arena__problem .rc-class {
+  align-self: flex-start;
+}
+
+.rc-arena__problem-name {
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.rc-arena__problem-summary {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
 }
 
 .rc-arena__aside {
@@ -600,41 +650,6 @@ code {
 
 .rc-arena__streak {
   margin: 0;
-}
-
-.rc-arena__how h2 {
-  margin: 0 0 0.5rem;
-  font-size: 1.15rem;
-}
-
-.rc-arena__how ol {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
-  gap: 12px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  counter-reset: step;
-}
-
-.rc-arena__how li {
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-card);
-  background: var(--surface);
-  color: var(--text-muted);
-  font-size: 0.9rem;
-  line-height: 1.55;
-  counter-increment: step;
-}
-
-.rc-arena__how li::before {
-  content: counter(step);
-  display: block;
-  margin-bottom: 6px;
-  color: var(--accent);
-  font-family: var(--font-mono);
-  font-weight: 600;
 }
 
 .rc-panel__bar .rc-arena__panel-title {
