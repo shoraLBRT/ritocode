@@ -3,7 +3,7 @@ import type { CandidateCard, ProblemClass, TaskDetail, TreatmentTree } from '../
 // A task as `GET /tasks/{slug}` serves it, and a small treatment tree, for the task screen's tests.
 
 export const classes: ProblemClass[] = [
-  { id: 'hygiene', name: 'Гигиена и безопасность', description: null },
+  { id: 'hygiene', name: 'Гигиена и безопасность', description: 'То, что должно быть закрыто оградой.' },
   { id: 'growth', name: 'Разрастание', description: null },
   { id: 'domain', name: 'Предметная область', description: null },
 ];
