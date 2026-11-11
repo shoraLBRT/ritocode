@@ -141,8 +141,9 @@ description. As of that day:
   ([#197](https://github.com/shoraLBRT/ritocode/issues/197)) is built — surface levels in the tokens
   (DESIGN.md › Tokens), applied to the arena and the workspace, AA checked by
   `src/theme/contrast.test.ts` — the maintainer approved its before/after on 2026-11-07, which
-  unblocks #198, #200, #202 and #203. The workspace layout, the
-  catalogue and progress start with mock-ups.
+  unblocks #198, #200, #202 and #203. The workspace layout is chosen
+  (layout A with a rising search of cards, DESIGN.md › Chosen next; built in #198); the catalogue is
+  cards since #202; progress waits on its mock-up (#203).
 - **Later** holds the post-MVP iterations that were SPEC §12; not taken until the maintainer moves one.
 
 **Content.** The content track, with the two skills: 55–60 cards
