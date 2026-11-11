@@ -153,7 +153,12 @@ export const ru = {
     searchPlaceholder: 'Название, описание или ключевое слово',
     count: { one: '{count} карточка', few: '{count} карточки', many: '{count} карточек', other: '{count} карточки' },
     anchor: 'Ссылка на карточку «{name}»',
-    anchorMark: '#',
+    classFilter: 'Классы',
+    allClasses: 'Все',
+    open: 'Открыть',
+    openCard: 'Открыть карточку «{name}»',
+    close: 'Закрыть карточку',
+    slug: '#{slug}',
     sections: {
       signs: 'Признаки',
       whyAiDoesIt: 'Почему так делает ИИ',

@@ -69,6 +69,7 @@
   --shadow: 0 1px 2px rgb(24 24 31 / 6%), 0 4px 16px rgb(24 24 31 / 7%);
   --shadow-pop: 0 0 0 1px rgb(24 24 31 / 6%), 0 18px 44px rgb(24 24 31 / 22%);
   --shadow-control: 0 1px 3px rgb(24 24 31 / 14%);
+  --overlay: rgb(24 24 31 / 52%);
   --font-sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Code', 'Consolas', monospace;
   --radius: 10px;
@@ -132,6 +133,7 @@
   --shadow: inset 0 1px 0 rgb(255 255 255 / 4%), 0 1px 2px rgb(0 0 0 / 50%), 0 6px 18px rgb(0 0 0 / 30%);
   --shadow-pop: inset 0 1px 0 rgb(255 255 255 / 6%), 0 18px 44px rgb(0 0 0 / 65%);
   --shadow-control: inset 0 1px 0 rgb(255 255 255 / 5%), 0 1px 3px rgb(0 0 0 / 50%);
+  --overlay: rgb(0 0 0 / 62%);
 }
 
 /* An element of a problem class takes its colour as `--k` and its tint as `--ks`. */
@@ -343,37 +345,363 @@ code {
   font-size: 0.875rem;
 }
 
-.problem-class {
-  margin-top: calc(var(--gap) * 2);
+/*
+ * The problem catalogue (DESIGN.md › The problem catalogue): a card per problem, in its class's
+ * colours — the tint as the card's frame, the colour on its band, seal and rule. Folded, a card
+ * shows its name and summary; open, it grows to the centre of the screen with every section.
+ */
+.rc-catalogue__bar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 18px;
 }
 
-.problem-card {
-  margin: var(--gap) 0;
-  padding: var(--gap) calc(var(--gap) * 1.25);
+.rc-catalogue__search-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rc-catalogue__search {
+  flex: 1;
+  min-width: 0;
+}
+
+.rc-catalogue__search input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 14px;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  /* An anchor jump leaves the card's heading clear of the top edge. */
-  scroll-margin-top: var(--gap);
+  border-radius: 12px;
+  background: var(--surface-inset);
+  color: var(--text);
+  font: inherit;
+  font-size: 1rem;
+}
+
+.rc-catalogue__count {
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.rc-catalogue__filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rc-catalogue__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--surface-sunken);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.rc-catalogue__chip[aria-pressed='true'] {
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.rc-catalogue__chip-count {
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.rc-catalogue__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--k);
+}
+
+.rc-catalogue__classes {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.rc-catalogue__class {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.rc-catalogue__class-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+
+.rc-catalogue__class-head h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.rc-catalogue__class-head h2::before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--k);
+}
+
+.rc-catalogue__class-head p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.rc-catalogue__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15.5rem, 1fr));
+  gap: 20px;
+}
+
+.rc-pcard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 360px;
+  padding: 8px;
+  border-radius: 18px;
+  background: var(--ks);
+  box-shadow: var(--shadow);
+  /* A jump to the card leaves it clear of the top edge. */
+  scroll-margin-top: 24px;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.rc-pcard:not(.rc-pcard--open):hover,
+.rc-pcard:not(.rc-pcard--open):focus-within {
+  box-shadow: var(--shadow-pop);
+  transform: translateY(-4px) rotate(-0.4deg);
+}
+
+/* The open card has left its place: the slot stays, as an outline. */
+.rc-pcard--lifted {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--border-strong);
+  transform: none;
+}
+
+.rc-pcard--lifted > * {
+  visibility: hidden;
+}
+
+.rc-pcard__band {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 30px;
+  padding: 0 8px 6px;
+  color: var(--k);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.rc-pcard__band a {
+  color: inherit;
+}
+
+.rc-pcard__band-label {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
+.rc-pcard__seal {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--k);
+  box-shadow: inset 0 0 0 4px var(--ks), 0 0 0 1.5px var(--k);
+}
+
+.rc-pcard__face {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  padding: 18px 16px 14px;
+  border-radius: 12px;
   background: var(--surface);
 }
 
-.problem-card:target {
-  border-color: var(--accent);
+.rc-pcard__name {
+  margin: 0;
+  font-size: 1.15rem;
+  line-height: 1.25;
 }
 
-.problem-card__name {
+.rc-pcard__rule {
+  width: 28px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--k);
+}
+
+.rc-pcard__summary {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.rc-pcard__summary p {
   margin: 0;
 }
 
-.problem-card__anchor {
-  margin-left: 0.4rem;
-  color: var(--text-muted);
-  text-decoration: none;
+.rc-pcard:not(.rc-pcard--open) .rc-pcard__summary p {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 6;
+  line-clamp: 6;
 }
 
-.problem-card__summary {
-  margin: 0.35rem 0 0;
-  color: var(--text-muted);
+/* The summary of the details stretches over the whole folded card, so the card is one target. */
+.rc-pcard__more {
+  margin-top: auto;
+}
+
+.rc-pcard__more > summary {
+  display: flex;
+  width: fit-content;
+  margin-left: auto;
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+}
+
+.rc-pcard__more > summary::-webkit-details-marker {
+  display: none;
+}
+
+.rc-pcard__more > summary::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 18px;
+}
+
+.rc-pcard__more > summary:focus-visible {
+  outline: none;
+}
+
+.rc-pcard__more > summary:focus-visible::after {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* Without JavaScript the details unfold in place; above the stretched summary so it can be read. */
+.rc-pcard__more[open] .rc-pcard__sections {
+  position: relative;
+  margin-top: 10px;
+}
+
+.rc-pcard-overlay {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.rc-pcard-overlay__backdrop {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  background: var(--overlay);
+  cursor: pointer;
+  animation: rc-fade 0.22s ease both;
+}
+
+.rc-pcard--open {
+  width: min(860px, 100%);
+  max-height: 100%;
+  min-height: 0;
+  padding: 10px;
+  border-radius: 24px;
+  box-shadow: var(--shadow-pop);
+}
+
+.rc-pcard--open .rc-pcard__face {
+  gap: 14px;
+  padding: 26px 30px;
+  overflow-y: auto;
+  border-radius: 16px;
+}
+
+.rc-pcard--open .rc-pcard__name {
+  font-size: 1.75rem;
+}
+
+.rc-pcard--open .rc-pcard__summary {
+  font-size: 1rem;
+}
+
+.rc-pcard__open-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.rc-pcard__open-head .rc-pcard__name {
+  flex: 1;
+}
+
+.rc-pcard__open-head .icon-button {
+  width: 44px;
+  height: 44px;
+  font-size: 1.4rem;
+}
+
+.rc-pcard--open .rc-pcard__sections {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: 0 34px;
+}
+
+@keyframes rc-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rc-pcard,
+  .rc-pcard-overlay__backdrop {
+    animation: none;
+    transition: none;
+  }
 }
 
 .problem-card__section h4 {
@@ -1125,8 +1453,67 @@ code {
     padding: calc(var(--gap) * 1.25) var(--gap);
   }
 
-  .problem-card {
-    padding: 0.75rem;
+  .rc-catalogue__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .rc-pcard {
+    min-height: 236px;
+    padding: 6px;
+  }
+
+  .rc-pcard__face {
+    padding: 12px 11px 10px;
+  }
+
+  .rc-pcard__band {
+    padding: 0 4px 5px;
+    font-size: 0.58rem;
+    letter-spacing: 0.03em;
+  }
+
+  .rc-pcard__seal {
+    width: 14px;
+    height: 14px;
+    box-shadow: inset 0 0 0 3px var(--ks), 0 0 0 1.5px var(--k);
+  }
+
+  .rc-catalogue__search-row {
+    flex-wrap: wrap;
+  }
+
+  .rc-catalogue__search {
+    flex-basis: 100%;
+  }
+
+  .rc-pcard__name {
+    font-size: 0.95rem;
+  }
+
+  .rc-pcard__summary {
+    font-size: 0.8rem;
+  }
+
+  .rc-pcard:not(.rc-pcard--open) .rc-pcard__summary p {
+    -webkit-line-clamp: 5;
+    line-clamp: 5;
+  }
+
+  .rc-pcard-overlay {
+    padding: 12px 10px;
+  }
+
+  .rc-pcard--open {
+    height: 100%;
+  }
+
+  .rc-pcard--open .rc-pcard__face {
+    padding: 18px 16px;
+  }
+
+  .rc-pcard--open .rc-pcard__name {
+    font-size: 1.35rem;
   }
 
   h1 {
