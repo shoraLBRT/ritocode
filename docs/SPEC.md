@@ -706,7 +706,9 @@ approval before they are carried out.
 Recorded so they are not lost and not built early — as issues in the
 [*Later* milestone](https://github.com/shoraLBRT/ritocode/milestone/11) since 2026-11-04: what the
 learner takes away, locations, equivalent leaves, existing projects, authors' own code, other stacks,
-authoring in the admin area, community authorship, English, difficulty beyond the shortlist.
+authoring in the admin area, community authorship, English, difficulty beyond the shortlist — and,
+since 2026-11-11, the incident: a boss task over a whole production stack
+([ADR 0016](adr/0016-incident-boss-task.md), [#227](https://github.com/shoraLBRT/ritocode/issues/227)).
 
 ---
 

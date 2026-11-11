@@ -18,6 +18,7 @@ and the old one is marked `Superseded by NNNN` rather than edited.
 | [0013](0013-uptime-monitoring.md) | Uptime monitoring from a scheduled GitHub workflow | Proposed |
 | [0014](0014-visual-identity-and-task-workspace.md) | Visual identity and the task workspace | Accepted |
 | [0015](0015-arena-home-and-junior-audience.md) | The home page is an arena, and the audience is junior developers | Accepted |
+| [0016](0016-incident-boss-task.md) | The incident: a boss task over a whole production stack | Accepted |
 
 ## Removed
 

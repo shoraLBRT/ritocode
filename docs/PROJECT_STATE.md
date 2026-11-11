@@ -4,7 +4,7 @@
 in the same pull request as the work it describes — a session that skips this makes the next one
 start from nothing.
 
-- **Last updated:** 2026-11-04
+- **Last updated:** 2026-11-11
 - **Current stage:** S7 · Production — its engineering can be built against a local stack (#135's
   Compose file, #136's release command, #34's monitor, #41); the real checks wait on the VPS and domain of #134.
   S6 closed with #133: `/` and `/problems` read without JavaScript (#132), and every listed event
@@ -144,6 +144,11 @@ description. As of that day:
   unblocks #198, #200, #202 and #203. The workspace layout, the
   catalogue and progress start with mock-ups.
 - **Later** holds the post-MVP iterations that were SPEC §12; not taken until the maintainer moves one.
+  Since 2026-11-11 it also holds the **incident**
+  ([#227](https://github.com/shoraLBRT/ritocode/issues/227),
+  [ADR 0016](adr/0016-incident-boss-task.md)): a boss task over a whole production stack, in a fixed
+  pool of systems, recorded rather than live. Its shape is decided; SPEC has no section for it yet,
+  and the ADR lists what is open.
 
 **Content.** The content track, with the two skills: 55–60 cards
 ([#124](https://github.com/shoraLBRT/ritocode/issues/124)) and the 20 tasks
