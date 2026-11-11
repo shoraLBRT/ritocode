@@ -25,6 +25,45 @@
   font-size: 0.78rem;
 }
 
+/*
+ * The header keeps the arena's sections (#199): the brand and the sections on the left, the steps
+ * between them and the session, each part as wide as it needs, on one line.
+ */
+.app--workspace .app__header {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.app--workspace .app__header-start,
+.app--workspace .app__nav {
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+/*
+ * Below the width the three fit in — an admin's four sections and the session come to about
+ * 73 rem — the steps take a line of their own under them, centred. At phone width the arena's own
+ * wrapping follows (styles.css): brand and sections, then the toggle and the session, then the steps.
+ */
+@media (max-width: 75rem) {
+  .app--workspace .app__header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+
+  .app--workspace .app__header-center {
+    order: 3;
+    flex-basis: 100%;
+  }
+}
+
+@media (max-width: 40rem) {
+  .app--workspace .app__header-start,
+  .app--workspace .app__nav {
+    flex-wrap: wrap;
+  }
+}
+
 .workspace {
   /* What the raised dock leaves of the code: the file bar and the first line. */
   --code-peek: 5.75rem;
