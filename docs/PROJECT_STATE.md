@@ -147,8 +147,9 @@ description. As of that day:
   Since 2026-11-11 it also holds the **incident**
   ([#227](https://github.com/shoraLBRT/ritocode/issues/227),
   [ADR 0016](adr/0016-incident-boss-task.md)): a boss task over a whole production stack, in a fixed
-  pool of systems, recorded rather than live. Its shape is decided; SPEC has no section for it yet,
-  and the ADR lists what is open.
+  pool of systems, recorded rather than live; three worlds of three or four incidents each to
+  start, in Python and Java. Its shape is decided; SPEC has no section for it yet, and the economy
+  (hint costs, evidence points, the unlock threshold) is balanced last.
 
 **Content.** The content track, with the two skills: 55–60 cards
 ([#124](https://github.com/shoraLBRT/ritocode/issues/124)) and the 20 tasks
