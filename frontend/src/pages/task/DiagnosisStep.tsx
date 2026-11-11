@@ -91,15 +91,18 @@ export function DiagnosisStep({
     }
   };
 
-  const close = () => {
-    const slug = opened;
-    setOpened(null);
-    // Focus goes back to the card the open one came from.
-    if (slug !== null) {
-      requestAnimationFrame(() => {
-        document.getElementById(`${cardId(slug)}-open`)?.focus();
-      });
+  // Focus goes back to the card the open one came from, once the dock is no longer inert.
+  const returnFocus = useRef<string | null>(null);
+  useEffect(() => {
+    if (opened === null && returnFocus.current !== null) {
+      document.getElementById(`${cardId(returnFocus.current)}-open`)?.focus();
+      returnFocus.current = null;
     }
+  }, [opened]);
+
+  const close = () => {
+    returnFocus.current = opened;
+    setOpened(null);
   };
 
   return (
@@ -200,7 +203,9 @@ export function DiagnosisStep({
               }))}
               selected={classFilter}
               onToggle={(id) => {
-                search(query, toggled(classFilter, id));
+                setClassFilter((list) => toggled(list, id));
+                setActive(0);
+                reset(terms.length === 0 && toggled(classFilter, id).length === 0);
               }}
             />
             {shown !== null && (

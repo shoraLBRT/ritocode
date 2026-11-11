@@ -265,7 +265,9 @@ export function TreatmentStep({
               options={tree.branches.map((branch) => ({ id: branch.id, label: short(branch.id), count: matching.filter((leaf) => leaf.branch === branch.id).length }))}
               selected={branchFilter}
               onToggle={(id) => {
-                search(query, toggled(branchFilter, id));
+                setBranchFilter((list) => toggled(list, id));
+                setActive(0);
+                reset(false);
               }}
             />
             {shown !== null && (

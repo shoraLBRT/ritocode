@@ -29,7 +29,7 @@
   /* What the raised dock leaves of the code: the file bar and the first line. */
   --code-peek: 5.75rem;
   /* A card in the dock. */
-  --dock-card: 12.75rem;
+  --dock-card: 13.5rem;
 
   display: grid;
   flex: 1;
@@ -73,6 +73,7 @@
 }
 
 .workspace__code {
+  container-type: inline-size;
   grid-area: code;
   display: flex;
   flex-direction: column;
@@ -95,6 +96,13 @@
   min-height: 0;
   padding: 14px;
   overflow: auto;
+}
+
+/* A narrow centre keeps the file bar on one line: the neighbours are arrows, named for a reader. */
+@container (max-width: 46rem) {
+  .material__nav .nav-button span {
+    display: none;
+  }
 }
 
 /* At rest the code scrolls clear of the dock. */
@@ -511,7 +519,7 @@
 
 .dock__cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(11.25rem, 1fr));
   grid-auto-rows: var(--dock-card);
   gap: 12px;
 }
@@ -531,6 +539,13 @@
   letter-spacing: 0.06em;
 }
 
+.rc-pcard--dock .rc-pcard__band > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .rc-pcard--dock .rc-pcard__seal {
   width: 13px;
   height: 13px;
@@ -544,7 +559,12 @@
 }
 
 .rc-pcard--dock .rc-pcard__name {
+  display: -webkit-box;
+  overflow: hidden;
   font-size: 0.9rem;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .rc-pcard--dock .rc-pcard__rule {
@@ -591,6 +611,7 @@
   font: inherit;
   font-size: 0.75rem;
   font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -616,7 +637,7 @@
   display: inline-flex;
   align-items: center;
   height: 28px;
-  padding: 0 10px;
+  padding: 0 8px;
   border-radius: 8px;
   background: var(--surface-sunken);
   color: var(--text);
@@ -691,6 +712,14 @@
 .rc-pcard--peek .rc-pcard__summary {
   color: var(--text);
   font-size: 0.95rem;
+}
+
+/* The full summary: the catalogue's folded card clamps it, the opened one does not. */
+.dock-open .rc-pcard--peek .rc-pcard__summary p {
+  display: block;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+  line-clamp: none;
 }
 
 .rc-pcard__class-note {
@@ -1130,11 +1159,8 @@
 .finding__name {
   flex: 1;
   min-width: 0;
-  overflow: hidden;
   font-size: 0.86rem;
   font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .finding__status {
@@ -1762,8 +1788,6 @@ button.file-tree__row:hover {
   }
 
   .workspace {
-    --dock-card: 11.5rem;
-
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -1889,7 +1913,8 @@ button.file-tree__row:hover {
     white-space: nowrap;
   }
 
-  .workspace__sheet .picked__name {
+  .workspace__sheet .picked__name,
+  .workspace__sheet .finding__name {
     overflow: hidden;
     text-overflow: ellipsis;
   }
@@ -1908,6 +1933,7 @@ button.file-tree__row:hover {
 
   .workspace__sheet .dock {
     position: static;
+    align-self: stretch;
     flex: 0 1 auto;
     max-height: none;
     border-radius: 0;
@@ -1958,6 +1984,47 @@ button.file-tree__row:hover {
   .dock__cards {
     grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
     gap: 10px;
+  }
+
+  .rc-pcard--dock .rc-pcard__face {
+    padding: 10px 10px 8px;
+  }
+
+  .dock .rc-pcard--dock:not(.rc-pcard--open) .rc-pcard__summary p {
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+  }
+
+  /* Too narrow for the two side by side: *Отметить* takes the card's width under *Подробнее*. */
+  .rc-pcard__foot {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+
+  .rc-pcard__open {
+    align-self: flex-start;
+  }
+
+  .rc-pcard__pick {
+    justify-content: center;
+  }
+
+  /* The steps in the header keep their names whole. */
+  .step-pill {
+    gap: 5px;
+    padding: 0 8px 0 4px;
+    font-size: 0.78rem;
+    white-space: nowrap;
+  }
+
+  .step-pill__number {
+    width: 22px;
+    height: 22px;
+  }
+
+  .step-pill__badge {
+    padding: 1px 6px;
   }
 
   /* The opened card takes the screen, as the catalogue's does on a phone. */
