@@ -286,9 +286,13 @@ ADR 0001's "revisit if catalog SEO becomes a goal" without adding a server-rende
 
 ### 4.2 Problem catalogue
 
-One page. Cards are grouped by the six classes, each shown in full. A search box filters by name,
-summary and keywords. Every card has an anchor, so a card can be linked to without a page of its
-own.
+One page. Cards are grouped by the six classes. A search box filters by name, summary and keywords,
+and a class filter shows one class or all. A card is shown **folded** — its class, name and summary,
+like a playing card — and **opens** at the centre of the screen with every field of §3.2; the
+maintainer chose this on 2026-11-10 ([#202](https://github.com/shoraLBRT/ritocode/issues/202)).
+Every card has an anchor: `/problems#slug` opens that card, so a card can be linked to without a page
+of its own. Without JavaScript the prerendered page carries every card in full, and a card unfolds in
+place.
 
 ### 4.3 Task catalogue
 

@@ -169,6 +169,32 @@ full length:
   keeps them; the home page's link to the list carries its difficulty tab.
 - On a phone the tab groups wrap, and the table loses its time column like the home page's.
 
+### The problem catalogue
+
+`/problems` ([#202](https://github.com/shoraLBRT/ritocode/issues/202)): problems **as cards**, the
+maintainer's direction of 2026-11-10 (artboards «#202 C» on the canvas
+<https://claude.ai/artifact/HLpnMneZaDeENR3kSFyPup>).
+
+- The page head (`rc-page-head`), then a panel (`rc-catalogue__bar`) with the search, the number of
+  cards shown, and the **class filter** — *Все* and the six classes, each with its count; one class
+  at a time, pressed again it shows all.
+- Each class: its name with a dot in its colour and its description, then its cards in a grid
+  (`rc-catalogue__grid`, as many 15.5 rem columns as fit; two on a phone).
+- **A folded card** (`article.rc-pcard.k-{class}`, at least 360 px tall) looks like a card: the
+  class's tint is its frame; the band on it carries the class name and a round seal in the class's
+  colour, which is the card's anchor (`#slug`); on the white face, the name, a short rule in the class
+  colour and the summary (Markdown, clamped to six lines), and *Открыть*. The whole card is one target:
+  the `<summary>` of the `<details>` that holds the sections stretches over it. On hover it lifts and
+  tilts a little.
+- **Open**: the page dims (`--overlay`), and the card grows out of its place to the centre — a FLIP
+  animation with the Web Animations API, none under `prefers-reduced-motion` — while its place stays
+  as an outline (`rc-pcard--lifted`). The open card (`rc-pcard--open`, up to 860 px wide, as tall as
+  the window allows and scrolling inside) is a modal dialog in the same frame: the class and
+  `#slug` on the band, the name, the summary and every section in two columns. ×, Esc and a click
+  outside close it; Tab stays inside it; focus returns to the card. The address follows it:
+  `#slug` while it is open, none after.
+- **Without JavaScript** the `<details>` unfolds in place, so the prerendered page reads in full.
+
 ### Components
 
 Everything the arena adds is a class prefixed `rc-` in `frontend/src/styles.css`, on the tokens
@@ -194,6 +220,8 @@ above. What the site already had stays as it is.
 | Progress | `.rc-ring` (`--p`), `.rc-ring__hole`, `__value`, `__of`; `.rc-bar.k-{class}` (`--p`) | `--p` is a percentage, 0–100 |
 | Activity | `.rc-heat` › `.rc-heat__cell[data-level=0–4]` | a column per week; `aria-hidden`, the streak says it in words |
 | Streak, avatar | `.rc-streak`, `.rc-avatar` | the header's right end (`HeaderStreak`; the avatar opens `.app__menu`) |
+| Problem card | `article.rc-pcard.k-{class}` › `__band`, `__seal`, `__face`, `__name`, `__rule`, `__summary`, `details.rc-pcard__more`; open: `.rc-pcard--open` in `.rc-pcard-overlay` | the catalogue's card, folded and open (above) |
+| Class filter | `.rc-catalogue__filter` › `button.rc-catalogue__chip.k-{class}[aria-pressed]` | one class or all, with counts |
 
 The list shows no number of findings: a clean task would read as «0» and give itself away. Classes
 never appear on the task list (SPEC §4.3) — the concept's opt-in toggle for them was turned down in #190.
