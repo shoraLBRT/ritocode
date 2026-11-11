@@ -1,6 +1,6 @@
 # 0014 — Visual identity and the task workspace
 
-- Status: Accepted
+- Status: Accepted. The workspace's 40/60 layout was superseded in part by layout A of [#198](https://github.com/shoraLBRT/ritocode/issues/198) (2026-11-11): three columns, the code in the centre, the step docked at the bottom of it — [DESIGN.md](../DESIGN.md) › The task workspace. The look, the steps in the header and search first stand
 - Date: 2026-10-27
 - Relates to: [#188](https://github.com/shoraLBRT/ritocode/issues/188)
 - Builds on: [SPEC.md](../SPEC.md) §4.4–4.5, §9.4; [DESIGN.md](../DESIGN.md)

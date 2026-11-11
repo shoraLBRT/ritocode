@@ -1,7 +1,9 @@
 /*
- * The task workspace (docs/DESIGN.md): solving a task and its review. The steps in the header; a
- * sidebar of 40% with the context and the step at hand; the code in the remaining 60%. The window
- * is filled, and each part scrolls on its own. At phone width the parts become three tabs.
+ * The task workspace (docs/DESIGN.md › The task workspace): solving a task and its review. The
+ * steps in the header; three columns — the context on the left, the code in the centre, what the
+ * step has gathered on the right — and the step's dock at the bottom of the code, rising over it.
+ * The window is filled, and each part scrolls on its own. At phone width the context or the code is
+ * behind and the step is a bottom sheet; the review keeps three tabs.
  */
 
 .app--workspace {
@@ -24,45 +26,55 @@
 }
 
 .workspace {
+  /* What the raised dock leaves of the code: the file bar and the first line. */
+  --code-peek: 5.75rem;
+  /* A card in the dock. */
+  --dock-card: 13.5rem;
+
   display: grid;
   flex: 1;
   min-width: 0;
   min-height: 0;
-  grid-template-columns: minmax(0, 4fr) minmax(0, 6fr);
-  grid-template-rows: auto auto auto minmax(0, 1fr);
+  grid-template-columns: minmax(13rem, 17rem) minmax(0, 1fr) minmax(14rem, 18rem);
+  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-areas:
+    'steps steps steps'
+    'notice notice notice'
+    'context code aside';
   column-gap: 14px;
 }
 
 /* The steps stand here only when there is no header to hold them — a screen mounted on its own. */
 .workspace > .steps {
-  grid-row: 1;
-  grid-column: 1 / -1;
+  grid-area: steps;
   justify-self: center;
   margin-bottom: 14px;
 }
 
 .workspace__notice {
-  grid-row: 2;
-  grid-column: 1 / -1;
+  grid-area: notice;
+  margin-bottom: 14px;
 }
 
 .workspace__tabs {
   display: none;
 }
 
-.workspace__side {
-  grid-row: 4;
-  grid-column: 1;
+.workspace__context {
+  grid-area: context;
   display: flex;
   flex-direction: column;
-  gap: 14px;
   min-width: 0;
   min-height: 0;
 }
 
-.workspace__pane {
-  grid-row: 4;
-  grid-column: 2;
+.workspace__context > .panel {
+  overflow: auto;
+}
+
+.workspace__code {
+  container-type: inline-size;
+  grid-area: code;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -70,24 +82,32 @@
   overflow: hidden;
 }
 
-.workspace__area--context {
-  flex: none;
-  display: flex;
-  flex-direction: column;
-  max-height: 44%;
-  min-height: 0;
+/* The step's parts are the frame's own: its column on the right, its dock over the code. */
+.workspace__sheet {
+  display: contents;
 }
 
-.workspace__area--context > .panel {
+.workspace__aside {
+  grid-area: aside;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+  padding: 14px;
   overflow: auto;
 }
 
-.workspace__area--answer {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  padding: 14px 16px 0;
+/* A narrow centre keeps the file bar on one line: the neighbours are arrows, named for a reader. */
+@container (max-width: 46rem) {
+  .material__nav .nav-button span {
+    display: none;
+  }
+}
+
+/* At rest the code scrolls clear of the dock. */
+.workspace--task .material__code .code {
+  padding-bottom: 10rem;
 }
 
 .panel {
@@ -175,26 +195,26 @@
   font-weight: 700;
 }
 
-/* The context: the brief always, the rest on expanding. */
+/* The context: the title, the difficulty and the brief always, the rest on expanding. */
 .context {
-  padding: 14px 16px;
-}
-
-.context__head {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
 }
 
 .context__title {
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
+  line-height: 1.3;
+}
+
+.context__difficulty {
+  align-self: flex-start;
 }
 
 .context__brief {
-  margin-top: 8px;
   padding: 10px 12px;
   border-radius: var(--radius);
   background: var(--accent-soft);
@@ -210,9 +230,13 @@
 }
 
 .context__more {
-  margin-top: 12px;
   color: var(--text-muted);
-  font-size: 0.88rem;
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+.context__more > :first-child {
+  margin-top: 0;
 }
 
 .context__more ul {
@@ -224,38 +248,561 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-  margin: 0;
+  margin: 10px 0 0;
   color: var(--text-faint);
   font-size: 0.8rem;
 }
 
-/* A step: its head, the search with the button beside it, what is picked, filters, the options. */
-.step {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-height: 0;
+.context__toggle {
+  align-self: flex-start;
 }
 
-.step__head {
+/* The right column: what the step has gathered — the picks, the findings, the verdicts. */
+.aside__head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 10px;
+  padding: 2px 4px;
 }
 
-.step__title {
+.aside__title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.aside__count {
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+
+.aside__empty {
+  margin: 0 4px;
+  color: var(--text-faint);
+  font-size: 0.85rem;
+}
+
+.aside__foot {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: auto;
+  padding: 8px 4px 0;
+}
+
+.picked__list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.picked__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 4px 6px 4px 12px;
+  border-radius: var(--radius);
+  background: var(--ks, var(--surface-inset));
+  color: var(--text);
+  font-size: 0.86rem;
+  font-weight: 500;
+}
+
+.picked__name {
+  flex: 1;
+  min-width: 0;
+}
+
+.picked__remove {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.picked__remove .icon {
+  width: 14px;
+  height: 14px;
+}
+
+.picked__remove:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
+/*
+ * The dock: the step's search at the bottom of the code. At rest it is the field and the filters,
+ * and with results one row of them and a sliver of the next; raised, it leaves the code its file
+ * bar and first line.
+ */
+.dock {
+  position: relative;
+  z-index: 2;
+  grid-area: code;
+  align-self: end;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  max-height: calc(100% - var(--code-peek));
+  border-radius: var(--radius-card);
+  background: var(--surface-pop);
+  box-shadow: var(--shadow-pop);
+}
+
+.dock--raised {
+  height: calc(100% - var(--code-peek));
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .workspace {
+    interpolate-size: allow-keywords;
+  }
+
+  .dock {
+    transition: height 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+}
+
+.dock__grip {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 100%;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.dock__grip span {
+  width: 44px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-strong);
+}
+
+.dock__grip:hover span {
+  background: var(--text-faint);
+}
+
+.dock__controls {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+}
+
+.dock--results .dock__controls {
+  padding: 0 16px 12px;
+}
+
+.dock .search-field {
+  height: 46px;
+  padding-left: 14px;
+}
+
+.dock .search-field input {
+  font-size: 0.95rem;
+}
+
+.dock .search-row .button {
+  height: 46px;
+}
+
+.dock__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+
+.dock__title {
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
 }
 
-.step__count {
+.dock__finding {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.dock__head .dock__count {
+  margin-left: auto;
+}
+
+.dock__filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dock__filters .filter-chips {
+  flex: 1;
+  min-width: 0;
+  margin-top: 0;
+}
+
+.dock .filter-chip {
+  height: 28px;
+  padding: 0 11px;
+  font-size: 0.78rem;
+}
+
+.dock__count {
   color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.dock .chips {
+  margin: 0;
+}
+
+.dock .step__hint {
+  margin: 0;
+}
+
+.dock__results {
+  flex: none;
+  height: var(--dock-rest);
+  min-height: 0;
+  padding: 4px 16px 14px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.dock--raised .dock__results {
+  flex: 1;
+  height: auto;
+}
+
+/* One row of cards and about 5% of the next. */
+.dock--cards {
+  --dock-rest: calc(4px + var(--dock-card) * 1.05 + 12px);
+}
+
+.dock--leaves {
+  --dock-rest: 15rem;
+}
+
+.dock__empty {
+  margin: 6px 0;
+  color: var(--text-faint);
+  font-size: 0.85rem;
+}
+
+.dock__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11.25rem, 1fr));
+  grid-auto-rows: var(--dock-card);
+  gap: 12px;
+}
+
+/* A match: the catalogue's card (styles.css › The problem catalogue), made small for the dock. */
+.rc-pcard--dock {
+  min-height: 0;
+  padding: 6px;
+  border-radius: 14px;
+  scroll-margin: 8px;
+}
+
+.rc-pcard--dock .rc-pcard__band {
+  min-height: 22px;
+  padding: 0 6px 4px;
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+}
+
+.rc-pcard--dock .rc-pcard__band > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rc-pcard--dock .rc-pcard__seal {
+  width: 13px;
+  height: 13px;
+  box-shadow: inset 0 0 0 3px var(--ks), 0 0 0 1.5px var(--k);
+}
+
+.rc-pcard--dock .rc-pcard__face {
+  gap: 7px;
+  padding: 11px 11px 9px;
+  border-radius: 9px;
+}
+
+.rc-pcard--dock .rc-pcard__name {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 0.9rem;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.rc-pcard--dock .rc-pcard__rule {
+  width: 22px;
+}
+
+.rc-pcard--dock .rc-pcard__summary {
+  min-height: 0;
+  overflow: hidden;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.dock .rc-pcard--dock:not(.rc-pcard--open) .rc-pcard__summary p {
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+}
+
+.rc-pcard--picked,
+.rc-pcard--picked:not(.rc-pcard--open):hover,
+.rc-pcard--picked:not(.rc-pcard--open):focus-within {
+  box-shadow: 0 0 0 2px var(--accent), var(--shadow);
+}
+
+.rc-pcard--active {
+  outline: 2px dashed var(--accent);
+  outline-offset: 3px;
+}
+
+.rc-pcard__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: auto;
+}
+
+/* *Подробнее* stretches over the card, so the card is one target; *Отметить* stands above it. */
+.rc-pcard__open {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.rc-pcard__open::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+}
+
+.rc-pcard__open:focus-visible {
+  outline: none;
+}
+
+.rc-pcard__open:focus-visible::after {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.rc-pcard__pick {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 8px;
+  background: var(--surface-sunken);
+  color: var(--text);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.rc-pcard__pick:has(:checked) {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.rc-pcard__pick:has(:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.rc-pcard__check {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+}
+
+/* The opened card: over the code only, at the middle; the side columns stay as they are. */
+.dock-open {
+  position: relative;
+  z-index: 4;
+  grid-area: code;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  padding: 20px;
+}
+
+.dock-open__dim {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-card);
+  background: var(--overlay);
+  cursor: pointer;
+  animation: rc-fade 0.2s ease both;
+}
+
+.rc-pcard--peek,
+.rc-pcard--peek:not(.rc-pcard--open):hover,
+.rc-pcard--peek:not(.rc-pcard--open):focus-within {
+  width: min(35rem, 100%);
+  max-height: 100%;
+  min-height: 0;
+  padding: 8px;
+  box-shadow: var(--shadow-pop);
+  transform: none;
+}
+
+.rc-pcard--peek .rc-pcard__face {
+  gap: 12px;
+  padding: 20px 22px 16px;
+  overflow-y: auto;
+}
+
+.rc-pcard--peek .rc-pcard__name {
+  font-size: 1.35rem;
+}
+
+.rc-pcard--peek .rc-pcard__summary {
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+/* The full summary: the catalogue's folded card clamps it, the opened one does not. */
+.dock-open .rc-pcard--peek .rc-pcard__summary p {
+  display: block;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+  line-clamp: none;
+}
+
+.rc-pcard__class-note {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--surface-inset);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.rc-pcard__class-note strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.rc-pcard__walk {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.rc-pcard__position {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
   font-size: 0.8rem;
 }
 
+.rc-pcard__mark {
+  margin-left: auto;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .rc-pcard--peek {
+    animation: dock-grow 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+}
+
+@keyframes dock-grow {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
+/* Step 2's leaves: every branch in columns, or the matches. */
+.leaf-columns {
+  column-gap: 18px;
+  column-width: 15rem;
+}
+
+.leaf-group {
+  margin-bottom: 10px;
+  break-inside: avoid;
+}
+
+.leaf-group__name {
+  margin: 0;
+  padding: 4px 6px 0;
+  color: var(--text-faint);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.leaf-group__where {
+  margin: 0;
+  padding: 0 6px 2px;
+  color: var(--text-faint);
+  font-size: 0.74rem;
+}
+
+.leaf-matches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  gap: 2px 14px;
+}
+
+/* What a step says: a note, a hint under the field. */
 .step__note {
   color: var(--text-muted);
   font-size: 0.88rem;
@@ -437,47 +984,6 @@
   background: var(--k, var(--text-faint));
 }
 
-.step__options {
-  flex: 1;
-  min-height: 0;
-  margin: 10px -16px 0;
-  padding: 0 10px 12px;
-  overflow: auto;
-  border-top: 1px solid var(--border);
-}
-
-.step__label {
-  margin: 0;
-  padding: 10px 6px 4px;
-  color: var(--text-faint);
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-}
-
-.step__empty,
-.step__browse {
-  margin: 10px 6px 2px;
-  color: var(--text-faint);
-  font-size: 0.82rem;
-}
-
-.step__foot,
-.step__back {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: 14px;
-  margin: 0 -16px;
-  padding: 8px 16px;
-  border-top: 1px solid var(--border);
-}
-
-.step__foot {
-  justify-content: flex-end;
-}
-
 /* One option: a drawn box over a real checkbox, the name, the summary, the class. */
 .option {
   position: relative;
@@ -597,56 +1103,6 @@
   color: inherit;
 }
 
-/* Browsing: a group, muted on purpose — searching is the way in. */
-.browse-group__head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 8px 6px;
-  border: 0;
-  border-bottom: 1px dashed var(--border);
-  background: transparent;
-  color: var(--text-faint);
-  font: inherit;
-  font-size: 0.82rem;
-  text-align: left;
-  cursor: pointer;
-}
-
-.browse-group__head:hover {
-  color: var(--text-muted);
-}
-
-.browse-group__head > .icon {
-  width: 14px;
-  height: 14px;
-  transition: transform 0.15s;
-}
-
-.browse-group--open > .browse-group__head > .icon {
-  transform: rotate(90deg);
-}
-
-.browse-group__text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.browse-group__description {
-  font-size: 0.74rem;
-}
-
-.browse-group__count {
-  margin-left: auto;
-  font-size: 0.74rem;
-}
-
-.browse-group__items {
-  padding: 4px 0 8px 14px;
-}
-
 /* Step 2: the picked findings, each with how many measures it has. */
 .findings {
   display: flex;
@@ -703,11 +1159,8 @@
 .finding__name {
   flex: 1;
   min-width: 0;
-  overflow: hidden;
   font-size: 0.86rem;
   font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .finding__status {
@@ -980,15 +1433,60 @@ button.file-tree__row:hover {
   background: var(--code-hover);
 }
 
-/* The review: the score and the verdicts in the sidebar, the chosen one in full beside it. */
-.review__summary {
-  overflow: auto;
-  padding-bottom: 16px;
+/*
+ * The review in the same frame: the score with *Попробовать снова* at the top of the centre, the
+ * chosen verdict in full under it, the verdicts listed on the right.
+ */
+.workspace--review {
+  grid-template-areas:
+    'steps steps steps'
+    'context score aside'
+    'context code aside';
+}
+
+.review__score-bar {
+  grid-area: score;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 22px;
+  margin-bottom: 12px;
+  padding: 14px 22px;
+}
+
+.review__score-text {
+  flex: 1;
+  min-width: 14rem;
+}
+
+.review__score-text p {
+  margin: 0;
+}
+
+.review__verdict-line {
+  margin-top: 4px;
+  font-size: 0.9rem;
+}
+
+.review__verdicts .aside__title {
+  margin: 2px 4px 4px;
+}
+
+.review__more {
+  margin-top: 6px;
+  padding: 12px;
+  border-radius: var(--radius);
+  background: var(--surface-inset);
+  font-size: 0.88rem;
+}
+
+.review__more .review__label {
+  margin-top: 0;
 }
 
 .review__score {
-  margin: 4px 0 0;
-  font-size: 2.6rem;
+  margin: 2px 0 0;
+  font-size: 2.2rem;
   font-weight: 700;
   letter-spacing: -0.03em;
   line-height: 1.1;
@@ -1096,7 +1594,7 @@ button.file-tree__row:hover {
 }
 
 .review__lesson {
-  margin-top: 16px;
+  margin-top: auto;
   padding: 12px 14px;
   border-radius: var(--radius);
   background: var(--accent-soft);
@@ -1113,7 +1611,8 @@ button.file-tree__row:hover {
 }
 
 .review__actions {
-  margin: 18px 0 0;
+  flex: none;
+  margin: 0;
 }
 
 .pane-tabs {
@@ -1274,7 +1773,11 @@ button.file-tree__row:hover {
   text-transform: uppercase;
 }
 
-/* Phone and narrow window (SPEC §4.4): the context, the code and the answer become three tabs. */
+/*
+ * Phone and narrow window (≤ 64 rem): the context or the code is behind, by two tabs, and the step
+ * is a bottom sheet over it — its picks or findings as a row on top, then the dock, rising the same
+ * way. The review keeps its three tabs: the context, the verdicts, the chosen card.
+ */
 @media (max-width: 64rem) {
   .app--workspace {
     height: auto;
@@ -1292,6 +1795,10 @@ button.file-tree__row:hover {
 
   .workspace > .steps {
     align-self: center;
+    margin-bottom: 0;
+  }
+
+  .workspace__notice {
     margin-bottom: 0;
   }
 
@@ -1321,30 +1828,224 @@ button.file-tree__row:hover {
     font-weight: 600;
   }
 
-  .workspace__side {
-    display: contents;
-  }
-
-  .workspace__area--context {
-    max-height: none;
-  }
-
   .workspace[data-area='context'] .workspace__area:not(.workspace__area--context),
   .workspace[data-area='code'] .workspace__area:not(.workspace__area--code),
   .workspace[data-area='answer'] .workspace__area:not(.workspace__area--answer) {
     display: none;
   }
 
-  .workspace__pane {
+  .workspace__code {
     overflow: visible;
   }
 
-  .material__code {
+  .workspace--review .material__code {
     max-height: 75vh;
   }
 
-  .step__options {
-    max-height: 60vh;
+  /* The page scrolls clear of the sheet at rest. */
+  .workspace--task {
+    padding-bottom: 12rem;
+  }
+
+  .workspace--task .material__code .code {
+    padding-bottom: 14px;
+  }
+
+  .workspace__sheet {
+    position: fixed;
+    z-index: 20;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100dvh - 4rem);
+    padding-top: 10px;
+    border-radius: 18px 18px 0 0;
+    background: var(--surface-pop);
+    box-shadow: var(--shadow-pop);
+  }
+
+  .workspace__sheet:has(.dock--results) {
+    padding-top: 18px;
+  }
+
+  .workspace__sheet:has(.dock--raised) {
+    height: calc(100dvh - 4rem);
+  }
+
+  /* The picks or the findings: a row of chips on top of the sheet. */
+  .workspace__sheet .workspace__aside {
+    flex: none;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding: 0 14px 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  .workspace__sheet .workspace__aside:not(:has(li)) {
+    display: none;
+  }
+
+  .workspace__sheet .aside__head,
+  .workspace__sheet .finding__summary {
+    display: none;
+  }
+
+  .workspace__sheet .picked__list,
+  .workspace__sheet .findings {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 6px;
+    margin: 0;
+  }
+
+  .workspace__sheet .picked__row,
+  .workspace__sheet .finding {
+    flex: none;
+    max-width: 15rem;
+    min-height: 36px;
+    white-space: nowrap;
+  }
+
+  .workspace__sheet .picked__name,
+  .workspace__sheet .finding__name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .workspace__sheet .finding__head {
+    padding: 5px 10px 5px 6px;
+  }
+
+  .workspace__sheet .aside__foot {
+    flex: none;
+    flex-direction: row;
+    margin: 0;
+    padding: 0 4px;
+    white-space: nowrap;
+  }
+
+  .workspace__sheet .dock {
+    position: static;
+    align-self: stretch;
+    flex: 0 1 auto;
+    max-height: none;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  .workspace__sheet .dock--raised {
+    flex: 1 1 auto;
+    height: auto;
+  }
+
+  .workspace__sheet .dock__grip {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    border-radius: 18px 18px 0 0;
+  }
+
+  .workspace__sheet .dock__controls {
+    padding: 0 14px 12px;
+  }
+
+  .workspace__sheet .dock__results {
+    padding: 4px 14px 14px;
+  }
+
+  .workspace__sheet .dock--leaves {
+    --dock-rest: 13rem;
+  }
+
+  /* The filters scroll sideways rather than taking the sheet's height. */
+  .dock__filters .filter-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .dock .filter-chip {
+    flex: none;
+  }
+
+  .dock .search-row .button {
+    padding: 0 14px;
+  }
+
+  .dock__cards {
+    grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+    gap: 10px;
+  }
+
+  .rc-pcard--dock .rc-pcard__face {
+    padding: 10px 10px 8px;
+  }
+
+  .dock .rc-pcard--dock:not(.rc-pcard--open) .rc-pcard__summary p {
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+  }
+
+  /* Too narrow for the two side by side: *Отметить* takes the card's width under *Подробнее*. */
+  .rc-pcard__foot {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+
+  .rc-pcard__open {
+    align-self: flex-start;
+  }
+
+  .rc-pcard__pick {
+    justify-content: center;
+  }
+
+  /* The steps in the header keep their names whole. */
+  .step-pill {
+    gap: 5px;
+    padding: 0 8px 0 4px;
+    font-size: 0.78rem;
+    white-space: nowrap;
+  }
+
+  .step-pill__number {
+    width: 22px;
+    height: 22px;
+  }
+
+  .step-pill__badge {
+    padding: 1px 6px;
+  }
+
+  /* The opened card takes the screen, as the catalogue's does on a phone. */
+  .dock-open {
+    position: fixed;
+    z-index: 30;
+    inset: 0;
+    padding: 12px 10px;
+  }
+
+  .dock-open__dim {
+    border-radius: 0;
+  }
+
+  .rc-pcard--peek .rc-pcard__face {
+    padding: 16px;
+  }
+
+  .workspace--review .workspace__aside {
+    overflow: visible;
   }
 
   .finding-card {

@@ -15,15 +15,14 @@ const search = (value: string) => {
 };
 
 describe('step 1: what do you see', () => {
-  it('starts from the search, with the catalogue folded by class and muted', () => {
+  it('starts from the search: the dock is the field and the filters, with no cards until something is typed or pressed', () => {
     diagnosis();
 
     expect(screen.getByLabelText(ru.task.search)).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: ru.task.classFilter })).toBeInTheDocument();
     expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
-    expect(screen.getByText(ru.task.browse)).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: /Разрастание/, expanded: false }));
-    expect(screen.getByRole('checkbox', { name: /^Класс-бог/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: ru.task.raiseDock })).not.toBeInTheDocument();
+    expect(screen.getByText(ru.task.nothingPickedYet)).toBeInTheDocument();
   });
 
   it('finds cards by name, summary and keywords as the learner types, whatever the word form', () => {
@@ -49,10 +48,11 @@ describe('step 1: what do you see', () => {
     fireEvent.click(within(filters).getByRole('button', { name: /Гигиена и безопасность/ }));
 
     expect(within(filters).getByRole('button', { name: /Гигиена и безопасность/ })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getAllByRole('checkbox').map((box) => box.closest('label')?.querySelector('.option__name')?.textContent)).toEqual([
+    expect(screen.getAllByRole('article').map((card) => card.querySelector('.rc-pcard__name')?.textContent)).toEqual([
       'Секреты в репозитории',
       'Хардкод конфигурации',
     ]);
+    expect(screen.getByText(ru.task.cardCount.few.replace('{count}', '2'))).toBeInTheDocument();
   });
 
   it('picks with a click or with Enter on the match walked to, and shows the picks as chips', () => {
@@ -76,6 +76,73 @@ describe('step 1: what do you see', () => {
     const { onNext } = diagnosis();
     fireEvent.click(screen.getByRole('button', { name: ru.task.toStep2Clean }));
     expect(onNext).toHaveBeenCalled();
+  });
+
+  it('shows the matches as the catalogue’s cards, each with its class, its own pick and a way to open it', () => {
+    diagnosis([{ card: 'secrets-in-repo', leaves: [] }]);
+    search('секреты');
+
+    const card = screen.getByRole('article', { name: 'Секреты в репозитории' });
+    expect(card).toHaveClass('rc-pcard', 'k-hygiene', 'rc-pcard--picked');
+    expect(card).toHaveTextContent('Гигиена и безопасность');
+    expect(within(card).getByRole('checkbox', { name: /^Секреты в репозитории/ })).toBeChecked();
+    expect(within(card).getByRole('button', { name: ru.task.openCard.replace('{name}', 'Секреты в репозитории') })).toBeInTheDocument();
+  });
+
+  it('opens a card over the code with its class, summary and the class’s description, and walks the matches', () => {
+    const { onToggle } = diagnosis();
+    fireEvent.click(within(screen.getByRole('group', { name: ru.task.classFilter })).getByRole('button', { name: /Гигиена и безопасность/ }));
+    fireEvent.click(screen.getByRole('button', { name: ru.task.openCard.replace('{name}', 'Секреты в репозитории') }));
+
+    const dialog = screen.getByRole('dialog', { name: 'Секреты в репозитории' });
+    expect(dialog).toHaveTextContent('Пароли и токены прямо в коде.');
+    expect(dialog).toHaveTextContent('То, что должно быть закрыто оградой.');
+    expect(dialog).toHaveTextContent(ru.task.cardPosition.replace('{index}', '1').replace('{count}', '2'));
+    expect(within(dialog).getByRole('button', { name: ru.problems.close })).toHaveFocus();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: ru.task.pickLong }));
+    expect(onToggle).toHaveBeenLastCalledWith('secrets-in-repo');
+
+    fireEvent.click(within(dialog).getByRole('button', { name: ru.task.nextCard }));
+    expect(screen.getByRole('dialog', { name: 'Хардкод конфигурации' })).toBeInTheDocument();
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'ArrowRight' });
+    expect(screen.getByRole('dialog', { name: 'Секреты в репозитории' })).toBeInTheDocument();
+
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('raises the dock by the grip, and lowers it when the results are gone', () => {
+    diagnosis();
+    search('секрет');
+
+    const grip = screen.getByRole('button', { name: ru.task.raiseDock });
+    expect(grip).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(grip);
+    expect(screen.getByRole('button', { name: ru.task.lowerDock })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('region', { name: ru.task.step1 })).toHaveClass('dock--raised');
+
+    search('');
+    expect(screen.queryByRole('button', { name: ru.task.lowerDock })).not.toBeInTheDocument();
+    search('секрет');
+    expect(screen.getByRole('button', { name: ru.task.raiseDock })).toBeInTheDocument();
+  });
+
+  it('raises the dock when the cards are scrolled down, and lowers it when scrolled up from the top', () => {
+    diagnosis();
+    search('секрет');
+    const results = screen.getByRole('region', { name: ru.task.step1 }).querySelector('.dock__results');
+    if (!(results instanceof HTMLElement)) {
+      throw new Error('no results');
+    }
+    // jsdom lays nothing out: the cards are said to be taller than their box.
+    Object.defineProperty(results, 'scrollHeight', { value: 900 });
+    Object.defineProperty(results, 'clientHeight', { value: 300 });
+
+    fireEvent.wheel(results, { deltaY: 40 });
+    expect(screen.getByRole('button', { name: ru.task.lowerDock })).toBeInTheDocument();
+    fireEvent.wheel(results, { deltaY: -40 });
+    expect(screen.getByRole('button', { name: ru.task.raiseDock })).toBeInTheDocument();
   });
 });
 
@@ -111,12 +178,23 @@ describe('step 2: what do you do with it here', () => {
     expect(onToggleLeaf).toHaveBeenCalledWith('god-class', 'accept.fits-context');
   });
 
-  it('opens a branch to browse when nothing is typed', () => {
+  it('shows every branch with its leaves when nothing is typed, and narrows them by branch', () => {
     render(<TreatmentStep cards={cards} tree={tree} answer={[{ card: 'god-class', leaves: [] }]} onToggleLeaf={vi.fn()} action={check} />);
 
-    expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
-    fireEvent.click(screen.getByRole('button', { name: /Исправить руками сейчас/, expanded: false }));
-    expect(screen.getAllByRole('checkbox')).toHaveLength(2);
+    expect(screen.getAllByRole('checkbox')).toHaveLength(3);
+    expect(within(screen.getByRole('region', { name: 'Исправить руками сейчас' })).getAllByRole('checkbox')).toHaveLength(2);
+
+    fireEvent.click(within(screen.getByRole('group', { name: ru.task.branchFilter })).getByRole('button', { name: /Оставить/ }));
+    expect(screen.getAllByRole('checkbox')).toHaveLength(1);
+    expect(screen.getByText(ru.task.leafMatches.one.replace('{count}', '1'))).toBeInTheDocument();
+  });
+
+  it('goes back to diagnosis from the findings column', () => {
+    const onBack = vi.fn();
+    render(<TreatmentStep cards={cards} tree={tree} answer={[{ card: 'god-class', leaves: [] }]} onToggleLeaf={vi.fn()} action={check} onBack={onBack} />);
+
+    fireEvent.click(screen.getByRole('button', { name: ru.task.backToStep1 }));
+    expect(onBack).toHaveBeenCalled();
   });
 
   it('says what an empty answer means, and still offers the check', () => {
