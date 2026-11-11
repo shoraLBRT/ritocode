@@ -105,6 +105,35 @@ it, the chosen verdict in full — the learner's leaves against the author's (th
 the learner's wrong ones red), the author's note, the whole card, and for an extra pick the
 signal — or the code again.
 
+### Chosen next: layout A ([#198](https://github.com/shoraLBRT/ritocode/issues/198))
+
+The maintainer chose this layout from mock-ups on 2026-11-11; it replaces the 40/60 layout above
+once #198 is built (canvas <https://claude.ai/artifact/TVFVsXkjuRFuo59oaDSqP9>: the top row for step
+1, row A for step 2, the review and the phone). The code is read once and the work happens in the
+step, so the step gets the room.
+
+- **Three columns.** A narrow left column for the context (the title, the difficulty, the brief,
+  *Весь контекст*); **the code in the centre**; a narrow right column for what is picked (step 1)
+  or the found problems, a row each with the current one's summary (step 2), or the verdicts
+  (review).
+- **The step's action docks at the bottom of the centre**, over the code: the search field, the
+  filters (classes at step 1, treatment branches at step 2) and the step's button.
+- **Step 1 — the matches are cards** (the catalogue's card, #202), never a list over the code.
+  While the field is empty and no filter is on, the dock is the field and the filters. Text or a
+  filter raises it, and the matching cards appear **under the field**, four to a row, each with
+  *Подробнее* and its own *Отметить*. At rest the dock is the field + the filters + one row of cards
+  + about 5% of the next row, so it is plain there is more. **Scrolling down the cards first lifts
+  the dock** until about 10% of the code is left (the file bar and the first line), then scrolls the
+  cards; scrolling up from the top lowers it again; a grip on top does the same by a click.
+- **An opened card** shows what a task may show of a card (SPEC §3.2 — no signs, no treatment):
+  the class, the full summary and the class's description, with ‹ n из N › and *Отметить: вижу это в
+  коде*. It opens over the centre column only, at the middle, and closes like the catalogue's.
+- **Step 2** keeps the same frame: the dock holds the treatment search, the branch filters and the
+  leaves in columns, rising the same way; the found problems are compact rows on the right.
+- **The review** keeps the frame: the score with *Попробовать снова* and *Следующая задача* at the
+  top of the centre (#199), the verdict in full under it, the verdicts listed on the right.
+- **Phone**: the code behind, the step as a bottom sheet.
+
 ## The arena
 
 The home page and, after it, the catalogue, the task list and progress
