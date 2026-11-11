@@ -74,9 +74,17 @@ from mock-ups on 2026-11-11 (canvas <https://claude.ai/artifact/TVFVsXkjuRFuo59o
 for step 1, row A for step 2, the review and the phone). The code is read once and the work happens
 in the step, so the step gets the room; it replaced a 40/60 split of a sidebar and the code.
 
-- **Header**: the brand (a link home) on the left; **the steps** *Диагноз → Лечение → Разбор* at
-  the centre, with what is done in each (cards picked, findings treated); the theme toggle and the
-  session on the right. The sections and the search are not shown here.
+- **Header**: the brand (a link home) and the arena's **sections** (Задачи — current, a task being
+  in it — Каталог проблем, Прогресс, Админка, as the arena offers them) on the left; **the steps**
+  *Диагноз → Лечение → Разбор* between them and the right end, with what is done in each (cards
+  picked, findings treated); the theme toggle and the session on the right. The sections came back
+  in [#199](https://github.com/shoraLBRT/ritocode/issues/199), reversing #195, so that a finished
+  task is one click from the task list and the catalogue; the search is still not shown here. Each
+  part is as wide as it needs, so the steps sit between the sections and the session rather than
+  at the window's centre — on one line from 75 rem (1200 px) up, which an admin's four sections and
+  the session need. Below that the steps take a line of their own under them, centred (900 px), and
+  at phone width the header wraps as the arena's does: brand and sections, then the toggle and the
+  session, then the steps (375 px). No menu: a section stays one click away.
 - **Three columns** (`pages/task/workspace.css`, `.workspace`): a narrow left column for the
   **context** (`ContextPanel`: the title, the difficulty, the agent's brief always, and *Весь
   контекст* for the context itself — open on step 1, folded from step 2 on); **the code in the
@@ -135,8 +143,9 @@ top of the centre (`.review__score-bar`); under it the chosen verdict in full �
 against the author's (the shared ones green, the learner's wrong ones red), the author's note, the
 whole card, and for an extra pick the signal — or the code again. The verdicts — found, missed,
 extra — are listed on the right with the lesson; the same code in another task sits under the
-context on the left. *Следующая задача* and the header's sections on the workspace are
-[#199](https://github.com/shoraLBRT/ritocode/issues/199).
+context on the left. The review offers no *Следующая задача*: which task comes next is the
+maintainer's decision, left open on [#199](https://github.com/shoraLBRT/ritocode/issues/199); the
+header's sections reach the task list meanwhile.
 
 ## The arena
 
@@ -158,8 +167,8 @@ its token names are its own, and where it differs from this document, this docum
 
 ### The home page
 
-- The header, on every page but the task workspace
-  ([#195](https://github.com/shoraLBRT/ritocode/issues/195)): the brand (the way home), the sections
+- The header, on every page; the task workspace keeps its brand, sections and right end and puts
+  its steps where the search would be (above, #199): the brand (the way home), the sections
   (Задачи, Каталог проблем; Прогресс for a learner, Админка for an admin), the search, the theme
   toggle, then the streak and the avatar — or *Войти* and *Начать* (the demo task) for a guest.
   - **The search** («Задачи и проблемы», `Ctrl K` / `⌘K` from anywhere) is a combobox: as the
