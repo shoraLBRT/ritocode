@@ -1882,6 +1882,7 @@ button.file-tree__row:hover {
     gap: 8px;
     padding: 0 14px 10px;
     overflow-x: auto;
+    scrollbar-width: none;
     border: 0;
     border-radius: 0;
     background: none;
