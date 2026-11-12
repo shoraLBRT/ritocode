@@ -68,42 +68,84 @@ Colour never carries meaning alone: an outcome has a mark and a word, a class it
 
 ## The task workspace
 
-`/tasks/{slug}` and its review `/tasks/{slug}/attempts/{id}` (SPEC §4.4–4.5) fill the window:
+`/tasks/{slug}` and its review `/tasks/{slug}/attempts/{id}` (SPEC §4.4–4.5) fill the window. The
+layout is **A** of [#198](https://github.com/shoraLBRT/ritocode/issues/198), chosen by the maintainer
+from mock-ups on 2026-11-11 (canvas <https://claude.ai/artifact/TVFVsXkjuRFuo59oaDSqP9>: the top row
+for step 1, row A for step 2, the review and the phone). The code is read once and the work happens
+in the step, so the step gets the room; it replaced a 40/60 split of a sidebar and the code.
 
-- **Header**: the brand (a link home) on the left; **the steps** *Диагноз → Лечение → Разбор* at
-  the centre, with what is done in each (cards picked, findings treated); the theme toggle and the
-  session on the right. The sections and the search are not shown here.
-- **Sidebar, 40%**: the **context** card — the title, the agent's brief always, and on expanding the
-  path, difficulty and the context itself (open on step 1, folded from step 2 on) — and below it
-  **the step at hand**.
-- **Code, 60%**: the open file's path as a button that opens the project's tree (folders, files, a
-  line count each, the project's size); the previous and next files as buttons named by them; a
-  larger-code toggle; the code with line numbers.
-- **Phone width** (≤ 64 rem): the context, the code and the answer become three tabs.
+- **Header**: the brand (a link home) and the arena's **sections** (Задачи — current, a task being
+  in it — Каталог проблем, Прогресс, Админка, as the arena offers them) on the left; **the steps**
+  *Диагноз → Лечение → Разбор* between them and the right end, with what is done in each (cards
+  picked, findings treated); the theme toggle and the session on the right. The sections came back
+  in [#199](https://github.com/shoraLBRT/ritocode/issues/199), reversing #195, so that a finished
+  task is one click from the task list and the catalogue; the search is still not shown here. Each
+  part is as wide as it needs, so the steps sit between the sections and the session rather than
+  at the window's centre — on one line from 75 rem (1200 px) up, which an admin's four sections and
+  the session need. Below that the steps take a line of their own under them, centred (900 px), and
+  at phone width the header wraps as the arena's does: brand and sections, then the toggle and the
+  session, then the steps (375 px). No menu: a section stays one click away.
+- **Three columns** (`pages/task/workspace.css`, `.workspace`): a narrow left column for the
+  **context** (`ContextPanel`: the title, the difficulty, the agent's brief always, and *Весь
+  контекст* for the context itself — open on step 1, folded from step 2 on); **the code in the
+  centre**; a narrow right column (`.workspace__aside`) for what the step has gathered — the picked
+  cards (step 1), the found problems (step 2) or the verdicts (review).
+- **The code** (`MaterialViewer`): the open file's path as a button that opens the project's tree
+  (folders, files, a line count each, the project's size); the previous and next files as buttons
+  named by them — arrows only when the centre is narrow, so the bar stays one line; a larger-code
+  toggle; the code with line numbers.
+- **The dock** (`.dock`): the step's action docks at the bottom of the centre, over the code — the
+  search field, the filters and the step's button. With results it **rises on scroll**
+  (`dock.ts`): at rest it shows one row of them and about 5% of the next, so it is plain there is
+  more; scrolling down the results first lifts the dock until about 10% of the code is left (the
+  file bar and the first line), then scrolls them; scrolling up from the top lowers it again; a grip
+  on top does the same by a click. At rest the code scrolls clear of the dock.
+- **Phone width** (≤ 64 rem): the context or the code is behind, by two tabs, and the step is a
+  **bottom sheet** (`.workspace__sheet`, fixed): the picks or the findings as a row of chips on top,
+  then the dock, rising the same way up to just under the header. The review keeps three tabs: the
+  context, the verdicts, the chosen card.
 
-### A step
+### Step 1 — the matches are cards
 
-1. A heading and a count.
-2. **The search row**: a field, and beside it the step's action — *К лечению* (or *Здесь чисто*
-   with nothing picked) at step 1, *Проверить* at step 2.
-3. What is picked, as removable chips under the field.
-4. Filter chips — the classes at step 1, the treatment branches at step 2 — any number on.
-5. The options: ranked matches with the matched words marked, or — with no query and no filter —
-   the catalogue folded by group, muted. Searching is the way in; browsing is the way round.
+- While the field is empty and no class is pressed, the dock is the field, the class filters and
+  *К лечению* (or *Здесь чисто* with nothing picked). Text or a class raises it, and the matching
+  cards appear **under the field** — the catalogue's card (`article.rc-pcard.rc-pcard--dock`),
+  as many 11.25 rem columns as fit (three at 1280 px, four at 1440, two on a phone): the class on
+  the band, the name (two lines at most), the rule, the summary (four lines; three on a phone), the
+  matched words marked; *Подробнее*, which opens it (it stretches over the card), and its own
+  *Отметить* (a real checkbox named by the card). A picked card has an accent outline and is listed
+  under *Отмечено* on the right, each with ×. The number of matches, or of cards in the pressed
+  classes, ends the filter row.
+- **An opened card** (`.dock-open` › `.rc-pcard--peek`) shows what a task may show of a card —
+  SPEC §3.2, **no signs, no treatment**: the class, the full summary and the class's description,
+  with ‹ n из N › through the matches (← → too) and *Отметить: вижу это в коде*. It opens over the
+  centre column only, at the middle, the code dimmed; the side columns stay as they are. ×, Esc or a
+  click on the dimmed code closes it; Tab stays inside it; focus returns to the card.
+- Arrow keys walk the matches from the field and Enter ticks the one walked to.
 
-Step 2 adds above the field the list of picked findings, each with its count of measures or
-*нужна мера*; the current one shows its summary. Each leaf says where its measure lives.
+### Step 2 — the same dock
+
+- The found problems are compact rows on the right (`.findings`), each with its count of measures
+  or *нужна мера*; the current one shows its summary. *Следующая находка →* and *← К диагнозу* are
+  under them.
+- The dock holds the heading with the current finding, the treatment search with *Проверить*
+  beside it, the hints, the measures ticked for the current finding as chips, the branch filters,
+  and the leaves: every branch in columns, each headed by where its measure lives (`.leaf-columns`),
+  or — with text or a branch pressed — the matches, each with its branch. It rises the same way.
 
 Search (`src/pages/task/search.ts`) cuts each word of the query to a crude stem, so Russian word
 forms match, and ranks by how many stems an option shares, then by where — name, keywords, summary.
 
 ### The review
 
-The same frame with *Разбор* current. The sidebar holds the score, its composition, the verdicts —
-found, missed, extra — as a list, the lesson, the same code in another task and *Try again*. Beside
-it, the chosen verdict in full — the learner's leaves against the author's (the shared ones green,
-the learner's wrong ones red), the author's note, the whole card, and for an extra pick the
-signal — or the code again.
+The same frame with *Разбор* current: the score with its composition and *Попробовать снова* at the
+top of the centre (`.review__score-bar`); under it the chosen verdict in full — the learner's leaves
+against the author's (the shared ones green, the learner's wrong ones red), the author's note, the
+whole card, and for an extra pick the signal — or the code again. The verdicts — found, missed,
+extra — are listed on the right with the lesson; the same code in another task sits under the
+context on the left. The review offers no *Следующая задача*: which task comes next is the
+maintainer's decision, left open on [#199](https://github.com/shoraLBRT/ritocode/issues/199); the
+header's sections reach the task list meanwhile.
 
 ## The arena
 
@@ -125,8 +167,8 @@ its token names are its own, and where it differs from this document, this docum
 
 ### The home page
 
-- The header, on every page but the task workspace
-  ([#195](https://github.com/shoraLBRT/ritocode/issues/195)): the brand (the way home), the sections
+- The header, on every page; the task workspace keeps its brand, sections and right end and puts
+  its steps where the search would be (above, #199): the brand (the way home), the sections
   (Задачи, Каталог проблем; Прогресс for a learner, Админка for an admin), the search, the theme
   toggle, then the streak and the avatar — or *Войти* and *Начать* (the demo task) for a guest.
   - **The search** («Задачи и проблемы», `Ctrl K` / `⌘K` from anywhere) is a combobox: as the
@@ -222,6 +264,8 @@ above. What the site already had stays as it is.
 | Streak, avatar | `.rc-streak`, `.rc-avatar` | the header's right end (`HeaderStreak`; the avatar opens `.app__menu`) |
 | Problem card | `article.rc-pcard.k-{class}` › `__band`, `__seal`, `__face`, `__name`, `__rule`, `__summary`, `details.rc-pcard__more`; open: `.rc-pcard--open` in `.rc-pcard-overlay` | the catalogue's card, folded and open (above) |
 | Class filter | `.rc-catalogue__filter` › `button.rc-catalogue__chip.k-{class}[aria-pressed]` | one class or all, with counts |
+| Workspace dock | `.dock` (`--cards`, `--leaves`, `--results`, `--raised`) › `__grip`, `__controls`, `__filters`, `__results`, `__cards`; `.workspace__aside`; `.workspace__sheet` | the task screen's step at the bottom of the code (above); `pages/task/workspace.css` |
+| Card in the dock | `article.rc-pcard.rc-pcard--dock.k-{class}` › `__foot`, `__open`, `label.rc-pcard__pick`; opened: `.dock-open` › `.rc-pcard--peek` | the catalogue's card made small; the opened one shows no signs or treatment (SPEC §3.2) |
 
 The list shows no number of findings: a clean task would read as «0» and give itself away. Classes
 never appear on the task list (SPEC §4.3) — the concept's opt-in toggle for them was turned down in #190.

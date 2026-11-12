@@ -190,6 +190,25 @@ describe('the header search', () => {
   });
 });
 
+describe('the header on the task workspace', () => {
+  it('keeps the sections beside the steps, so a review is one click from the task list and the catalogue', async () => {
+    renderApp(api().stub, '/tasks/flower-shop/attempts/a1');
+
+    const sections = screen.getByRole('navigation', { name: ru.nav.label });
+    expect(within(sections).getByRole('link', { name: ru.nav.tasks })).toHaveAttribute('href', '/tasks');
+    expect(within(sections).getByRole('link', { name: ru.nav.problems })).toHaveAttribute('href', '/problems');
+    expect(await within(sections).findByRole('link', { name: ru.nav.progress })).toHaveAttribute('href', '/progress');
+  });
+
+  it('keeps them while a task is being solved too', () => {
+    renderApp(api({ signedIn: false }).stub, '/tasks/flower-shop');
+
+    const sections = screen.getByRole('navigation', { name: ru.nav.label });
+    expect(within(sections).getByRole('link', { name: ru.nav.tasks })).toBeInTheDocument();
+    expect(within(sections).getByRole('link', { name: ru.nav.problems })).toBeInTheDocument();
+  });
+});
+
 describe('the header streak', () => {
   it('counts the days in a row with a submitted attempt', async () => {
     const day = 24 * 60 * 60 * 1000;

@@ -19,11 +19,12 @@ type Line = AttemptResult['cards'][number];
 
 /**
  * `/tasks/{slug}/attempts/{id}` — the review of a checked answer (docs/SPEC.md §4.5), for its owner,
- * in the task's workspace with the third step current (docs/DESIGN.md). The sidebar holds the score
- * in points with its composition, every finding of the key, found or missed, every extra pick, the
- * lesson, the same code in another context and trying again. Beside it, the chosen line in full —
- * the learner's leaves beside the author's, the author's note, the whole card, and for an extra
- * pick the signal button (SPEC §4.8) — or the code again.
+ * in the task's frame with the third step current (docs/DESIGN.md › The task workspace). At the top
+ * of the centre, the score in points with its composition and trying again; under it, the chosen
+ * line in full — the learner's leaves beside the author's, the author's note, the whole card, and
+ * for an extra pick the signal button (SPEC §4.8) — or the code again. On the right, every finding
+ * of the key, found or missed, every extra pick, and the lesson; on the left, the context and the
+ * same code in another context.
  *
  * Found, missed and extra each carry a mark and a word, never colour alone. The note and the lesson
  * are the ones kept with the attempt, so the review always matches the key it was scored against;
@@ -132,7 +133,7 @@ function Review({ attempt, task, tree, cards }: { attempt: Attempt; task: TaskDe
   );
 
   return (
-    <section className="workspace review" data-area={area}>
+    <section className="workspace workspace--review review" data-area={area}>
       <StepBar step={3} picked={picks.length} treated={picks.filter((pick) => pick.leaves.length > 0).length} />
 
       <div className="workspace__tabs" role="tablist" aria-label={t('task.areas')}>
@@ -141,52 +142,14 @@ function Review({ attempt, task, tree, cards }: { attempt: Attempt; task: TaskDe
         {tab('code', t('review.cardTab'))}
       </div>
 
-      <div className="workspace__side">
-        <div className="workspace__area workspace__area--context">
-          <ContextPanel
-            task={task}
-            open={contextOpen}
-            onToggle={() => {
-              setContextOpen(!contextOpen);
-            }}
-          />
-        </div>
-
-        <section className="panel workspace__area workspace__area--answer review__summary" aria-labelledby="review-title">
-          <h2 id="review-title" className="eyebrow">
-            {t('review.title')}
-          </h2>
-          <p className="review__score">{t('review.score', { score: result.total, maximum: result.maximum })}</p>
-          {!clean && (
-            <p className="review__composition">
-              {t('review.composition', { found: found.length, present: findings.length, extra: extras.length, matched: matched.length })}
-            </p>
-          )}
-          {clean && <p>{extras.length === 0 ? t('review.cleanNothing') : t('review.cleanExtra')}</p>}
-          {!clean && result.isCorrect && <p>{t('review.correct')}</p>}
-          {attempt.practice && <p className="step__hint step__hint--quiet">{t('review.practice')}</p>}
-
-          {findings.length > 0 && (
-            <>
-              <h3 className="review__label">{t('review.findings')}</h3>
-              <ul className="verdicts">{findings.map(lineButton)}</ul>
-            </>
-          )}
-
-          {extras.length > 0 && (
-            <>
-              <h3 className="review__label">{t('review.extras')}</h3>
-              <ul className="verdicts">{extras.map(lineButton)}</ul>
-            </>
-          )}
-
-          {attempt.review?.lesson != null && (
-            <div className="review__lesson">
-              <h3 className="eyebrow">{t('review.lesson')}</h3>
-              <Markdown source={attempt.review.lesson} />
-            </div>
-          )}
-
+      <div className="workspace__context workspace__area workspace__area--context">
+        <ContextPanel
+          task={task}
+          open={contextOpen}
+          onToggle={() => {
+            setContextOpen(!contextOpen);
+          }}
+        >
           {task.sameMaterial.length > 0 && (
             <div className="review__more">
               <h3 className="review__label">{t('review.sameMaterial')}</h3>
@@ -199,16 +162,33 @@ function Review({ attempt, task, tree, cards }: { attempt: Attempt; task: TaskDe
               </ul>
             </div>
           )}
-
-          <p className="review__actions">
-            <Link className="button button--primary" to={`/tasks/${task.slug}`}>
-              {t('review.tryAgain')}
-            </Link>
-          </p>
-        </section>
+        </ContextPanel>
       </div>
 
-      <section className="panel workspace__pane workspace__area workspace__area--code" aria-label={t('review.cardTab')}>
+      {/* The score at the top of the centre, with the way to try again. */}
+      <section className="panel review__score-bar workspace__area workspace__area--answer" aria-labelledby="review-title">
+        <div className="review__score-text">
+          <h2 id="review-title" className="eyebrow">
+            {t('review.title')}
+          </h2>
+          <p className="review__score">{t('review.score', { score: result.total, maximum: result.maximum })}</p>
+          {!clean && (
+            <p className="review__composition">
+              {t('review.composition', { found: found.length, present: findings.length, extra: extras.length, matched: matched.length })}
+            </p>
+          )}
+          {clean && <p className="review__verdict-line">{extras.length === 0 ? t('review.cleanNothing') : t('review.cleanExtra')}</p>}
+          {!clean && result.isCorrect && <p className="review__verdict-line">{t('review.correct')}</p>}
+          {attempt.practice && <p className="step__hint step__hint--quiet">{t('review.practice')}</p>}
+        </div>
+        <p className="review__actions">
+          <Link className="button button--primary" to={`/tasks/${task.slug}`}>
+            {t('review.tryAgain')}
+          </Link>
+        </p>
+      </section>
+
+      <section className="panel workspace__code review__pane workspace__area workspace__area--code" aria-label={t('review.cardTab')}>
         <div className="pane-tabs" role="group" aria-label={t('review.paneTabs')}>
           <button
             type="button"
@@ -254,6 +234,31 @@ function Review({ attempt, task, tree, cards }: { attempt: Attempt; task: TaskDe
           </FindingCard>
         )}
       </section>
+
+      <aside className="panel workspace__aside review__verdicts workspace__area workspace__area--answer" aria-label={t('review.verdicts')}>
+        {findings.length > 0 && (
+          <>
+            <h3 className="aside__title">
+              {t('review.findings')}
+            </h3>
+            <ul className="verdicts">{findings.map(lineButton)}</ul>
+          </>
+        )}
+
+        {extras.length > 0 && (
+          <>
+            <h3 className="review__label">{t('review.extras')}</h3>
+            <ul className="verdicts">{extras.map(lineButton)}</ul>
+          </>
+        )}
+
+        {attempt.review?.lesson != null && (
+          <div className="review__lesson">
+            <h3 className="eyebrow">{t('review.lesson')}</h3>
+            <Markdown source={attempt.review.lesson} />
+          </div>
+        )}
+      </aside>
     </section>
   );
 }
