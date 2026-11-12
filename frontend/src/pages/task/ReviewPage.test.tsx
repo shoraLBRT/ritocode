@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, screen, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { ru } from '../../i18n';
 import { renderApp } from '../../test/render';
 import { jsonResponse, problemResponse } from '../../test/responses';
@@ -71,7 +71,25 @@ const clean = {
   review: { notes: {}, lesson: null },
 };
 
-function api(attempt: object, taskBody: object = task, signal: () => Response = () => jsonResponse({}, 201), revealed: () => Response = () => jsonResponse(scored)) {
+// The `/tasks` list around the task under review: the one after it is solved, so the next is `orders-report`.
+const listed = [
+  { slug: 'contact-dedupe', title: 'Дубли контактов', difficulty: 'easy', status: 'new' },
+  { slug: task.slug, title: task.title, difficulty: 'easy', status: 'tried' },
+  { slug: 'team-reminders', title: 'Напоминания команды', difficulty: 'easy', status: 'solved' },
+  { slug: 'orders-report', title: 'Отчёт по заказам', difficulty: 'easy', status: 'gaveUp' },
+];
+
+function page(items: readonly object[]) {
+  return { items, pageNumber: 1, pageSize: 100, totalItems: items.length, totalPages: 1, hasNextPage: false, hasPreviousPage: false };
+}
+
+function api(
+  attempt: object,
+  taskBody: object = task,
+  signal: () => Response = () => jsonResponse({}, 201),
+  revealed: () => Response = () => jsonResponse(scored),
+  tasks: () => Response = () => jsonResponse(page(listed)),
+) {
   return vi.fn<typeof globalThis.fetch>().mockImplementation((input) => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
     const path = new URL(url).pathname.replace('/api/v1', '');
@@ -82,6 +100,10 @@ function api(attempt: object, taskBody: object = task, signal: () => Response = 
 
     if (path === '/attempts/attempt-1/reveal') {
       return Promise.resolve(revealed());
+    }
+
+    if (path === '/tasks') {
+      return Promise.resolve(tasks());
     }
 
     const bodies: Record<string, object> = {
@@ -366,5 +388,55 @@ describe('a signal from an extra pick', () => {
     expect(await extra.findByText('At most 10 signals.')).toBeInTheDocument();
     expect(extra.getByLabelText(ru.review.signalComment)).toHaveValue('здесь');
     expect(extra.getByRole('button', { name: ru.review.signalSend })).toBeEnabled();
+  });
+});
+
+describe('the next task from a review', () => {
+  it('leads to the next unsolved task in the list, beside trying again', async () => {
+    await openReview(scored);
+
+    const next = await screen.findByRole('link', { name: ru.review.nextTask });
+    expect(next).toHaveAttribute('href', '/tasks/orders-report');
+    expect(next.parentElement).toBe(screen.getByRole('link', { name: ru.review.tryAgain }).parentElement);
+  });
+
+  it('is there before the answer is revealed, and stays after it', async () => {
+    renderApp(api(hidden), `/tasks/${task.slug}/attempts/attempt-1`);
+    expect(await screen.findByRole('link', { name: ru.review.nextTask })).toHaveAttribute('href', '/tasks/orders-report');
+
+    fireEvent.click(screen.getByRole('button', { name: ru.review.reveal }));
+    fireEvent.click(screen.getByRole('button', { name: ru.review.revealConfirm }));
+    await screen.findByRole('article', { name: 'Секреты в репозитории' });
+
+    expect(screen.getByRole('link', { name: ru.review.nextTask })).toHaveAttribute('href', '/tasks/orders-report');
+  });
+
+  it('carries on from the start of the list past its end', async () => {
+    // The task under review last, after a solved one.
+    const last = [...listed.slice(2, 3), ...listed.slice(0, 2)];
+    renderApp(api(scored, task, undefined, undefined, () => jsonResponse(page(last))), `/tasks/${task.slug}/attempts/attempt-1`);
+
+    expect(await screen.findByRole('link', { name: ru.review.nextTask })).toHaveAttribute('href', '/tasks/contact-dedupe');
+  });
+
+  it('is not offered when every other task is solved', async () => {
+    const solved = listed.map((each) => (each.slug === task.slug ? each : { ...each, status: 'solved' }));
+    const stub = api(scored, task, undefined, undefined, () => jsonResponse(page(solved)));
+    renderApp(stub, `/tasks/${task.slug}/attempts/attempt-1`);
+    await screen.findByRole('article', { name: 'Секреты в репозитории' });
+    await waitFor(() => {
+      expect(stub.mock.calls.some(([input]) => new URL(urlOf(input)).pathname.endsWith('/tasks'))).toBe(true);
+    });
+
+    expect(screen.queryByRole('link', { name: ru.review.nextTask })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: ru.review.tryAgain })).toBeInTheDocument();
+  });
+
+  it('leaves the review whole when the list cannot be read', async () => {
+    renderApp(api(scored, task, undefined, undefined, () => problemResponse(500, 'internal_error', 'x')), `/tasks/${task.slug}/attempts/attempt-1`);
+    await screen.findByRole('article', { name: 'Секреты в репозитории' });
+
+    expect(screen.queryByRole('link', { name: ru.review.nextTask })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: ru.review.tryAgain })).toBeInTheDocument();
   });
 });
