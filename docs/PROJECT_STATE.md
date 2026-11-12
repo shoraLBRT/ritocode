@@ -155,6 +155,14 @@ description. As of that day:
   1280 and 375 px, light and dark (the session ran out of usage window before it), after which the
   issue can close. *Следующая задача* (#199) is still the follow-up after it.
 - **Later** holds the post-MVP iterations that were SPEC §12; not taken until the maintainer moves one.
+  Since 2026-11-11 it also holds the **incident**
+  ([#227](https://github.com/shoraLBRT/ritocode/issues/227),
+  [ADR 0016](adr/0016-incident-boss-task.md)): a boss task over a whole production stack, in a fixed
+  pool of systems, recorded rather than live; three worlds of three or four incidents each to
+  start, in Python and Java. Specified in [SPEC](SPEC.md) §14; the maintainer confirmed its defaults on
+  2026-11-12 and changed the balance (§14.10: every attempt counts, opening a boss spends its
+  price). The economy's numbers (hint costs, evidence points, prices) are balanced last. Nothing
+  is built.
 
 **Content.** The content track, with the two skills: 55–60 cards
 ([#124](https://github.com/shoraLBRT/ritocode/issues/124)) and the 20 tasks
