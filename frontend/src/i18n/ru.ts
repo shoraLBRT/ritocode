@@ -68,11 +68,12 @@ export const ru = {
   privacy: {
     title: 'Политика конфиденциальности',
   },
-  // The arena (docs/SPEC.md §4.1). The title and lead are a placeholder on the maintainer's idea —
-  // learning to see the problems in code — until the copy is worked out (#190).
+  // The arena (docs/SPEC.md §4.1). The title and lead are the maintainer's choice of 2026-11-12
+  // (variant C on #216). The lead names the treatments without jargon and does not say the tasks
+  // are on real projects: by SPEC §3.4 the material is generated to order.
   home: {
-    title: 'Научись видеть проблемы в коде, который пишет ИИ',
-    lead: 'Агент пишет код, ты его принимаешь. Здесь — короткие задачи на настоящих проектах: найди, что в коде не так, и реши, чем это лечить.',
+    title: 'Код работает. Что с ним не так?',
+    lead: 'Агент пишет код, который запускается и проходит тесты, а проблемы прячутся глубже. Короткие задачи учат их замечать и выбирать лечение: уточнить задание, завести правило, поставить проверку — или осознанно оставить.',
     actions: 'С чего начать',
     demo: 'Начать с лёгкой задачи',
     tasks: 'Все задачи',
