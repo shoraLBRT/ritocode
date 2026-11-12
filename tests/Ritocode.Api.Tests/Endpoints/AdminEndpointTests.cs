@@ -247,6 +247,11 @@ public sealed class AdminEndpointTests(AdminContentTestApi api) : IClassFixture<
         {
         }
 
+        // Revealed, so the review names the extra pick and a signal can be sent from it (ADR 0017).
+        using (await JsonAsync(await PostAsync($"/api/v1/attempts/{id}/reveal", null), HttpStatusCode.OK))
+        {
+        }
+
         return id;
     }
 

@@ -92,16 +92,27 @@ public sealed class AttemptEndpointsTests(ContentTestApi api) : IClassFixture<Co
     }
 
     [Fact]
-    public async Task Submitting_ScoresTheAnswer_AndRevealsTheKey()
+    public async Task Submitting_ScoresTheAnswer_AndRevealingTheAnswerShowsTheKey()
     {
         var id = await StartAsync(ContentTestApi.EasyTask);
 
         using var submitted = await JsonAsync(await PostAsync($"/api/v1/attempts/{id}/submit", Answer), HttpStatusCode.OK);
-        var root = submitted.RootElement;
 
-        Assert.NotEqual(JsonValueKind.Null, root.GetProperty("submittedAt").ValueKind);
-        Assert.Equal("first", root.GetProperty("contentRevision").GetString());
-        Assert.Equal("treatment", root.GetProperty("step").GetString());
+        Assert.NotEqual(JsonValueKind.Null, submitted.RootElement.GetProperty("submittedAt").ValueKind);
+        Assert.Equal("first", submitted.RootElement.GetProperty("contentRevision").GetString());
+        Assert.Equal("treatment", submitted.RootElement.GetProperty("step").GetString());
+
+        // The outcome comes at once: the score and the counts.
+        var outcome = submitted.RootElement.GetProperty("outcome");
+        Assert.Equal(
+            (64, 120, 3, 2, 1, 1, 1, false),
+            (outcome.GetProperty("total").GetInt32(), outcome.GetProperty("maximum").GetInt32(), outcome.GetProperty("present").GetInt32(),
+                outcome.GetProperty("found").GetInt32(), outcome.GetProperty("treated").GetInt32(), outcome.GetProperty("missed").GetInt32(),
+                outcome.GetProperty("extra").GetInt32(), outcome.GetProperty("solved").GetBoolean()));
+
+        using var revealed = await JsonAsync(await PostAsync($"/api/v1/attempts/{id}/reveal", null), HttpStatusCode.OK);
+        var root = revealed.RootElement;
+        Assert.True(root.GetProperty("revealed").GetBoolean());
 
         var result = root.GetProperty("result");
         Assert.Equal(64, result.GetProperty("total").GetInt32());
@@ -159,7 +170,7 @@ public sealed class AttemptEndpointsTests(ContentTestApi api) : IClassFixture<Co
         using (var submitted = await JsonAsync(await PostAsync($"/api/v1/attempts/{second}/submit", answer), HttpStatusCode.OK))
         {
             Assert.False(submitted.RootElement.GetProperty("practice").GetBoolean());
-            Assert.True(submitted.RootElement.GetProperty("result").GetProperty("isCorrect").GetBoolean());
+            Assert.True(submitted.RootElement.GetProperty("outcome").GetProperty("solved").GetBoolean());
         }
 
         using (var submitted = await JsonAsync(await PostAsync($"/api/v1/attempts/{first}/submit", answer), HttpStatusCode.OK))
@@ -233,9 +244,11 @@ public sealed class AttemptEndpointsTests(ContentTestApi api) : IClassFixture<Co
     {
         var id = await StartAsync(ContentTestApi.EasyTask);
 
-        using var submitted = await JsonAsync(await PostAsync($"/api/v1/attempts/{id}/submit", new { picks = Array.Empty<object>() }), HttpStatusCode.OK);
+        (await PostAsync($"/api/v1/attempts/{id}/submit", new { picks = Array.Empty<object>() })).EnsureSuccessStatusCode();
+        using var submitted = await JsonAsync(await PostAsync($"/api/v1/attempts/{id}/reveal", null), HttpStatusCode.OK);
 
-        Assert.Equal(0, submitted.RootElement.GetProperty("result").GetProperty("total").GetInt32());
+        Assert.Equal(0, submitted.RootElement.GetProperty("outcome").GetProperty("total").GetInt32());
+        Assert.Equal(3, submitted.RootElement.GetProperty("outcome").GetProperty("missed").GetInt32());
         Assert.All(
             submitted.RootElement.GetProperty("result").GetProperty("cards").EnumerateArray(),
             line => Assert.Equal("missed", line.GetProperty("outcome").GetString()));
@@ -264,6 +277,7 @@ public sealed class AttemptEndpointsTests(ContentTestApi api) : IClassFixture<Co
 
         Assert.Equal(HttpStatusCode.NotFound, (await PatchAsync($"/api/v1/attempts/{theirs.Id}", new { step = "treatment" })).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await PostAsync($"/api/v1/attempts/{theirs.Id}/submit", Answer)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await PostAsync($"/api/v1/attempts/{theirs.Id}/reveal", null)).StatusCode);
 
         using var history = await GetJsonAsync("/api/v1/attempts?pageSize=100", HttpStatusCode.OK);
         Assert.DoesNotContain(
@@ -272,7 +286,7 @@ public sealed class AttemptEndpointsTests(ContentTestApi api) : IClassFixture<Co
     }
 
     [Fact]
-    public async Task TheKey_NeverLeavesTheServer_ExceptInASubmittedResult()
+    public async Task TheKey_NeverLeavesTheServer_ExceptInTheResultOfARevealedAnswer()
     {
         var id = await StartAsync(ContentTestApi.EasyTask);
 
@@ -293,6 +307,7 @@ public sealed class AttemptEndpointsTests(ContentTestApi api) : IClassFixture<Co
         }
 
         (await PostAsync($"/api/v1/attempts/{id}/submit", Answer)).EnsureSuccessStatusCode();
+        (await PostAsync($"/api/v1/attempts/{id}/reveal", null)).EnsureSuccessStatusCode();
 
         using var submitted = await GetJsonAsync($"/api/v1/attempts/{id}", HttpStatusCode.OK);
         Assert.Contains("keyLeaves", submitted.RootElement.GetRawText(), StringComparison.Ordinal);
@@ -313,16 +328,29 @@ public sealed class AttemptEndpointsTests(ContentTestApi api) : IClassFixture<Co
         return body.RootElement.GetProperty("id").GetGuid();
     }
 
-    private Task<HttpResponseMessage> PostAsync(string path, object body) =>
-        api.Client.PostAsJsonAsync(new Uri(path, UriKind.Relative), body, TestContext.Current.CancellationToken);
+    private Task<HttpResponseMessage> PostAsync(string path, object? body) => AttemptRequests.PostJsonAsync(api.Client, path, body);
 
     private Task<HttpResponseMessage> PatchAsync(string path, object body) =>
         api.Client.PatchAsJsonAsync(new Uri(path, UriKind.Relative), body, TestContext.Current.CancellationToken);
 
-    private async Task<JsonDocument> GetJsonAsync(string path, HttpStatusCode expected) =>
-        await JsonAsync(await api.Client.GetAsync(new Uri(path, UriKind.Relative), TestContext.Current.CancellationToken), expected);
+    private Task<JsonDocument> GetJsonAsync(string path, HttpStatusCode expected) => api.Client.GetJsonAsync(path, expected);
 
-    private static async Task<JsonDocument> JsonAsync(HttpResponseMessage response, HttpStatusCode? expected = null)
+    private static Task<JsonDocument> JsonAsync(HttpResponseMessage response, HttpStatusCode? expected = null) => response.JsonAsync(expected);
+}
+
+/// <summary>The requests the attempt tests send, and their bodies read back.</summary>
+internal static class AttemptRequests
+{
+    /// <summary>A POST with <paramref name="body"/> as JSON, or with no body at all for <see langword="null"/>.</summary>
+    public static Task<HttpResponseMessage> PostJsonAsync(this HttpClient client, string path, object? body) =>
+        body is null
+            ? client.PostAsync(new Uri(path, UriKind.Relative), null, TestContext.Current.CancellationToken)
+            : client.PostAsJsonAsync(new Uri(path, UriKind.Relative), body, TestContext.Current.CancellationToken);
+
+    public static async Task<JsonDocument> GetJsonAsync(this HttpClient client, string path, HttpStatusCode expected) =>
+        await (await client.GetAsync(new Uri(path, UriKind.Relative), TestContext.Current.CancellationToken)).JsonAsync(expected);
+
+    public static async Task<JsonDocument> JsonAsync(this HttpResponseMessage response, HttpStatusCode? expected = null)
     {
         var text = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
@@ -339,19 +367,21 @@ public sealed class AttemptEndpointsTests(ContentTestApi api) : IClassFixture<Co
 public sealed class AttemptHistoryTests(ContentTestApi api) : IClassFixture<ContentTestApi>
 {
     [Fact]
-    public async Task ReIngestingChangedContent_LeavesAStoredResultByteForByteUnchanged_AndTheCatalogueSaysSolved()
+    public async Task ReIngestingChangedContent_LeavesAStoredResultByteForByteUnchanged_AndTheCatalogueSaysWhereTheLearnerStands()
     {
-        using (var before = await GetJsonAsync("/api/v1/tasks"))
-        {
-            Assert.All(before.RootElement.GetProperty("items").EnumerateArray(), task => Assert.False(task.GetProperty("solved").GetBoolean()));
-        }
+        Assert.Equal(["new", "new"], await StatusesAsync());
 
         var start = await api.Client.PostAsJsonAsync(new Uri("/api/v1/attempts", UriKind.Relative), new { task = ContentTestApi.EasyTask }, TestContext.Current.CancellationToken);
         var id = (await start.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken)).GetProperty("id").GetString();
         var answer = new { picks = new[] { new { card = "secrets-in-repo", leaves = new[] { "auto.secrets" } } } };
         (await api.Client.PostAsJsonAsync(new Uri($"/api/v1/attempts/{id}/submit", UriKind.Relative), answer, TestContext.Current.CancellationToken)).EnsureSuccessStatusCode();
 
+        // The easy task first, as the catalogue orders them.
+        Assert.Equal(["tried", "new"], await StatusesAsync());
+
+        (await AttemptRequests.PostJsonAsync(api.Client, $"/api/v1/attempts/{id}/reveal", null)).EnsureSuccessStatusCode();
         var stored = await GetRawAsync($"/api/v1/attempts/{id}");
+        Assert.Contains("keyLeaves", stored, StringComparison.Ordinal);
 
         // The key, a weight and the task's text all change; the task stays published.
         api.Write(
@@ -363,11 +393,15 @@ public sealed class AttemptHistoryTests(ContentTestApi api) : IClassFixture<Cont
 
         Assert.Equal(stored, await GetRawAsync($"/api/v1/attempts/{id}"));
 
-        using var after = await GetJsonAsync("/api/v1/tasks");
-        var solved = after.RootElement.GetProperty("items").EnumerateArray()
-            .ToDictionary(task => task.GetProperty("slug").GetString()!, task => task.GetProperty("solved").GetBoolean());
-        Assert.True(solved[ContentTestApi.EasyTask]);
-        Assert.False(solved[ContentTestApi.MediumTask]);
+        Assert.Equal(["gaveUp", "new"], await StatusesAsync());
+    }
+
+    private async Task<string[]> StatusesAsync()
+    {
+        using var tasks = await GetJsonAsync("/api/v1/tasks");
+        var statuses = tasks.RootElement.GetProperty("items").EnumerateArray()
+            .ToDictionary(task => task.GetProperty("slug").GetString()!, task => task.GetProperty("status").GetString()!);
+        return [statuses[ContentTestApi.EasyTask], statuses[ContentTestApi.MediumTask]];
     }
 
     [Fact]
@@ -449,6 +483,7 @@ public sealed class AnonymousAttemptTests(AnonymousTestApi api) : IClassFixture<
         Assert.Equal(HttpStatusCode.Unauthorized, (await api.Client.GetAsync(new Uri("/api/v1/attempts", UriKind.Relative), TestContext.Current.CancellationToken)).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await api.Client.GetAsync(new Uri($"/api/v1/attempts/{id}", UriKind.Relative), TestContext.Current.CancellationToken)).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await api.Client.PostAsJsonAsync(new Uri($"/api/v1/attempts/{id}/submit", UriKind.Relative), new { picks = Array.Empty<object>() }, TestContext.Current.CancellationToken)).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await api.Client.PostAsync(new Uri($"/api/v1/attempts/{id}/reveal", UriKind.Relative), null, TestContext.Current.CancellationToken)).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await api.Client.PatchAsJsonAsync(new Uri($"/api/v1/attempts/{id}", UriKind.Relative), new { step = "treatment" }, TestContext.Current.CancellationToken)).StatusCode);
     }
 }

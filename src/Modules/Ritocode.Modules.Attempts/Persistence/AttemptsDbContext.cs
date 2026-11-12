@@ -18,11 +18,14 @@ public sealed class AttemptsDbContext(DbContextOptions<AttemptsDbContext> option
 
     public DbSet<Signal> Signals => Set<Signal>();
 
+    public DbSet<Reveal> Reveals => Set<Reveal>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
         modelBuilder.ApplyConfiguration(new AttemptConfiguration());
         modelBuilder.ApplyConfiguration(new SignalConfiguration());
+        modelBuilder.ApplyConfiguration(new RevealConfiguration());
     }
 }

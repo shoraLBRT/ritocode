@@ -24,7 +24,7 @@ namespace Ritocode.Modules.Attempts;
 /// <remarks>
 /// Owns the <c>attempts</c> schema. Reads a task and its answer key through
 /// <see cref="Shared.Contracts.Content.ITaskForAttemptLookup"/>, and answers the task catalogue's
-/// solved flags through <see cref="ISubmittedTaskLookup"/> and the admin list of users' counts through
+/// statuses through <see cref="ITaskStatusLookup"/> and the admin list of users' counts through
 /// <see cref="IAttemptTallyLookup"/>. Serves the admin area's signals and attempts (SPEC §6.2).
 /// </remarks>
 public sealed class AttemptsModule : IModule
@@ -60,7 +60,7 @@ public sealed class AttemptsModule : IModule
         services.AddScoped<IValidator<RecordStepRequest>, RecordStepRequestValidator>();
         services.AddScoped<IValidator<SubmitAttemptRequest>, SubmitAttemptRequestValidator>();
 
-        services.AddScoped<ISubmittedTaskLookup, SubmittedTaskLookup>();
+        services.AddScoped<ITaskStatusLookup, TaskStatusLookup>();
         services.AddScoped<IProgressReader, ProgressReader>();
         services.AddScoped<ISignalSender, SignalSender>();
         services.AddScoped<IValidator<SendSignalRequest>, SendSignalRequestValidator>();

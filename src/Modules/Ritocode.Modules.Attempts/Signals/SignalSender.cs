@@ -21,7 +21,9 @@ internal sealed class SignalSender(
     IOptions<SignalRateLimitOptions> rateLimit,
     TimeProvider clock) : ISignalSender
 {
-    public const string NotSubmittedCode = "attempt_not_submitted";
+    public const string NotSubmittedCode = AttemptLifecycle.NotSubmittedCode;
+
+    public const string NotRevealedCode = "answer_not_revealed";
 
     public const string AlreadySentCode = "signal_already_sent";
 
@@ -64,6 +66,13 @@ internal sealed class SignalSender(
         if (attempt.Result is null)
         {
             return AppError.Conflict(NotSubmittedCode, "Signals are sent from the review of a submitted attempt.");
+        }
+
+        // Nor before the learner has revealed the answer (ADR 0017): until then the review names no
+        // extra pick, and an answer about a card would say whether the key lists it.
+        if (await context.RevealedAtAsync(userId, attempt.TaskSlug, cancellationToken).ConfigureAwait(false) is null)
+        {
+            return AppError.Conflict(NotRevealedCode, "Signals are sent once the answer to the task is revealed.");
         }
 
         var extra = AttemptsJson.Read<DiagnosisScore>(attempt.Result).Cards

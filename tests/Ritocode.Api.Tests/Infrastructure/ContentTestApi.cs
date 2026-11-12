@@ -29,6 +29,11 @@ public class ContentTestApi(PostgresTestServer postgres) : IAsyncLifetime
     /// <summary>Configuration a derived fixture varies, such as a smaller rate limit.</summary>
     protected virtual IReadOnlyDictionary<string, string?>? Settings => null;
 
+    /// <summary>Content a derived fixture adds to the tree before the first ingest.</summary>
+    protected virtual void AddContent()
+    {
+    }
+
     public async ValueTask InitializeAsync()
     {
         var connectionString = await postgres.CreateDatabaseAsync(GetType().Name, TestContext.Current.CancellationToken);
@@ -41,6 +46,7 @@ public class ContentTestApi(PostgresTestServer postgres) : IAsyncLifetime
         Write(
             $"tasks/{MediumTask}/ru.md",
             "---\ntitle: Счета для сотни студий\n---\n\n## Context\n\nСервис для сотни студий.\n\n## Brief\n\n«То же самое.»\n");
+        AddContent();
 
         await IngestAsync("first");
     }
@@ -90,6 +96,20 @@ public class ContentTestApi(PostgresTestServer postgres) : IAsyncLifetime
         {
             Copy(directory, Path.Combine(to, Path.GetFileName(directory)));
         }
+    }
+}
+
+/// <summary>As <see cref="ContentTestApi"/>, with a clean task — no findings — over the same material.</summary>
+public sealed class CleanTaskContentTestApi(PostgresTestServer postgres) : ContentTestApi(postgres)
+{
+    public const string CleanTask = "invoice-mailer-clean";
+
+    protected override void AddContent()
+    {
+        Write($"tasks/{CleanTask}/task.yaml", "material: invoice-mailer\ndifficulty: medium\nfindings: []\n");
+        Write(
+            $"tasks/{CleanTask}/ru.md",
+            "---\ntitle: Счета, где всё в порядке\n---\n\n## Context\n\nУчебный пример.\n\n## Brief\n\n«То же самое.»\n");
     }
 }
 

@@ -38,10 +38,11 @@ public sealed record BranchView(string Id, string Name, IReadOnlyList<LeafView> 
 public sealed record LeafView(string Id, string Label);
 
 /// <summary>
-/// One row of <c>GET /tasks</c>. <see cref="Solved"/> — whether the caller has submitted an attempt at
-/// it — is set in the catalogue for a signed-in caller, and <see langword="null"/> otherwise.
+/// One row of <c>GET /tasks</c>. <see cref="Status"/> — <c>new</c>, <c>tried</c>, <c>solved</c> or
+/// <c>gaveUp</c> for the caller (SPEC §4.3, ADR 0017) — is set in the catalogue for a signed-in caller,
+/// and <see langword="null"/> otherwise.
 /// </summary>
-public sealed record TaskSummaryView(string Slug, string Title, string Difficulty, bool? Solved = null);
+public sealed record TaskSummaryView(string Slug, string Title, string Difficulty, string? Status = null);
 
 /// <summary>
 /// <c>GET /tasks/{slug}</c>: everything a learner needs to solve a task, and nothing that gives the

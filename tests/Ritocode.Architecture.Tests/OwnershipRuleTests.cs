@@ -55,6 +55,14 @@ public sealed class OwnershipRuleTests
             Method: null,
             "Every lookup there takes the owner and puts it inside the query."),
         new(
+            "Ritocode.Modules.Attempts.Persistence.OwnedReveals",
+            Method: null,
+            "Every lookup there takes the owner and puts it inside the query."),
+        new(
+            "Ritocode.Modules.Attempts.Lifecycle.AttemptLifecycle",
+            "RevealAsync",
+            "Adds the reveal it creates from an attempt it found by owner, and reads nothing directly."),
+        new(
             "Ritocode.Modules.Attempts.Signals.SignalSender",
             "SendAsync",
             "Adds the signal it creates from an attempt it found by owner, and reads nothing directly."),
@@ -80,11 +88,13 @@ public sealed class OwnershipRuleTests
     }
 
     [Fact]
-    public void AttemptsAndSignals_AreBothGuarded()
+    public void AttemptsSignalsAndReveals_AreGuarded()
     {
-        // SPEC §10.1 names both: ownership is checked inside every query that reads an attempt or a signal.
+        // SPEC §10.1 names attempts and signals: ownership is checked inside every query that reads one.
+        // A reveal (ADR 0017) is a learner's row too.
         Assert.Contains(typeof(Ritocode.Modules.Attempts.Domain.Attempt), GuardedEntities);
         Assert.Contains(typeof(Ritocode.Modules.Attempts.Domain.Signal), GuardedEntities);
+        Assert.Contains(typeof(Ritocode.Modules.Attempts.Domain.Reveal), GuardedEntities);
     }
 
     [Fact]
