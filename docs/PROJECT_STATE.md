@@ -154,6 +154,9 @@ description. As of that day:
   **left**: the visual check of the counts' diagrams and the confirmation in the built-in browser at
   1280 and 375 px, light and dark (the session ran out of usage window before it), after which the
   issue can close. *Следующая задача* (#199) is still the follow-up after it.
+- **Studying the problems** ([#204](https://github.com/shoraLBRT/ritocode/issues/204)): [ADR 0018](adr/0018-studying-problems.md)
+  is *Proposed* — a mark and a drill of recognising a card by its signs, no authoring — and waits on
+  the maintainer's decision and its four open questions. Nothing is built until it is accepted.
 - **Later** holds the post-MVP iterations that were SPEC §12; not taken until the maintainer moves one.
   Since 2026-11-11 it also holds the **incident**
   ([#227](https://github.com/shoraLBRT/ritocode/issues/227),
