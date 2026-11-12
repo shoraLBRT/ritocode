@@ -303,6 +303,7 @@ export const ru = {
     lesson: 'Вывод',
     sameMaterial: 'Тот же код в другом контексте',
     tryAgain: 'Попробовать снова',
+    nextTask: 'Следующая задача →',
     signal: 'По-моему, это здесь есть',
     signalComment: 'Комментарий для автора (необязательно)',
     signalPlaceholder: 'Где это в коде и почему',

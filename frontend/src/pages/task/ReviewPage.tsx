@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link, useParams } from 'react-router';
-import { getAttempt, getProblemCatalogue, getTask, getTreatments, useApiClient } from '../../api';
-import type { Attempt, AttemptOutcome, AttemptResult, ProblemCard, TaskDetail, TreatmentTree } from '../../api';
+import { getAttempt, getProblemCatalogue, getTask, getTreatments, listTasks, useApiClient } from '../../api';
+import type { Attempt, AttemptOutcome, AttemptResult, ProblemCard, TaskDetail, TaskSummary, TreatmentTree } from '../../api';
 import { CardSectionsView } from '../../components/CardSectionsView';
 import { ErrorState } from '../../components/ErrorState';
 import { LoadingState } from '../../components/LoadingState';
@@ -11,6 +11,7 @@ import { useApiResource } from '../../hooks/useApiResource';
 import { useT } from '../../i18n';
 import { ContextPanel } from './ContextPanel';
 import { MaterialViewer } from './MaterialViewer';
+import { nextTask } from './next';
 import { OutcomeTally, RevealAnswer } from './OutcomeTally';
 import { SignalControl } from './SignalControl';
 import { StepBar } from './StepBar';
@@ -26,6 +27,7 @@ type Line = AttemptResult['cards'][number];
  * task is solved, and the counts drawn as small diagrams — never which card was right, missed or
  * extra, and neither the lesson nor the same code in another context; the API does not send them.
  * *Попробовать снова* leads; *Показать ответ* asks first, saying what it does to the task's status.
+ * *Следующая задача* sits beside trying again, before the reveal and after it (#199).
  *
  * **Once revealed**: at the top of the centre, the score in points with its composition and trying
  * again; under it, the chosen line in full — the learner's leaves beside the author's, the author's
@@ -78,6 +80,8 @@ function Review({ initial, task, tree, cards }: { initial: Attempt; task: TaskDe
   // Revealed on this page rather than opened revealed: the confirmation that held the focus is gone,
   // so the full review's score takes it.
   const [revealedHere, setRevealedHere] = useState(false);
+  const following = useNextTask(task.slug);
+  const next = <NextTaskLink next={following} />;
 
   if (attempt.outcome === null) {
     return null;
@@ -89,6 +93,7 @@ function Review({ initial, task, tree, cards }: { initial: Attempt; task: TaskDe
         attempt={attempt}
         outcome={attempt.outcome}
         task={task}
+        next={next}
         onRevealed={(revealed) => {
           setRevealedHere(true);
           setAttempt(revealed);
@@ -105,8 +110,36 @@ function Review({ initial, task, tree, cards }: { initial: Attempt; task: TaskDe
       task={task}
       tree={tree}
       cards={cards}
+      next={next}
       focusScore={revealedHere}
     />
+  );
+}
+
+/**
+ * The next unsolved task in the order of the `/tasks` list (`nextTask`), read from the list itself so
+ * the order and the statuses are the list's. The review does not wait for it: until the list
+ * arrives, or if it fails, there is no link, and the header's *Задачи* reaches the list.
+ */
+function useNextTask(current: string): TaskSummary | undefined {
+  const client = useApiClient();
+  // The catalogue is twenty tasks, read in one page as `/tasks` reads it.
+  const { state } = useApiResource((signal) => listTasks(client, { pageSize: 100 }, signal), [client]);
+  return state.status === 'success' ? nextTask(state.data.items, current) : undefined;
+}
+
+/** *Следующая задача →*, a plain button beside *Попробовать снова*; nothing when no task is left to solve. */
+function NextTaskLink({ next }: { next: TaskSummary | undefined }) {
+  const t = useT();
+
+  if (next === undefined) {
+    return null;
+  }
+
+  return (
+    <Link className="button" to={`/tasks/${next.slug}`}>
+      {t('review.nextTask')}
+    </Link>
   );
 }
 
@@ -140,11 +173,13 @@ function HiddenReview({
   attempt,
   outcome,
   task,
+  next,
   onRevealed,
 }: {
   attempt: Attempt;
   outcome: AttemptOutcome;
   task: TaskDetail;
+  next: ReactNode;
   onRevealed: (attempt: Attempt) => void;
 }) {
   const t = useT();
@@ -182,7 +217,7 @@ function HiddenReview({
           <p className="review__verdict-line">{outcome.solved ? t('review.solved') : t('review.notSolved')}</p>
           {attempt.practice && <p className="step__hint step__hint--quiet">{t('review.practice')}</p>}
         </div>
-        <RevealAnswer attempt={attempt} task={task.slug} onRevealed={onRevealed} />
+        <RevealAnswer attempt={attempt} task={task.slug} next={next} onRevealed={onRevealed} />
       </section>
 
       <section className="panel workspace__code review__pane workspace__area workspace__area--code" aria-label={t('review.codeTab')}>
@@ -208,6 +243,7 @@ function FullReview({
   task,
   tree,
   cards,
+  next,
   focusScore,
 }: {
   attempt: Attempt;
@@ -216,6 +252,7 @@ function FullReview({
   task: TaskDetail;
   tree: TreatmentTree;
   cards: readonly ProblemCard[];
+  next: ReactNode;
   focusScore: boolean;
 }) {
   const t = useT();
@@ -303,7 +340,7 @@ function FullReview({
         </ContextPanel>
       </div>
 
-      {/* The score at the top of the centre, with the way to try again. */}
+      {/* The score at the top of the centre, with the way to try again and to the next task. */}
       <section ref={scoreBar} tabIndex={-1} className="panel review__score-bar workspace__area workspace__area--answer" aria-labelledby="review-title">
         <div className="review__score-text">
           <h2 id="review-title" className="eyebrow">
@@ -323,6 +360,7 @@ function FullReview({
           <Link className="button button--primary" to={`/tasks/${task.slug}`}>
             {t('review.tryAgain')}
           </Link>
+          {next}
         </p>
       </section>
 

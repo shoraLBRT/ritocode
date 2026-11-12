@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { revealAnswer, useApiClient } from '../../api';
 import type { Attempt, AttemptOutcome } from '../../api';
@@ -74,11 +75,22 @@ function Row({ label, value, pips: kinds }: { label: string; value: string; pips
 type Stage = 'closed' | 'asking' | 'revealing' | 'failed';
 
 /**
- * *Попробовать снова* first, and *Показать ответ* beside it, which asks before it acts (ADR 0017):
- * the confirmation says what revealing does to the task's status — gave up, unless the task is
- * solved already, in which case it stays solved — and that trying again stays open as practice.
+ * *Попробовать снова* first, then `next` (the way to the next task, #199), and *Показать ответ*
+ * last, which asks before it acts (ADR 0017): the confirmation says what revealing does to the
+ * task's status — gave up, unless the task is solved already, in which case it stays solved — and
+ * that trying again stays open as practice.
  */
-export function RevealAnswer({ attempt, task, onRevealed }: { attempt: Attempt; task: string; onRevealed: (attempt: Attempt) => void }) {
+export function RevealAnswer({
+  attempt,
+  task,
+  next,
+  onRevealed,
+}: {
+  attempt: Attempt;
+  task: string;
+  next?: ReactNode;
+  onRevealed: (attempt: Attempt) => void;
+}) {
   const client = useApiClient();
   const t = useT();
   const [stage, setStage] = useState<Stage>('closed');
@@ -113,6 +125,7 @@ export function RevealAnswer({ attempt, task, onRevealed }: { attempt: Attempt; 
         <Link className="button button--primary" to={`/tasks/${task}`}>
           {t('review.tryAgain')}
         </Link>
+        {next}
         {stage === 'closed' && (
           <button
             ref={opener}
