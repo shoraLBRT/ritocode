@@ -5,7 +5,8 @@
 The decision to change the product, and the paths rejected on the way, are in
 [ADR 0010](adr/0010-diagnosis-of-ai-written-code.md).
 
-- **Last updated:** 2026-10-28 — §2: the audience is junior developers who build with AI agents,
+- **Last updated:** 2026-11-12 — §6: the incident, a second kind of task
+  ([ADR 0016](adr/0016-incident-boss-task.md)). Before that, 2026-10-28 — §2: the audience is junior developers who build with AI agents,
   no longer vibe coders ([ADR 0015](adr/0015-arena-home-and-junior-audience.md)). Before that,
   2026-09-30: cut back to what the maintainer confirmed while the specification was written; the
   take-home "recipe" was never agreed and is a later iteration in [`SPEC.md`](SPEC.md) §12.
@@ -80,6 +81,15 @@ agent was given, and the **material** — a small whole project. Then:
 
 **The same code in a different context is a different task with different right answers.** That is
 the mechanic the product is built on.
+
+**The incident** is the second kind of task, the boss: not a small project read as code, but a whole
+production application — its code, history, pipeline, infrastructure, database, metrics, logs and
+frontend — in which something went wrong and nobody says where. Every incident shows every one of
+those systems, so the learner has to search; the evidence is recorded from a real run of the
+application, never run for the learner. The answer is the same — cards, and treatments — plus the
+evidence that proves each card. An application serves several incidents, so the learner gets to know
+it as a junior gets to know a team's. [ADR 0016](adr/0016-incident-boss-task.md),
+[`SPEC.md`](SPEC.md) §14.
 
 ## 7. What Ritocode is not
 

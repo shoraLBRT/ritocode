@@ -131,9 +131,8 @@ is executed, and nothing runs in the learner's page either.
   nor obvious.
 - **SPEC §3.4's material rules do not fit a world.** Python only, new projects only, 79-character
   lines read on a phone, and the size bands were written for small projects. Java arrives with the
-  incident before ordinary tasks get other stacks (#211). The incident gets its own section in SPEC
-  before anything is built; until then this ADR is the record. CONCEPT §6 gains the incident at the
-  same time.
+  incident before ordinary tasks get other stacks (#211). The incident is specified in SPEC §14,
+  with the defaults it chose listed in §14.13; CONCEPT §6 names it.
 - **The treatment tree changes for every task.** New leaves are a content change to the tree's one
   file; existing keys stay valid, since no leaf is removed.
 - **Class 2 becomes possible.** A world has conventions, a history and existing utilities, so "no
