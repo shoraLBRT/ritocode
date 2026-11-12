@@ -5,9 +5,9 @@ import { renderApp } from '../test/render';
 import { jsonResponse, pageOf, problemResponse } from '../test/responses';
 
 const tasks = [
-  { slug: 'flower-shop', title: 'Выручка цветочного магазина', difficulty: 'easy', solved: true },
-  { slug: 'invoice-mailer', title: 'Счёт клиенту по почте', difficulty: 'easy', solved: false },
-  { slug: 'billing-core', title: 'Ядро биллинга', difficulty: 'hard', solved: false },
+  { slug: 'flower-shop', title: 'Выручка цветочного магазина', difficulty: 'easy', status: 'solved' },
+  { slug: 'invoice-mailer', title: 'Счёт клиенту по почте', difficulty: 'easy', status: 'tried' },
+  { slug: 'billing-core', title: 'Ядро биллинга', difficulty: 'hard', status: 'gaveUp' },
 ];
 
 function urlOf(input: RequestInfo | URL): string {
@@ -54,18 +54,20 @@ describe('the task catalogue', () => {
     expect(stub.mock.calls.some(([input]) => urlOf(input).includes('/tasks?pageSize=100'))).toBe(true);
   });
 
-  it('marks the tasks a signed-in learner solved, and filters by it', async () => {
-    renderApp(api(tasks), '/tasks');
+  it('marks each task with the signed-in learner’s status in words, and filters by the four statuses', async () => {
+    renderApp(api([...tasks, { slug: 'orders', title: 'Выгрузка заказов', difficulty: 'medium', status: 'new' }]), '/tasks');
 
     expect(await screen.findByRole('columnheader', { name: ru.taskTable.status })).toBeInTheDocument();
-    expect(screen.getAllByRole('img', { name: ru.taskTable.solved })).toHaveLength(1);
-    expect(tab(ru.tasks.statusFilter, /Нерешённые/)).toHaveTextContent('2');
+    for (const status of ['new', 'tried', 'solved', 'gaveUp'] as const) {
+      expect(screen.getByRole('img', { name: ru.taskTable.statuses[status] })).toBeInTheDocument();
+      expect(tab(ru.tasks.statusFilter, new RegExp(ru.tasks.statuses[status]))).toHaveTextContent('1');
+    }
 
-    fireEvent.click(tab(ru.tasks.statusFilter, /Нерешённые/));
+    fireEvent.click(tab(ru.tasks.statusFilter, new RegExp(ru.tasks.statuses.gaveUp)));
 
-    expect(await rows()).toHaveLength(2);
-    expect(screen.queryByRole('link', { name: 'Выручка цветочного магазина' })).not.toBeInTheDocument();
-    expect(screen.getByText('2 задачи')).toBeInTheDocument();
+    expect(await rows()).toHaveLength(1);
+    expect(screen.getByRole('link', { name: 'Ядро биллинга' })).toBeInTheDocument();
+    expect(screen.getByText('1 задача')).toBeInTheDocument();
   });
 
   it('filters by difficulty, counting each tab, and says when nothing is left', async () => {
@@ -99,7 +101,7 @@ describe('the task catalogue', () => {
   });
 
   it('offers no status to a signed-out visitor, whom the API tells nothing about it', async () => {
-    renderApp(api(tasks.map((task) => ({ ...task, solved: null })), { signedIn: false }), '/tasks?status=solved');
+    renderApp(api(tasks.map((task) => ({ ...task, status: null })), { signedIn: false }), '/tasks?status=solved');
 
     expect(await rows()).toHaveLength(3);
     expect(screen.queryByRole('group', { name: ru.tasks.statusFilter })).not.toBeInTheDocument();

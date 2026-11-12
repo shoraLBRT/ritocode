@@ -45,12 +45,21 @@ export type Difficulty = 'easy' | 'medium' | 'hard';
 /** The difficulties, easiest first — the order the task catalogue lists them in. */
 export const difficulties: readonly Difficulty[] = ['easy', 'medium', 'hard'];
 
-/** One row of `GET /api/v1/tasks`. `solved` is set for a signed-in caller and `null` otherwise. */
+/**
+ * Where a learner stands with a task (docs/SPEC.md §4.3, ADR 0017): no submitted attempt; submitted,
+ * not solved, the answer hidden; solved before the answer was revealed; the answer revealed first.
+ */
+export type TaskStatus = 'new' | 'tried' | 'solved' | 'gaveUp';
+
+/** The statuses, in the order the task list's filter offers them. */
+export const taskStatuses: readonly TaskStatus[] = ['new', 'tried', 'solved', 'gaveUp'];
+
+/** One row of `GET /api/v1/tasks`. `status` is set for a signed-in caller and `null` otherwise. */
 export interface TaskSummary {
   readonly slug: string;
   readonly title: string;
   readonly difficulty: Difficulty;
-  readonly solved: boolean | null;
+  readonly status: TaskStatus | null;
 }
 
 /** `GET /api/v1/problems`: the six classes, and every live card in full. */
@@ -154,7 +163,11 @@ export interface Pick {
   readonly leaves: readonly string[];
 }
 
-/** `/api/v1/attempts/{id}`: an attempt, and once submitted its answer and result. */
+/**
+ * `/api/v1/attempts/{id}`: an attempt; once submitted, its outcome; once the answer to the task is
+ * revealed (ADR 0017), the answer, the result line by line, the author's words and the signals.
+ * Before the reveal those are null or empty — the server does not send them.
+ */
 export interface Attempt {
   readonly id: string;
   readonly task: string;
@@ -163,12 +176,34 @@ export interface Attempt {
   readonly submittedAt: string | null;
   readonly practice: boolean;
   readonly contentRevision: string | null;
+  /** The score and the counts, naming nothing; null until submitted. */
+  readonly outcome: AttemptOutcome | null;
+  /** Whether the learner has revealed the answer to the task — for good, for every attempt at it. */
+  readonly revealed: boolean;
+  /** Where the learner stands with the task, as the task list shows it. */
+  readonly taskStatus: TaskStatus;
   readonly answer: { readonly picks: readonly Pick[] } | null;
   readonly result: AttemptResult | null;
   /** The author's note per finding, by card, and the lesson — kept with the attempt on submit. */
   readonly review: { readonly notes: Readonly<Record<string, string>>; readonly lesson: string | null } | null;
   /** The extra picks the learner has sent a signal for (SPEC §4.8). */
   readonly signalledCards: readonly string[];
+}
+
+/** What a result says without the answer: the score, the counts, and whether it solved the task. */
+export interface AttemptOutcome {
+  readonly total: number;
+  readonly maximum: number;
+  /** The findings in the key. */
+  readonly present: number;
+  readonly found: number;
+  /** Found ones with a leaf the key lists. */
+  readonly treated: number;
+  readonly missed: number;
+  /** Picks the key does not list. */
+  readonly extra: number;
+  /** Every finding found, each with a right leaf, and no extra pick. */
+  readonly solved: boolean;
 }
 
 /** `POST /api/v1/signals`: a learner sure a card is present though the key does not list it. */

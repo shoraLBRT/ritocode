@@ -13,16 +13,14 @@ const submitted = {
   submittedAt: '2026-09-30T15:09:00Z',
   practice: false,
   contentRevision: 'development',
-  answer: { picks: [{ card: 'money-in-float', leaves: ['manual.representation'] }] },
-  result: {
-    total: 36,
-    maximum: 90,
-    isCorrect: false,
-    cards: [
-      { card: 'secrets-in-repo', outcome: 'missed', points: -9, keyLeaves: ['auto.secrets'] },
-      { card: 'money-in-float', outcome: 'found', points: 45, keyLeaves: ['manual.representation'] },
-    ],
-  },
+  // Checked, the answer not revealed: the outcome only (ADR 0017).
+  outcome: { total: 36, maximum: 90, present: 2, found: 1, treated: 1, missed: 1, extra: 0, solved: false },
+  revealed: false,
+  taskStatus: 'tried',
+  answer: null,
+  result: null,
+  review: null,
+  signalledCards: [],
 };
 
 interface Call {
@@ -56,10 +54,10 @@ function api({ signedIn = true, openAttempt = false } = {}) {
       return Promise.resolve(jsonResponse(pageOf(openAttempt ? [open] : [], 1, 1)));
     }
     if (path === '/attempts' && method === 'POST') {
-      return Promise.resolve(jsonResponse({ ...submitted, submittedAt: null, result: null, answer: null, step: 'diagnosis' }, 201));
+      return Promise.resolve(jsonResponse({ ...submitted, submittedAt: null, outcome: null, step: 'diagnosis' }, 201));
     }
     if (path.startsWith('/attempts/') && method === 'PATCH') {
-      return Promise.resolve(jsonResponse({ ...submitted, submittedAt: null, result: null, answer: null }));
+      return Promise.resolve(jsonResponse({ ...submitted, submittedAt: null, outcome: null }));
     }
     if (path.endsWith('/submit')) {
       return Promise.resolve(jsonResponse(submitted));
@@ -143,7 +141,9 @@ describe('the task screen', () => {
       url: 'http://api.test/api/v1/attempts/attempt-1/submit',
       body: { picks: [{ card: 'money-in-float', leaves: ['manual.representation'] }] },
     });
-    expect(screen.getAllByText(ru.review.missed).length).toBeGreaterThan(0);
+    // The result without the answer: the counts, and the way to reveal it.
+    expect(screen.getByText(ru.review.notSolved)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: ru.review.reveal })).toBeInTheDocument();
   });
 
   it('checks an answer that picked nothing', async () => {

@@ -11,7 +11,7 @@ import { classTint } from './tint';
  * class's colour; nothing here knows a colour.
  */
 
-export function Icon({ name }: { name: 'search' | 'close' | 'check' | 'arrow' | 'chevron' | 'down' | 'left' | 'right' | 'file' | 'folder' }) {
+export function Icon({ name }: { name: 'search' | 'close' | 'check' | 'arrow' | 'chevron' | 'down' | 'left' | 'right' | 'file' | 'folder' | 'eye' }) {
   const paths: Record<typeof name, ReactNode> = {
     search: (
       <>
@@ -33,6 +33,12 @@ export function Icon({ name }: { name: 'search' | 'close' | 'check' | 'arrow' | 
       </>
     ),
     folder: <path d="M3 7h6l2 2h10v10H3z" />,
+    eye: (
+      <>
+        <path d="M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z" />
+        <circle cx="12" cy="12" r="2.6" />
+      </>
+    ),
   };
 
   return (

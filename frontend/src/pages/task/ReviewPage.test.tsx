@@ -30,6 +30,9 @@ const scored = {
   submittedAt: '2026-09-30T15:09:00Z',
   practice: false,
   contentRevision: 'development',
+  outcome: { total: 29, maximum: 90, present: 2, found: 1, treated: 1, missed: 1, extra: 1, solved: false },
+  revealed: true,
+  taskStatus: 'gaveUp',
   answer: {
     picks: [
       { card: 'god-class', leaves: ['manual.split'] },
@@ -56,20 +59,29 @@ const scored = {
   signalledCards: [],
 };
 
+// The same attempt before its answer is revealed: what the API sends then (ADR 0017).
+const hidden = { ...scored, revealed: false, taskStatus: 'tried', answer: null, result: null, review: null };
+
 const clean = {
   ...scored,
+  outcome: { total: 0, maximum: 0, present: 0, found: 0, treated: 0, missed: 0, extra: 0, solved: true },
+  taskStatus: 'solved',
   answer: { picks: [] },
   result: { total: 0, maximum: 0, isCorrect: true, cards: [] },
   review: { notes: {}, lesson: null },
 };
 
-function api(attempt: object, taskBody: object = task, signal: () => Response = () => jsonResponse({}, 201)) {
+function api(attempt: object, taskBody: object = task, signal: () => Response = () => jsonResponse({}, 201), revealed: () => Response = () => jsonResponse(scored)) {
   return vi.fn<typeof globalThis.fetch>().mockImplementation((input) => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
     const path = new URL(url).pathname.replace('/api/v1', '');
 
     if (path === '/signals') {
       return Promise.resolve(signal());
+    }
+
+    if (path === '/attempts/attempt-1/reveal') {
+      return Promise.resolve(revealed());
     }
 
     const bodies: Record<string, object> = {
@@ -148,7 +160,7 @@ describe('the review', () => {
   });
 
   it('closes with the lesson, the same code in another context, and trying again', async () => {
-    const withSibling = { ...task, sameMaterial: [{ slug: 'flower-shop-chain', title: 'Сеть магазинов', difficulty: 'medium', solved: null }] };
+    const withSibling = { ...task, sameMaterial: [{ slug: 'flower-shop-chain', title: 'Сеть магазинов', difficulty: 'medium', status: null }] };
     await openReview(scored, withSibling);
 
     expect(screen.getByText('Деньги и секреты от масштаба не зависят.')).toBeInTheDocument();
@@ -168,12 +180,84 @@ describe('the review', () => {
     const pickedOnClean = {
       ...clean,
       answer: { picks: [{ card: 'god-class', leaves: ['manual.split'] }] },
+      outcome: { ...clean.outcome, extra: 1, solved: false },
       result: { total: 0, maximum: 0, isCorrect: false, cards: [{ card: 'god-class', outcome: 'extra', points: -3, keyLeaves: null, treatment: null }] },
     };
     await openReview(pickedOnClean);
 
     expect(screen.getByText(ru.review.cleanExtra)).toBeInTheDocument();
     expect(within(line('Класс-бог')).getByText(ru.review.extra)).toBeInTheDocument();
+  });
+});
+
+describe('the review before the answer is revealed', () => {
+  it('gives the score, says the task is not solved, and draws the counts — naming no card', async () => {
+    await openReview(hidden);
+
+    expect(screen.getByText('29 из 90')).toBeInTheDocument();
+    expect(screen.getByText(ru.review.notSolved)).toBeInTheDocument();
+    const tally = within(screen.getByRole('complementary', { name: ru.review.tally.title }));
+    expect(tally.getByText(ru.review.tally.found).nextElementSibling).toHaveTextContent('1 из 2');
+    expect(tally.getByText(ru.review.tally.treated).nextElementSibling).toHaveTextContent('1 из 1');
+    expect(tally.getByText(ru.review.tally.missed).nextElementSibling).toHaveTextContent('1');
+    expect(tally.getByText(ru.review.tally.extra).nextElementSibling).toHaveTextContent('1');
+
+    for (const name of ['Секреты в репозитории', 'Деньги во float', 'Класс-бог']) {
+      expect(screen.queryByText(name)).not.toBeInTheDocument();
+    }
+    expect(screen.queryByText(ru.review.lesson)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: ru.review.signal })).not.toBeInTheDocument();
+  });
+
+  it('keeps trying again first, shows the code, and holds back the same code in another context', async () => {
+    const withSibling = { ...task, sameMaterial: [{ slug: 'flower-shop-chain', title: 'Сеть магазинов', difficulty: 'medium', status: null }] };
+    await openReview(hidden, withSibling);
+
+    expect(screen.getByRole('link', { name: ru.review.tryAgain })).toHaveAttribute('href', `/tasks/${task.slug}`);
+    expect(screen.getByText('TAX_RATE')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Сеть магазинов' })).not.toBeInTheDocument();
+  });
+
+  it('asks before revealing, saying the task will show as gave up, and can be left closed', async () => {
+    const stub = api(hidden);
+    renderApp(stub, `/tasks/${task.slug}/attempts/attempt-1`);
+    fireEvent.click(await screen.findByRole('button', { name: ru.review.reveal }));
+
+    expect(screen.getByText(ru.review.revealGivesUp)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: ru.review.revealCancel }));
+
+    expect(screen.queryByText(ru.review.revealGivesUp)).not.toBeInTheDocument();
+    expect(stub.mock.calls.some(([input]) => urlOf(input).endsWith('/reveal'))).toBe(false);
+  });
+
+  it('opens the whole review once the reveal is confirmed', async () => {
+    const stub = api(hidden);
+    renderApp(stub, `/tasks/${task.slug}/attempts/attempt-1`);
+    fireEvent.click(await screen.findByRole('button', { name: ru.review.reveal }));
+    fireEvent.click(screen.getByRole('button', { name: ru.review.revealConfirm }));
+
+    expect(await screen.findByRole('article', { name: 'Секреты в репозитории' })).toBeInTheDocument();
+    expect(screen.getByText('Деньги и секреты от масштаба не зависят.')).toBeInTheDocument();
+    const call = stub.mock.calls.find(([input]) => urlOf(input).endsWith('/attempts/attempt-1/reveal'));
+    expect(call?.[1]?.method).toBe('POST');
+  });
+
+  it('says a solved task stays solved when its answer is revealed', async () => {
+    const solved = { ...hidden, taskStatus: 'solved', outcome: { ...hidden.outcome, solved: true } };
+    await openReview(solved);
+
+    expect(screen.getByText(ru.review.solved)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: ru.review.reveal }));
+    expect(screen.getByText(ru.review.revealKeepsSolved)).toBeInTheDocument();
+  });
+
+  it('says so when the reveal fails, and stays closed', async () => {
+    renderApp(api(hidden, task, undefined, () => problemResponse(500, 'internal_error', 'x')), `/tasks/${task.slug}/attempts/attempt-1`);
+    fireEvent.click(await screen.findByRole('button', { name: ru.review.reveal }));
+    fireEvent.click(screen.getByRole('button', { name: ru.review.revealConfirm }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(ru.review.revealFailed);
+    expect(screen.queryByRole('article')).not.toBeInTheDocument();
   });
 });
 

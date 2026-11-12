@@ -14,8 +14,8 @@ import { headerResults, RESULTS_PER_KIND } from './headerResults';
 const webhookTask = 'Пополнение баланса через вебхук';
 
 const tasks: TaskSummary[] = [
-  { slug: 'flower-shop', title: 'Выручка цветочного магазина', difficulty: 'easy', solved: null },
-  { slug: 'payment-webhook', title: webhookTask, difficulty: 'medium', solved: null },
+  { slug: 'flower-shop', title: 'Выручка цветочного магазина', difficulty: 'easy', status: null },
+  { slug: 'payment-webhook', title: webhookTask, difficulty: 'medium', status: null },
 ];
 
 const sections = {
