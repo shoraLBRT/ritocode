@@ -142,7 +142,8 @@ forms match, and ranks by how many stems an option shares, then by where — nam
 **Before the answer is revealed** ([#229](https://github.com/shoraLBRT/ritocode/issues/229),
 [ADR 0017](adr/0017-a-result-without-the-answer.md)) the same frame holds the outcome only: at the
 top of the centre the score, a line saying whether the task is solved, and *Попробовать снова* —
-still the primary button — with *Показать ответ* beside it as a plain one; under it the code, to
+still the primary button — then *Следующая задача →* and *Показать ответ* beside it as plain ones
+(below); under it the code, to
 read again; on the right **the counts drawn small** (`OutcomeTally`, `rc-tally`):
 
 - a **ring** of the findings found out of those present (`--good` on `--surface-sunken`, the number
@@ -159,18 +160,28 @@ read again; on the right **the counts drawn small** (`OutcomeTally`, `rc-tally`)
 focused on opening): «Показать ответ?», what it opens and what it does to the status — «ответ
 открыт» from now on, or, for a task solved already, that it stays solved — and *Да, показать* /
 *Не сейчас*. No modal: the score stays in sight. *Не сейчас* gives focus back to *Показать ответ*;
-*Да, показать* moves it to the score bar of the full review. On a phone the two buttons wrap
+*Да, показать* moves it to the score bar of the full review. On a phone the buttons wrap
 under each other rather than overflow the bar. The same code in another context, the lesson and
 the signal wait for the reveal.
 
-**Once revealed**, the same frame with *Разбор* current: the score with its composition and *Попробовать снова* at the
-top of the centre (`.review__score-bar`); under it the chosen verdict in full — the learner's leaves
+**Once revealed**, the same frame with *Разбор* current: the score with its composition, *Попробовать снова* and
+*Следующая задача →* at the top of the centre (`.review__score-bar`); under it the chosen verdict in full — the learner's leaves
 against the author's (the shared ones green, the learner's wrong ones red), the author's note, the
 whole card, and for an extra pick the signal — or the code again. The verdicts — found, missed,
 extra — are listed on the right with the lesson; the same code in another task sits under the
-context on the left. The review offers no *Следующая задача*: which task comes next is the
-maintainer's decision, left open on [#199](https://github.com/shoraLBRT/ritocode/issues/199); the
-header's sections reach the task list meanwhile.
+context on the left.
+
+**The next task** ([#199](https://github.com/shoraLBRT/ritocode/issues/199), the maintainer's
+decision of 2026-11-12): *Следующая задача →* is a plain button right after *Попробовать снова*, in
+the same place before the reveal and after it, so it does not move when *Показать ответ* goes. It
+leads to the **next unsolved task in the order of the `/tasks` list** — any status but *solved*, so a
+task tried, given up on or never opened (`pages/task/next.ts`). Past the end of the list it carries
+on from the start; it never offers the task under review. When every other task is solved there is
+**no link**: the header's *Задачи* is the way to the list. A signed-out caller has no statuses, so
+for one it is simply the next task in the list. The review reads `GET /tasks` beside its own
+requests and does not wait for it — until the list arrives, or if it fails, the link is absent.
+From a review, then, one click reaches a new attempt, the next task, and through the header the
+task list and the catalogue.
 
 ## The arena
 

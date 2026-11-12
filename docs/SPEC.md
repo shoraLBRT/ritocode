@@ -358,7 +358,7 @@ diagnosing, not copying:
 - the **score** in points and whether the task is solved (§4.3);
 - the **counts**, drawn as small diagrams (DESIGN.md › The review): findings found out of present,
   found ones treated right, findings not found, extra picks;
-- *Try again*, first, and the code to read again.
+- *Try again*, first, *Next task* beside it, and the code to read again.
 
 It never says which pick was right or extra, which card was missed, or which leaves the key holds;
 the lesson, the author's notes and the same code in another context wait too. The API does not send
@@ -378,6 +378,9 @@ beside it — or the code again.
 - **The lesson**, if the task has one.
 - **The same code in another context** — links to the other tasks over this material.
 - **Try again** — a new attempt, marked as practice (§5.4).
+- **Next task** — the next task in the order of the task list (§4.3) that the learner has not
+  solved, carrying on from the start past the end; none when every other task is solved (#199,
+  DESIGN.md › The review).
 
 On a clean task with nothing picked, the review says so plainly: there was nothing to find, and the
 learner found nothing.
