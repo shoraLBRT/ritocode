@@ -97,8 +97,9 @@ is executed, and nothing runs in the learner's page either.
    boss — is balanced at the end**, once incidents exist to try it on.
 
 8. **The boss on the arena.** At first an incident simply appears in the task list beside ordinary
-   tasks. The target model: an incident is **unlocked by points earned on other tasks** — solve
-   enough of them and a boss opens. The threshold belongs to the economy of point 7.
+   tasks. The target model: an incident is **opened with points earned on other tasks** — every
+   attempt counts, each task once at its best score, and opening a boss spends its price
+   (SPEC §14.10, decided on 2026-11-12). The prices belong to the economy of point 7.
 
 ## Alternatives
 
@@ -142,7 +143,8 @@ is executed, and nothing runs in the learner's page either.
 - **An incident is desktop-first.** Eight panels do not read on a phone.
 - **An attempt is long**, so it has to survive a closed tab; the Attempts module records only
   finished attempts today.
-- **Unlocking needs a balance of points per learner** — derived from attempts the Attempts module
-  already keeps, or stored; the specification decides.
+- **Opening needs a balance of points per learner.** It is computed from the attempts the
+  Attempts module keeps and a new record of the incidents each learner opened; only that record is
+  stored.
 - The work is [#227](https://github.com/shoraLBRT/ritocode/issues/227), in the *Later* milestone;
   its steps become issues when the maintainer plans it.

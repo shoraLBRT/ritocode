@@ -989,13 +989,23 @@ incident.
 
 - **First stage:** incidents are listed in `/tasks` beside tasks, with their mark, open to everyone.
   A filter shows tasks, incidents or both.
-- **Target model:** an incident is **unlocked by points earned on tasks**. The learner's balance is
-  the sum of the scores of their **first** attempts (§5.4), so practice attempts cannot farm it; each
-  incident has an unlock threshold. Unlocking does not spend the balance. *Default.* A locked
-  incident is listed with its threshold and the learner's balance toward it; a signed-out visitor
-  sees the threshold and a sign-in prompt.
+- **Target model: incidents are opened with points earned on tasks.** Decided by the maintainer on
+  2026-11-12:
+  - **Every attempt counts, first or practice.** Ritocode does not police retries: a learner who
+    games the balance only cheats themselves, as §3.2 says of the open catalogue.
+  - **A task counts once, at the best score among its attempts.** Coming back to a task can raise
+    what it brings; repeating it cannot multiply it.
+  - **Each incident has a price, and opening it spends that price.** With 10 points and incidents
+    at 5, a learner opens two. An opened incident stays open for good.
+  - **The balance is computed, not stored:** what the learner's tasks brought, minus the prices of
+    the incidents they opened. The one new stored fact is which incidents a learner opened, and at
+    what price.
+  - A locked incident is listed with its price and the learner's balance; a signed-out visitor sees
+    the price and a sign-in prompt.
+- **Progress is unchanged.** §4.7 still counts first attempts only; the balance is a separate count
+  and does not touch it.
 - **This departs from §4.7's "no XP, no levels, no leaderboard"** on the maintainer's decision of
-  2026-11-11: the balance exists only to unlock incidents, is shown only beside them, and there is
+  2026-11-11: the balance exists only to open incidents, is shown only beside them, and there is
   still no leaderboard.
 
 ### 14.11 Review
@@ -1045,7 +1055,8 @@ rungs; no reference answer names a card.
 
 - **Content** owns worlds, incidents, recordings, hints and reference; ingest loads them.
 - **Attempts** owns incident attempts: their drafts, the hints taken, scoring per §14.8 as a pure
-  function beside §5's, and the balance of §14.10, derived from first attempts rather than stored.
+  function beside §5's, the incidents a learner opened, and the balance of §14.10, computed from
+  attempts and openings rather than stored.
 - **API**: the incident to investigate (alarm, world context, the panel index), each system's
   recording, loaded per panel; taking a hint, which returns its text and records it in the attempt;
   saving the draft. **A hint's text, like the answer key, never leaves the server before it is
@@ -1068,18 +1079,23 @@ the database shown, not run; evidence in the answer; treatment in two layers; op
 the one tree; help as prepared questions with authored answers, reference free and hints paid; the
 boss first in the task list, later unlocked by points; the economy balanced last.
 
-**Defaults this section chose**, for the maintainer to confirm or overturn:
+**Confirmed by the maintainer on 2026-11-12** — the defaults this section first chose, with one
+changed:
 
-1. Which world gets which domain and stack (§14.2).
+1. The worlds' domains and stacks of §14.2.
 2. Evidence required on every picked card, and −1 for a pin that matches nothing (§14.5, §14.8).
 3. Both treatment layers required on every card (§14.6).
 4. The interface word *помощник*, not *ИИ*, and no claim that answers are generated (§14.7).
 5. Hints only in a signed-in attempt (§14.7).
 6. The `ops` branch and its leaves, `auto.alert` and `auto.load-test` (§14.9).
-7. The balance as the sum of first-attempt scores, a threshold per incident, unlocking without
-   spending (§14.10).
+7. **Changed:** the balance counts every attempt, each task once at its best score, and opening an
+   incident spends its price (§14.10). The first stated default — first attempts only, a threshold,
+   nothing spent — is withdrawn.
 8. An incident not laid out for a phone (§14.6).
-9. The size of a world and the recording budget (§14.2, §14.12).
+9. The size of a world and the recording budget (§14.2, §14.12), to be revisited once the first
+   world and a few of its incidents exist.
+
+The section has no open defaults left; the economy's numbers remain the open part (§14.8).
 
 ---
 
