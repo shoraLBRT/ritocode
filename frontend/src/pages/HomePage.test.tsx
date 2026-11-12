@@ -163,6 +163,7 @@ describe('the arena', () => {
 
     expect(screen.queryByRole('heading', { name: 'Как устроена задача' })).not.toBeInTheDocument();
     expect(ru.home.lead).not.toContain('Писать ничего не нужно');
+    expect(ru.home.lead).not.toContain('настоящих проектах');
     expect(ru.home.demo).toBe('Начать с лёгкой задачи');
   });
 

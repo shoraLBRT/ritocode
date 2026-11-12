@@ -4,7 +4,7 @@
 in the same pull request as the work it describes — a session that skips this makes the next one
 start from nothing.
 
-- **Last updated:** 2026-11-11
+- **Last updated:** 2026-11-12
 - **Current stage:** S7 · Production — its engineering can be built against a local stack (#135's
   Compose file, #136's release command, #34's monitor, #41); the real checks wait on the VPS and domain of #134.
   S6 closed with #133: `/` and `/problems` read without JavaScript (#132), and every listed event
@@ -146,7 +146,9 @@ description. As of that day:
   *Попробовать снова* at the top of the review came with #198, and the header's sections are on the
   workspace (checked at 1280, 900 and 375 px, light and dark); *Следующая задача* is left open on
   the issue — which task comes next is the maintainer's decision. The catalogue is cards since #202; progress
-  waits on its mock-up (#203).
+  waits on its mock-up (#203). The arena's hero carries the maintainer's copy since #216 (variant C,
+  «Код работает. Что с ним не так?»; checked at 1280 and 375 px); the page's meta title and
+  description still carry the old wording ([#232](https://github.com/shoraLBRT/ritocode/issues/232)).
 - **Later** holds the post-MVP iterations that were SPEC §12; not taken until the maintainer moves one.
 
 **Content.** The content track, with the two skills: 55–60 cards
