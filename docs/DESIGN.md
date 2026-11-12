@@ -103,7 +103,8 @@ in the step, so the step gets the room; it replaced a 40/60 split of a sidebar a
 - **Phone width** (≤ 64 rem): the context or the code is behind, by two tabs, and the step is a
   **bottom sheet** (`.workspace__sheet`, fixed): the picks or the findings as a row of chips on top,
   then the dock, rising the same way up to just under the header. The review keeps three tabs: the
-  context, the verdicts, the chosen card.
+  context, the verdicts (before the reveal: the score and the counts), the chosen card (before the
+  reveal: the code).
 
 ### Step 1 — the matches are cards
 
@@ -138,7 +139,29 @@ forms match, and ranks by how many stems an option shares, then by where — nam
 
 ### The review
 
-The same frame with *Разбор* current: the score with its composition and *Попробовать снова* at the
+**Before the answer is revealed** ([#229](https://github.com/shoraLBRT/ritocode/issues/229),
+[ADR 0017](adr/0017-a-result-without-the-answer.md)) the same frame holds the outcome only: at the
+top of the centre the score, a line saying whether the task is solved, and *Попробовать снова* —
+still the primary button — with *Показать ответ* beside it as a plain one; under it the code, to
+read again; on the right **the counts drawn small** (`OutcomeTally`, `rc-tally`):
+
+- a **ring** of the findings found out of those present (`--good` on `--surface-sunken`, the number
+  in Plex Mono at its centre, «из N» under it) — the progress ring of the arena made smaller;
+- a **row** each for found, treated right, not found and extra picks, on the inset surface: the label,
+  the number in words on the right, and a **pip** per finding or pick — found filled `--good`, not
+  found an outline in `--warn`, treated `--accent`, not treated a hollow grey, extra a square in
+  `--danger`. Pips are drawn in one fixed order (found before missed), so they show how many and
+  never which; past twelve a row keeps its number only. The drawing is `aria-hidden`; the words
+  carry it, and colour never stands alone (a pip's shape or outline tells it apart as well);
+- a quiet hint that the answer holds which cards, the mistakes and the author's advice.
+
+*Показать ответ* opens a confirmation inside the score bar, across its width (`.review__reveal`,
+focused on opening): «Показать ответ?», what it opens and what it does to the status — «ответ
+открыт» from now on, or, for a task solved already, that it stays solved — and *Да, показать* /
+*Не сейчас*. No modal: the score stays in sight. The same code in another context, the lesson and
+the signal wait for the reveal.
+
+**Once revealed**, the same frame with *Разбор* current: the score with its composition and *Попробовать снова* at the
 top of the centre (`.review__score-bar`); under it the chosen verdict in full — the learner's leaves
 against the author's (the shared ones green, the learner's wrong ones red), the author's note, the
 whole card, and for an extra pick the signal — or the code again. The verdicts — found, missed,
@@ -203,7 +226,10 @@ full length:
 
 - A heading and the lead above the panel (`rc-page-head`), no hero card and no aside.
 - The panel's bar holds the filters (`rc-list-filters`): difficulty tabs, and for a signed-in learner
-  *Все / Нерешённые / Решённые*; each tab's count is what it would show under the other filter. The
+  *Все / Новые / Начатые / Решённые / Ответ открыт* (#229); each tab's count is what it would show
+  under the other filter. The status column marks each task (`StatusMark`): new an empty dashed ring,
+  tried an amber dot, solved a green check, the answer revealed a quiet grey eye — each named in
+  words for a screen reader. The
   number of tasks shown sits at the bar's right end.
 - Every task, in the API's order, in the same table as the home page — one component,
   `components/TaskTable.tsx`. Classes and the number of findings never appear, as on the home page.
@@ -253,7 +279,8 @@ above. What the site already had stays as it is.
 | Search | `label.rc-search` › `input`, `.rc-kbd` | the header's search over tasks and problems (`HeaderSearch`), its list in `.app__search-popup` |
 | Difficulty | `.rc-difficulty--easy` / `--medium` / `--hard` | always a word, on the state colours |
 | Problem class | `.rc-class.k-{class}` | the class colour is for classes only; never on a task |
-| Status | `.rc-status--done` / `--tried` / `--todo` | with an `aria-label` in words |
+| Status | `.rc-status--done` / `--tried` / `--todo` / `--revealed` | with an `aria-label` in words; the `StatusMark` component |
+| Outcome tally | `.rc-tally` › `__ring`, `__hole`, `__rows`, `__row`, `__label`, `__value`, `__pips`, `__pip--found` / `--missed` / `--treated` / `--untreated` / `--extra` | the review's counts before the reveal (above); `pages/task/OutcomeTally.tsx` |
 | Stat | `.rc-stat` › `.rc-stat__value`, `.rc-stat__label` | real counts only |
 | Task table | `table.rc-task-table`, `__title`, `__time`, `__number` | status (signed in) · title · time · difficulty; the time column goes on a phone; scrolls in `.table-scroll`. The `TaskTable` component |
 | List page head | `.rc-page-head` › `h1`, `p` | a list page's heading and lead, above its panel |

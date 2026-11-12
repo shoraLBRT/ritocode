@@ -11,7 +11,7 @@ a module cannot reach another module's data through EF at all.
 | `users` | Users | `users` |
 | `auth` | Auth | `linked_accounts`, `sessions` |
 | `content` | Content | `taxonomy`, `cards`, `materials`, `tasks` |
-| `attempts` | Attempts | `attempts`, `signals` |
+| `attempts` | Attempts | `attempts`, `signals`, `reveals` |
 
 Each schema also holds its own `__migrations_history`, so module migrations are independent.
 
@@ -33,6 +33,8 @@ erDiagram
     TASKS ||..o{ ATTEMPTS : "task_slug (no FK)"
     ATTEMPTS ||--o{ SIGNALS : "attempt_id"
     CARDS ||..o{ SIGNALS : "card (no FK)"
+    USERS ||..o{ REVEALS : "user_id (no FK)"
+    TASKS ||..o{ REVEALS : "task_slug (no FK)"
 
     USERS {
         uuid id PK
@@ -124,6 +126,12 @@ erDiagram
         timestamptz created_at
         timestamptz resolved_at "null while open"
     }
+
+    REVEALS {
+        uuid user_id PK "no FK, with task_slug"
+        text task_slug PK "no FK"
+        timestamptz revealed_at "the first reveal, kept for good"
+    }
 ```
 
 ## Conventions
@@ -160,6 +168,7 @@ schemas would reinstate exactly the coupling the schema split removes.
 | `attempts.attempts.task_slug` | `content.tasks.slug` | Attempts module on start, through `ITaskForAttemptLookup` |
 | `attempts.signals.user_id`, `task_slug` | `users.users.id`, `content.tasks.slug` | copied from the attempt the signal is sent from |
 | `attempts.signals.card` | `content.cards.slug` | Attempts module on send: the card is an extra pick in the attempt's stored result |
+| `attempts.reveals.user_id`, `task_slug` | `users.users.id`, `content.tasks.slug` | copied from the submitted attempt the answer is revealed from (ADR 0017) |
 
 "Validated by" means through a contract in `Ritocode.Shared/Contracts` — such as `IUserLookup` — never
 by opening the owning module's `DbContext` ([ADR 0007](adr/0007-cross-module-contract-form.md)).
@@ -180,6 +189,7 @@ never deleted, and ingest validates the reference before it writes anything.
 | `ux_attempts_first_submission` | at most one attempt per user and task counts toward progress (unique, partial) |
 | `ux_signals_attempt_id_card` | one signal per extra pick of an attempt |
 | `fk_signals_attempts_attempt_id` | a signal names an attempt that exists, in the same schema |
+| `pk_reveals` | one reveal per user and task; a second racing the first is refused and taken as revealed |
 | `ck_*_<enum column>` | the column holds a value from its enum |
 
 ## Indexes that exist for a specific query

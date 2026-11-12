@@ -271,9 +271,10 @@ ADR 0001's "revisit if catalog SEO becomes a goal" without adding a server-rende
   next one («До новой задачи 05:12:40») and shows it when the count reaches zero; its button names the
   whole task, «Решить задачу», not its first step.
 - **A starting point, not a copy of the catalogues** ([#200](https://github.com/shoraLBRT/ritocode/issues/200)):
-  - **Tasks for you** — six tasks in the table of §4.3 (title, expected time, difficulty, solved or
-    not), the learner's unsolved ones first, then solved ones; for a guest a pick of all tasks. The
-    daily task is left out. No class tags and no difficulty filter — that is `/tasks`, a link away.
+  - **Tasks for you** — six tasks in the table of §4.3 (status, title, expected time, difficulty),
+    the learner's open ones first (new or tried), then those whose answer is revealed, then solved
+    ones; for a guest a pick of all tasks. The daily task is left out, and is chosen among the open
+    ones. No class tags and no difficulty filter — that is `/tasks`, a link away.
   - **Problems to read** — four cards of the catalogue: class, name and summary, each opening at its
     anchor in `/problems`, and a link to the whole catalogue.
   - Both are picked in an order fixed by the Moscow day, like the daily task: the same for everyone
@@ -297,8 +298,20 @@ place.
 ### 4.3 Task catalogue
 
 A list of tasks: title, difficulty, an expected time derived from difficulty, and — for a signed-in
-learner — whether they have solved it. Filters: difficulty, solved or not. **No class tags** on
-tasks: they would give the answer away. Ordered by difficulty, then by publication.
+learner — its **status** ([ADR 0017](adr/0017-a-result-without-the-answer.md), #229):
+
+| Status | When | In the table |
+| --- | --- | --- |
+| New | no submitted attempt | an empty ring, as before |
+| Tried | submitted attempts, none solving it, the answer not revealed — whatever the score | its own mark |
+| Solved | an attempt solved it before the answer was revealed, if it ever was | a check |
+| Gave up («ответ открыт») | the answer was revealed before any attempt solved it | an eye |
+
+An attempt **solves** a task when every finding of the key is found, each with at least one of the
+key's leaves, and nothing extra is picked; on a clean task, when nothing is picked. A task solved and
+revealed afterwards stays solved; one revealed first stays gave up, whatever later practice scores.
+Filters: difficulty, and the four statuses. **No class tags** on tasks: they would give the answer
+away. Ordered by difficulty, then by publication. Signed out, there is no status.
 
 ### 4.4 Solving a task
 
@@ -335,8 +348,25 @@ at least one leaf before the answer can be checked. The learner can go back to s
 
 ### 4.5 Review
 
-The review opens in the task's workspace with the third step current: the score and every line in
-the sidebar, the chosen line in full beside it — or the code again.
+The review opens in the task's workspace with the third step current. It has two states
+([ADR 0017](adr/0017-a-result-without-the-answer.md), #229).
+
+**Until the learner reveals the answer** it is the outcome only, so that the next attempt is still
+diagnosing, not copying:
+
+- the **score** in points and whether the task is solved (§4.3);
+- the **counts**, drawn as small diagrams (DESIGN.md › The review): findings found out of present,
+  found ones treated right, findings not found, extra picks;
+- *Try again*, first, and the code to read again.
+
+It never says which pick was right or extra, which card was missed, or which leaves the key holds;
+the lesson, the author's notes and the same code in another context wait too. The API does not send
+them until the reveal. **Revealing is a deliberate action** — *Показать ответ*, behind a short
+confirmation that says what it does to the task's status (gave up, unless already solved). The
+reveal is kept for good, for every attempt at the task; later attempts remain possible as practice.
+
+**Once revealed**, the full review: the score and every line in the sidebar, the chosen line in full
+beside it — or the code again.
 
 - **Score** in points, with its composition beneath: findings found out of findings present, extra
   picks, treatments that matched.
@@ -384,7 +414,8 @@ No XP, no levels, no leaderboard.
 
 ### 4.8 Signals
 
-A signal is a learner saying "this card is really here, the answer key missed it". It records the
+A signal is a learner saying "this card is really here, the answer key missed it". It is sent only
+once the answer to the task is revealed (§4.5): before that no extra pick is named. It records the
 attempt, the task, the card, the learner and an optional comment of up to 500 characters. It changes
 nothing about the attempt's score. It reaches the admin's signal list (§6), where the author decides
 whether to update the task.
@@ -463,6 +494,10 @@ that the float was the costliest miss.
 - An attempt stores the learner's answer, the result broken down line by line, and the content
   revision it was scored against. **A later change to the task, a card or the scoring parameters
   never rewrites a stored result.** Re-scoring, if ever needed, is an explicit operation.
+- **Revealing the answer** (§4.5) is the learner's, per task, not an attempt's: it is kept beside
+  the attempts with its time, once, and changes none of them. Whether an attempt solved the task and
+  the task's status (§4.3) are read from the stored results and that time. A reveal changes nothing
+  in progress (§4.7): the first attempt counts as it was scored.
 
 ---
 
@@ -606,12 +641,13 @@ Under `/api/v1`, following ADR 0003.
 | --- | --- | --- |
 | `GET /problems` | The whole problem catalogue, full cards | public |
 | `GET /treatments` | The treatment tree | public |
-| `GET /tasks` | The task catalogue; solved flags when signed in | public |
+| `GET /tasks` | The task catalogue; each task's status (`new`, `tried`, `solved`, `gaveUp`) when signed in | public |
 | `GET /tasks/{slug}` | A task to solve: context, brief, material, the card list to pick from with name and summary only | public |
 | `POST /attempts` | Start an attempt at a task | signed in |
 | `PATCH /attempts/{id}` | Record the step reached | owner |
-| `POST /attempts/{id}/submit` | Submit the answer; returns the result and reveals the key | owner |
-| `GET /attempts/{id}` | An attempt and its result | owner |
+| `POST /attempts/{id}/submit` | Submit the answer; returns the outcome — score and counts — and the key only if the answer is already revealed | owner |
+| `POST /attempts/{id}/reveal` | Reveal the answer to the task of a submitted attempt, for good; returns the attempt in full | owner |
+| `GET /attempts/{id}` | An attempt, its outcome, and once the answer is revealed its result | owner |
 | `GET /attempts` | The caller's attempts, optionally for one task | signed in |
 | `GET /me`, `GET /me/progress` | The caller, and their progress | signed in |
 | `POST /signals` | Send a signal from an attempt | owner of the attempt |
@@ -621,8 +657,8 @@ Under `/api/v1`, following ADR 0003.
 Sign-in lives outside the versioned API: `GET /auth/login/{provider}?returnUrl=`, the providers'
 callbacks, and `POST /auth/logout`.
 
-The answer key never leaves the server before an attempt at the task is submitted, and afterwards
-only inside that attempt's result.
+The answer key never leaves the server before the learner has submitted an attempt at the task and
+revealed its answer, and afterwards only inside their attempts' results.
 
 Submission of attempts and signals is rate-limited per user, in the manner of the existing
 submission limit.
