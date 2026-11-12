@@ -1493,6 +1493,15 @@ button.file-tree__row:hover {
   padding: 14px 22px;
 }
 
+.review__score-bar:focus {
+  outline: none;
+}
+
+/* Focused by the page once the answer is revealed, as the confirmation was (ADR 0017). */
+.review__score-bar:focus-visible {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
 .review__score-text {
   flex: 1;
   min-width: 14rem;
@@ -1653,6 +1662,8 @@ button.file-tree__row:hover {
   display: flex;
   flex: none;
   flex-wrap: wrap;
+  /* On a phone the two buttons are wider than the bar: wrap them rather than overflow (#229). */
+  max-width: 100%;
   gap: 8px;
   margin: 0;
 }

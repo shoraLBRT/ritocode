@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link, useParams } from 'react-router';
 import { getAttempt, getProblemCatalogue, getTask, getTreatments, useApiClient } from '../../api';
@@ -75,16 +75,39 @@ interface Leaf {
 function Review({ initial, task, tree, cards }: { initial: Attempt; task: TaskDetail; tree: TreatmentTree; cards: readonly ProblemCard[] }) {
   // Revealing answers the attempt in full; it takes the place of the one read on opening.
   const [attempt, setAttempt] = useState(initial);
+  // Revealed on this page rather than opened revealed: the confirmation that held the focus is gone,
+  // so the full review's score takes it.
+  const [revealedHere, setRevealedHere] = useState(false);
 
   if (attempt.outcome === null) {
     return null;
   }
 
   if (attempt.result === null) {
-    return <HiddenReview attempt={attempt} outcome={attempt.outcome} task={task} onRevealed={setAttempt} />;
+    return (
+      <HiddenReview
+        attempt={attempt}
+        outcome={attempt.outcome}
+        task={task}
+        onRevealed={(revealed) => {
+          setRevealedHere(true);
+          setAttempt(revealed);
+        }}
+      />
+    );
   }
 
-  return <FullReview attempt={attempt} outcome={attempt.outcome} result={attempt.result} task={task} tree={tree} cards={cards} />;
+  return (
+    <FullReview
+      attempt={attempt}
+      outcome={attempt.outcome}
+      result={attempt.result}
+      task={task}
+      tree={tree}
+      cards={cards}
+      focusScore={revealedHere}
+    />
+  );
 }
 
 /** The workspace's tabs at phone width: the context, the review, and the code or the chosen card. */
@@ -185,6 +208,7 @@ function FullReview({
   task,
   tree,
   cards,
+  focusScore,
 }: {
   attempt: Attempt;
   outcome: AttemptOutcome;
@@ -192,8 +216,16 @@ function FullReview({
   task: TaskDetail;
   tree: TreatmentTree;
   cards: readonly ProblemCard[];
+  focusScore: boolean;
 }) {
   const t = useT();
+  const scoreBar = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (focusScore) {
+      scoreBar.current?.focus();
+    }
+  }, [focusScore]);
   const [selected, setSelected] = useState<string | null>(null);
   const [pane, setPane] = useState<'card' | 'code'>('card');
   const { area, setArea, tab } = useAreaTabs();
@@ -272,7 +304,7 @@ function FullReview({
       </div>
 
       {/* The score at the top of the centre, with the way to try again. */}
-      <section className="panel review__score-bar workspace__area workspace__area--answer" aria-labelledby="review-title">
+      <section ref={scoreBar} tabIndex={-1} className="panel review__score-bar workspace__area workspace__area--answer" aria-labelledby="review-title">
         <div className="review__score-text">
           <h2 id="review-title" className="eyebrow">
             {t('review.title')}

@@ -230,6 +230,16 @@ describe('the review before the answer is revealed', () => {
     expect(stub.mock.calls.some(([input]) => urlOf(input).endsWith('/reveal'))).toBe(false);
   });
 
+  it('puts focus back on Показать ответ when the question is left closed', async () => {
+    renderApp(api(hidden), `/tasks/${task.slug}/attempts/attempt-1`);
+    fireEvent.click(await screen.findByRole('button', { name: ru.review.reveal }));
+    expect(screen.getByRole('group', { name: ru.review.revealQuestion })).toHaveFocus();
+
+    fireEvent.click(screen.getByRole('button', { name: ru.review.revealCancel }));
+
+    expect(screen.getByRole('button', { name: ru.review.reveal })).toHaveFocus();
+  });
+
   it('opens the whole review once the reveal is confirmed', async () => {
     const stub = api(hidden);
     renderApp(stub, `/tasks/${task.slug}/attempts/attempt-1`);
@@ -240,6 +250,22 @@ describe('the review before the answer is revealed', () => {
     expect(screen.getByText('Деньги и секреты от масштаба не зависят.')).toBeInTheDocument();
     const call = stub.mock.calls.find(([input]) => urlOf(input).endsWith('/attempts/attempt-1/reveal'));
     expect(call?.[1]?.method).toBe('POST');
+  });
+
+  it('moves focus to the score once the answer is revealed', async () => {
+    renderApp(api(hidden), `/tasks/${task.slug}/attempts/attempt-1`);
+    fireEvent.click(await screen.findByRole('button', { name: ru.review.reveal }));
+    fireEvent.click(screen.getByRole('button', { name: ru.review.revealConfirm }));
+    await screen.findByRole('article', { name: 'Секреты в репозитории' });
+
+    expect(screen.getByRole('region', { name: ru.review.title })).toHaveFocus();
+  });
+
+  it('leaves focus alone when a review opens with its answer revealed', async () => {
+    renderApp(api(scored), `/tasks/${task.slug}/attempts/attempt-1`);
+    await screen.findByRole('article', { name: 'Секреты в репозитории' });
+
+    expect(screen.getByRole('region', { name: ru.review.title })).not.toHaveFocus();
   });
 
   it('says a solved task stays solved when its answer is revealed', async () => {

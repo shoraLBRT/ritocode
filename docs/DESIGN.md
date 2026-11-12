@@ -158,7 +158,9 @@ read again; on the right **the counts drawn small** (`OutcomeTally`, `rc-tally`)
 *Показать ответ* opens a confirmation inside the score bar, across its width (`.review__reveal`,
 focused on opening): «Показать ответ?», what it opens and what it does to the status — «ответ
 открыт» from now on, or, for a task solved already, that it stays solved — and *Да, показать* /
-*Не сейчас*. No modal: the score stays in sight. The same code in another context, the lesson and
+*Не сейчас*. No modal: the score stays in sight. *Не сейчас* gives focus back to *Показать ответ*;
+*Да, показать* moves it to the score bar of the full review. On a phone the two buttons wrap
+under each other rather than overflow the bar. The same code in another context, the lesson and
 the signal wait for the reveal.
 
 **Once revealed**, the same frame with *Разбор* current: the score with its composition and *Попробовать снова* at the

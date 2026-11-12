@@ -83,10 +83,17 @@ export function RevealAnswer({ attempt, task, onRevealed }: { attempt: Attempt; 
   const t = useT();
   const [stage, setStage] = useState<Stage>('closed');
   const question = useRef<HTMLDivElement>(null);
+  const opener = useRef<HTMLButtonElement>(null);
+  // Set by *Не сейчас*: the button that was pressed leaves the page, so focus goes back to the one
+  // that opened the question rather than falling to the page's start.
+  const returnFocus = useRef(false);
 
   useEffect(() => {
     if (stage === 'asking') {
       question.current?.focus();
+    } else if (stage === 'closed' && returnFocus.current) {
+      returnFocus.current = false;
+      opener.current?.focus();
     }
   }, [stage]);
 
@@ -108,6 +115,7 @@ export function RevealAnswer({ attempt, task, onRevealed }: { attempt: Attempt; 
         </Link>
         {stage === 'closed' && (
           <button
+            ref={opener}
             type="button"
             className="button"
             onClick={() => {
@@ -146,6 +154,7 @@ export function RevealAnswer({ attempt, task, onRevealed }: { attempt: Attempt; 
               className="button"
               disabled={stage === 'revealing'}
               onClick={() => {
+                returnFocus.current = true;
                 setStage('closed');
               }}
             >
