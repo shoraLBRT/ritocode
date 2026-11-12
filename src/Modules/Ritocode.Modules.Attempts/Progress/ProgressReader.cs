@@ -5,7 +5,7 @@ using Ritocode.Shared.Contracts.Content;
 
 namespace Ritocode.Modules.Attempts.Progress;
 
-/// <summary>A user's progress, read from their own first attempts.</summary>
+/// <summary>A user's progress, read from their own first attempts and the answers they have revealed.</summary>
 public interface IProgressReader
 {
     Task<ProgressView> GetAsync(Guid userId, CancellationToken cancellationToken);
@@ -23,14 +23,23 @@ internal sealed class ProgressReader(AttemptsDbContext context, ICardClassLookup
     {
         var stored = await context.OwnedBy(userId)
             .Where(attempt => attempt.CountsTowardProgress && attempt.Result != null)
-            .Select(attempt => attempt.Result!)
+            .Select(attempt => new { attempt.TaskSlug, Result = attempt.Result! })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        var scores = stored.Select(AttemptsJson.Read<DiagnosisScore>).ToList();
-        var slugs = scores.SelectMany(score => score.Cards).Select(line => line.Card).Distinct(StringComparer.Ordinal).ToList();
+        // The tasks whose answer the learner has revealed: only their first attempts name cards (ADR 0017).
+        var revealed = (await context.RevealsOf(userId)
+            .Select(reveal => reveal.TaskSlug)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false))
+            .ToHashSet(StringComparer.Ordinal);
+
+        var firstAttempts = stored
+            .Select(attempt => new FirstAttempt(AttemptsJson.Read<DiagnosisScore>(attempt.Result), revealed.Contains(attempt.TaskSlug)))
+            .ToList();
+        var slugs = firstAttempts.SelectMany(attempt => attempt.Score.Cards).Select(line => line.Card).Distinct(StringComparer.Ordinal).ToList();
         var catalogue = await cards.FindAsync(slugs, cancellationToken).ConfigureAwait(false);
 
-        return ProgressCalculator.Calculate(scores, catalogue);
+        return ProgressCalculator.Calculate(firstAttempts, catalogue);
     }
 }

@@ -403,7 +403,12 @@ Built from **first attempts only** (§5.4):
 
 - **Per class** — how many findings of that class were found out of those met, and how many found
   ones were treated right.
-- **Per card** — met, found, missed, picked when absent, treated right.
+- **Per card** — met, found, missed, picked when absent, treated right — only from the tasks whose
+  answer the learner has revealed (§4.5,
+  [ADR 0017](adr/0017-a-result-without-the-answer.md)). Before the reveal a task's first attempt
+  counts in its classes and in the number of tasks, but names none of its cards; the page says how
+  many tasks wait for their answer to be revealed. The reveal changes no score: the first attempt
+  stays the one scored.
 
 Two counts of practice, from **every** attempt, not only first ones:
 
@@ -659,7 +664,7 @@ Sign-in lives outside the versioned API: `GET /auth/login/{provider}?returnUrl=`
 callbacks, and `POST /auth/logout`.
 
 The answer key never leaves the server before the learner has submitted an attempt at the task and
-revealed its answer, and afterwards only inside their attempts' results.
+revealed its answer, and afterwards only inside their attempts' results and their per-card progress.
 
 Submission of attempts and signals is rate-limited per user, in the manner of the existing
 submission limit.

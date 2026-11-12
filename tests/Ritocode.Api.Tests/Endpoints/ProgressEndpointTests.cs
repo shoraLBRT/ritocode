@@ -10,7 +10,8 @@ namespace Ritocode.Api.Tests.Endpoints;
 
 /// <summary>
 /// <c>GET /api/v1/me/progress</c> over real attempts at the reference content: first attempts count,
-/// practice changes nothing, and nobody else's attempts count.
+/// practice changes nothing, and nobody else's attempts count. Both tasks' answers are revealed, so
+/// every card is listed (ADR 0017); <see cref="ProgressBeforeTheRevealEndpointTests"/> covers the rest.
 /// </summary>
 public sealed class ProgressEndpointTests(ContentTestApi api) : IClassFixture<ContentTestApi>
 {
@@ -27,7 +28,7 @@ public sealed class ProgressEndpointTests(ContentTestApi api) : IClassFixture<Co
 
         // The easy task, first: secrets found and treated right, money found and treated wrong, the
         // swallowed error missed, hardcoded configuration picked though its key does not list it.
-        await SolveAsync(ContentTestApi.EasyTask,
+        var easy = await SolveAsync(ContentTestApi.EasyTask,
         [
             Pick("secrets-in-repo", "auto.secrets"),
             Pick("money-in-float", "manual.split"),
@@ -35,7 +36,9 @@ public sealed class ProgressEndpointTests(ContentTestApi api) : IClassFixture<Co
         ]);
 
         // The medium task, first: its one finding found and treated right.
-        await SolveAsync(ContentTestApi.MediumTask, [Pick("hardcoded-config", "manual.extract-config")]);
+        var medium = await SolveAsync(ContentTestApi.MediumTask, [Pick("hardcoded-config", "manual.extract-config")]);
+        await RevealAsync(easy);
+        await RevealAsync(medium);
 
         using var before = await ProgressAsync();
 
@@ -62,6 +65,7 @@ public sealed class ProgressEndpointTests(ContentTestApi api) : IClassFixture<Co
 
         var root = after.RootElement;
         Assert.Equal(2, root.GetProperty("tasks").GetInt32());
+        Assert.Equal(0, root.GetProperty("notRevealed").GetInt32());
 
         var cards = root.GetProperty("cards").EnumerateArray()
             .Select(card => (
@@ -93,19 +97,96 @@ public sealed class ProgressEndpointTests(ContentTestApi api) : IClassFixture<Co
         Assert.Equal("Предметная область", root.GetProperty("classes").EnumerateArray().Single(item => item.GetProperty("class").GetString() == "domain").GetProperty("name").GetString());
     }
 
-    private static object Pick(string card, params string[] leaves) => new { card, leaves };
+    private static object Pick(string card, params string[] leaves) => ProgressRequests.Pick(card, leaves);
 
-    private async Task SolveAsync(string task, object[] picks)
+    private Task<string> SolveAsync(string task, object[] picks) => ProgressRequests.SolveAsync(api.Client, task, picks);
+
+    private Task RevealAsync(string attempt) => ProgressRequests.RevealAsync(api.Client, attempt);
+
+    private Task<JsonDocument> ProgressAsync() => ProgressRequests.ProgressAsync(api.Client);
+}
+
+/// <summary>
+/// Per-card progress waits for the reveal (ADR 0017, #235): a submitted task whose answer the learner
+/// has not revealed names none of its cards, though it counts in the classes; the reveal lists them.
+/// </summary>
+public sealed class ProgressBeforeTheRevealEndpointTests(ContentTestApi api) : IClassFixture<ContentTestApi>
+{
+    [Fact]
+    public async Task ATaskWhoseAnswerIsNotRevealed_NamesNoCard_UntilItIs()
     {
-        var start = await api.Client.PostAsJsonAsync(new Uri("/api/v1/attempts", UriKind.Relative), new { task }, TestContext.Current.CancellationToken);
-        var id = (await start.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken)).GetProperty("id").GetString();
-        var submit = await api.Client.PostAsJsonAsync(new Uri($"/api/v1/attempts/{id}/submit", UriKind.Relative), new { picks }, TestContext.Current.CancellationToken);
-        Assert.Equal(HttpStatusCode.OK, submit.StatusCode);
+        // The easy task: secrets found and treated right, money and the swallowed error missed, and
+        // hardcoded configuration picked though the key does not list it.
+        var attempt = await ProgressRequests.SolveAsync(api.Client, ContentTestApi.EasyTask,
+        [
+            ProgressRequests.Pick("secrets-in-repo", "auto.secrets"),
+            ProgressRequests.Pick("hardcoded-config", "manual.extract-config"),
+        ]);
+
+        using (var before = await ProgressRequests.ProgressAsync(api.Client))
+        {
+            var root = before.RootElement;
+            Assert.Equal(1, root.GetProperty("tasks").GetInt32());
+            Assert.Equal(1, root.GetProperty("notRevealed").GetInt32());
+            Assert.Equal(0, root.GetProperty("cards").GetArrayLength());
+
+            // No card is named anywhere in the answer, not only in the table.
+            var text = root.GetRawText();
+            Assert.DoesNotContain("secrets-in-repo", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("money-in-float", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("swallowed-error", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("hardcoded-config", text, StringComparison.Ordinal);
+
+            // The classes still count the first attempt: they name no card.
+            Assert.Equal((2, 1, 1), Class(root, "hygiene"));
+            Assert.Equal((1, 0, 0), Class(root, "domain"));
+        }
+
+        await ProgressRequests.RevealAsync(api.Client, attempt);
+
+        using var after = await ProgressRequests.ProgressAsync(api.Client);
+        var revealed = after.RootElement;
+        Assert.Equal(1, revealed.GetProperty("tasks").GetInt32());
+        Assert.Equal(0, revealed.GetProperty("notRevealed").GetInt32());
+        Assert.Equal(
+            ["hardcoded-config", "secrets-in-repo", "swallowed-error", "money-in-float"],
+            revealed.GetProperty("cards").EnumerateArray().Select(card => card.GetProperty("card").GetString()));
+
+        // The reveal changes which cards are listed, not the score: the classes are as they were.
+        Assert.Equal((2, 1, 1), Class(revealed, "hygiene"));
+        Assert.Equal((1, 0, 0), Class(revealed, "domain"));
     }
 
-    private async Task<JsonDocument> ProgressAsync()
+    private static (int Met, int Found, int TreatedRight) Class(JsonElement root, string @class)
     {
-        var response = await api.Client.GetAsync(new Uri("/api/v1/me/progress", UriKind.Relative), TestContext.Current.CancellationToken);
+        var item = root.GetProperty("classes").EnumerateArray().Single(candidate => candidate.GetProperty("class").GetString() == @class);
+        return (item.GetProperty("met").GetInt32(), item.GetProperty("found").GetInt32(), item.GetProperty("treatedRight").GetInt32());
+    }
+}
+
+/// <summary>The requests the progress tests make: start and submit an attempt, reveal its answer, read the progress.</summary>
+internal static class ProgressRequests
+{
+    public static object Pick(string card, params string[] leaves) => new { card, leaves };
+
+    public static async Task<string> SolveAsync(HttpClient client, string task, object[] picks)
+    {
+        var start = await client.PostAsJsonAsync(new Uri("/api/v1/attempts", UriKind.Relative), new { task }, TestContext.Current.CancellationToken);
+        var id = (await start.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken)).GetProperty("id").GetString()!;
+        var submit = await client.PostAsJsonAsync(new Uri($"/api/v1/attempts/{id}/submit", UriKind.Relative), new { picks }, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, submit.StatusCode);
+        return id;
+    }
+
+    public static async Task RevealAsync(HttpClient client, string attempt)
+    {
+        using var response = await client.PostAsync(new Uri($"/api/v1/attempts/{attempt}/reveal", UriKind.Relative), null, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    public static async Task<JsonDocument> ProgressAsync(HttpClient client)
+    {
+        var response = await client.GetAsync(new Uri("/api/v1/me/progress", UriKind.Relative), TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         return JsonDocument.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
     }

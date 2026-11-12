@@ -12,6 +12,7 @@ const classes = [
 
 const progress = {
   tasks: 2,
+  notRevealed: 0,
   classes,
   cards: [
     { card: 'hardcoded-config', name: 'Хардкод конфигурации', class: 'hygiene', met: 1, found: 1, missed: 0, pickedWhenAbsent: 1, treatedRight: 1 },
@@ -22,7 +23,10 @@ const progress = {
   ],
 };
 
-const empty = { tasks: 0, classes, cards: [] };
+const empty = { tasks: 0, notRevealed: 0, classes, cards: [] };
+
+// One task submitted, its answer not revealed: counted in the classes, no card named.
+const hidden = { tasks: 1, notRevealed: 1, classes, cards: [] };
 
 function urlOf(input: RequestInfo | URL): string {
   if (typeof input === 'string') {
@@ -78,6 +82,30 @@ describe('the progress page', () => {
     expect(table.getByRole('link', { name: 'Секреты в репозитории' })).toHaveAttribute('href', '/problems#secrets-in-repo');
     expect(table.queryByRole('link', { name: 'gone-card' })).not.toBeInTheDocument();
     expect(table.getByRole('columnheader', { name: ru.progress.pickedWhenAbsent })).toBeInTheDocument();
+  });
+
+  it('says nothing of unrevealed tasks when every answer is revealed', async () => {
+    renderApp(api(progress), '/progress');
+
+    await screen.findByRole('table');
+    expect(screen.queryByText(/не учтен/)).not.toBeInTheDocument();
+  });
+
+  it('says how many tasks the cards leave out until their answer is revealed', async () => {
+    renderApp(api({ ...progress, tasks: 4, notRevealed: 2 }), '/progress');
+
+    expect(await screen.findByText('2 задачи пока не учтены по карточкам: их ответ ещё не открыт. В классах выше они уже есть. Открой ответ в разборе задачи — и их карточки появятся здесь.')).toBeInTheDocument();
+    expect(screen.getByRole('table')).toBeInTheDocument();
+  });
+
+  it('shows the note without a table when no answer is revealed yet', async () => {
+    renderApp(api(hidden), '/progress');
+
+    expect(await screen.findByText('1 решённая задача')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: ru.progress.cards })).toBeInTheDocument();
+    expect(screen.getByText(/^1 задача пока не учтена по карточкам: её ответ ещё не открыт\./)).toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(screen.queryByText(ru.progress.cardsHint)).not.toBeInTheDocument();
   });
 
   it('points a learner with no attempts to the task catalogue', async () => {

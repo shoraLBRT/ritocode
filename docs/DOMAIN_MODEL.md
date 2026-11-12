@@ -114,7 +114,9 @@ picks and leaves never changes the result.
 Owned by the **Attempts** module and never stored: computed on read from the scored results of a
 user's **first** attempts ([SPEC.md](SPEC.md) §4.7), so practice cannot move it and a result that
 never changes gives a progress that never needs rewriting. Per class — findings met, found, and
-found ones treated right — and per card — met, found, missed, picked when absent, treated right. The
+found ones treated right — and per card — met, found, missed, picked when absent, treated right —
+the cards only from the tasks whose answer the user has **revealed** (ADR 0017, #235), with the
+number of tasks they leave out. The
 class of a card, and the names of classes and cards in the default locale, come from Content through
 `ICardClassLookup`; a retired card keeps its name, and a card Content does not know is named by its
 slug and has no class.
