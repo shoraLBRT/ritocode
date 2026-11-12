@@ -255,6 +255,8 @@ export interface AttemptSummary {
 export interface Progress {
   /** How many tasks it is built from — one first attempt each. */
   readonly tasks: number;
+  /** How many of those tasks the cards leave out: their answer is not revealed (ADR 0017). The classes count them. */
+  readonly notRevealed: number;
   readonly classes: readonly ClassProgress[];
   readonly cards: readonly CardProgress[];
 }

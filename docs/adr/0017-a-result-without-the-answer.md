@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-11-12
-- Relates to: [#229](https://github.com/shoraLBRT/ritocode/issues/229)
+- Relates to: [#229](https://github.com/shoraLBRT/ritocode/issues/229), [#235](https://github.com/shoraLBRT/ritocode/issues/235)
 - Builds on: [ADR 0010](0010-diagnosis-of-ai-written-code.md); [SPEC.md](../SPEC.md) §4.3, §4.5, §4.8,
   §5.4, §9.3; [ADR 0007](0007-cross-module-contract-form.md)
 
@@ -58,8 +58,16 @@ gave up. `GET /tasks` carries `status` instead of `solved` for a signed-in calle
 `ITaskStatusLookup`, which replaces `ISubmittedTaskLookup`; the attempt carries `taskStatus` too, so
 the review can say what revealing will do. Signed out, no status, as before.
 
-**Progress is unchanged** (SPEC §4.7): it is built from first attempts as scored; a reveal neither
-adds nor removes one. The status is only the task list's view.
+**Progress is built from first attempts as scored** (SPEC §4.7), and **per card it waits for the
+reveal** (#235, the maintainer's option (b), 2026-11-12). A first attempt counts toward a card's met,
+found, missed, picked when absent and treated right only once the learner has revealed that task's
+answer; before that the per-card table — the page and `GET /me/progress` alike — names none of the
+task's cards, picked or in the key. The per-class counts and the number of tasks still take every
+first attempt: they name no card. `GET /me/progress` carries `notRevealed`, how many of those tasks
+the cards leave out, and `/progress` says so in a note above the table, which shows alone while no
+answer is revealed. The reveal adds no attempt and changes no score: it only lets a task's first
+attempt into the per-card table (`ProgressCalculator` takes each first attempt with whether its
+answer is revealed). The status is only the task list's view.
 
 **Signals wait for the reveal** (SPEC §4.8): before it there is no named extra pick to signal, and
 `POST /signals` answers `409 answer_not_revealed` whatever the card, so the refusal cannot be used to
@@ -72,10 +80,18 @@ probe the key.
   the task's status (DESIGN.md › The review).
 - The counts on a clean task say "0 of 0" before the reveal, and a score's maximum says how much the
   key holds: the counts the issue asked for carry that much by design.
-- `/me/progress` still lists every card met, found and missed from first attempts, so a learner who
-  opens their progress before revealing can read which cards a task held. The maintainer kept
-  progress as it is; whether it should leave out tasks not yet revealed is an open question
-  (PROJECT_STATE.md).
+- `/me/progress` named every card met, found and missed from first attempts until #235, so a learner
+  who opened their progress before revealing could read which cards a task held. Since #235 the
+  per-card table leaves those tasks out; a card met only in unrevealed tasks is not listed at all.
+- **The per-class counts still narrow an unrevealed key** (#235). No class names a card — each holds
+  nine or ten in the live catalogue, so a count alone points at none — but read against what the
+  learner knows, their own picks, they say more than the outcome. *Met* per class says which classes
+  an unrevealed key holds and how many findings in each, where the outcome gives only the total;
+  *found* per class says which picks were found whenever the picks fall in different classes — a
+  learner who picked one card of a class learns from that class whether it was in the key. The class
+  counts minus the per-card table are exactly the unrevealed tasks' share. The issue recommended
+  keeping the classes whole, and that is what was built; whether they should wait for the reveal too
+  is an open question for the maintainer (PROJECT_STATE.md).
 - The admin area's "tasks solved" keeps its old meaning — tasks with a submitted attempt.
 - Computing the status reads a learner's submitted results at a page of tasks: a few dozen rows at
   the MVP's scale. A stored flag per attempt is the way out if it ever shows.

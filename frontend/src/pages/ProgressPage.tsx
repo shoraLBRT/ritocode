@@ -11,6 +11,7 @@ import { useT } from '../i18n';
  * `/progress` — the learner's progress (docs/SPEC.md §4.7), from first attempts only: the six
  * classes with their counts, then a table of the cards met or picked, grouped by class. No XP, no
  * levels. The API names the classes and cards, retired ones included, so the page reads nothing else.
+ * The table leaves out the tasks whose answer the learner has not revealed (ADR 0017), and says so.
  *
  * Signed in only: it sits under `RequireSignIn`.
  */
@@ -51,7 +52,7 @@ function ProgressView({ progress }: { progress: Progress }) {
         ))}
       </ul>
 
-      {progress.cards.length > 0 && <CardTable progress={progress} />}
+      {(progress.cards.length > 0 || progress.notRevealed > 0) && <CardTable progress={progress} />}
     </>
   );
 }
@@ -75,7 +76,8 @@ function ClassItem({ item }: { item: ClassProgress }) {
 
 /**
  * The cards, one `tbody` per class in the taxonomy's order, the class named in a header row. A
- * card Content no longer knows comes last, under a group of its own, and links nowhere.
+ * card Content no longer knows comes last, under a group of its own, and links nowhere. Tasks whose
+ * answer is not revealed name no card here; a note counts them, alone when no task is revealed yet.
  */
 function CardTable({ progress }: { progress: Progress }) {
   const t = useT();
@@ -88,6 +90,17 @@ function CardTable({ progress }: { progress: Progress }) {
   return (
     <>
       <h2 id="progress-cards">{t('progress.cards')}</h2>
+      {progress.notRevealed > 0 && <p className="page__note">{t('progress.notRevealed', { count: progress.notRevealed })}</p>}
+      {progress.cards.length > 0 && <CardList groups={groups} />}
+    </>
+  );
+}
+
+function CardList({ groups }: { groups: readonly { key: string; name: string; cards: readonly CardProgress[] }[] }) {
+  const t = useT();
+
+  return (
+    <>
       <p className="page__note">{t('progress.cardsHint')}</p>
       {/* A region that scrolls sideways on a phone, so the page itself never does. */}
       <div className="table-scroll" role="region" aria-labelledby="progress-cards" tabIndex={0}>
