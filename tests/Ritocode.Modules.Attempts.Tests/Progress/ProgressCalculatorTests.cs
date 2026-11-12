@@ -4,7 +4,7 @@ using Ritocode.Shared.Contracts.Content;
 
 namespace Ritocode.Modules.Attempts.Tests.Progress;
 
-/// <summary>SPEC §4.7: per class and per card, from the scored results of first attempts.</summary>
+/// <summary>SPEC §4.7: per class and per card, from the scored results of first attempts; per card only where the answer is revealed.</summary>
 public sealed class ProgressCalculatorTests
 {
     private static readonly CardClasses Catalogue = new(
@@ -44,7 +44,7 @@ public sealed class ProgressCalculatorTests
             new KeyFinding("secrets-in-repo", 3, ["auto.secrets"]),
             picks: [new("god-class", ["accept.fits-context"])]);
 
-        var progress = ProgressCalculator.Calculate([first, second], Catalogue);
+        var progress = ProgressCalculator.Calculate([Revealed(first), Revealed(second)], Catalogue);
 
         Assert.Equal(2, progress.Tasks);
         Assert.Equal(
@@ -65,7 +65,7 @@ public sealed class ProgressCalculatorTests
             new KeyFinding("swallowed-error", 2, ["manual.handle-errors"]),
             picks: [new("secrets-in-repo", ["auto.secrets"]), new("swallowed-error", ["rule.conventions"]), new("money-in-float", ["manual.representation"])]);
 
-        var progress = ProgressCalculator.Calculate([first], Catalogue);
+        var progress = ProgressCalculator.Calculate([Revealed(first)], Catalogue);
 
         Assert.Equal(
             [
@@ -84,6 +84,7 @@ public sealed class ProgressCalculatorTests
         var progress = ProgressCalculator.Calculate([], Catalogue);
 
         Assert.Equal(0, progress.Tasks);
+        Assert.Equal(0, progress.NotRevealed);
         Assert.Empty(progress.Cards);
         Assert.All(progress.Classes, @class => Assert.Equal(0, @class.Met));
     }
@@ -93,12 +94,69 @@ public sealed class ProgressCalculatorTests
     {
         var first = Score(new KeyFinding("mystery", 1, ["manual.remove"]), new KeyFinding("money-in-float", 3, ["manual.representation"]), picks: []);
 
-        var progress = ProgressCalculator.Calculate([first], Catalogue);
+        var progress = ProgressCalculator.Calculate([Revealed(first)], Catalogue);
 
         Assert.Equal(["money-in-float", "mystery"], progress.Cards.Select(card => card.Card));
         Assert.Null(progress.Cards[1].Class);
         Assert.Equal("mystery", progress.Cards[1].Name);
     }
+
+    [Fact]
+    public void ATaskWhoseAnswerIsNotRevealed_NamesNoCard_ButCountsInItsClasses()
+    {
+        var hidden = Score(
+            new KeyFinding("secrets-in-repo", 3, ["auto.secrets"]),
+            new KeyFinding("money-in-float", 3, ["manual.representation"]),
+            picks: [new("secrets-in-repo", ["auto.secrets"]), new("god-class", ["manual.split"])]);
+        var seen = Score(
+            new KeyFinding("swallowed-error", 2, ["manual.handle-errors"]),
+            new KeyFinding("secrets-in-repo", 3, ["auto.secrets"]),
+            picks: [new("swallowed-error", ["manual.handle-errors"])]);
+
+        var progress = ProgressCalculator.Calculate([new FirstAttempt(hidden, AnswerRevealed: false), Revealed(seen)], Catalogue);
+
+        Assert.Equal(2, progress.Tasks);
+        Assert.Equal(1, progress.NotRevealed);
+
+        // Only the revealed task's cards: neither the hidden key's money-in-float nor its extra pick, and
+        // secrets-in-repo counted once, as the revealed task met it.
+        Assert.Equal(
+            [
+                new CardProgress("secrets-in-repo", "Secrets in the repository", "hygiene", Met: 1, Found: 0, Missed: 1, PickedWhenAbsent: 0, TreatedRight: 0),
+                new CardProgress("swallowed-error", "Swallowed error", "hygiene", Met: 1, Found: 1, Missed: 0, PickedWhenAbsent: 0, TreatedRight: 1),
+            ],
+            progress.Cards);
+
+        // The classes name no card, so they count both first attempts.
+        Assert.Equal(
+            [
+                new ClassProgress("disproportion", "Disproportion", 0, 0, 0),
+                new ClassProgress("hygiene", "Hygiene", Met: 3, Found: 2, TreatedRight: 2),
+                new ClassProgress("growth", "Growth", 0, 0, 0),
+                new ClassProgress("domain", "Domain", Met: 1, Found: 0, TreatedRight: 0),
+            ],
+            progress.Classes);
+    }
+
+    [Fact]
+    public void RevealingTheAnswer_ChangesOnlyWhichCardsAreListed()
+    {
+        var first = Score(
+            new KeyFinding("secrets-in-repo", 3, ["auto.secrets"]),
+            new KeyFinding("money-in-float", 3, ["manual.representation"]),
+            picks: [new("secrets-in-repo", ["auto.secrets"])]);
+
+        var before = ProgressCalculator.Calculate([new FirstAttempt(first, AnswerRevealed: false)], Catalogue);
+        var after = ProgressCalculator.Calculate([Revealed(first)], Catalogue);
+
+        Assert.Empty(before.Cards);
+        Assert.Equal(["secrets-in-repo", "money-in-float"], after.Cards.Select(card => card.Card));
+        Assert.Equal(before.Classes, after.Classes);
+        Assert.Equal((1, 1), (before.Tasks, before.NotRevealed));
+        Assert.Equal((1, 0), (after.Tasks, after.NotRevealed));
+    }
+
+    private static FirstAttempt Revealed(DiagnosisScore score) => new(score, AnswerRevealed: true);
 
     private static DiagnosisScore Score(KeyFinding first, KeyFinding second, PickedCard[] picks) =>
         DiagnosisScoring.Score(new DiagnosisAnswer(picks), [first, second], ScoringParameters.Default);
