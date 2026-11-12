@@ -4,13 +4,20 @@ using Ritocode.Modules.Attempts.Scoring;
 namespace Ritocode.Modules.Attempts.Lifecycle;
 
 // The shapes the attempt endpoints answer with (docs/SPEC.md §9.3). The answer key appears in exactly
-// one place: the result of a submitted attempt.
+// one place: the result of a submitted attempt at a task whose answer the learner has revealed
+// (ADR 0017). Before that, a submitted attempt carries its outcome — the score and the counts — and
+// nothing that names a card or a leaf.
 
-/// <summary>An attempt, and once it is submitted, the answer and the result with the key revealed.</summary>
+/// <summary>An attempt; once submitted, its outcome; once the answer is revealed, the answer and the result with the key.</summary>
 /// <param name="Practice">True for a submitted attempt that is not the first at its task (SPEC §5.4).</param>
 /// <param name="ContentRevision">The content the result was scored against; null until submitted.</param>
-/// <param name="Review">The author's note per finding and the lesson; null until submitted.</param>
-/// <param name="SignalledCards">The extra picks the learner has sent a signal for (SPEC §4.8).</param>
+/// <param name="Outcome">The score and the counts, naming nothing; null until submitted.</param>
+/// <param name="Revealed">Whether the learner has revealed the answer to the task — for good, for every attempt at it.</param>
+/// <param name="TaskStatus">Where the learner stands with the task (SPEC §4.3), as the task list shows it.</param>
+/// <param name="Answer">The answer as submitted; null until submitted and revealed.</param>
+/// <param name="Result">The score line by line with the key; null until submitted and revealed.</param>
+/// <param name="Review">The author's note per finding and the lesson; null until submitted and revealed.</param>
+/// <param name="SignalledCards">The extra picks the learner has sent a signal for (SPEC §4.8); empty until revealed.</param>
 public sealed record AttemptView(
     Guid Id,
     string Task,
@@ -19,6 +26,9 @@ public sealed record AttemptView(
     DateTimeOffset? SubmittedAt,
     bool Practice,
     string? ContentRevision,
+    AttemptOutcome? Outcome,
+    bool Revealed,
+    LearnerTaskStatus TaskStatus,
     DiagnosisAnswer? Answer,
     DiagnosisScore? Result,
     AttemptReview? Review,

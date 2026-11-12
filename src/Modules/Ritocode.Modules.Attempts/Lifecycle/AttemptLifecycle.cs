@@ -24,6 +24,12 @@ public interface IAttemptLifecycle
 
     Task<Result<AttemptView>> GetAsync(Guid userId, Guid attemptId, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Reveals the answer to the task of a submitted attempt, for good (ADR 0017), and answers that
+    /// attempt in full. Revealing it again changes nothing.
+    /// </summary>
+    Task<Result<AttemptView>> RevealAsync(Guid userId, Guid attemptId, CancellationToken cancellationToken);
+
     /// <summary>The user's attempts, newest first, optionally at one task.</summary>
     Task<Page<AttemptSummaryView>> ListAsync(Guid userId, string? taskSlug, PageRequest request, CancellationToken cancellationToken);
 }
@@ -52,6 +58,9 @@ internal sealed class AttemptLifecycle(
 
     public const string RateLimitedCode = "attempt_rate_limited";
 
+    /// <summary>The answer is revealed from a submitted attempt, and a signal sent from one; an open attempt has neither.</summary>
+    public const string NotSubmittedCode = "attempt_not_submitted";
+
     public async Task<Result<AttemptView>> StartAsync(Guid userId, string taskSlug, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(taskSlug);
@@ -76,7 +85,7 @@ internal sealed class AttemptLifecycle(
         context.Attempts.Add(attempt);
         await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        return View(attempt);
+        return await ViewAsync(userId, attempt, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<Result<AttemptView>> RecordStepAsync(Guid userId, Guid attemptId, AttemptStep step, CancellationToken cancellationToken)
@@ -96,7 +105,7 @@ internal sealed class AttemptLifecycle(
         attempt.Reach(step);
         await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        return View(attempt);
+        return await ViewAsync(userId, attempt, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<Result<AttemptView>> SubmitAsync(Guid userId, Guid attemptId, DiagnosisAnswer answer, CancellationToken cancellationToken)
@@ -176,7 +185,7 @@ internal sealed class AttemptLifecycle(
             await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
 
-        return View(attempt);
+        return await ViewAsync(userId, attempt, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<Result<AttemptView>> GetAsync(Guid userId, Guid attemptId, CancellationToken cancellationToken)
@@ -188,17 +197,42 @@ internal sealed class AttemptLifecycle(
             return AttemptNotFound();
         }
 
-        // Only a submitted attempt has extra picks to signal; the review reads which were.
-        var signalled = attempt.IsSubmitted
-            ? await context.SignalsOf(userId)
-                .Where(signal => signal.AttemptId == attemptId)
-                .Select(signal => signal.Card)
-                .OrderBy(card => card)
-                .ToListAsync(cancellationToken)
-                .ConfigureAwait(false)
-            : [];
+        return await ViewAsync(userId, attempt, cancellationToken).ConfigureAwait(false);
+    }
 
-        return View(attempt, signalled);
+    public async Task<Result<AttemptView>> RevealAsync(Guid userId, Guid attemptId, CancellationToken cancellationToken)
+    {
+        var attempt = await context.FindOwnedAsync(userId, attemptId, cancellationToken).ConfigureAwait(false);
+
+        if (attempt is null)
+        {
+            return AttemptNotFound();
+        }
+
+        // There is no answer to see before one was checked: the review is what offers the reveal.
+        if (!attempt.IsSubmitted)
+        {
+            return AppError.Conflict(NotSubmittedCode, "The answer is revealed from the review of a submitted attempt.");
+        }
+
+        // The first reveal is the one kept: an attempt solved before it still solved the task.
+        if (await context.RevealedAtAsync(userId, attempt.TaskSlug, cancellationToken).ConfigureAwait(false) is null)
+        {
+            var reveal = Reveal.Of(attempt, Now());
+            context.Reveals.Add(reveal);
+
+            try
+            {
+                await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (DbUpdateException exception) when (IsRevealRace(exception))
+            {
+                // Another reveal of the same task committed in the meantime; it is the one kept.
+                context.Entry(reveal).State = EntityState.Detached;
+            }
+        }
+
+        return await ViewAsync(userId, attempt, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<Page<AttemptSummaryView>> ListAsync(Guid userId, string? taskSlug, PageRequest request, CancellationToken cancellationToken)
@@ -249,18 +283,50 @@ internal sealed class AttemptLifecycle(
     private static AppError AlreadySubmitted() =>
         AppError.Conflict(AlreadySubmittedCode, "The attempt has been submitted; start a new one to answer again.");
 
-    private static AttemptView View(Attempt attempt, IReadOnlyList<string>? signalledCards = null) => new(
-        attempt.Id,
-        attempt.TaskSlug,
-        attempt.StartedAt,
-        attempt.Step,
-        attempt.SubmittedAt,
-        attempt.IsSubmitted && !attempt.CountsTowardProgress,
-        attempt.ContentRevision,
-        attempt.Answer is null ? null : AttemptsJson.Read<DiagnosisAnswer>(attempt.Answer),
-        attempt.Result is null ? null : AttemptsJson.Read<DiagnosisScore>(attempt.Result),
-        attempt.Review is null ? null : AttemptsJson.Read<AttemptReview>(attempt.Review),
-        signalledCards ?? []);
+    /// <summary>
+    /// The attempt as its owner may see it now (ADR 0017): its outcome once submitted, and the answer,
+    /// the result line by line, the author's words and the signals only once the task's answer is
+    /// revealed. The hiding is here, in what leaves the server, not in the page.
+    /// </summary>
+    private async Task<AttemptView> ViewAsync(Guid userId, Attempt attempt, CancellationToken cancellationToken)
+    {
+        var revealedAt = await context.RevealedAtAsync(userId, attempt.TaskSlug, cancellationToken).ConfigureAwait(false);
+
+        var submitted = await context.OwnedBy(userId)
+            .Where(candidate => candidate.TaskSlug == attempt.TaskSlug && candidate.SubmittedAt != null)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var status = TaskStatuses.Of(submitted.Select(candidate => candidate.AsSubmitted()), revealedAt);
+        var revealed = revealedAt is not null;
+        var full = revealed && attempt.IsSubmitted;
+
+        // Only a submitted attempt has extra picks to signal, and only a revealed one names them.
+        var signalled = full
+            ? await context.SignalsOf(userId)
+                .Where(signal => signal.AttemptId == attempt.Id)
+                .Select(signal => signal.Card)
+                .OrderBy(card => card)
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false)
+            : [];
+
+        return new AttemptView(
+            attempt.Id,
+            attempt.TaskSlug,
+            attempt.StartedAt,
+            attempt.Step,
+            attempt.SubmittedAt,
+            attempt.IsSubmitted && !attempt.CountsTowardProgress,
+            attempt.ContentRevision,
+            attempt.IsSubmitted ? AttemptOutcome.Of(attempt.ResultOf()) : null,
+            revealed,
+            status,
+            full && attempt.Answer is not null ? AttemptsJson.Read<DiagnosisAnswer>(attempt.Answer) : null,
+            full ? attempt.ResultOf() : null,
+            full && attempt.Review is not null ? AttemptsJson.Read<AttemptReview>(attempt.Review) : null,
+            signalled);
+    }
 
     /// <summary>The notes for the findings of this key, and the lesson — kept as they were when it was scored.</summary>
     private static AttemptReview Review(TaskForAttempt task, DiagnosisScore score)
@@ -306,6 +372,13 @@ internal sealed class AttemptLifecycle(
 
         return fields.Count == 0 ? null : AppError.Validation("The answer names cards or leaves this task does not have.", fields);
     }
+
+    private static bool IsRevealRace(DbUpdateException exception) =>
+        exception.InnerException is PostgresException
+        {
+            SqlState: PostgresErrorCodes.UniqueViolation,
+            TableName: RevealConfiguration.TableName,
+        };
 
     private static bool IsFirstSubmissionRace(DbUpdateException exception) =>
         exception.InnerException is PostgresException

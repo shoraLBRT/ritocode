@@ -34,13 +34,21 @@ export function formatCountdown(ms: number): string {
 }
 
 /**
- * Today's task: chosen by the Moscow day among the tasks the learner has not solved — all of them
- * for a guest, whose `solved` is null, and for a learner who has solved everything. The same list
- * on the same day always gives the same task; it changes at midnight Moscow time.
+ * Whether a task is still the learner's to solve: new or tried (ADR 0017). Solved is done, and gave
+ * up has its answer open — practice, not a challenge. For a guest, whose `status` is null, every task.
+ */
+export function isOpen(task: TaskSummary): boolean {
+  return task.status === null || task.status === 'new' || task.status === 'tried';
+}
+
+/**
+ * Today's task: chosen by the Moscow day among the tasks still open to the learner (`isOpen`) — all
+ * of them for a guest, and for a learner who has none open. The same list on the same day always
+ * gives the same task; it changes at midnight Moscow time.
  */
 export function dailyTask(tasks: readonly TaskSummary[], now: Date): TaskSummary | null {
-  const unsolved = tasks.filter((task) => task.solved !== true);
-  const pool = unsolved.length > 0 ? unsolved : tasks;
+  const open = tasks.filter(isOpen);
+  const pool = open.length > 0 ? open : tasks;
 
   if (pool.length === 0) {
     return null;
@@ -80,9 +88,10 @@ export function shuffleByDay<T>(items: readonly T[], now: Date, salt: number): T
 }
 
 /**
- * The tasks the home page suggests: the learner's unsolved ones first, then solved ones if there
- * are too few, each group in the day's order — for a guest, whose `solved` is null, simply the
- * day's pick. Today's task is left out: it has a card of its own.
+ * The tasks the home page suggests: the learner's open ones first (new or tried), then those whose
+ * answer is open, then solved ones, if there are too few, each group in the day's order — for a
+ * guest, whose `status` is null, simply the day's pick. Today's task is left out: it has a card of
+ * its own.
  */
 export function suggestedTasks(tasks: readonly TaskSummary[], now: Date, today: string | null): TaskSummary[] {
   const order = shuffleByDay(
@@ -90,7 +99,11 @@ export function suggestedTasks(tasks: readonly TaskSummary[], now: Date, today: 
     now,
     1,
   );
-  return [...order.filter((task) => task.solved !== true), ...order.filter((task) => task.solved === true)].slice(0, SUGGESTED_TASKS);
+  return [
+    ...order.filter(isOpen),
+    ...order.filter((task) => task.status === 'gaveUp'),
+    ...order.filter((task) => task.status === 'solved'),
+  ].slice(0, SUGGESTED_TASKS);
 }
 
 /** A few problems to read today, in the day's order. */

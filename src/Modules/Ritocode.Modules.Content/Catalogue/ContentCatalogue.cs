@@ -15,14 +15,14 @@ public interface IContentCatalogue
 
     Task<TreatmentTreeView> GetTreatmentsAsync(CancellationToken cancellationToken);
 
-    /// <summary>A page of the task catalogue; with <paramref name="userId"/>, each task says whether that user solved it.</summary>
+    /// <summary>A page of the task catalogue; with <paramref name="userId"/>, each task carries that user's status.</summary>
     Task<Page<TaskSummaryView>> ListTasksAsync(PageRequest request, Guid? userId, CancellationToken cancellationToken);
 
     /// <summary>A published task, or <c>task_not_found</c> for a slug that names none.</summary>
     Task<Result<TaskView>> GetTaskAsync(string slug, CancellationToken cancellationToken);
 }
 
-internal sealed class ContentCatalogue(ContentDbContext context, ISubmittedTaskLookup submitted) : IContentCatalogue
+internal sealed class ContentCatalogue(ContentDbContext context, ITaskStatusLookup statuses) : IContentCatalogue
 {
     public const string TaskNotFound = "task_not_found";
 
@@ -74,8 +74,8 @@ internal sealed class ContentCatalogue(ContentDbContext context, ISubmittedTaskL
 
         if (userId is { } user && page.Count > 0)
         {
-            var solved = await submitted.FindSubmittedAsync(user, [.. page.Select(task => task.Slug)], cancellationToken).ConfigureAwait(false);
-            page = [.. page.Select(task => task with { Solved = solved.Contains(task.Slug) })];
+            var status = await statuses.FindStatusesAsync(user, [.. page.Select(task => task.Slug)], cancellationToken).ConfigureAwait(false);
+            page = [.. page.Select(task => task with { Status = status.GetValueOrDefault(task.Slug, ITaskStatusLookup.New) })];
         }
 
         return Page<TaskSummaryView>.From(page, request, tasks.Count);

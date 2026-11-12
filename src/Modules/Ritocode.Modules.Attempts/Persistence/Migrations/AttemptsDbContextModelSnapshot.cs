@@ -112,6 +112,27 @@ namespace Ritocode.Modules.Attempts.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Ritocode.Modules.Attempts.Domain.Reveal", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<string>("TaskSlug")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("task_slug");
+
+                    b.Property<DateTimeOffset>("RevealedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("revealed_at");
+
+                    b.HasKey("UserId", "TaskSlug")
+                        .HasName("pk_reveals");
+
+                    b.ToTable("reveals", "attempts");
+                });
+
             modelBuilder.Entity("Ritocode.Modules.Attempts.Domain.Signal", b =>
                 {
                     b.Property<Guid>("Id")

@@ -85,6 +85,20 @@ cards signalled from it. The author reads signals in the admin area (§6.2), ope
 **resolves** one there; resolving it again keeps the first time. Resolving is the only change a
 signal ever sees.
 
+Since #229 a signal is sent only once the learner has **revealed** the answer to the task (below):
+before that no extra pick is named, and any card is `409 answer_not_revealed`.
+
+## Reveal
+
+Owned by the **Attempts** module ([ADR 0017](adr/0017-a-result-without-the-answer.md)). A learner
+asking to see the answer to a task: the user, the task, when — one per learner and task, made from a
+submitted attempt, kept for good, never changed. Until it exists, a submitted attempt is shown by
+its **outcome** only — the score and the counts (present, found, treated right, missed, extra) and
+whether it **solved** the task (every finding found with a right leaf, nothing extra; on a clean
+task, nothing picked); from then on every attempt at the task in full. The task's **status** for the
+learner — new, tried, solved, gave up — is a pure function of their submitted attempts and the
+reveal's time; a task solved before the reveal stays solved.
+
 ## Scoring
 
 Owned by the **Attempts** module and stored in an attempt's result. Scoring is a pure function of an

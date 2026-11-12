@@ -1,13 +1,13 @@
 import { useSearchParams } from 'react-router';
-import { difficulties, listTasks, useApiClient } from '../api';
-import type { Difficulty, TaskSummary } from '../api';
+import { difficulties, listTasks, taskStatuses, useApiClient } from '../api';
+import type { Difficulty, TaskStatus, TaskSummary } from '../api';
 import { ErrorState } from '../components/ErrorState';
 import { LoadingState } from '../components/LoadingState';
 import { Tabs, TaskTable } from '../components/TaskTable';
 import { useApiResource } from '../hooks/useApiResource';
 import { useT } from '../i18n';
 
-type StatusFilter = 'all' | 'unsolved' | 'solved';
+type StatusFilter = 'all' | TaskStatus;
 
 /**
  * `/tasks` — the task catalogue (docs/SPEC.md §4.3) in the arena's style (DESIGN.md › The arena):
@@ -43,13 +43,12 @@ function TaskList({ tasks }: { tasks: readonly TaskSummary[] }) {
   const t = useT();
   const [params, setParams] = useSearchParams();
   const difficulty = difficultyParam(params.get('difficulty'));
-  // The API says `solved` only to a signed-in caller; without it there is nothing to filter by.
-  const signedIn = tasks.some((task) => task.solved !== null);
+  // The API says a `status` only to a signed-in caller; without it there is nothing to filter by.
+  const signedIn = tasks.some((task) => task.status !== null);
   const status = signedIn ? statusParam(params.get('status')) : 'all';
 
   const ofDifficulty = (value: Difficulty | 'all') => tasks.filter((task) => value === 'all' || task.difficulty === value);
-  const ofStatus = (list: readonly TaskSummary[], value: StatusFilter) =>
-    list.filter((task) => value === 'all' || (value === 'solved') === task.solved);
+  const ofStatus = (list: readonly TaskSummary[], value: StatusFilter) => list.filter((task) => value === 'all' || task.status === value);
   const shown = ofStatus(ofDifficulty(difficulty), status);
 
   // A filter at its default leaves the address; replacing the entry keeps the back button for pages.
@@ -82,9 +81,9 @@ function TaskList({ tasks }: { tasks: readonly TaskSummary[] }) {
           {signedIn && (
             <Tabs
               label={t('tasks.statusFilter')}
-              options={(['all', 'unsolved', 'solved'] as const).map((value) => ({
+              options={(['all', ...taskStatuses] as const).map((value) => ({
                 value,
-                label: t(value === 'all' ? 'tasks.all' : value === 'solved' ? 'tasks.solvedOnly' : 'tasks.unsolvedOnly'),
+                label: value === 'all' ? t('tasks.all') : t(`tasks.statuses.${value}`),
                 count: ofStatus(ofDifficulty(difficulty), value).length,
               }))}
               value={status}
@@ -109,5 +108,5 @@ function difficultyParam(value: string | null): Difficulty | 'all' {
 }
 
 function statusParam(value: string | null): StatusFilter {
-  return value === 'solved' || value === 'unsolved' ? value : 'all';
+  return taskStatuses.find((item) => item === value) ?? 'all';
 }

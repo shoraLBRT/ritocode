@@ -182,7 +182,7 @@ function DailyTask({
       <div className="rc-daily__meta">
         <span className={`rc-difficulty rc-difficulty--${task.difficulty}`}>{t(`tasks.difficulty.${task.difficulty}`)}</span>
         <span className="rc-daily__chip">{t(`tasks.time.${task.difficulty}`)}</span>
-        {task.solved === true && <span className="rc-daily__chip">{t('home.daily.solved')}</span>}
+        {task.status !== null && task.status !== 'new' && <span className="rc-daily__chip">{t(`home.daily.statuses.${task.status}`)}</span>}
       </div>
       <Link className="button rc-daily__action" to={`/tasks/${task.slug}`}>
         {t('home.daily.start')}

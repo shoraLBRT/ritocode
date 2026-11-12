@@ -1989,6 +1989,109 @@ pre {
   background: currentColor;
 }
 
+/* The answer revealed before the task was solved (ADR 0017): quiet, an eye, never the colour of a result. */
+.rc-status--revealed { background: var(--surface-sunken); color: var(--text-muted); }
+
+.rc-status .icon {
+  width: 13px;
+  height: 13px;
+}
+
+/*
+ * The outcome of an answer before its reveal (DESIGN.md › The review): a ring of the findings found
+ * out of those present, then a row per count with a pip per finding or pick. Pips are drawn in one
+ * order, found before missed, so they say how many and never which.
+ */
+.rc-tally {
+  display: grid;
+  gap: 14px;
+}
+
+.rc-tally__ring {
+  display: grid;
+  place-items: center;
+  justify-self: start;
+  width: 92px;
+  height: 92px;
+  border-radius: 50%;
+  background: conic-gradient(var(--good) calc(var(--p, 0) * 1%), var(--surface-sunken) 0);
+}
+
+.rc-tally__hole {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: var(--surface);
+}
+
+.rc-tally__ring-value {
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 1.375rem;
+  font-weight: 600;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.rc-tally__ring-of {
+  color: var(--text-faint);
+  font-size: 0.7rem;
+}
+
+.rc-tally__rows {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.rc-tally__row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 12px;
+  align-items: baseline;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--surface-inset);
+}
+
+.rc-tally__label {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.rc-tally__value {
+  margin: 0;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.rc-tally__pips {
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: 1 / -1;
+  gap: 5px;
+  margin: 2px 0 0;
+}
+
+.rc-tally__pip {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.rc-tally__pip--found { background: var(--good); }
+.rc-tally__pip--treated { background: var(--accent); }
+.rc-tally__pip--untreated { background: var(--surface-sunken); box-shadow: inset 0 0 0 1.5px var(--border-strong); }
+.rc-tally__pip--missed { box-shadow: inset 0 0 0 1.5px var(--warn); }
+.rc-tally__pip--extra { border-radius: 3px; background: var(--danger); }
+
 .rc-stat {
   padding: 14px 16px;
   border-radius: 12px;

@@ -82,19 +82,19 @@ public sealed class ContentCatalogueTests(PostgresTestServer postgres) : IAsyncL
         Assert.Equal(2, page.TotalItems);
         Assert.Equal([("invoice-mailer-monthly", "easy"), ("invoice-mailer-hosted", "medium")], page.Items.Select(task => (task.Slug, task.Difficulty)));
         Assert.Equal("Счёт клиенту по почте", page.Items[0].Title);
-        Assert.All(page.Items, task => Assert.Null(task.Solved));
+        Assert.All(page.Items, task => Assert.Null(task.Status));
     }
 
     [Fact]
-    public async Task ForASignedInCaller_EachTaskSaysWhetherTheySolvedIt()
+    public async Task ForASignedInCaller_EachTaskCarriesTheirStatus_NewWhereTheLookupHasNone()
     {
         var user = Guid.CreateVersion7();
-        var submitted = new SubmittedTasks(user, "invoice-mailer-hosted");
+        var statuses = new TaskStatuses(user, "invoice-mailer-hosted", "gaveUp");
 
-        var page = await Catalogue(submitted).ListTasksAsync(PageRequest.Create(null, null).Value, user, TestContext.Current.CancellationToken);
+        var page = await Catalogue(statuses).ListTasksAsync(PageRequest.Create(null, null).Value, user, TestContext.Current.CancellationToken);
 
-        Assert.Equal([("invoice-mailer-monthly", false), ("invoice-mailer-hosted", true)], page.Items.Select(task => (task.Slug, task.Solved!.Value)));
-        Assert.Equal(["invoice-mailer-monthly", "invoice-mailer-hosted"], submitted.Asked);
+        Assert.Equal([("invoice-mailer-monthly", "new"), ("invoice-mailer-hosted", "gaveUp")], page.Items.Select(task => (task.Slug, task.Status)));
+        Assert.Equal(["invoice-mailer-monthly", "invoice-mailer-hosted"], statuses.Asked);
     }
 
     [Fact]
@@ -160,15 +160,15 @@ public sealed class ContentCatalogueTests(PostgresTestServer postgres) : IAsyncL
     {
         var empty = await ContentDatabase.CreateAsync(postgres, nameof(AnEmptyDatabase_AnswersEmptyViews_NotErrors));
         await using var context = empty.CreateContext();
-        var catalogue = new ContentCatalogue(context, new SubmittedTasks(Guid.Empty));
+        var catalogue = new ContentCatalogue(context, new TaskStatuses(Guid.Empty));
 
         Assert.Empty((await catalogue.GetProblemsAsync(TestContext.Current.CancellationToken)).Cards);
         Assert.Empty((await catalogue.GetTreatmentsAsync(TestContext.Current.CancellationToken)).Branches);
         Assert.Equal(0, (await catalogue.ListTasksAsync(PageRequest.Create(null, null).Value, Guid.CreateVersion7(), TestContext.Current.CancellationToken)).TotalItems);
     }
 
-    private ContentCatalogue Catalogue(SubmittedTasks? submitted = null) =>
-        new(_database.CreateContext(), submitted ?? new SubmittedTasks(Guid.Empty));
+    private ContentCatalogue Catalogue(TaskStatuses? statuses = null) =>
+        new(_database.CreateContext(), statuses ?? new TaskStatuses(Guid.Empty));
 
     private async Task IngestAsync()
     {
@@ -177,15 +177,17 @@ public sealed class ContentCatalogueTests(PostgresTestServer postgres) : IAsyncL
         Assert.True(result.Ingested, string.Join("\n", result.Report.Issues));
     }
 
-    /// <summary>The Attempts module's answer, stood in for: one user, and the tasks they submitted.</summary>
-    private sealed class SubmittedTasks(Guid user, params string[] slugs) : ISubmittedTaskLookup
+    /// <summary>The Attempts module's answer, stood in for: one user, and the status of one task, if any.</summary>
+    private sealed class TaskStatuses(Guid user, string? slug = null, string? status = null) : ITaskStatusLookup
     {
         public List<string> Asked { get; } = [];
 
-        public System.Threading.Tasks.Task<IReadOnlySet<string>> FindSubmittedAsync(Guid userId, IReadOnlyCollection<string> taskSlugs, CancellationToken cancellationToken)
+        public System.Threading.Tasks.Task<IReadOnlyDictionary<string, string>> FindStatusesAsync(Guid userId, IReadOnlyCollection<string> taskSlugs, CancellationToken cancellationToken)
         {
             Asked.AddRange(taskSlugs);
-            IReadOnlySet<string> found = userId == user ? taskSlugs.Intersect(slugs).ToHashSet() : new HashSet<string>();
+            IReadOnlyDictionary<string, string> found = userId == user && slug is not null && status is not null && taskSlugs.Contains(slug)
+                ? new Dictionary<string, string> { [slug] = status }
+                : new Dictionary<string, string>();
             return System.Threading.Tasks.Task.FromResult(found);
         }
     }

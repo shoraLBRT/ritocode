@@ -34,12 +34,12 @@ const progress = {
 };
 
 function tasksFor(signedIn: boolean) {
-  const solved = (value: boolean) => (signedIn ? value : null);
+  const status = (value: string) => (signedIn ? value : null);
   return [
-    { slug: 'demo-task', title: 'Выручка цветочного магазина', difficulty: 'easy', solved: solved(true) },
-    { slug: 'orders', title: 'Выгрузка заказов', difficulty: 'easy', solved: solved(false) },
-    { slug: 'webhook', title: 'Пополнение баланса', difficulty: 'medium', solved: solved(false) },
-    { slug: 'invoices', title: 'Счета дизайн-студии', difficulty: 'hard', solved: solved(false) },
+    { slug: 'demo-task', title: 'Выручка цветочного магазина', difficulty: 'easy', status: status('solved') },
+    { slug: 'orders', title: 'Выгрузка заказов', difficulty: 'easy', status: status('tried') },
+    { slug: 'webhook', title: 'Пополнение баланса', difficulty: 'medium', status: status('new') },
+    { slug: 'invoices', title: 'Счета дизайн-студии', difficulty: 'hard', status: status('gaveUp') },
   ];
 }
 
@@ -88,13 +88,13 @@ describe('the arena', () => {
     expect(actions.getByRole('link', { name: ru.home.problems })).toHaveAttribute('href', '/problems');
   });
 
-  it('shows a daily task the learner has not solved', async () => {
+  it('shows a daily task still open to the learner: neither solved nor with its answer revealed', async () => {
     renderApp(api({ signedIn: true }), '/');
 
     const daily = await screen.findByRole('article', { name: (name) => name !== '' });
     const title = within(daily).getByRole('heading', { level: 2 }).textContent;
 
-    expect(['Выгрузка заказов', 'Пополнение баланса', 'Счета дизайн-студии']).toContain(title);
+    expect(['Выгрузка заказов', 'Пополнение баланса']).toContain(title);
     expect(within(daily).getByRole('link', { name: ru.home.daily.start })).toBeInTheDocument();
   });
 
@@ -178,7 +178,8 @@ describe('the arena', () => {
     renderApp(api({ signedIn: true }), '/');
 
     expect(await screen.findByRole('columnheader', { name: ru.taskTable.status })).toBeInTheDocument();
-    expect(await screen.findByRole('img', { name: ru.taskTable.solved })).toBeInTheDocument();
+    expect(await screen.findByRole('img', { name: ru.taskTable.statuses.solved })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: ru.taskTable.statuses.gaveUp })).toBeInTheDocument();
     expect(await screen.findByText(ru.home.progress.note)).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Найдено 1 из 2' })).toBeInTheDocument();
     expect(await screen.findByText(ru.home.activity.noStreak)).toBeInTheDocument();

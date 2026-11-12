@@ -94,12 +94,20 @@ export function recordStep(client: ApiClient, id: string, step: AttemptStep): Pr
   return client.request<Attempt>(`/attempts/${encodeURIComponent(id)}`, { method: 'PATCH', body: { step } });
 }
 
-/** `POST /attempts/{id}/submit` — checks the answer; the result reveals the key. */
+/** `POST /attempts/{id}/submit` — checks the answer; the outcome comes back, the key only if already revealed. */
 export function submitAttempt(client: ApiClient, id: string, picks: readonly Pick[]): Promise<Attempt> {
   return client.request<Attempt>(`/attempts/${encodeURIComponent(id)}/submit`, { method: 'POST', body: { picks } });
 }
 
-/** `GET /attempts/{id}` — an attempt and, once submitted, its result. */
+/**
+ * `POST /attempts/{id}/reveal` — reveals the answer to the task of a submitted attempt, for good,
+ * and answers the attempt in full. Revealing again changes nothing.
+ */
+export function revealAnswer(client: ApiClient, id: string): Promise<Attempt> {
+  return client.request<Attempt>(`/attempts/${encodeURIComponent(id)}/reveal`, { method: 'POST' });
+}
+
+/** `GET /attempts/{id}` — an attempt and, once submitted, its outcome; once revealed, its result. */
 export function getAttempt(client: ApiClient, id: string, signal?: AbortSignal): Promise<Attempt> {
   return client.request<Attempt>(`/attempts/${encodeURIComponent(id)}`, { ...(signal ? { signal } : {}) });
 }

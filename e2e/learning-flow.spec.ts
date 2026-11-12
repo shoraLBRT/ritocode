@@ -50,9 +50,24 @@ test('a visitor solves a task signed out, signs in on Check, and sees the review
   await test.step('comes back signed in, to the review of that answer', async () => {
     await expect(page).toHaveURL(new RegExp(`/tasks/${task}/attempts/[0-9a-f-]{36}$`));
     await expect(page.getByLabel(/^Профиль e2e-learner-/)).toBeVisible();
+    // The result without the answer (ADR 0017): the counts, and no card named.
+    await expect(page.getByText(t('review.notSolved'))).toBeVisible();
+    await expect(page.getByRole('complementary', { name: t('review.tally.title') })).toContainText(t('review.tally.of', { count: 1, total: 2 }));
+    await expect(page.getByText(missedCard)).toHaveCount(0);
+  });
+
+  await test.step('reveals the answer, after confirming, and sees the whole review', async () => {
+    await page.getByRole('button', { name: t('review.reveal') }).click();
+    await expect(page.getByText(t('review.revealGivesUp'))).toBeVisible();
+    await page.getByRole('button', { name: t('review.revealConfirm') }).click();
     await expect(page.getByText(t('review.composition', { found: 1, present: 2, extra: 0, matched: 1 }))).toBeVisible();
     await expect(page.getByText(card).first()).toBeVisible();
     await expect(page.getByText(missedCard).first()).toBeVisible();
+  });
+
+  await test.step('finds the task marked as answer revealed in the task list', async () => {
+    await page.goto('/tasks');
+    await expect(page.getByRole('row', { name: /Выручка цветочного магазина/ }).getByRole('img', { name: t('taskTable.statuses.gaveUp') })).toBeVisible();
   });
 
   await test.step('sees the attempt in the progress', async () => {

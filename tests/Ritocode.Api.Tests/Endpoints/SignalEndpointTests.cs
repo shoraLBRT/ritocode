@@ -11,7 +11,7 @@ namespace Ritocode.Api.Tests.Endpoints;
 
 /// <summary>
 /// <c>POST /api/v1/signals</c> (docs/SPEC.md §4.8): from an extra pick of the caller's own submitted
-/// attempt only, once per pick, and never changing the attempt. The reference easy task's key lists
+/// attempt only, once its answer is revealed (ADR 0017), once per pick, and never changing the attempt. The reference easy task's key lists
 /// secrets, money in a float and a swallowed error; <c>hardcoded-config</c> is the extra pick here.
 /// </summary>
 public sealed class SignalEndpointTests(ContentTestApi api) : IClassFixture<ContentTestApi>
@@ -88,6 +88,23 @@ public sealed class SignalEndpointTests(ContentTestApi api) : IClassFixture<Cont
     }
 
     [Fact]
+    public async Task BeforeTheAnswerIsRevealed_NoCardCanBeSignalled_AndTheRefusalSaysNothingAboutTheKey()
+    {
+        // The medium task, which no other test here reveals: its key lists hardcoded configuration only.
+        var answer = new { picks = new[] { new { card = "hardcoded-config", leaves = new[] { "manual.extract-config" } }, new { card = "secrets-in-repo", leaves = new[] { "auto.secrets" } } } };
+        var id = await SubmitAsync(ContentTestApi.MediumTask, answer, reveal: false);
+
+        using var found = await JsonAsync(await SendAsync(new { attempt = id, card = "hardcoded-config" }), HttpStatusCode.Conflict);
+        using var extra = await JsonAsync(await SendAsync(new { attempt = id, card = "secrets-in-repo" }), HttpStatusCode.Conflict);
+        using var unknown = await JsonAsync(await SendAsync(new { attempt = id, card = "no-such-card" }), HttpStatusCode.Conflict);
+
+        Assert.Equal("answer_not_revealed", found.RootElement.GetProperty("code").GetString());
+        Assert.Equal(found.RootElement.GetProperty("detail").GetString(), extra.RootElement.GetProperty("detail").GetString());
+        Assert.Equal("answer_not_revealed", extra.RootElement.GetProperty("code").GetString());
+        Assert.Equal(found.RootElement.GetProperty("detail").GetString(), unknown.RootElement.GetProperty("detail").GetString());
+    }
+
+    [Fact]
     public async Task AnotherUsersAttempt_AnswersExactlyAsAMissingOne()
     {
         var theirs = Attempt.Start(Guid.CreateVersion7(), ContentTestApi.EasyTask, DateTimeOffset.UtcNow);
@@ -139,11 +156,19 @@ public sealed class SignalEndpointTests(ContentTestApi api) : IClassFixture<Cont
         return body.RootElement.GetProperty("id").GetGuid();
     }
 
-    private async Task<Guid> SubmitAsync(string task, object answer)
+    /// <summary>A submitted attempt, its answer revealed unless <paramref name="reveal"/> says otherwise.</summary>
+    private async Task<Guid> SubmitAsync(string task, object answer, bool reveal = true)
     {
         var id = await StartAsync(task);
         var response = await api.Client.PostAsJsonAsync(new Uri($"/api/v1/attempts/{id}/submit", UriKind.Relative), answer, TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        if (reveal)
+        {
+            var revealed = await api.Client.PostAsync(new Uri($"/api/v1/attempts/{id}/reveal", UriKind.Relative), null, TestContext.Current.CancellationToken);
+            Assert.Equal(HttpStatusCode.OK, revealed.StatusCode);
+        }
+
         return id;
     }
 
@@ -178,6 +203,7 @@ public sealed class SignalRateLimitTests(SignalRateLimitedContentTestApi api) : 
         string[] extras = ["money-in-float", "secrets-in-repo", "swallowed-error"];
         var answer = new { picks = extras.Select(card => new { card, leaves = Leaves }) };
         (await api.Client.PostAsJsonAsync(new Uri($"/api/v1/attempts/{id}/submit", UriKind.Relative), answer, TestContext.Current.CancellationToken)).EnsureSuccessStatusCode();
+        (await api.Client.PostAsync(new Uri($"/api/v1/attempts/{id}/reveal", UriKind.Relative), null, TestContext.Current.CancellationToken)).EnsureSuccessStatusCode();
 
         foreach (var card in extras.Take(2))
         {

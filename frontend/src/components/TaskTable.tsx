@@ -1,17 +1,18 @@
 import { Link } from 'react-router';
-import type { TaskSummary } from '../api';
+import type { TaskStatus, TaskSummary } from '../api';
 import { useT } from '../i18n';
 import { Icon } from '../pages/task/parts';
 
 /**
  * The arena's task table (DESIGN.md › The arena), shared by `/` and `/tasks`: status · title · time ·
  * difficulty, in the order given. No classes and no number of findings: either would give the answer
- * away (SPEC §4.3). The status column is there only when the API said `solved`, which it says only to
- * a signed-in caller.
+ * away (SPEC §4.3). The status column is there only when the API said a `status`, which it says only
+ * to a signed-in caller: new (an empty ring, as before), tried, solved, or the answer revealed — each
+ * a mark named in words.
  */
 export function TaskTable({ tasks }: { tasks: readonly TaskSummary[] }) {
   const t = useT();
-  const signedIn = tasks.some((task) => task.solved !== null);
+  const signedIn = tasks.some((task) => task.status !== null);
 
   return (
     <div className="table-scroll">
@@ -31,13 +32,7 @@ export function TaskTable({ tasks }: { tasks: readonly TaskSummary[] }) {
             <tr key={task.slug}>
               {signedIn && (
                 <td>
-                  {task.solved === true ? (
-                    <span className="rc-status rc-status--done" role="img" aria-label={t('taskTable.solved')}>
-                      <Icon name="check" />
-                    </span>
-                  ) : (
-                    <span className="rc-status rc-status--todo" role="img" aria-label={t('taskTable.unsolved')} />
-                  )}
+                  <StatusMark status={task.status ?? 'new'} />
                 </td>
               )}
               <td>
@@ -54,6 +49,25 @@ export function TaskTable({ tasks }: { tasks: readonly TaskSummary[] }) {
         </tbody>
       </table>
     </div>
+  );
+}
+
+const statusClass: Record<TaskStatus, string> = {
+  new: 'rc-status--todo',
+  tried: 'rc-status--tried',
+  solved: 'rc-status--done',
+  gaveUp: 'rc-status--revealed',
+};
+
+/** A task's status as a small round mark (`rc-status`), named in words for a screen reader. */
+export function StatusMark({ status }: { status: TaskStatus }) {
+  const t = useT();
+
+  return (
+    <span className={`rc-status ${statusClass[status]}`} role="img" aria-label={t(`taskTable.statuses.${status}`)} title={t(`taskTable.statuses.${status}`)}>
+      {status === 'solved' && <Icon name="check" />}
+      {status === 'gaveUp' && <Icon name="eye" />}
+    </span>
   );
 }
 
