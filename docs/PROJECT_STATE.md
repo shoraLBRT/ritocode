@@ -441,10 +441,10 @@ compose stack is PostgreSQL only.
 | --- | --- |
 | `Ritocode.Architecture.Tests` | 14 |
 | `Ritocode.Shared.Tests` | 58 |
-| `Ritocode.Api.Tests` | 143 |
+| `Ritocode.Api.Tests` | 144 |
 | `Ritocode.Modules.Content.Tests` | 78 |
-| `Ritocode.Modules.Attempts.Tests` | 29 |
-| Frontend (vitest) | 362 |
+| `Ritocode.Modules.Attempts.Tests` | 31 |
+| Frontend (vitest) | 365 |
 | `scripts/monitor-test.sh` | 9 |
 | End-to-end (`e2e/`) | 1 |
 
