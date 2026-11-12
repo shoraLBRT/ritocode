@@ -1,26 +1,35 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Link } from 'react-router';
-import { difficulties, getProblemCatalogue, getProgress, listAttemptsSince, listTasks, useApiClient } from '../api';
-import type { AttemptSummary, Difficulty, ProblemCatalogue, Progress, TaskSummary } from '../api';
+import { getProblemCatalogue, getProgress, listAttemptsSince, listTasks, useApiClient } from '../api';
+import type { AttemptSummary, ProblemCard, ProblemCatalogue, Progress, TaskSummary } from '../api';
 import { ErrorState } from '../components/ErrorState';
 import { LoadingState } from '../components/LoadingState';
-import { Tabs, TaskTable } from '../components/TaskTable';
+import { TaskTable } from '../components/TaskTable';
 import { useApiResource } from '../hooks/useApiResource';
 import { useT } from '../i18n';
 import { useSession } from '../session';
 import { SignInLinks } from '../session/SignInLinks';
 import { useSiteConfig } from '../site';
-import { activity, activityLevel, activitySince, dailyTask, formatCountdown, nextMoscowMidnight } from './home/arena';
+import {
+  activity,
+  activityLevel,
+  activitySince,
+  dailyTask,
+  formatCountdown,
+  nextMoscowMidnight,
+  suggestedProblems,
+  suggestedTasks,
+} from './home/arena';
 
 /**
  * `/` — the arena (docs/SPEC.md §4.1, ADR 0015, DESIGN.md › The arena): what Ritocode teaches with
- * the real counts, the daily task, the task list, and the learner's progress, streak and activity —
- * or, for a guest, a way to sign in.
+ * the real counts, the daily task, a few tasks and problems to start from — the ways into the two
+ * catalogues — and the learner's progress, streak and activity, or, for a guest, a way to sign in.
  *
  * The prerender renders {@link StaticHomePage} with the catalogue from the content export: effects do
- * not run there, so the lead, the counts and how a task goes are in the static page, and the tasks
- * and everything personal are filled in by the application.
+ * not run there, so the lead, the counts and the problems to read are in the static page, and the
+ * tasks and everything personal are filled in by the application.
  */
 export function HomePage() {
   const client = useApiClient();
@@ -33,9 +42,6 @@ export function HomePage() {
 export function StaticHomePage({ catalogue }: { catalogue: ProblemCatalogue }) {
   return <Arena catalogue={catalogue} />;
 }
-
-/** How many tasks the home page lists; the rest are a link away. */
-const LISTED_TASKS = 8;
 
 function Arena({ catalogue }: { catalogue: ProblemCatalogue | null }) {
   const client = useApiClient();
@@ -50,6 +56,7 @@ function Arena({ catalogue }: { catalogue: ProblemCatalogue | null }) {
     setNow(new Date());
   }, []);
   const taskList = tasks.state.status === 'success' ? tasks.state.data.items : null;
+  const today = taskList === null ? null : dailyTask(taskList, now);
 
   return (
     <section className="page rc-arena">
@@ -82,7 +89,7 @@ function Arena({ catalogue }: { catalogue: ProblemCatalogue | null }) {
         </header>
 
         <DailyTask
-          task={taskList === null ? null : dailyTask(taskList, now)}
+          task={today}
           loading={taskList === null}
           now={now}
           onNextDay={nextDay}
@@ -90,10 +97,26 @@ function Arena({ catalogue }: { catalogue: ProblemCatalogue | null }) {
       </div>
 
       <div className="rc-arena__main">
-        <div className="rc-panel rc-arena__tasks">
-          {tasks.state.status === 'loading' && <LoadingState label={t('home.table.loading')} />}
-          {tasks.state.status === 'error' && <ErrorState error={tasks.state.error} onRetry={tasks.reload} />}
-          {taskList !== null && <HomeTasks tasks={taskList} />}
+        <div className="rc-arena__lists">
+          <section className="rc-panel" aria-labelledby="home-tasks">
+            <div className="rc-panel__bar">
+              <h2 id="home-tasks" className="rc-arena__panel-title">
+                {t('home.table.title')}
+              </h2>
+            </div>
+            {tasks.state.status === 'loading' && <LoadingState label={t('home.table.loading')} />}
+            {tasks.state.status === 'error' && <ErrorState error={tasks.state.error} onRetry={tasks.reload} />}
+            {taskList !== null && <SuggestedTasks tasks={suggestedTasks(taskList, now, today?.slug ?? null)} />}
+          </section>
+
+          <section className="rc-panel" aria-labelledby="home-reading">
+            <div className="rc-panel__bar">
+              <h2 id="home-reading" className="rc-arena__panel-title">
+                {t('home.reading.title')}
+              </h2>
+            </div>
+            {catalogue === null ? <LoadingState label={t('home.reading.loading')} /> : <ProblemsToRead catalogue={catalogue} now={now} />}
+          </section>
         </div>
 
         <aside className="rc-arena__aside">
@@ -106,15 +129,6 @@ function Arena({ catalogue }: { catalogue: ProblemCatalogue | null }) {
           {session.status === 'signedOut' && <GuestCard />}
         </aside>
       </div>
-
-      <section className="rc-arena__how" aria-labelledby="home-how">
-        <h2 id="home-how">{t('home.howTitle')}</h2>
-        <ol>
-          <li>{t('home.step1')}</li>
-          <li>{t('home.step2')}</li>
-          <li>{t('home.step3')}</li>
-        </ol>
-      </section>
     </section>
   );
 }
@@ -168,7 +182,7 @@ function DailyTask({
       <div className="rc-daily__meta">
         <span className={`rc-difficulty rc-difficulty--${task.difficulty}`}>{t(`tasks.difficulty.${task.difficulty}`)}</span>
         <span className="rc-daily__chip">{t(`tasks.time.${task.difficulty}`)}</span>
-        {task.solved === true && <span className="rc-daily__chip">{t('home.daily.solved')}</span>}
+        {task.status !== null && task.status !== 'new' && <span className="rc-daily__chip">{t(`home.daily.statuses.${task.status}`)}</span>}
       </div>
       <Link className="button rc-daily__action" to={`/tasks/${task.slug}`}>
         {t('home.daily.start')}
@@ -214,41 +228,44 @@ function Countdown({ until, onZero }: { until: Date; onZero: () => void }) {
   );
 }
 
-/**
- * The first tasks of the catalogue, in the API's order, with difficulty tabs; the rest are on
- * `/tasks`, which the link opens on the same tab.
- */
-function HomeTasks({ tasks }: { tasks: readonly TaskSummary[] }) {
+/** The suggested tasks (`suggestedTasks`) in the arena's table; every task is on `/tasks`. */
+function SuggestedTasks({ tasks }: { tasks: readonly TaskSummary[] }) {
   const t = useT();
-  const [difficulty, setDifficulty] = useState<Difficulty | 'all'>('all');
 
   if (tasks.length === 0) {
     return <p className="rc-arena__empty">{t('home.table.empty')}</p>;
   }
 
-  const shown = tasks.filter((task) => difficulty === 'all' || task.difficulty === difficulty).slice(0, LISTED_TASKS);
-  const count = (value: Difficulty | 'all') => tasks.filter((task) => value === 'all' || task.difficulty === value).length;
+  return (
+    <>
+      <TaskTable tasks={tasks} />
+      <div className="rc-arena__more">
+        <Link to="/tasks">{t('home.table.more')}</Link>
+      </div>
+    </>
+  );
+}
+
+/** A few cards of the catalogue — name, class and summary — each opening at its anchor in `/problems`. */
+function ProblemsToRead({ catalogue, now }: { catalogue: ProblemCatalogue; now: Date }) {
+  const t = useT();
+  const className = (card: ProblemCard) => catalogue.classes.find((each) => each.id === card.class)?.name ?? card.class;
 
   return (
     <>
-      <div className="rc-panel__bar">
-        <h2 className="rc-arena__panel-title">{t('home.table.title')}</h2>
-        <Tabs
-          label={t('tasks.difficultyFilter')}
-          options={(['all', ...difficulties] as const).map((value) => ({
-            value,
-            label: value === 'all' ? t('tasks.all') : t(`tasks.difficulty.${value}`),
-            count: count(value),
-          }))}
-          value={difficulty}
-          onChange={setDifficulty}
-        />
-      </div>
-
-      <TaskTable tasks={shown} />
-
+      <ul className="rc-arena__problems">
+        {suggestedProblems(catalogue.cards, now).map((card) => (
+          <li key={card.slug}>
+            <Link to={`/problems#${card.slug}`} className={`rc-arena__problem k-${card.class}`}>
+              <span className="rc-class">{className(card)}</span>
+              <span className="rc-arena__problem-name">{card.name}</span>
+              <span className="rc-arena__problem-summary">{card.summary}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
       <div className="rc-arena__more">
-        <Link to={difficulty === 'all' ? '/tasks' : `/tasks?difficulty=${difficulty}`}>{t('home.table.more')}</Link>
+        <Link to="/problems">{t('home.reading.more')}</Link>
       </div>
     </>
   );

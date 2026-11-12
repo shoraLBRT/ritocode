@@ -1,16 +1,17 @@
 import type { ReactNode } from 'react';
+import { useT } from '../../i18n';
 import { highlight } from './search';
 import { classTint } from './tint';
 
 /**
  * The small pieces both steps and the review are built from (docs/DESIGN.md): an option a learner
- * ticks, a chip for what they picked, a row of filter chips, and a muted group to browse.
+ * ticks, a chip for what they picked, a row of filter chips, and the grip of the step's dock.
  *
  * A problem class travels as `k-{class}` on the element, which the stylesheet turns into that
  * class's colour; nothing here knows a colour.
  */
 
-export function Icon({ name }: { name: 'search' | 'close' | 'check' | 'arrow' | 'chevron' | 'down' | 'left' | 'right' | 'file' | 'folder' }) {
+export function Icon({ name }: { name: 'search' | 'close' | 'check' | 'arrow' | 'chevron' | 'down' | 'left' | 'right' | 'file' | 'folder' | 'eye' }) {
   const paths: Record<typeof name, ReactNode> = {
     search: (
       <>
@@ -32,6 +33,12 @@ export function Icon({ name }: { name: 'search' | 'close' | 'check' | 'arrow' | 
       </>
     ),
     folder: <path d="M3 7h6l2 2h10v10H3z" />,
+    eye: (
+      <>
+        <path d="M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z" />
+        <circle cx="12" cy="12" r="2.6" />
+      </>
+    ),
   };
 
   return (
@@ -145,39 +152,13 @@ export function FilterChips({ label, options, selected, onToggle }: { label: str
   );
 }
 
-/**
- * A group met by browsing: its name, a line on what it holds, and how many options it has; its
- * options show once it is opened. Muted on purpose — searching is the way in, browsing the way round.
- */
-export function BrowseGroup({
-  name,
-  description,
-  count,
-  open,
-  onToggle,
-  problemClass,
-  children,
-}: {
-  name: string;
-  description?: string | null;
-  count: number;
-  open: boolean;
-  onToggle: () => void;
-  problemClass?: string | undefined;
-  children: ReactNode;
-}) {
+/** The grip on top of a dock that has results: raises or lowers it by a click (`dock.ts`). */
+export function DockGrip({ raised, onToggle }: { raised: boolean; onToggle: () => void }) {
+  const t = useT();
+
   return (
-    <div className={`browse-group${open ? ' browse-group--open' : ''}${classTint(problemClass)}`}>
-      <button type="button" className="browse-group__head" aria-expanded={open} onClick={onToggle}>
-        <Icon name="chevron" />
-        {problemClass !== undefined && <span className="dot" aria-hidden="true" />}
-        <span className="browse-group__text">
-          <span className="browse-group__name">{name}</span>
-          {description != null && <span className="browse-group__description">{description}</span>}
-        </span>
-        <span className="browse-group__count">{count}</span>
-      </button>
-      {open && <div className="browse-group__items">{children}</div>}
-    </div>
+    <button type="button" className="dock__grip" aria-expanded={raised} aria-label={raised ? t('task.lowerDock') : t('task.raiseDock')} onClick={onToggle}>
+      <span aria-hidden="true" />
+    </button>
   );
 }

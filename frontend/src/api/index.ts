@@ -18,6 +18,7 @@ export {
   listModules,
   listTasks,
   recordStep,
+  revealAnswer,
   resolveSignal,
   sendSignal,
   signInUrl,
@@ -30,7 +31,7 @@ export type { SignInProvider } from './endpoints';
 export { DEFAULT_API_BASE_URL, resolveApiBaseUrl } from './config';
 export { ApiClientContext, useApiClient } from './ApiClientContext';
 export { ApiClientProvider } from './ApiClientProvider';
-export { difficulties } from './types';
+export { difficulties, taskStatuses } from './types';
 export type {
   AdminAttempt,
   AdminAttemptStatus,
@@ -39,6 +40,7 @@ export type {
   AdminSignalStatus,
   AdminUser,
   Attempt,
+  AttemptOutcome,
   AttemptResult,
   CardProgress,
   ClassProgress,
@@ -47,6 +49,7 @@ export type {
   CandidateCard,
   CardSections,
   Difficulty,
+  TaskStatus,
   Me,
   ModuleInfo,
   Page,

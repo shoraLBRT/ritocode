@@ -38,6 +38,7 @@ the interface shows.
 | **Attempt** | попытка | One learner's answer to one task, and its result. |
 | **Signal** | сигнал | A learner's claim that a card they picked is really present although the answer key does not list it. Goes to the author. |
 | **Weight** | вес | How much a card matters, 1–3, set on the card. Secrets outweigh magic numbers everywhere. |
+| **Incident** | инцидент | A second task type, outside the MVP: a whole production application investigated through a fixed pool of systems. Its terms are in §14.1. |
 
 In C#, a task is `DiagnosisTask`, so that it never collides with `System.Threading.Tasks.Task`.
 
@@ -243,7 +244,7 @@ Localisation is built in from the first commit; only the Russian content is writ
 
 | Route | Page | Access |
 | --- | --- | --- |
-| `/` | Home, the arena: what Ritocode teaches, the daily task, the task list, progress (below) | public |
+| `/` | Home, the arena: what Ritocode teaches, the daily task, tasks and problems to start from, progress (below) | public |
 | `/problems` | Problem catalogue, one page, every card in full, anchor per card (`/problems#secrets-in-repo`) | public |
 | `/tasks` | Task catalogue | public |
 | `/tasks/{slug}` | Solving a task | public to solve; sign-in to check |
@@ -270,24 +271,48 @@ ADR 0001's "revisit if catalog SEO becomes a goal" without adding a server-rende
   same state sees the same task and the prerendered page is stable. The card counts down to the
   next one («До новой задачи 05:12:40») and shows it when the count reaches zero; its button names the
   whole task, «Решить задачу», not its first step.
-- **The task list**, as in §4.3: title, expected time, difficulty, and for a signed-in learner
-  whether it is solved — the first eight, with difficulty tabs and a link to `/tasks`. No class tags.
+- **A starting point, not a copy of the catalogues** ([#200](https://github.com/shoraLBRT/ritocode/issues/200)):
+  - **Tasks for you** — six tasks in the table of §4.3 (status, title, expected time, difficulty),
+    the learner's open ones first (new or tried), then those whose answer is revealed, then solved
+    ones; for a guest a pick of all tasks. The daily task is left out, and is chosen among the open
+    ones. No class tags and no difficulty filter — that is `/tasks`, a link away.
+  - **Problems to read** — four cards of the catalogue: class, name and summary, each opening at its
+    anchor in `/problems`, and a link to the whole catalogue.
+  - Both are picked in an order fixed by the Moscow day, like the daily task: the same for everyone
+    on the same day, so the prerendered page and the application agree.
 - **Progress** for a signed-in learner: found out of met, by class (§4.7), the **streak** and
   the **activity** of the last twelve weeks. A guest sees a sign-in prompt there.
-- **Without JavaScript** the prerendered page carries the lead, the catalogue's counts and how a task
-  goes; the content export has no tasks, so the daily task and the list are filled in by the application.
+- **Without JavaScript** the prerendered page carries the lead, the catalogue's counts and the
+  problems to read; the content export has no tasks, so the daily task and the suggested tasks are
+  filled in by the application.
 
 ### 4.2 Problem catalogue
 
-One page. Cards are grouped by the six classes, each shown in full. A search box filters by name,
-summary and keywords. Every card has an anchor, so a card can be linked to without a page of its
-own.
+One page. Cards are grouped by the six classes. A search box filters by name, summary and keywords,
+and a class filter shows one class or all. A card is shown **folded** — its class, name and summary,
+like a playing card — and **opens** at the centre of the screen with every field of §3.2; the
+maintainer chose this on 2026-11-10 ([#202](https://github.com/shoraLBRT/ritocode/issues/202)).
+Every card has an anchor: `/problems#slug` opens that card, so a card can be linked to without a page
+of its own. Without JavaScript the prerendered page carries every card in full, and a card unfolds in
+place.
 
 ### 4.3 Task catalogue
 
 A list of tasks: title, difficulty, an expected time derived from difficulty, and — for a signed-in
-learner — whether they have solved it. Filters: difficulty, solved or not. **No class tags** on
-tasks: they would give the answer away. Ordered by difficulty, then by publication.
+learner — its **status** ([ADR 0017](adr/0017-a-result-without-the-answer.md), #229):
+
+| Status | When | In the table |
+| --- | --- | --- |
+| New | no submitted attempt | an empty ring, as before |
+| Tried | submitted attempts, none solving it, the answer not revealed — whatever the score | its own mark |
+| Solved | an attempt solved it before the answer was revealed, if it ever was | a check |
+| Gave up («ответ открыт») | the answer was revealed before any attempt solved it | an eye |
+
+An attempt **solves** a task when every finding of the key is found, each with at least one of the
+key's leaves, and nothing extra is picked; on a clean task, when nothing is picked. A task solved and
+revealed afterwards stays solved; one revealed first stays gave up, whatever later practice scores.
+Filters: difficulty, and the four statuses. **No class tags** on tasks: they would give the answer
+away. Ordered by difficulty, then by publication. Signed out, there is no status.
 
 ### 4.4 Solving a task
 
@@ -324,8 +349,25 @@ at least one leaf before the answer can be checked. The learner can go back to s
 
 ### 4.5 Review
 
-The review opens in the task's workspace with the third step current: the score and every line in
-the sidebar, the chosen line in full beside it — or the code again.
+The review opens in the task's workspace with the third step current. It has two states
+([ADR 0017](adr/0017-a-result-without-the-answer.md), #229).
+
+**Until the learner reveals the answer** it is the outcome only, so that the next attempt is still
+diagnosing, not copying:
+
+- the **score** in points and whether the task is solved (§4.3);
+- the **counts**, drawn as small diagrams (DESIGN.md › The review): findings found out of present,
+  found ones treated right, findings not found, extra picks;
+- *Try again*, first, and the code to read again.
+
+It never says which pick was right or extra, which card was missed, or which leaves the key holds;
+the lesson, the author's notes and the same code in another context wait too. The API does not send
+them until the reveal. **Revealing is a deliberate action** — *Показать ответ*, behind a short
+confirmation that says what it does to the task's status (gave up, unless already solved). The
+reveal is kept for good, for every attempt at the task; later attempts remain possible as practice.
+
+**Once revealed**, the full review: the score and every line in the sidebar, the chosen line in full
+beside it — or the code again.
 
 - **Score** in points, with its composition beneath: findings found out of findings present, extra
   picks, treatments that matched.
@@ -373,7 +415,8 @@ No XP, no levels, no leaderboard.
 
 ### 4.8 Signals
 
-A signal is a learner saying "this card is really here, the answer key missed it". It records the
+A signal is a learner saying "this card is really here, the answer key missed it". It is sent only
+once the answer to the task is revealed (§4.5): before that no extra pick is named. It records the
 attempt, the task, the card, the learner and an optional comment of up to 500 characters. It changes
 nothing about the attempt's score. It reaches the admin's signal list (§6), where the author decides
 whether to update the task.
@@ -452,6 +495,10 @@ that the float was the costliest miss.
 - An attempt stores the learner's answer, the result broken down line by line, and the content
   revision it was scored against. **A later change to the task, a card or the scoring parameters
   never rewrites a stored result.** Re-scoring, if ever needed, is an explicit operation.
+- **Revealing the answer** (§4.5) is the learner's, per task, not an attempt's: it is kept beside
+  the attempts with its time, once, and changes none of them. Whether an attempt solved the task and
+  the task's status (§4.3) are read from the stored results and that time. A reveal changes nothing
+  in progress (§4.7): the first attempt counts as it was scored.
 
 ---
 
@@ -595,12 +642,13 @@ Under `/api/v1`, following ADR 0003.
 | --- | --- | --- |
 | `GET /problems` | The whole problem catalogue, full cards | public |
 | `GET /treatments` | The treatment tree | public |
-| `GET /tasks` | The task catalogue; solved flags when signed in | public |
+| `GET /tasks` | The task catalogue; each task's status (`new`, `tried`, `solved`, `gaveUp`) when signed in | public |
 | `GET /tasks/{slug}` | A task to solve: context, brief, material, the card list to pick from with name and summary only | public |
 | `POST /attempts` | Start an attempt at a task | signed in |
 | `PATCH /attempts/{id}` | Record the step reached | owner |
-| `POST /attempts/{id}/submit` | Submit the answer; returns the result and reveals the key | owner |
-| `GET /attempts/{id}` | An attempt and its result | owner |
+| `POST /attempts/{id}/submit` | Submit the answer; returns the outcome — score and counts — and the key only if the answer is already revealed | owner |
+| `POST /attempts/{id}/reveal` | Reveal the answer to the task of a submitted attempt, for good; returns the attempt in full | owner |
+| `GET /attempts/{id}` | An attempt, its outcome, and once the answer is revealed its result | owner |
 | `GET /attempts` | The caller's attempts, optionally for one task | signed in |
 | `GET /me`, `GET /me/progress` | The caller, and their progress | signed in |
 | `POST /signals` | Send a signal from an attempt | owner of the attempt |
@@ -610,8 +658,8 @@ Under `/api/v1`, following ADR 0003.
 Sign-in lives outside the versioned API: `GET /auth/login/{provider}?returnUrl=`, the providers'
 callbacks, and `POST /auth/logout`.
 
-The answer key never leaves the server before an attempt at the task is submitted, and afterwards
-only inside that attempt's result.
+The answer key never leaves the server before the learner has submitted an attempt at the task and
+revealed its answer, and afterwards only inside their attempts' results.
 
 Submission of attempts and signals is rate-limited per user, in the manner of the existing
 submission limit.
@@ -695,7 +743,9 @@ approval before they are carried out.
 Recorded so they are not lost and not built early — as issues in the
 [*Later* milestone](https://github.com/shoraLBRT/ritocode/milestone/11) since 2026-11-04: what the
 learner takes away, locations, equivalent leaves, existing projects, authors' own code, other stacks,
-authoring in the admin area, community authorship, English, difficulty beyond the shortlist.
+authoring in the admin area, community authorship, English, difficulty beyond the shortlist — and,
+since 2026-11-11, the incident: a boss task over a whole production stack, specified in §14
+([ADR 0016](adr/0016-incident-boss-task.md), [#227](https://github.com/shoraLBRT/ritocode/issues/227)).
 
 ---
 
@@ -712,6 +762,376 @@ What this file decided without the maintainer's answer, or could not decide at a
 4. **The shortlist size** for easy tasks is 15–20 extra cards on the maintainer's figure; with a
    key of zero to three cards, that is 15–23 cards in all.
 5. **Personal data:** the policy text and the operator notification (§10.4).
+
+---
+
+## 14. The incident
+
+**A second task type, outside the MVP** (§2.2): a long "boss" task in which the learner investigates
+a whole production application — code, history, pipeline, infrastructure, database, metrics, logs
+and frontend — and answers with the same cards and the same treatment tree as a task. The decision
+and the alternatives weighed are [ADR 0016](adr/0016-incident-boss-task.md); the work is
+[#227](https://github.com/shoraLBRT/ritocode/issues/227), in the *Later* milestone.
+
+**Everything §3–§10 says about tasks holds for incidents unless this section says otherwise.** The
+catalogue, the treatment tree, signals, sign-in, attempts and their history are shared. Where this
+section had to choose without the maintainer's answer, it marks the choice as a **default** (§14.13).
+
+### 14.1 Terms
+
+| Term | Russian | Meaning |
+| --- | --- | --- |
+| **World** | мир | An application — backend, frontend, database, infrastructure, pipeline, history — authored once and shared by several incidents. |
+| **Incident** | инцидент | One thing that went wrong in a world: a variant, a scenario, a recording, an alarm, an answer key, hints and a postmortem. The unit of practice, like a task. |
+| **Variant** | изменение | What the incident changes against the world's base revision: lines of code, a database setting, an index, a YAML file. Never shown as such; it is in the recording. |
+| **Scenario** | сценарий | The load and events the variant is run under when it is recorded. Not shown. |
+| **Recording** | запись | What every system of the pool produced in one run of the variant under its scenario. Everything the learner investigates. |
+| **System** | система | One part of the stack the learner can inspect — code, history, CI/CD, infrastructure, database, metrics, logs, frontend. |
+| **Pool** | набор систем | The fixed list of systems every incident shows (§14.3). |
+| **Alarm** | тревога | What reached the team and opened the incident — an alert, a support ticket, a message from the business. Not §4.8's signal, which stays the learner's word to the author. |
+| **Evidence** | доказательство | A pointer into the recording that shows a problem: lines, a commit, a log entry, a time range, a query, a setting. |
+| **Help** | помощник | Prepared questions with authored answers: free **reference** and paid **hints** (§14.7). |
+| **Postmortem** | разбор инцидента | The author's account of the incident, shown in the review. |
+
+In code an incident is `Incident`; the shared parent of a task and an incident, where one is needed,
+is an *exercise*.
+
+### 14.2 Worlds
+
+A world is an application a junior could join as a new team member. It is authored once, with an AI
+assistant, and runs on the author's machine for recording (§14.10); the learner never runs it.
+
+**The first stage is three worlds with three or four incidents each**, in popular stacks and
+ordinary domains of Ritocode's own. *Default:*
+
+| World | Domain | Backend | Shared by all three |
+| --- | --- | --- | --- |
+| **A marketplace** | sellers, a catalogue, a cart, orders, payments | Java, Spring Boot | PostgreSQL; a React and TypeScript frontend; Docker Compose behind nginx; GitHub Actions |
+| **A delivery service** | orders, couriers, dispatching, tracking | Python, FastAPI; Redis and a background worker | |
+| **A places map** | places, search near a point, reviews, routes | Python, Django | |
+
+A world carries:
+
+- **The base revision** — its source tree, infrastructure and pipeline files, its database schema,
+  settings and seed data, and its commit history (§14.3).
+- **The world's context** — a team's onboarding page: what the product does, for whom, at what
+  scale (users, requests, data), who maintains what, and the team's conventions. It plays the part
+  of §3.5's context and is visible from the start of every incident in the world. Scale is stated
+  here, because disproportion is judged against it.
+- **Its dashboards and saved queries** — the same set in every incident of the world (§14.3).
+
+Rules:
+
+- **A world is an existing project.** It has conventions, utilities and history, so class 2 — no
+  knowledge of the project — can be in an incident's key (§3.1's exclusion does not apply).
+- **Incidents in a world are independent variants of the base revision**, not a chain. They can be
+  solved in any order; the task list orders them by difficulty.
+- **Written in English** — code, logs, commit messages, configuration — as §3.4. The world's context,
+  the alarm, help and the postmortem are localised.
+- **No hint comments**, as §3.4. **The 79-character limit does not apply**: a world follows its
+  stack's usual formatter, and an incident is read on a computer.
+- **Size is not banded.** A world is meant to be searched, not read through; *default* order of
+  size: 2 000–6 000 lines of backend in 30–100 files, 1 000–3 000 lines of frontend.
+
+### 14.3 The pool of systems
+
+Every incident of every world shows **every system of the pool**, healthy or not, in the same order.
+A system that appeared only when it mattered would tell the learner where to look. A system is added
+to or removed from the pool for every world at once, never for one incident.
+
+| System | What the learner sees | Where it comes from |
+| --- | --- | --- |
+| **Code** | Backend and frontend sources at the incident's revision: the file tree, a viewer with highlighting for each stack, and search across all files | the world plus the variant |
+| **History** | The last 20–40 commits before the incident: author, date, message, diff. Commits made by an agent link the brief it was given, as the description of its pull request. The team's commit rules | the world plus the variant |
+| **CI/CD** | Pipeline definitions; the recent runs with their steps, status and logs; deploys with their times | the recording |
+| **Infrastructure** | Compose files or manifests, the proxy configuration, resource limits, environment variables with secret values masked | the world plus the variant |
+| **Database** | Schema, indexes, row counts and sizes, selected server settings with their values; the slow-query statistics of the window; the queries the application ran, with recorded results and plans; the world's saved queries — connections, locks, table sizes — with their results | the recording |
+| **Metrics** | The world's dashboards over the recording window: traffic, latency percentiles, errors, resources per service, database connections, queues, cache, one business metric | the recording |
+| **Logs** | Every service's log lines over the window, filtered by service, level, text and time | the recording |
+| **Frontend at run time** | One or more recorded browser sessions: network requests with status, timing and size; console messages | the recording |
+
+**The database is shown, not run** (ADR 0016): nothing executes a query in the page. The learner
+reads what the application ran and what the team's saved queries returned. The saved queries are
+the same in every incident of a world, so their presence says nothing; their results differ.
+
+**Noise belongs to the world.** A recording carries what a healthy run of the world produces —
+routine warnings, a retried request, a flaky test in an old run. A coincidence in the scenario — an
+unrelated deploy in the same minute — is allowed, because it happens in production, and it must be
+real in the recording rather than painted on afterwards.
+
+### 14.4 The incident
+
+An incident carries:
+
+- **Title** and **difficulty** — easy, medium or hard, on a scale of its own (§14.6).
+- **World** — a reference to one world.
+- **Variant** and **scenario** — for recording only; never sent to the learner.
+- **Alarm** — what reached the team, in a few lines, with its time. Visible from the start.
+- **Recording** — the data of every system of the pool.
+- **Answer key** — zero to about five findings. Each finding is a card, **one or more pieces of
+  evidence**, **one or more leaves to stop it now** and **one or more leaves to prevent it**, plus an
+  optional note.
+- **Hints** — one ladder of one to five rungs (§14.7).
+- **Postmortem** — what happened, minute by minute; the cause; what stopped it; what prevents it;
+  and what the brief or the world's rules did not say. Shown in the review, in place of §3.5's
+  lesson.
+
+Rules:
+
+- **A finding may be a contributing cause.** A missing timeout that turned a slow query into an
+  outage is a finding beside the slow query.
+- **A false alarm is a valid incident.** An alert raised by load the context announced, where
+  everything is as it should be, has an empty key or only `accept` leaves — the incident's clean
+  task (§3.5).
+- **Verdict cards** — over-engineering, under-engineering — follow §3.5: in the key only when the
+  world's context makes them a problem.
+
+### 14.5 Evidence
+
+Evidence is what proves a finding. Each system has its kinds of pointer:
+
+| System | A piece of evidence is |
+| --- | --- |
+| Code, infrastructure | a file and a range of lines |
+| History | a commit, optionally a file in it |
+| CI/CD | a run, optionally a step |
+| Database | a table, an index, a setting, or one of the listed queries |
+| Metrics | a dashboard panel and a time range |
+| Logs | one or more log entries |
+| Frontend at run time | a request or a console message |
+
+- **The learner pins evidence while investigating**: every panel has a *pin* action, and pins gather
+  in a tray. In step 1 each picked card is given one or more pins.
+- **Every picked card needs at least one piece of evidence** before the answer can be checked — the
+  incident's equivalent of §4.4's "at least one leaf". *Default.*
+- **The key lists one or more accepted pieces of evidence per finding, and any one of them is
+  right** — §5.1's tolerance, carried over: the slow query can be shown in its statistics, in its
+  plan or in the lines that build it.
+- **Matching is computed, not judged.** Identifiers match exactly; a range of lines matches if it
+  overlaps the key's range; a time range matches if it overlaps the key's window; a set of log
+  entries matches if it contains one the key lists.
+- Evidence generalises #207's locations: when locations reach ordinary tasks, they are evidence of
+  the kind *a file and a range of lines*.
+
+### 14.6 Solving an incident
+
+**Where.** An incident is listed in `/tasks` with an *incident* mark and its world, and opens at
+`/incidents/{slug}`. Its review is `/incidents/{slug}/attempts/{id}`. Access is as for tasks: public
+to investigate, sign-in to check.
+
+**An incident is for a computer.** On a narrow screen the page shows the alarm, the world's context
+and a note that the incident is meant for a wider screen; the panels are not laid out for a phone.
+
+**The workspace.** A sidebar with the alarm, the world's context and the answer — the step at hand —
+as in §4.4; beside it the **panels**, one per system of the pool, always present and always in the
+same order; the pin tray; and the help button.
+
+**Steps:**
+
+0. **Investigation** — free. The learner opens panels, searches, filters and pins. Nothing is asked.
+1. **Diagnosis** — cards from the **whole catalogue**, as §4.4's step 1 for medium and hard tasks
+   (no shortlist), each given its evidence.
+2. **Treatment, in two layers** — for each picked card, the whole tree twice: **what stops it now**
+   and **what keeps it from happening again**. Each layer needs at least one leaf; `accept` is a
+   valid answer in either. *Default.*
+3. **Check** — scored (§14.8); the review opens.
+
+**An attempt survives a closed tab.** For a signed-in learner the answer in progress — pins, picks,
+leaves, hints taken — is saved on the server as the attempt's draft; for a signed-out one, in the
+browser, then carried through sign-in as §4.6. This is new to the Attempts module, which records
+only submitted answers today.
+
+**Time.** *Default* estimates, to be calibrated from attempts (§8): easy 20–30 minutes, medium
+30–45, hard 45–60.
+
+### 14.7 Help
+
+The help button opens a panel styled as a conversation with an assistant. The learner does not type:
+they pick one of the questions offered, and the answer appears. **Every answer is authored. No model
+is called** (ADR 0016): nothing is sent to a third party, a question costs nothing to serve, and the
+same question always gets the same answer. The interface calls it *помощник* and does not claim the
+answers are generated. *Default.*
+
+Two kinds of question:
+
+- **Reference — free.** How to read a latency chart, what p95 means, what an index does, what
+  `max_connections` controls, how this world deploys. Written once per system of the pool, per
+  concept, or per world — **never per incident**, and never naming a card, so a reference answer
+  cannot point at the cause. Content validation checks that no reference answer contains a card's
+  name. Reference is open to everyone.
+- **Hints — each costs points.** One ladder per incident, from vague to specific: "start from the
+  database", then "look at the slowest query of the minute the alert fired", then "count how many
+  times it runs per request". A rung opens only after the one before it; each shows its cost before
+  it is taken; the last rung never names the card. Taking a hint needs a signed-in attempt, because
+  its cost is recorded there.
+
+### 14.8 Scoring
+
+§5's principles hold: deterministic, no traps, tolerant of alternatives, numbers as parameters. The
+rules of §5.2 are extended; with *w* the card's weight:
+
+| Event | Points |
+| --- | --- |
+| A card in the key is picked | **+10 · w** |
+| A card in the key is not picked | **−3 · w** |
+| A card not in the key is picked | **−3**, flat |
+| For a found card, at least one piece of evidence matches the key's | **+5 · w** |
+| For a found card, each piece of evidence that matches none of the key's | **−1** |
+| For a found card, in each layer, at least one picked leaf is among the key's leaves for that layer | **+5 · w** per layer |
+| For a found card, each picked leaf that is not among the key's leaves for its layer | **−2** |
+| Each hint taken | **−h** for its rung |
+
+- The maximum is the sum of **25 · w** over the findings in the key.
+- The total is floored at zero and shown in points, as §5.2.
+- **The economy is balanced last** (ADR 0016): every number here, and the cost *h* of each rung, is
+  a starting value, tuned once incidents and attempts exist.
+
+**Worked example.** A delivery-world incident: at lunchtime the checkout slows down until it fails.
+The key has two findings: a query in a loop (`query-in-loop`, weight 2; evidence: its line in the
+slow-query statistics or the lines that build it; now `ops.rollback`; prevent `auto.load-test` or
+`brief.scale`) and a missing timeout on the call to the couriers' service (`missing-timeout`,
+weight 2; evidence: the hanging requests in the logs; now `ops.config`; prevent `rule.conventions`).
+Maximum: 50 + 50 = **100**. Starting hint costs: 2 for the first rung, 4 for the second.
+
+The learner takes two hints, picks the query in a loop with two pins — the statistics line and an
+unrelated log entry — chooses `ops.rollback` now and `manual.tests` to prevent it; picks
+`unbounded-load` as well, which the key does not list; and misses the timeout.
+
+- Query in a loop: +20 found, +10 evidence matched, −1 a pin that matched nothing, +10 the "now"
+  layer matched, the "prevent" layer unmatched, −2 an extra leaf → **+37**
+- Missing timeout: missed → **−6**
+- Unbounded load: extra → **−3**
+- Hints: **−6**
+
+Total **22 of 100**. The review shows that the rollback was right, that a test of the query would not
+have caught a load problem, and that the timeout was what turned slowness into an outage.
+
+### 14.9 The treatment tree gains operational leaves
+
+The tree of §3.3 gains the measures that live in the **running system** rather than in the code. It
+stays **one tree for every task and every incident**: ordinary tasks may use the new leaves, and the
+tree is still shown whole in step 2. *Default* leaves:
+
+| Branch | New leaves |
+| --- | --- |
+| **`ops` — Change the running system** (Изменить работающую систему) — a new branch | `rollback` — roll back the release or the change · `config` — change a setting: a pool, a timeout, a limit · `index` — add or change an index · `capacity` — add resources or instances · `switch-off` — turn the feature off · `data-fix` — repair the data the incident damaged |
+| **`auto`** | `alert` — an alert on a metric · `load-test` — a load test in the pipeline |
+
+No leaf is removed, so every existing answer key stays valid. The new branch and leaves go into
+`taxonomy/treatments.yaml` and its translations, and into §3.3's table, in the change that builds the
+incident.
+
+### 14.10 The boss on the arena
+
+- **First stage:** incidents are listed in `/tasks` beside tasks, with their mark, open to everyone.
+  A filter shows tasks, incidents or both.
+- **Target model: incidents are opened with points earned on tasks.** Decided by the maintainer on
+  2026-11-12:
+  - **Every attempt counts, first or practice.** Ritocode does not police retries: a learner who
+    games the balance only cheats themselves, as §3.2 says of the open catalogue.
+  - **A task counts once, at the best score among its attempts.** Coming back to a task can raise
+    what it brings; repeating it cannot multiply it.
+  - **Each incident has a price, and opening it spends that price.** With 10 points and incidents
+    at 5, a learner opens two. An opened incident stays open for good.
+  - **The balance is computed, not stored:** what the learner's tasks brought, minus the prices of
+    the incidents they opened. The one new stored fact is which incidents a learner opened, and at
+    what price.
+  - A locked incident is listed with its price and the learner's balance; a signed-out visitor sees
+    the price and a sign-in prompt.
+- **Progress is unchanged.** §4.7 still counts first attempts only; the balance is a separate count
+  and does not touch it.
+- **This departs from §4.7's "no XP, no levels, no leaderboard"** on the maintainer's decision of
+  2026-11-11: the balance exists only to open incidents, is shown only beside them, and there is
+  still no leaderboard.
+
+### 14.11 Review
+
+The review opens in the incident's workspace, with:
+
+- **The score**, with its composition: findings found of present, evidence matched, each layer's
+  treatments matched, extra picks, hints taken and their cost.
+- **Every finding in the key**, found or missed: the learner's evidence beside the key's — each opens
+  the panel at that place — the learner's leaves beside the author's in both layers, the note, and
+  the full card.
+- **Every extra pick**, with the signal button of §4.8.
+- **The postmortem.**
+- **Other incidents in this world.**
+- **Try again** — a new attempt, marked as practice. Hints taken in a practice attempt cost the same.
+
+### 14.12 Authoring and engineering
+
+**Authoring** — `content/` carries worlds and incidents beside cards and tasks; the file format goes
+into [`CONTENT_FORMAT.md`](CONTENT_FORMAT.md) with the change that builds them. In outline:
+
+- **A world**: its base revision as a source tree, its context, its dashboards and saved queries, and
+  the scripts that run it locally.
+- **An incident**: the variant as a patch to the base revision, the scenario, the recording, the
+  alarm, the key, the hint ladder and the postmortem.
+- **Reference**: questions and answers per system, per concept and per world.
+
+**Recording** is a command on the author's machine: it applies the variant, starts the world, runs
+the scenario with a load generator and a scripted browser, and exports every system of the pool —
+logs, metric series, database statistics, plans and saved-query results, pipeline runs, browser
+sessions — into the incident's recording. Recording again gives a new recording, reviewed in a pull
+request like any content.
+
+**A skill, `author-incident`**, does for incidents what `author-task` does for tasks (§7.1): drafts
+the variant, scenario, alarm, key, hints and postmortem from the maintainer's idea; records; runs
+content validation; and runs the **blind smoke test** — a separate session that receives exactly what
+a learner would, without hints, and investigates the recording. It reports what it found, which
+systems it opened, and every difference from the key: the check that an incident is neither
+unsolvable nor obvious. Writing a world is larger work, done with the maintainer before its first
+incident.
+
+**Content validation** adds: every system of the pool has data in every recording; every piece of
+evidence in a key points at something that exists in the recording; the ladder has one to five
+rungs; no reference answer names a card.
+
+**Engineering**, within §9's rules:
+
+- **Content** owns worlds, incidents, recordings, hints and reference; ingest loads them.
+- **Attempts** owns incident attempts: their drafts, the hints taken, scoring per §14.8 as a pure
+  function beside §5's, the incidents a learner opened, and the balance of §14.10, computed from
+  attempts and openings rather than stored.
+- **API**: the incident to investigate (alarm, world context, the panel index), each system's
+  recording, loaded per panel; taking a hint, which returns its text and records it in the attempt;
+  saving the draft. **A hint's text, like the answer key, never leaves the server before it is
+  taken.**
+- **Recordings** are megabytes, not the tens of kilobytes of §10.2. Each panel's data is loaded when
+  the panel is first opened; *default* budget: at most 5 MB compressed per incident.
+- **Frontend**: highlighting for every world's languages and for YAML, SQL and logs; a virtualised
+  log view; charts with a selectable time range; the pin tray.
+- **Security**: nothing the learner writes runs anywhere, as §10.1. The world runs only on the
+  author's machine, during recording.
+- **Measurement** (§8): the internal journal adds the panels opened and the time in each; Umami adds
+  *incident opened*, *hint taken* and *evidence pinned*.
+
+### 14.13 Decisions and defaults
+
+**Decided by the maintainer on 2026-11-11** (ADR 0016): the incident keeps the answer model of
+tasks; a fixed pool of systems in every incident; worlds with several incidents each, three worlds
+of three or four incidents to start, in Python and Java, in ordinary domains; recorded, not live;
+the database shown, not run; evidence in the answer; treatment in two layers; operational leaves in
+the one tree; help as prepared questions with authored answers, reference free and hints paid; the
+boss first in the task list, later unlocked by points; the economy balanced last.
+
+**Confirmed by the maintainer on 2026-11-12** — the defaults this section first chose, with one
+changed:
+
+1. The worlds' domains and stacks of §14.2.
+2. Evidence required on every picked card, and −1 for a pin that matches nothing (§14.5, §14.8).
+3. Both treatment layers required on every card (§14.6).
+4. The interface word *помощник*, not *ИИ*, and no claim that answers are generated (§14.7).
+5. Hints only in a signed-in attempt (§14.7).
+6. The `ops` branch and its leaves, `auto.alert` and `auto.load-test` (§14.9).
+7. **Changed:** the balance counts every attempt, each task once at its best score, and opening an
+   incident spends its price (§14.10). The first stated default — first attempts only, a threshold,
+   nothing spent — is withdrawn.
+8. An incident not laid out for a phone (§14.6).
+9. The size of a world and the recording budget (§14.2, §14.12), to be revisited once the first
+   world and a few of its incidents exist.
+
+The section has no open defaults left; the economy's numbers remain the open part (§14.8).
 
 ---
 

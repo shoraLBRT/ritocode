@@ -35,6 +35,10 @@ internal static class AttemptEndpoints
             .WithTags("Attempts")
             .WithValidation<SubmitAttemptRequest>();
 
+        endpoints.MapPost("/{id}/reveal", RevealAsync)
+            .WithName("RevealAnswer")
+            .WithTags("Attempts");
+
         endpoints.MapGet("/{id}", GetAsync)
             .WithName(GetAttemptRouteName)
             .WithTags("Attempts");
@@ -104,6 +108,24 @@ internal static class AttemptEndpoints
         var answer = new DiagnosisAnswer([.. request.Picks!.Select(pick => new PickedCard(pick.Card!, [.. pick.Leaves!]))]);
 
         return Answer(await lifecycle.SubmitAsync(userId, attemptId, answer, cancellationToken), context);
+    }
+
+    /// <summary>200 with the attempt in full; no body is read. An open attempt is <c>409 attempt_not_submitted</c>.</summary>
+    private static async Task<IResult> RevealAsync(
+        string id,
+        IAttemptLifecycle lifecycle,
+        ICurrentUser currentUser,
+        HttpContext context,
+        CancellationToken cancellationToken)
+    {
+        var userId = currentUser.RequireId();
+
+        if (!Guid.TryParse(id, out var attemptId))
+        {
+            return NotFound(context);
+        }
+
+        return Answer(await lifecycle.RevealAsync(userId, attemptId, cancellationToken), context);
     }
 
     private static async Task<IResult> GetAsync(

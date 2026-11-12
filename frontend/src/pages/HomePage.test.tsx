@@ -17,7 +17,11 @@ const catalogue = {
     { id: 'hygiene', name: 'Гигиена и безопасность', description: null },
     { id: 'domain', name: 'Предметная область', description: null },
   ],
-  cards: [{ slug: 'secrets-in-repo' }, { slug: 'money-in-float' }, { slug: 'naive-datetime' }],
+  cards: [
+    { slug: 'secrets-in-repo', class: 'hygiene', name: 'Секреты в репозитории', summary: 'Пароль или токен прямо в коде.' },
+    { slug: 'money-in-float', class: 'domain', name: 'Деньги во float', summary: 'Суммы в числах с плавающей точкой.' },
+    { slug: 'naive-datetime', class: 'domain', name: 'Время без пояса', summary: 'Дата и время без часового пояса.' },
+  ],
 };
 
 const progress = {
@@ -30,12 +34,12 @@ const progress = {
 };
 
 function tasksFor(signedIn: boolean) {
-  const solved = (value: boolean) => (signedIn ? value : null);
+  const status = (value: string) => (signedIn ? value : null);
   return [
-    { slug: 'demo-task', title: 'Выручка цветочного магазина', difficulty: 'easy', solved: solved(true) },
-    { slug: 'orders', title: 'Выгрузка заказов', difficulty: 'easy', solved: solved(false) },
-    { slug: 'webhook', title: 'Пополнение баланса', difficulty: 'medium', solved: solved(false) },
-    { slug: 'invoices', title: 'Счета дизайн-студии', difficulty: 'hard', solved: solved(false) },
+    { slug: 'demo-task', title: 'Выручка цветочного магазина', difficulty: 'easy', status: status('solved') },
+    { slug: 'orders', title: 'Выгрузка заказов', difficulty: 'easy', status: status('tried') },
+    { slug: 'webhook', title: 'Пополнение баланса', difficulty: 'medium', status: status('new') },
+    { slug: 'invoices', title: 'Счета дизайн-студии', difficulty: 'hard', status: status('gaveUp') },
   ];
 }
 
@@ -84,13 +88,13 @@ describe('the arena', () => {
     expect(actions.getByRole('link', { name: ru.home.problems })).toHaveAttribute('href', '/problems');
   });
 
-  it('shows a daily task the learner has not solved', async () => {
+  it('shows a daily task still open to the learner: neither solved nor with its answer revealed', async () => {
     renderApp(api({ signedIn: true }), '/');
 
     const daily = await screen.findByRole('article', { name: (name) => name !== '' });
     const title = within(daily).getByRole('heading', { level: 2 }).textContent;
 
-    expect(['Выгрузка заказов', 'Пополнение баланса', 'Счета дизайн-студии']).toContain(title);
+    expect(['Выгрузка заказов', 'Пополнение баланса']).toContain(title);
     expect(within(daily).getByRole('link', { name: ru.home.daily.start })).toBeInTheDocument();
   });
 
@@ -125,19 +129,42 @@ describe('the arena', () => {
     }
   });
 
-  it('lists the tasks without classes, and filters them by difficulty', async () => {
+  it('suggests tasks without classes or a difficulty filter, leaving out the daily task', async () => {
     renderApp(api(), '/');
 
-    const table = await screen.findByRole('table');
-    expect(within(table).getAllByRole('row')).toHaveLength(5);
+    const panel = await screen.findByRole('region', { name: ru.home.table.title });
+    const table = await within(panel).findByRole('table');
+    const daily = await screen.findByRole('article', { name: (name) => name !== '' });
+    const today = within(daily).getByRole('heading', { level: 2 }).textContent ?? '';
+
+    // Four tasks, one of them today's: a header row and three suggestions.
+    expect(within(table).getAllByRole('row')).toHaveLength(4);
+    expect(within(table).queryByRole('link', { name: today })).not.toBeInTheDocument();
     expect(within(table).queryByRole('columnheader', { name: ru.taskTable.status })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: ru.tasks.difficultyFilter })).not.toBeInTheDocument();
+    expect(within(panel).getByRole('link', { name: ru.home.table.more })).toHaveAttribute('href', '/tasks');
+  });
 
-    within(screen.getByRole('group', { name: ru.tasks.difficultyFilter })).getByRole('button', { name: /Сложная/ }).click();
+  it('suggests problems to read, each opening at its card in the catalogue', async () => {
+    renderApp(api(), '/');
 
-    expect(await within(table).findByRole('link', { name: 'Счета дизайн-студии' })).toBeInTheDocument();
-    expect(within(table).getAllByRole('row')).toHaveLength(2);
-    // The rest of the list opens on the same tab.
-    expect(screen.getByRole('link', { name: ru.home.table.more })).toHaveAttribute('href', '/tasks?difficulty=hard');
+    const panel = await screen.findByRole('region', { name: ru.home.reading.title });
+    const card = await within(panel).findByRole('link', { name: /Деньги во float/ });
+
+    expect(card).toHaveAttribute('href', '/problems#money-in-float');
+    expect(card).toHaveTextContent('Предметная область');
+    expect(card).toHaveTextContent('Суммы в числах с плавающей точкой.');
+    expect(within(panel).getAllByRole('listitem')).toHaveLength(3);
+    expect(within(panel).getByRole('link', { name: ru.home.reading.more })).toHaveAttribute('href', '/problems');
+  });
+
+  it('no longer explains how a task goes, and the lead asks for nothing more', () => {
+    renderApp(api(), '/');
+
+    expect(screen.queryByRole('heading', { name: 'Как устроена задача' })).not.toBeInTheDocument();
+    expect(ru.home.lead).not.toContain('Писать ничего не нужно');
+    expect(ru.home.lead).not.toContain('настоящих проектах');
+    expect(ru.home.demo).toBe('Начать с лёгкой задачи');
   });
 
   it('asks a guest to sign in instead of showing progress', async () => {
@@ -151,7 +178,8 @@ describe('the arena', () => {
     renderApp(api({ signedIn: true }), '/');
 
     expect(await screen.findByRole('columnheader', { name: ru.taskTable.status })).toBeInTheDocument();
-    expect(await screen.findByRole('img', { name: ru.taskTable.solved })).toBeInTheDocument();
+    expect(await screen.findByRole('img', { name: ru.taskTable.statuses.solved })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: ru.taskTable.statuses.gaveUp })).toBeInTheDocument();
     expect(await screen.findByText(ru.home.progress.note)).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Найдено 1 из 2' })).toBeInTheDocument();
     expect(await screen.findByText(ru.home.activity.noStreak)).toBeInTheDocument();

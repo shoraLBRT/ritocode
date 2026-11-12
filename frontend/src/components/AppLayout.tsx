@@ -20,12 +20,13 @@ import { HeaderStreak } from './HeaderStreak';
  *
  * The header has three parts: the brand and the sections, a centre a page may fill — the task
  * screen puts its steps there (`HeaderSlot`) — and the search, the theme and the session. On the
- * task screen and its review the frame becomes a workspace (docs/DESIGN.md): the sections and the
- * search step aside so the steps own the header, and the page fills the window instead of a
- * reading column.
+ * task screen and its review the frame becomes a workspace (docs/DESIGN.md): the search steps
+ * aside so the steps have the centre, the sections stay — a review is one click from the task list
+ * and the catalogue (#199) — and the page fills the window instead of a reading column.
  *
  * At phone width the header wraps rather than scrolls: brand and sections on the first line, the
- * session below them, the search on a line of its own (styles.css).
+ * session below them, the search — or the workspace's steps — on a line of its own (styles.css,
+ * pages/task/workspace.css).
  */
 export function AppLayout() {
   const t = useT();
@@ -70,7 +71,7 @@ export function AppLayout() {
             <span className="app__mark" aria-hidden="true" />
             {t('app.name')}
           </Link>
-          {!workspace && <Navigation signedIn={signedIn} admin={admin} />}
+          <Navigation signedIn={signedIn} admin={admin} />
         </div>
         <div className="app__header-center" ref={setSlot} />
         <div className="app__header-end">

@@ -1,4 +1,4 @@
-import type { AttemptSummary, TaskSummary } from '../../api';
+import type { AttemptSummary, ProblemCard, TaskSummary } from '../../api';
 
 /**
  * The arithmetic of the home page (docs/SPEC.md §4.1, §4.7): which task is today's, and the activity
@@ -34,19 +34,81 @@ export function formatCountdown(ms: number): string {
 }
 
 /**
- * Today's task: chosen by the Moscow day among the tasks the learner has not solved — all of them
- * for a guest, whose `solved` is null, and for a learner who has solved everything. The same list
- * on the same day always gives the same task; it changes at midnight Moscow time.
+ * Whether a task is still the learner's to solve: new or tried (ADR 0017). Solved is done, and gave
+ * up has its answer open — practice, not a challenge. For a guest, whose `status` is null, every task.
+ */
+export function isOpen(task: TaskSummary): boolean {
+  return task.status === null || task.status === 'new' || task.status === 'tried';
+}
+
+/**
+ * Today's task: chosen by the Moscow day among the tasks still open to the learner (`isOpen`) — all
+ * of them for a guest, and for a learner who has none open. The same list on the same day always
+ * gives the same task; it changes at midnight Moscow time.
  */
 export function dailyTask(tasks: readonly TaskSummary[], now: Date): TaskSummary | null {
-  const unsolved = tasks.filter((task) => task.solved !== true);
-  const pool = unsolved.length > 0 ? unsolved : tasks;
+  const open = tasks.filter(isOpen);
+  const pool = open.length > 0 ? open : tasks;
 
   if (pool.length === 0) {
     return null;
   }
 
   return pool[moscowDay(now) % pool.length] ?? null;
+}
+
+/** How many tasks and problems the home page suggests; the rest are a link away. */
+export const SUGGESTED_TASKS = 6;
+export const SUGGESTED_PROBLEMS = 4;
+
+/**
+ * A pseudo-random order fixed by the Moscow day: the same list on the same day comes back in the
+ * same order, so the prerendered page and the application agree, and the order changes at midnight.
+ * `salt` keeps two lists shuffled on the same day independent of each other.
+ */
+export function shuffleByDay<T>(items: readonly T[], now: Date, salt: number): T[] {
+  // mulberry32, seeded by the day and the salt.
+  let seed = (Math.imul(moscowDay(now), 2654435761) + salt) >>> 0;
+  const next = () => {
+    seed = (seed + 0x6d2b79f5) >>> 0;
+    let value = seed;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  };
+
+  const result = [...items];
+  for (let index = result.length - 1; index > 0; index -= 1) {
+    const other = Math.floor(next() * (index + 1));
+    const held = result[index] as T;
+    result[index] = result[other] as T;
+    result[other] = held;
+  }
+  return result;
+}
+
+/**
+ * The tasks the home page suggests: the learner's open ones first (new or tried), then those whose
+ * answer is open, then solved ones, if there are too few, each group in the day's order — for a
+ * guest, whose `status` is null, simply the day's pick. Today's task is left out: it has a card of
+ * its own.
+ */
+export function suggestedTasks(tasks: readonly TaskSummary[], now: Date, today: string | null): TaskSummary[] {
+  const order = shuffleByDay(
+    tasks.filter((task) => task.slug !== today),
+    now,
+    1,
+  );
+  return [
+    ...order.filter(isOpen),
+    ...order.filter((task) => task.status === 'gaveUp'),
+    ...order.filter((task) => task.status === 'solved'),
+  ].slice(0, SUGGESTED_TASKS);
+}
+
+/** A few problems to read today, in the day's order. */
+export function suggestedProblems(cards: readonly ProblemCard[], now: Date): ProblemCard[] {
+  return shuffleByDay(cards, now, 2).slice(0, SUGGESTED_PROBLEMS);
 }
 
 export interface Activity {

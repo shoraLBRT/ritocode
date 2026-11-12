@@ -1,4 +1,4 @@
-# 0016 — Studying the problems as a use case of its own
+# 0018 — Studying the problems as a use case of its own
 
 - Status: Proposed
 - Date: 2026-11-04

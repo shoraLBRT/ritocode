@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { AttemptSummary, TaskSummary } from '../../api';
+import type { AttemptSummary, ProblemCard, TaskStatus, TaskSummary } from '../../api';
 import {
   ACTIVITY_DAYS,
   activity,
@@ -9,10 +9,15 @@ import {
   formatCountdown,
   moscowDay,
   nextMoscowMidnight,
+  shuffleByDay,
+  SUGGESTED_PROBLEMS,
+  SUGGESTED_TASKS,
+  suggestedProblems,
+  suggestedTasks,
 } from './arena';
 
-function taskOf(slug: string, solved: boolean | null): TaskSummary {
-  return { slug, title: slug, difficulty: 'easy', solved };
+function taskOf(slug: string, status: TaskStatus | null): TaskSummary {
+  return { slug, title: slug, difficulty: 'easy', status };
 }
 
 function submittedAt(iso: string | null): AttemptSummary {
@@ -54,8 +59,55 @@ describe('the countdown to the next daily task', () => {
   });
 });
 
+describe('what the home page suggests', () => {
+  const monday = new Date('2026-11-09T09:00:00Z');
+  const tuesday = new Date('2026-11-10T09:00:00Z');
+  const many = Array.from({ length: 12 }, (_, index): TaskSummary => ({
+    slug: `task-${String(index)}`,
+    title: `Task ${String(index)}`,
+    difficulty: 'easy',
+    status: index < 2 ? 'new' : index < 4 ? 'tried' : index < 6 ? 'solved' : index < 8 ? 'gaveUp' : null,
+  }));
+
+  it('shuffles by the Moscow day: the same day gives the same order, another day another', () => {
+    const items = Array.from({ length: 20 }, (_, index) => index);
+    const order = shuffleByDay(items, monday, 1);
+
+    expect([...order].sort((a, b) => a - b)).toEqual(items);
+    expect(shuffleByDay(items, new Date('2026-11-09T20:59:59Z'), 1)).toEqual(order);
+    expect(shuffleByDay(items, tuesday, 1)).not.toEqual(order);
+    expect(shuffleByDay(items, monday, 2)).not.toEqual(order);
+  });
+
+  it('suggests open tasks first, then those with the answer open, then solved ones, leaves out the daily task, and stops at the limit', () => {
+    const learner = many.slice(0, 8);
+    const suggested = suggestedTasks(learner, monday, 'task-0');
+
+    expect(suggested).toHaveLength(SUGGESTED_TASKS);
+    expect(suggested.map((task) => task.slug)).not.toContain('task-0');
+    expect(suggested.slice(0, 3).every((task) => task.status === 'new' || task.status === 'tried')).toBe(true);
+    expect(suggested.slice(3, 5).every((task) => task.status === 'gaveUp')).toBe(true);
+    expect(suggested[5]?.status).toBe('solved');
+  });
+
+  it('gives a guest a pick of all tasks for the day', () => {
+    const guest = many.map((task) => ({ ...task, status: null }));
+    const suggested = suggestedTasks(guest, monday, null);
+
+    expect(suggested).toHaveLength(SUGGESTED_TASKS);
+    expect(suggestedTasks(guest, monday, null)).toEqual(suggested);
+  });
+
+  it('picks a few problems to read', () => {
+    const cards = Array.from({ length: 10 }, (_, index) => ({ slug: `card-${String(index)}` }) as ProblemCard);
+
+    expect(suggestedProblems(cards, monday)).toHaveLength(SUGGESTED_PROBLEMS);
+    expect(suggestedProblems(cards.slice(0, 2), monday)).toHaveLength(2);
+  });
+});
+
 describe('the daily task', () => {
-  const tasks = [taskOf('a', false), taskOf('b', true), taskOf('c', false), taskOf('d', false)];
+  const tasks = [taskOf('a', 'new'), taskOf('b', 'solved'), taskOf('c', 'tried'), taskOf('d', 'gaveUp')];
 
   it('is the same all day and changes at midnight', () => {
     const morning = dailyTask(tasks, new Date('2026-10-28T06:00:00Z'));
@@ -66,19 +118,19 @@ describe('the daily task', () => {
     expect(nextDay).not.toEqual(morning);
   });
 
-  it('is never a task the learner has solved while one is left', () => {
+  it('is never a task the learner has solved or given up while one is open', () => {
     for (let hour = 0; hour < 24 * 10; hour += 6) {
       const day = dailyTask(tasks, new Date(Date.UTC(2026, 9, 1, hour)));
-      expect(day?.solved).toBe(false);
+      expect(['new', 'tried']).toContain(day?.status);
     }
   });
 
   it('comes from every task for a guest, and for a learner who solved them all', () => {
     const guest = [taskOf('a', null), taskOf('b', null)];
-    const done = [taskOf('a', true), taskOf('b', true)];
+    const done = [taskOf('a', 'solved'), taskOf('b', 'gaveUp')];
 
     expect(dailyTask(guest, new Date('2026-10-28T12:00:00Z'))).not.toBeNull();
-    expect(dailyTask(done, new Date('2026-10-28T12:00:00Z'))?.solved).toBe(true);
+    expect(dailyTask(done, new Date('2026-10-28T12:00:00Z'))).not.toBeNull();
   });
 
   it('is null without tasks', () => {

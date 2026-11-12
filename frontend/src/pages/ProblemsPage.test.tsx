@@ -62,26 +62,87 @@ describe('the problem catalogue', () => {
   it('groups the cards by class, in the classes order, and leaves out classes with none', async () => {
     renderApp(api(), '/problems');
 
-    await screen.findByRole('heading', { level: 3, name: /Секреты в репозитории/ });
+    await screen.findByRole('heading', { level: 3, name: 'Секреты в репозитории' });
     const classes = screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent);
 
     expect(classes).toEqual(['Гигиена и безопасность', 'Предметная область']);
   });
 
-  it('shows every card in full, its sections rendered from Markdown', async () => {
+  it('shows a folded card as its class, name and summary, its sections folded in the page', async () => {
     renderApp(api(), '/problems');
 
-    await screen.findByRole('heading', { level: 3, name: /Деньги во float/ });
-    const money = within(byId('money-in-float'));
+    await screen.findByRole('heading', { level: 3, name: 'Деньги во float' });
+    const money = byId('money-in-float');
 
-    expect(money.getByText('Суммы считаются в числах с плавающей точкой.')).toBeInTheDocument();
-    expect(money.getByRole('heading', { level: 4, name: ru.problems.sections.acceptableWhen })).toBeInTheDocument();
-    expect(money.getByText('Никогда.')).toBeInTheDocument();
-    expect(money.getAllByRole('listitem')).toHaveLength(2);
-    expect(money.getByText('float').tagName).toBe('CODE');
+    expect(money).toHaveClass('rc-pcard', 'k-domain');
+    expect(money).toHaveTextContent('Предметная область');
+    expect(within(money).getByText('Суммы считаются в числах с плавающей точкой.')).toBeInTheDocument();
+    // Without JavaScript the sections unfold in place, so they are in the page, in a closed <details>.
+    const details = money.querySelector('details');
+    expect(details).not.toBeNull();
+    expect(details?.open).toBe(false);
+    expect(details).toHaveTextContent('Копейки расходятся с бухгалтерией.');
+  });
 
+  it('opens a card at the centre with every section, and closes it with Esc, back to the card', async () => {
+    renderApp(api(), '/problems');
+
+    const open = await screen.findByLabelText(ru.problems.openCard.replace('{name}', 'Деньги во float'));
+    fireEvent.click(open);
+
+    const dialog = screen.getByRole('dialog', { name: 'Деньги во float' });
+    expect(dialog).toHaveClass('rc-pcard--open', 'k-domain');
+    expect(within(dialog).getByRole('heading', { level: 4, name: ru.problems.sections.acceptableWhen })).toBeInTheDocument();
+    expect(within(dialog).getByText('Никогда.')).toBeInTheDocument();
+    expect(within(dialog).getAllByRole('listitem')).toHaveLength(2);
+    expect(within(dialog).getByText('float').tagName).toBe('CODE');
     // A section the card leaves empty has no heading.
-    expect(money.queryByRole('heading', { level: 4, name: ru.problems.sections.detection })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('heading', { level: 4, name: ru.problems.sections.detection })).not.toBeInTheDocument();
+    // The details did not unfold in place; the card's place stays as an outline; the address names it.
+    expect(byId('money-in-float').querySelector('details')?.open).toBe(false);
+    expect(byId('money-in-float')).toHaveClass('rc-pcard--lifted');
+    expect(window.location.hash).toBe('#money-in-float');
+    expect(within(dialog).getByRole('button', { name: ru.problems.close })).toHaveFocus();
+
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(window.location.hash).toBe('');
+    expect(open).toHaveFocus();
+  });
+
+  it('closes an open card with its close button or a click outside it', async () => {
+    renderApp(api(), '/problems');
+
+    fireEvent.click(await screen.findByLabelText(ru.problems.openCard.replace('{name}', 'Секреты в репозитории')));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: ru.problems.close }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText(ru.problems.openCard.replace('{name}', 'Секреты в репозитории')));
+    // The backdrop is the other close control; it is outside the dialog.
+    const backdrop = screen.getAllByRole('button', { name: ru.problems.close }).find((button) => !screen.getByRole('dialog').contains(button));
+    if (backdrop === undefined) {
+      throw new Error('The open card has no backdrop to click.');
+    }
+    fireEvent.click(backdrop);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('filters by class, counting what each class would show', async () => {
+    renderApp(api(), '/problems');
+
+    const filter = within(await screen.findByRole('group', { name: ru.problems.classFilter }));
+    expect(filter.getByRole('button', { name: `${ru.problems.allClasses} 2` })).toHaveAttribute('aria-pressed', 'true');
+    expect(filter.getByRole('button', { name: 'Разрастание 0' })).toBeInTheDocument();
+
+    fireEvent.click(filter.getByRole('button', { name: 'Предметная область 1' }));
+    expect(document.getElementById('money-in-float')).not.toBeNull();
+    expect(document.getElementById('secrets-in-repo')).toBeNull();
+    expect(screen.getByText('1 карточка')).toBeInTheDocument();
+
+    // The pressed class again shows them all.
+    fireEvent.click(filter.getByRole('button', { name: 'Предметная область 1' }));
+    expect(document.getElementById('secrets-in-repo')).not.toBeNull();
   });
 
   it('searches names, summaries and keywords, ignoring case and ё', async () => {
@@ -117,7 +178,7 @@ describe('the problem catalogue', () => {
     expect(document.getElementById('secrets-in-repo')).not.toBeNull();
   });
 
-  it('gives every card an anchor, and opens at the card the address names', async () => {
+  it('gives every card an anchor, and opens the card the address names', async () => {
     const scrolled: string[] = [];
     vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(function (this: Element) {
       scrolled.push(this.id);
@@ -128,6 +189,9 @@ describe('the problem catalogue', () => {
     await waitFor(() => {
       expect(scrolled).toEqual(['money-in-float']);
     });
-    expect(screen.getByRole('link', { name: 'Ссылка на карточку «Деньги во float»' })).toHaveAttribute('href', '#money-in-float');
+    expect(screen.getByRole('dialog', { name: 'Деньги во float' })).toBeInTheDocument();
+    // The folded card's seal is its anchor, and the open card carries the same link in its band.
+    expect(within(byId('money-in-float')).getByRole('link', { name: 'Ссылка на карточку «Деньги во float»' })).toHaveAttribute('href', '#money-in-float');
+    expect(within(screen.getByRole('dialog')).getByRole('link', { name: 'Ссылка на карточку «Деньги во float»' })).toHaveAttribute('href', '#money-in-float');
   });
 });

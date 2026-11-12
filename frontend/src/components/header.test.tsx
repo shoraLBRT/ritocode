@@ -14,8 +14,8 @@ import { headerResults, RESULTS_PER_KIND } from './headerResults';
 const webhookTask = 'Пополнение баланса через вебхук';
 
 const tasks: TaskSummary[] = [
-  { slug: 'flower-shop', title: 'Выручка цветочного магазина', difficulty: 'easy', solved: null },
-  { slug: 'payment-webhook', title: webhookTask, difficulty: 'medium', solved: null },
+  { slug: 'flower-shop', title: 'Выручка цветочного магазина', difficulty: 'easy', status: null },
+  { slug: 'payment-webhook', title: webhookTask, difficulty: 'medium', status: null },
 ];
 
 const sections = {
@@ -187,6 +187,25 @@ describe('the header search', () => {
     renderApp(api().stub, '/tasks/flower-shop');
 
     expect(screen.queryByRole('combobox', { name: ru.header.search.label })).not.toBeInTheDocument();
+  });
+});
+
+describe('the header on the task workspace', () => {
+  it('keeps the sections beside the steps, so a review is one click from the task list and the catalogue', async () => {
+    renderApp(api().stub, '/tasks/flower-shop/attempts/a1');
+
+    const sections = screen.getByRole('navigation', { name: ru.nav.label });
+    expect(within(sections).getByRole('link', { name: ru.nav.tasks })).toHaveAttribute('href', '/tasks');
+    expect(within(sections).getByRole('link', { name: ru.nav.problems })).toHaveAttribute('href', '/problems');
+    expect(await within(sections).findByRole('link', { name: ru.nav.progress })).toHaveAttribute('href', '/progress');
+  });
+
+  it('keeps them while a task is being solved too', () => {
+    renderApp(api({ signedIn: false }).stub, '/tasks/flower-shop');
+
+    const sections = screen.getByRole('navigation', { name: ru.nav.label });
+    expect(within(sections).getByRole('link', { name: ru.nav.tasks })).toBeInTheDocument();
+    expect(within(sections).getByRole('link', { name: ru.nav.problems })).toBeInTheDocument();
   });
 });
 

@@ -18,13 +18,15 @@ import { Icon } from './parts';
 import { StepBar } from './StepBar';
 import { TreatmentStep } from './TreatmentStep';
 
-type Area = 'context' | 'code' | 'answer';
+type Area = 'context' | 'code';
 
 /**
- * `/tasks/{slug}` — solving a task (docs/SPEC.md §4.4, docs/DESIGN.md). A workspace: the steps in
- * the header; a sidebar with the context — the brief always, the rest on expanding — and the step
- * at hand; the code beside it. At phone width the context, the code and the answer are three tabs.
- * The answer is two steps: pick the cards you see, then the treatment for each.
+ * `/tasks/{slug}` — solving a task (docs/SPEC.md §4.4, docs/DESIGN.md › The task workspace). A
+ * workspace of three columns: the context on the left — the brief always, the rest on expanding —
+ * the code in the centre, and on the right what the step has gathered; the step's search docks at
+ * the bottom of the code and rises over it. At phone width the context or the code is behind, and
+ * the step is a bottom sheet. The answer is two steps: pick the cards you see, then the treatment
+ * for each.
  *
  * It reads the task and the treatment tree, never a card's full text. A signed-in learner works in
  * an attempt: the newest open one at this task, or a new one, and the steps reached are recorded
@@ -111,7 +113,7 @@ function TaskScreen({ task, tree }: { task: TaskDetail; tree: TreatmentTree }) {
     track('step-2-reached', { task: task.slug });
     setStep(2);
     setContextOpen(false);
-    setArea('answer');
+    setArea('code');
   };
 
   const submit = useCallback(
@@ -198,7 +200,7 @@ function TaskScreen({ task, tree }: { task: TaskDetail; tree: TreatmentTree }) {
   );
 
   return (
-    <section className="workspace" data-area={area}>
+    <section className="workspace workspace--task" data-area={area}>
       <StepBar
         step={step}
         picked={answer.length}
@@ -217,73 +219,60 @@ function TaskScreen({ task, tree }: { task: TaskDetail; tree: TreatmentTree }) {
       <div className="workspace__tabs" role="tablist" aria-label={t('task.areas')}>
         {tab('context', t('task.contextTab'))}
         {tab('code', t('task.codeTab'))}
-        {tab('answer', t('task.answerTab'))}
       </div>
 
-      <div className="workspace__side">
-        <div className="workspace__area workspace__area--context">
-          <ContextPanel
-            task={task}
-            open={contextOpen}
-            onToggle={() => {
-              setContextOpen(!contextOpen);
-            }}
-          />
-        </div>
-
-        <section className="panel workspace__area workspace__area--answer" aria-label={t('task.answerTab')}>
-          {step === 1 ? (
-            <DiagnosisStep
-              classes={task.classes}
-              cards={task.cards}
-              answer={answer}
-              onToggle={(card) => {
-                setAnswer((current) => toggleCard(current, card));
-              }}
-              onNext={toStep2}
-            />
-          ) : (
-            <TreatmentStep
-              cards={task.cards}
-              tree={tree}
-              answer={answer}
-              onToggleLeaf={(card, leaf) => {
-                setAnswer((current) => toggleLeaf(current, card, leaf));
-              }}
-              action={checkButton}
-              notice={
-                <>
-                  {missing.length > 0 && <p className="step__hint">{t('task.needsLeaf', { cards: missing.join(', ') })}</p>}
-                  {signedOut && signInPrompt === null && <p className="step__hint step__hint--quiet">{t('task.signInToCheck')}</p>}
-                  {failure !== null && <ErrorState error={failure} />}
-                  {signedOut && signInPrompt !== null && <SignInPrompt returnPath={checkReturnPath(path)} kept={signInPrompt.kept} />}
-                </>
-              }
-            />
-          )}
-
-          {step === 2 && (
-            <div className="step__back">
-              <button
-                type="button"
-                className="link-button"
-                onClick={() => {
-                  setStep(1);
-                }}
-              >
-                {t('task.backToStep1')}
-              </button>
-            </div>
-          )}
-        </section>
+      <div className="workspace__context workspace__area workspace__area--context">
+        <ContextPanel
+          task={task}
+          open={contextOpen}
+          onToggle={() => {
+            setContextOpen(!contextOpen);
+          }}
+        />
       </div>
 
-      <section className="panel workspace__pane workspace__area workspace__area--code" aria-labelledby="task-material">
+      <section className="panel workspace__code workspace__area workspace__area--code" aria-labelledby="task-material">
         <h2 id="task-material" className="visually-hidden">
           {t('task.material')}
         </h2>
         <MaterialViewer material={task.material} />
       </section>
+
+      {/* The step: its column on the right and its dock over the code; at phone width, a bottom sheet. */}
+      <div className="workspace__sheet">
+        {step === 1 ? (
+          <DiagnosisStep
+            classes={task.classes}
+            cards={task.cards}
+            answer={answer}
+            onToggle={(card) => {
+              setAnswer((current) => toggleCard(current, card));
+            }}
+            onNext={toStep2}
+          />
+        ) : (
+          <TreatmentStep
+            cards={task.cards}
+            tree={tree}
+            answer={answer}
+            onToggleLeaf={(card, leaf) => {
+              setAnswer((current) => toggleLeaf(current, card, leaf));
+            }}
+            action={checkButton}
+            onBack={() => {
+              setStep(1);
+            }}
+            notice={
+              <>
+                {missing.length > 0 && <p className="step__hint">{t('task.needsLeaf', { cards: missing.join(', ') })}</p>}
+                {signedOut && signInPrompt === null && <p className="step__hint step__hint--quiet">{t('task.signInToCheck')}</p>}
+                {failure !== null && <ErrorState error={failure} />}
+                {signedOut && signInPrompt !== null && <SignInPrompt returnPath={checkReturnPath(path)} kept={signInPrompt.kept} />}
+              </>
+            }
+          />
+        )}
+      </div>
     </section>
   );
 }
