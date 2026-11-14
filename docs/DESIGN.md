@@ -129,7 +129,9 @@ in the step, so the step gets the room; it replaced a 40/60 split of a sidebar a
 - The found problems are compact rows on the right (`.findings`), each with its count of measures
   or *нужна мера*; the current one shows its summary. *Следующая находка →* and *← К диагнозу* are
   under them.
-- The dock holds the heading with the current finding, the treatment search with *Проверить*
+- The dock holds the heading and, under it, the current finding as its subject (`.dock__subject`):
+  a card in the finding's class colour (`.k-{class}`, border and tint) with the name large and a line
+  saying what the step asks ([#241](https://github.com/shoraLBRT/ritocode/issues/241)); then the treatment search with *Проверить*
   beside it, the hints, the measures ticked for the current finding as chips, the branch filters,
   and the leaves: every branch in columns, each headed by where its measure lives (`.leaf-columns`),
   or — with text or a branch pressed — the matches, each with its branch. It rises the same way.
