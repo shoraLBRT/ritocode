@@ -2228,3 +2228,193 @@ button.file-tree__row:hover {
     grid-template-columns: 1fr;
   }
 }
+
+/*
+ * The revealed review's centre (#242, variant B): the task's cards in three lanes — found, missed,
+ * not in the answer — each lane's outcome a coloured top edge plus a mark, a word and a count; each
+ * card the catalogue's, made small, with its treatment leaves marked on the face.
+ */
+.review-lanes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+  align-items: start;
+}
+
+.review-lane {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  border-top: 4px solid var(--border-strong);
+  border-radius: var(--radius-card);
+  background: var(--surface-inset);
+}
+
+.review-lane--found { border-top-color: var(--good); }
+.review-lane--missed { border-top-color: var(--warn); }
+.review-lane--extra { border-top-color: var(--danger); }
+
+.review-lane__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.review-lane__count {
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.review-lane__empty {
+  margin: 0;
+  padding: 16px 0;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  color: var(--text-faint);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.lane-card {
+  display: flex;
+  flex-direction: column;
+  padding: 5px;
+  border-radius: var(--radius-card);
+  background: var(--ks, var(--surface-sunken));
+  box-shadow: var(--shadow);
+}
+
+.lane-card__band {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 3px 6px 7px;
+  color: var(--k, var(--text-muted));
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.lane-card__seal {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--k, var(--text-faint));
+}
+
+.lane-card__face {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.lane-card__name {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.3;
+}
+
+.lane-card__summary {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.lane-card__treat {
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.lane-card__treat-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 6px;
+  color: var(--text-faint);
+  font-size: 0.75rem;
+}
+
+.lane-card__treat-head b {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.lane-card__leaves {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A leaf on a card's face: a mark and a colour, its word for a screen reader. */
+.face-leaf {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 2px 8px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.face-leaf__mark {
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+.face-leaf--right { background: var(--good-surface); color: var(--good); }
+.face-leaf--extra { background: var(--danger-surface); color: var(--danger); }
+.face-leaf--unchosen { border: 1px dashed var(--warn); color: var(--warn); }
+.face-leaf--plain { background: var(--surface-sunken); color: var(--text-muted); }
+
+.lane-card__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  color: var(--text-faint);
+  font-size: 0.75rem;
+}
+
+.lane-card__open {
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.lane-card__open:hover {
+  text-decoration: underline;
+}
+
+.review__back {
+  align-self: flex-start;
+  margin-top: 12px;
+}
+
+@media (max-width: 64rem) {
+  .review-lanes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
