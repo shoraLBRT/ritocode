@@ -205,11 +205,11 @@ export function TreatmentStep({
             <h2 id="dock-title" className="dock__title">
               {t('task.step2')}
             </h2>
-            <span className={`dock__finding${classTint(pickedCard?.class)}`}>
-              <span className="dot" aria-hidden="true" />
-              {pickedName}
-            </span>
             <span className="dock__count">{t('task.treated', { done: treated, total: answer.length })}</span>
+          </div>
+          <div className={`dock__subject${classTint(pickedCard?.class)}`} aria-live="polite">
+            <p className="dock__finding">{pickedName}</p>
+            <p className="dock__ask">{t('task.step2Ask')}</p>
           </div>
 
           <div className="search-row">

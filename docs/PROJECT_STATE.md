@@ -4,7 +4,7 @@
 in the same pull request as the work it describes — a session that skips this makes the next one
 start from nothing.
 
-- **Last updated:** 2026-11-12
+- **Last updated:** 2026-11-14
 - **Current stage:** S7 · Production — its engineering can be built against a local stack (#135's
   Compose file, #136's release command, #34's monitor, #41); the real checks wait on the VPS and domain of #134.
   S6 closed with #133: `/` and `/problems` read without JavaScript (#132), and every listed event
@@ -157,6 +157,9 @@ description. As of that day:
   focus lost on *Не сейчас* and after the reveal. **#235 is done** (2026-11-12): per-card progress
   leaves out the tasks whose answer is not revealed, and `/progress` says how many; the per-class
   counts still take every first attempt, which narrows an unrevealed key (Open questions).
+  **#241** (2026-11-14, PR open): on the treatment step the finding being treated is the dock's
+  subject — a card in its class colour with the name large and a line saying what the step asks.
+  Lint, build and vitest pass; the browser check in both themes at 1280/375 px was not done yet.
 - **Studying the problems** ([#204](https://github.com/shoraLBRT/ritocode/issues/204)): [ADR 0018](adr/0018-studying-problems.md)
   is *Proposed* — a mark and a drill of recognising a card by its signs, no authoring — and waits on
   the maintainer's decision and its four open questions. Nothing is built until it is accepted.

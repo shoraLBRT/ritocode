@@ -127,6 +127,10 @@ describe('the task screen', () => {
     await waitFor(() => {
       expect(stub.calls).toContainEqual({ method: 'PATCH', url: 'http://api.test/api/v1/attempts/attempt-1', body: { step: 'treatment' } });
     });
+    // The finding under treatment is the subject of the dock, with what the step asks.
+    const subject = screen.getByText(ru.task.step2Ask).closest('.dock__subject');
+    expect(subject).toHaveClass('k-domain');
+    expect(subject).toHaveTextContent('Деньги во float');
     const check = screen.getByRole('button', { name: ru.task.check });
     expect(check).toBeDisabled();
     expect(screen.getByText('Отметь хотя бы одно лечение для каждой карточки: Деньги во float.')).toBeInTheDocument();
