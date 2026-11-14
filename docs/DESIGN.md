@@ -95,11 +95,15 @@ in the step, so the step gets the room; it replaced a 40/60 split of a sidebar a
   named by them — arrows only when the centre is narrow, so the bar stays one line; a larger-code
   toggle; the code with line numbers.
 - **The dock** (`.dock`): the step's action docks at the bottom of the centre, over the code — the
-  search field, the filters and the step's button. With results it **rises on scroll**
+  search field, the filters and the step's button. With results it **rises with the scroll**
   (`dock.ts`): at rest it shows one row of them and about 5% of the next, so it is plain there is
-  more; scrolling down the results first lifts the dock until about 10% of the code is left (the
-  file bar and the first line), then scrolls them; scrolling up from the top lowers it again; a grip
-  on top does the same by a click. At rest the code scrolls clear of the dock.
+  more; scrolling down the results first lifts the dock, in step with the wheel, trackpad or finger
+  — never in one jump — until every result is in sight or about 10% of the code is left (the file
+  bar and the first line), then scrolls them; scrolling up, the results go back to their top first
+  and then the dock comes down the same way. The lift is `--dock-lift` on the results, added to
+  their height; the dock's `max-height` is the bound, so the CSS keeps it. A grip on top raises or
+  lowers it all the way by a click; a mouse wheel's tick and the grip are eased over a few frames,
+  and snap under `prefers-reduced-motion`. At rest the code scrolls clear of the dock.
 - **Phone width** (≤ 64 rem): the context or the code is behind, by two tabs, and the step is a
   **bottom sheet** (`.workspace__sheet`, fixed): the picks or the findings as a row of chips on top,
   then the dock, rising the same way up to just under the header. The review keeps three tabs: the

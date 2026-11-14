@@ -128,19 +128,29 @@ describe('step 1: what do you see', () => {
     expect(screen.getByRole('button', { name: ru.task.raiseDock })).toBeInTheDocument();
   });
 
-  it('raises the dock when the cards are scrolled down, and lowers it when scrolled up from the top', () => {
+  it('raises the dock with the cards scrolled down, step by step, and lowers it when scrolled up from the top', () => {
     diagnosis();
     search('секрет');
     const results = screen.getByRole('region', { name: ru.task.step1 }).querySelector('.dock__results');
     if (!(results instanceof HTMLElement)) {
       throw new Error('no results');
     }
-    // jsdom lays nothing out: the cards are said to be taller than their box.
+    // jsdom lays nothing out: the cards are taller than their box, which grows with the lift up to
+    // 200 px more, where the dock meets its bound.
+    const lift = () => Number.parseFloat(results.style.getPropertyValue('--dock-lift')) || 0;
     Object.defineProperty(results, 'scrollHeight', { value: 900 });
-    Object.defineProperty(results, 'clientHeight', { value: 300 });
+    Object.defineProperty(results, 'clientHeight', { get: () => Math.min(300 + lift(), 500) });
 
     fireEvent.wheel(results, { deltaY: 40 });
+    expect(screen.getByRole('button', { name: ru.task.raiseDock })).toBeInTheDocument();
+    fireEvent.wheel(results, { deltaY: 200 });
     expect(screen.getByRole('button', { name: ru.task.lowerDock })).toBeInTheDocument();
+    // What the dock did not take scrolled the cards: up, they go back to their top first.
+    expect(results.scrollTop).toBe(40);
+    fireEvent.wheel(results, { deltaY: -40 });
+    expect(screen.getByRole('button', { name: ru.task.lowerDock })).toBeInTheDocument();
+    // That wheel was the browser's to scroll; jsdom does not, so the cards are put back by hand.
+    results.scrollTop = 0;
     fireEvent.wheel(results, { deltaY: -40 });
     expect(screen.getByRole('button', { name: ru.task.raiseDock })).toBeInTheDocument();
   });

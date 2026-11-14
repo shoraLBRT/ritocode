@@ -385,8 +385,9 @@
 
 /*
  * The dock: the step's search at the bottom of the code. At rest it is the field and the filters,
- * and with results one row of them and a sliver of the next; raised, it leaves the code its file
- * bar and first line.
+ * and with results one row of them and a sliver of the next; it rises with the scroll by
+ * `--dock-lift` on the results (dock.ts), at most until it leaves the code its file bar and first
+ * line — the dock's `max-height`, which the results shrink to fit.
  */
 .dock {
   position: relative;
@@ -401,20 +402,6 @@
   border-radius: var(--radius-card);
   background: var(--surface-pop);
   box-shadow: var(--shadow-pop);
-}
-
-.dock--raised {
-  height: calc(100% - var(--code-peek));
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .workspace {
-    interpolate-size: allow-keywords;
-  }
-
-  .dock {
-    transition: height 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-  }
 }
 
 .dock__grip {
@@ -541,18 +528,13 @@
 }
 
 .dock__results {
-  flex: none;
-  height: var(--dock-rest);
+  flex: 0 1 auto;
+  height: calc(var(--dock-rest) + var(--dock-lift, 0px));
   min-height: 0;
   padding: 4px 16px 14px;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
-}
-
-.dock--raised .dock__results {
-  flex: 1;
-  height: auto;
 }
 
 /* One row of cards and about 5% of the next. */
@@ -1981,10 +1963,6 @@ button.file-tree__row:hover {
     padding-top: 18px;
   }
 
-  .workspace__sheet:has(.dock--raised) {
-    height: calc(100dvh - 4rem);
-  }
-
   /* The picks or the findings: a row of chips on top of the sheet. */
   .workspace__sheet .workspace__aside {
     flex: none;
@@ -2051,11 +2029,6 @@ button.file-tree__row:hover {
     border-radius: 0;
     background: none;
     box-shadow: none;
-  }
-
-  .workspace__sheet .dock--raised {
-    flex: 1 1 auto;
-    height: auto;
   }
 
   .workspace__sheet .dock__grip {
