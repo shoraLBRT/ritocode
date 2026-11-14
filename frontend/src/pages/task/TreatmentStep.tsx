@@ -5,7 +5,7 @@ import { useT } from '../../i18n';
 import type { MessageKey } from '../../i18n';
 import type { Answer } from './answer';
 import { useRisingDock } from './dock';
-import { Chip, DockGrip, FilterChips, Highlighted, Icon, Option } from './parts';
+import { Chip, DockBar, FilterChips, Highlighted, Icon, Option } from './parts';
 import { rank, stems } from './search';
 import { classTint, toggled } from './tint';
 
@@ -52,7 +52,7 @@ export function TreatmentStep({
   const [query, setQuery] = useState('');
   const [branchFilter, setBranchFilter] = useState<readonly string[]>([]);
   const [active, setActive] = useState(0);
-  const { raised, toggle: toggleDock, attach, reset } = useRisingDock();
+  const { raised, toggle: toggleDock, attach, reset, collapsed, toggleCollapsed } = useRisingDock();
 
   const short = (branch: string) => (known(branch) ? t(`task.branchShort.${branch}` as MessageKey) : branch);
   const where = (branch: string) => (known(branch) ? t(`task.branchWhere.${branch}` as MessageKey) : null);
@@ -171,8 +171,9 @@ export function TreatmentStep({
     return (
       <>
         {aside}
-        <section className="dock" aria-labelledby="dock-title">
-          <div className="dock__controls">
+        <section className={`dock${collapsed ? ' dock--collapsed' : ''}`} aria-labelledby="dock-title">
+          <DockBar title={t('task.step2')} collapsed={collapsed} onCollapse={toggleCollapsed} />
+          <div className="dock__controls" hidden={collapsed}>
             <div className="dock__head">
               <h2 id="dock-title" className="dock__title">
                 {t('task.step2')}
@@ -193,12 +194,15 @@ export function TreatmentStep({
   return (
     <>
       {aside}
-      <section className={`dock dock--leaves dock--results${raised ? ' dock--raised' : ''}`} aria-labelledby="dock-title">
-        <DockGrip
-          raised={raised}
-          onToggle={toggleDock}
+      <section className={`dock dock--leaves dock--results${raised ? ' dock--raised' : ''}${collapsed ? ' dock--collapsed' : ''}`} aria-labelledby="dock-title">
+        <DockBar
+          title={t('task.step2')}
+          summary={pickedName}
+          collapsed={collapsed}
+          onCollapse={toggleCollapsed}
+          grip={{ raised, onToggle: toggleDock }}
         />
-        <div className="dock__controls">
+        <div className="dock__controls" hidden={collapsed}>
           <div className="dock__head">
             <h2 id="dock-title" className="dock__title">
               {t('task.step2')}
@@ -276,7 +280,7 @@ export function TreatmentStep({
           </div>
         </div>
 
-        <div ref={attach} className="dock__results">
+        <div ref={attach} className="dock__results" hidden={collapsed}>
           {shown === null ? (
             <div className="leaf-columns">
               {tree.branches.map((branch) => (

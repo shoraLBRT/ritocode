@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 /** How a scroll moves the dock: how far it is lifted, and what is left to scroll the results by. */
 export interface DockMove {
@@ -84,12 +84,19 @@ function measure(results: HTMLElement, shown: number): { full: number; content: 
  * taken it — unless the reader asked for reduced motion. `raised` (React state) changes only when
  * the dock reaches its top or leaves it.
  *
+ * `collapsed` hides the dock down to its bar so the code behind it can be read whole (#240); the
+ * step keeps its controls and results mounted but hidden, so the search, the filters and the picks
+ * stay, and showing it again puts the results back where they were scrolled to, at the same lift.
+ *
  * `attach` is the results element's callback ref, so the listeners follow it as it comes and
  * goes. Wheel and touch-move listeners are not passive: the scroll that raises the dock does not
  * also scroll the results.
  */
 export function useRisingDock() {
   const [raised, setRaised] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  /** Where the results were scrolled to when the dock was hidden. */
+  const hiddenAt = useRef(0);
   const [results, setResults] = useState<HTMLDivElement | null>(null);
   const element = useRef<HTMLDivElement | null>(null);
   /** Where the input has taken the dock. */
@@ -243,6 +250,23 @@ export function useRisingDock() {
     [draw, stop],
   );
 
+  /** Hides the dock down to its bar, or shows it again as it was. */
+  const toggleCollapsed = useCallback(() => {
+    if (!collapsed) {
+      hiddenAt.current = element.current?.scrollTop ?? 0;
+    }
+    setCollapsed(!collapsed);
+  }, [collapsed]);
+
+  // A hidden element loses its scroll: shown again, the results go back to where they were.
+  useLayoutEffect(() => {
+    const node = element.current;
+    if (!collapsed && node !== null && hiddenAt.current > 0) {
+      node.scrollTop = hiddenAt.current;
+      hiddenAt.current = 0;
+    }
+  }, [collapsed]);
+
   const attach = useCallback(
     (node: HTMLDivElement | null) => {
       element.current = node;
@@ -253,5 +277,5 @@ export function useRisingDock() {
     [],
   );
 
-  return { raised, toggle, attach, reset };
+  return { raised, toggle, attach, reset, collapsed, toggleCollapsed };
 }
