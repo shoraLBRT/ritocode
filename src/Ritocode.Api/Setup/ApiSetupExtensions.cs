@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Options;
 using Ritocode.Api.Configuration;
 using Ritocode.Api.Endpoints;
+using Ritocode.Api.Feedback;
 using Ritocode.Shared.Http;
 using Ritocode.Shared.Identity;
 using Ritocode.Shared.Modules;
@@ -87,6 +88,9 @@ public static class ApiSetupExtensions
         // so no assembly scanning is needed here.
 
         builder.Services.AddModules(builder.Configuration, ModuleRegistry.All);
+
+        // The feedback widget (ADR 0019): host-level, as it belongs to no module.
+        builder.Services.AddFeedback(builder.Configuration);
 
         var apiOptions = builder.Configuration.GetSection(ApiOptions.SectionName).Get<ApiOptions>() ?? new ApiOptions();
 
@@ -187,6 +191,7 @@ public static class ApiSetupExtensions
 
         var api = app.MapGroup(options.BasePath);
         api.MapMetaEndpoints();
+        api.MapFeedbackEndpoints();
         api.MapModules(ModuleRegistry.All);
         app.MapModuleHostEndpoints(ModuleRegistry.All);
 
