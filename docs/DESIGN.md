@@ -104,6 +104,12 @@ in the step, so the step gets the room; it replaced a 40/60 split of a sidebar a
   their height; the dock's `max-height` is the bound, so the CSS keeps it. A grip on top raises or
   lowers it all the way by a click; a mouse wheel's tick and the grip are eased over a few frames,
   and snap under `prefers-reduced-motion`. At rest the code scrolls clear of the dock.
+  **Every dock can be hidden** (#240): its bar on top holds the grip in the middle and, on the
+  right, *Скрыть* (named *Скрыть панель, чтобы читать код*); hidden, the dock is that bar alone —
+  the step's question, what the dock holds (the search text and the count, or the finding being
+  treated) and *Показать* — so the whole file can be read, with a filter on or not. The controls
+  and results stay mounted while hidden: the search, the filters, the picks, the lift and the
+  results' scroll come back as they were.
 - **Phone width** (≤ 64 rem): the context or the code is behind, by two tabs, and the step is a
   **bottom sheet** (`.workspace__sheet`, fixed): the picks or the findings as a row of chips on top,
   then the dock, rising the same way up to just under the header. The review keeps three tabs: the
@@ -310,7 +316,7 @@ above. What the site already had stays as it is.
 | Streak, avatar | `.rc-streak`, `.rc-avatar` | the header's right end (`HeaderStreak`; the avatar opens `.app__menu`) |
 | Problem card | `article.rc-pcard.k-{class}` › `__band`, `__seal`, `__face`, `__name`, `__rule`, `__summary`, `details.rc-pcard__more`; open: `.rc-pcard--open` in `.rc-pcard-overlay` | the catalogue's card, folded and open (above) |
 | Class filter | `.rc-catalogue__filter` › `button.rc-catalogue__chip.k-{class}[aria-pressed]` | one class or all, with counts |
-| Workspace dock | `.dock` (`--cards`, `--leaves`, `--results`, `--raised`) › `__grip`, `__controls`, `__filters`, `__results`, `__cards`; `.workspace__aside`; `.workspace__sheet` | the task screen's step at the bottom of the code (above); `pages/task/workspace.css` |
+| Workspace dock | `.dock` (`--cards`, `--leaves`, `--results`, `--raised`, `--collapsed`) › `__bar` (`__grip`, `__summary`, `__collapse`), `__controls`, `__filters`, `__results`, `__cards`; `.workspace__aside`; `.workspace__sheet` | the task screen's step at the bottom of the code (above); `pages/task/workspace.css` |
 | Card in the dock | `article.rc-pcard.rc-pcard--dock.k-{class}` › `__foot`, `__open`, `label.rc-pcard__pick`; opened: `.dock-open` › `.rc-pcard--peek` | the catalogue's card made small; the opened one shows no signs or treatment (SPEC §3.2) |
 
 The list shows no number of findings: a clean task would read as «0» and give itself away. Classes
