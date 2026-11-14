@@ -21,6 +21,7 @@ and the old one is marked `Superseded by NNNN` rather than edited.
 | [0016](0016-incident-boss-task.md) | The incident: a boss task over a whole production stack | Accepted |
 | [0017](0017-a-result-without-the-answer.md) | A result without the answer, a deliberate reveal, and four task statuses | Accepted |
 | [0018](0018-studying-problems.md) | Studying the problems as a use case of its own | Proposed |
+| [0019](0019-feedback-as-github-issues.md) | Feedback becomes a GitHub issue, opened by the API | Accepted |
 
 ## Removed
 

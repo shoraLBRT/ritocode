@@ -660,6 +660,7 @@ Under `/api/v1`, following ADR 0003.
 | `GET /attempts` | The caller's attempts, optionally for one task | signed in |
 | `GET /me`, `GET /me/progress` | The caller, and their progress | signed in |
 | `POST /signals` | Send a signal from an attempt | owner of the attempt |
+| `POST /feedback` | A message from the feedback widget becomes a GitHub issue (§9.6) | public |
 | `GET /admin/signals`, `POST /admin/signals/{id}/resolve` | Signals | admin |
 | `GET /admin/users`, `GET /admin/attempts` | Users and attempts | admin |
 
@@ -690,6 +691,25 @@ a layout that works at phone width.
 - **A release** builds images in CI, then on the server applies migrations, runs content ingest, and
   restarts the API — one scripted command.
 - **Backups:** a daily database dump, seven days kept, one copy off the server.
+
+### 9.6 Feedback
+
+A widget in the bottom corner of every page ([#243](https://github.com/shoraLBRT/ritocode/issues/243),
+[ADR 0019](adr/0019-feedback-as-github-issues.md); its look in DESIGN.md › Feedback): a heading, a
+textarea, *Отправить*. No sign-in. `POST /api/v1/feedback` with `{ message, page, captchaToken }`
+opens an issue in this repository with the `feedback` label — the message, the page path, and the
+user id when signed in — and answers `201 { number }`. Refusals, each explained in a word on the form
+with the text kept:
+
+| Status | `code` | When |
+| --- | --- | --- |
+| 400 | `feedback_empty` | the message is empty or whitespace |
+| 400 | `feedback_too_long` | longer than `Feedback:MaxLength` (4000) |
+| 429 | `feedback_rate_limited` | more than `Feedback:MaxPerWindow` (5) from one address in `Feedback:Window` (1 hour) |
+| 403 | `feedback_not_verified` | the Turnstile captcha failed, when `Feedback:TurnstileSecretKey` is set |
+| 503 | `feedback_not_configured` | no GitHub token or repository on the server |
+| 503 | `feedback_unreachable` | GitHub could not be reached |
+| 500 | `feedback_failed` | GitHub refused the issue |
 
 ---
 

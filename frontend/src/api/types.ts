@@ -337,3 +337,8 @@ export interface AdminAttempt {
   readonly score: number | null;
   readonly maxScore: number | null;
 }
+
+/** `POST /feedback`: the issue the message became. */
+export interface FeedbackSent {
+  readonly number: number | null;
+}

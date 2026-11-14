@@ -317,7 +317,16 @@ above. What the site already had stays as it is.
 | Problem card | `article.rc-pcard.k-{class}` › `__band`, `__seal`, `__face`, `__name`, `__rule`, `__summary`, `details.rc-pcard__more`; open: `.rc-pcard--open` in `.rc-pcard-overlay` | the catalogue's card, folded and open (above) |
 | Class filter | `.rc-catalogue__filter` › `button.rc-catalogue__chip.k-{class}[aria-pressed]` | one class or all, with counts |
 | Workspace dock | `.dock` (`--cards`, `--leaves`, `--results`, `--raised`, `--collapsed`) › `__bar` (`__grip`, `__summary`, `__collapse`), `__controls`, `__filters`, `__results`, `__cards`; `.workspace__aside`; `.workspace__sheet` | the task screen's step at the bottom of the code (above); `pages/task/workspace.css` |
+| Feedback | `.feedback` › `button.feedback__trigger[aria-expanded]`, `.feedback__window[role=dialog]` › `__head`, `__heading`, `__close`, `__text`, `__captcha`, `__foot`, `__status` (`--good`) | every page, bottom right; see Feedback below |
 | Card in the dock | `article.rc-pcard.rc-pcard--dock.k-{class}` › `__foot`, `__open`, `label.rc-pcard__pick`; opened: `.dock-open` › `.rc-pcard--peek` | the catalogue's card made small; the opened one shows no signs or treatment (SPEC §3.2) |
+
+**Feedback** ([#243](https://github.com/shoraLBRT/ritocode/issues/243), [ADR 0019](adr/0019-feedback-as-github-issues.md)).
+A round 44 px button with a speech-bubble outline in the accent, on `--surface-pop` with `--shadow`,
+16 px from the bottom-right corner of every page (above the task screen's phone sheet: 76 px up at
+64rem and narrower). It opens a window above it, at most 340 px wide: the heading *Обратная связь*, a
+textarea whose placeholder explains that no sign-in is needed and that the message becomes an issue,
+and *Отправить*. No other text. The outcome is a word beside the button — `--good` once sent, `--danger`
+for each refusal — and the text stays on a failure and while the window is closed. Escape closes it.
 
 The list shows no number of findings: a clean task would read as «0» and give itself away. Classes
 never appear on the task list (SPEC §4.3) — the concept's opt-in toggle for them was turned down in #190.

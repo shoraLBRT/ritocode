@@ -65,6 +65,10 @@ services:
       Auth__Google__ClientId: ${GOOGLE_CLIENT_ID:-}
       Auth__Google__ClientSecret: ${GOOGLE_CLIENT_SECRET:-}
       Users__Admin__Emails__0: ${ADMIN_EMAIL:-}
+      # The feedback widget (ADR 0019). No token: POST /feedback answers 503 feedback_not_configured.
+      Feedback__Repository: ${FEEDBACK_REPOSITORY:-shoraLBRT/ritocode}
+      Feedback__GitHubToken: ${FEEDBACK_GITHUB_TOKEN:-}
+      Feedback__TurnstileSecretKey: ${TURNSTILE_SECRET_KEY:-}
     volumes:
       - api-keys:/keys
     depends_on:
