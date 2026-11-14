@@ -52,7 +52,7 @@ export function TreatmentStep({
   const [query, setQuery] = useState('');
   const [branchFilter, setBranchFilter] = useState<readonly string[]>([]);
   const [active, setActive] = useState(0);
-  const { raised, setRaised, attach, reset } = useRisingDock();
+  const { raised, toggle: toggleDock, attach, reset } = useRisingDock();
 
   const short = (branch: string) => (known(branch) ? t(`task.branchShort.${branch}` as MessageKey) : branch);
   const where = (branch: string) => (known(branch) ? t(`task.branchWhere.${branch}` as MessageKey) : null);
@@ -196,9 +196,7 @@ export function TreatmentStep({
       <section className={`dock dock--leaves dock--results${raised ? ' dock--raised' : ''}`} aria-labelledby="dock-title">
         <DockGrip
           raised={raised}
-          onToggle={() => {
-            setRaised(!raised);
-          }}
+          onToggle={toggleDock}
         />
         <div className="dock__controls">
           <div className="dock__head">

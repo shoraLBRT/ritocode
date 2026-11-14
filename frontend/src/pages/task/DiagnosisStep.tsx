@@ -45,7 +45,7 @@ export function DiagnosisStep({
   const [classFilter, setClassFilter] = useState<readonly string[]>([]);
   const [active, setActive] = useState(0);
   const [opened, setOpened] = useState<string | null>(null);
-  const { raised, setRaised, attach, reset } = useRisingDock();
+  const { raised, toggle, attach, reset } = useRisingDock();
 
   const terms = stems(query);
   const searchable = (card: CandidateCard) => ({ name: card.name, summary: card.summary, keywords: card.keywords.join(' ') });
@@ -150,9 +150,7 @@ export function DiagnosisStep({
         {shown !== null && (
           <DockGrip
             raised={raised}
-            onToggle={() => {
-              setRaised(!raised);
-            }}
+            onToggle={toggle}
           />
         )}
         <div className="dock__controls">
