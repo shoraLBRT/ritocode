@@ -178,6 +178,15 @@ description. As of that day:
   read with a filter on; the search, the filters, the picks, the lift and the results' scroll are
   kept. Checked in the built-in browser at 1280 px (both steps, a class or branch filter and a
   search on, the dock raised) and 375 px (the sheet shrinks to the chips and the bar).
+  **#242 waits on the maintainer** (2026-11-14, draft PR, `needs:maintainer`): the review's centre
+  as the task's problem cards, marked found / missed / extra, with the treatments on each card's
+  face. Three variants are drawn in [`docs/mockups/242-review-cards.html`](mockups/242-review-cards.html)
+  (a static page on the tokens, light and dark): **A** a grid of the catalogue's cards, the outcome
+  as the card's border and a ribbon (recommended); **B** three lanes, found · missed · extra;
+  **C** wide rows, the card on the left and the learner's leaves beside the author's. Nothing is
+  built until one is chosen; then DESIGN.md › The review and SPEC §4.5 record it and the mock-up
+  file goes. Open with it: what «missed» means for a treatment, since any one of the author's
+  leaves is enough (the mock-ups say «не выбрано, а подходило», not a mistake).
 - **Studying the problems** ([#204](https://github.com/shoraLBRT/ritocode/issues/204)): [ADR 0018](adr/0018-studying-problems.md)
   is *Proposed* — a mark and a drill of recognising a card by its signs, no authoring — and waits on
   the maintainer's decision and its four open questions. Nothing is built until it is accepted.

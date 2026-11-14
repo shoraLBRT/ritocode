@@ -1,0 +1,669 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Review cards #242</title>
+<!--
+  Mock-ups for shoraLBRT/ritocode#242: the review (after the answer is revealed) with the task's
+  problem cards in the centre, marked found / missed / extra, with their treatments on the face.
+  Static and self-contained; the tokens are copied from frontend/src/styles.css (DESIGN.md › Tokens).
+  The task is the real orders-report-marketplace; the learner's picks and the points are made up.
+  Not part of the site: delete this file once the chosen variant is built.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  color-scheme: light;
+  --page: #e6e7ee; --surface: #ffffff; --surface-inset: #f1f2f6; --surface-pop: #ffffff; --surface-sunken: #e2e3eb;
+  --text: #18181f; --text-muted: #4c4c5a; --text-faint: #5e5e70;
+  --border: #dcdce5; --border-strong: #c3c3d0;
+  --accent: #4a4fb0; --accent-ink: #ffffff; --accent-soft: #e6e7f7;
+  --danger: #a83f2b; --danger-surface: #f6e1dc; --good: #2a6f47; --good-surface: #dfefe5; --warn: #845910; --warn-surface: #f4ead4;
+  --code-surface: #f1f2f6; --code-keyword: #4a4fb0; --code-string: #9a5b12;
+  --class-disproportion: #a0661a; --class-disproportion-tint: #f6ecd9;
+  --class-hygiene: #b4483a; --class-hygiene-tint: #f7e3df;
+  --shadow: 0 1px 2px rgb(24 24 31 / 6%), 0 4px 16px rgb(24 24 31 / 7%);
+  --shadow-pop: 0 0 0 1px rgb(24 24 31 / 6%), 0 18px 44px rgb(24 24 31 / 22%);
+  --overlay: rgb(24 24 31 / 52%);
+  --font-sans: 'IBM Plex Sans', system-ui, sans-serif; --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --radius: 10px; --radius-card: 14px; --radius-panel: 18px;
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --page: #0b0b10; --surface: #1d1d28; --surface-inset: #14141c; --surface-pop: #252531; --surface-sunken: #2b2b38;
+  --text: #e7e7ef; --text-muted: #a9a9ba; --text-faint: #9393a6;
+  --border: #2e2e3b; --border-strong: #45455a;
+  --accent: #9ea3f5; --accent-ink: #11122c; --accent-soft: #232448;
+  --danger: #ec8a72; --danger-surface: #38201a; --good: #74c493; --good-surface: #16301f; --warn: #ddb260; --warn-surface: #2f2612;
+  --code-surface: #14141c; --code-keyword: #9ea3f5; --code-string: #ddb260;
+  --class-disproportion: #deaa5c; --class-disproportion-tint: #33281a;
+  --class-hygiene: #ec8f7e; --class-hygiene-tint: #3a221d;
+  --shadow: inset 0 1px 0 rgb(255 255 255 / 4%), 0 1px 2px rgb(0 0 0 / 50%), 0 6px 18px rgb(0 0 0 / 30%);
+  --shadow-pop: inset 0 1px 0 rgb(255 255 255 / 6%), 0 18px 44px rgb(0 0 0 / 65%);
+  --overlay: rgb(0 0 0 / 62%);
+}
+.k-disproportion { --k: var(--class-disproportion); --ks: var(--class-disproportion-tint); }
+.k-hygiene { --k: var(--class-hygiene); --ks: var(--class-hygiene-tint); }
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--text); font: 15px/1.5 var(--font-sans); }
+h1, h2, h3, h4, h5, p, ul { margin: 0; }
+ul { padding: 0; list-style: none; }
+button { font: inherit; color: inherit; }
+
+/* The sheet around the artboards */
+.sheet { max-width: 1360px; margin: 0 auto; padding: 24px 16px 64px; }
+.sheet__head { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; }
+.sheet__head h1 { font-size: 24px; }
+.sheet__head p { color: var(--text-muted); max-width: 72ch; margin-top: 4px; }
+.theme { display: inline-flex; background: var(--surface-sunken); border-radius: 999px; padding: 3px; }
+.theme button { border: 0; background: none; padding: 6px 14px; border-radius: 999px; cursor: pointer; }
+.theme button[aria-pressed='true'] { background: var(--surface); box-shadow: var(--shadow); font-weight: 600; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; background: var(--surface); border-radius: var(--radius-card); box-shadow: var(--shadow); padding: 12px 16px; margin-bottom: 28px; font-size: 13px; color: var(--text-muted); }
+.legend strong { color: var(--text); }
+.variant { margin-bottom: 44px; }
+.variant > h2 { font-size: 20px; }
+.variant > .why { color: var(--text-muted); max-width: 90ch; margin: 4px 0 12px; }
+.variant > .why b { color: var(--text); }
+.board-label { font: 600 12px var(--font-mono); color: var(--text-faint); text-transform: uppercase; letter-spacing: .06em; margin: 14px 0 6px; }
+.scroll { overflow-x: auto; padding-bottom: 6px; }
+
+/* The workspace frame (layout A of #198): context · centre · aside */
+.frame { width: 1280px; display: grid; grid-template-columns: 250px 1fr 290px; gap: 12px; padding: 12px; background: var(--page); border: 1px solid var(--border); border-radius: var(--radius-panel); }
+.panel { background: var(--surface); border-radius: var(--radius-card); box-shadow: var(--shadow); padding: 14px 16px; }
+.col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.eyebrow { font: 600 11px var(--font-sans); letter-spacing: .06em; text-transform: uppercase; color: var(--text-faint); }
+.ctx h3 { font-size: 16px; margin: 4px 0 6px; }
+.ctx p { font-size: 13px; color: var(--text-muted); }
+.ctx .brief { background: var(--accent-soft); border-radius: var(--radius); padding: 8px 10px; margin-top: 10px; font-size: 13px; color: var(--text); }
+.ctx a { color: var(--accent); font-size: 13px; display: block; margin-top: 4px; }
+.steps { display: flex; gap: 6px; font-size: 12px; }
+.steps span { padding: 3px 10px; border-radius: 999px; background: var(--surface-sunken); color: var(--text-muted); }
+.steps span.on { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+
+.score-bar { display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.score { font: 600 26px var(--font-mono); }
+.score small { font-size: 15px; color: var(--text-muted); }
+.composition { font-size: 13px; color: var(--text-muted); }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.button { border: 1px solid var(--border-strong); background: var(--surface); border-radius: var(--radius); padding: 7px 14px; font-weight: 500; font-size: 14px; white-space: nowrap; }
+.button--primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.button--small { padding: 4px 10px; font-size: 13px; }
+
+.pane-tabs { display: inline-flex; background: var(--surface-sunken); border-radius: var(--radius); padding: 3px; gap: 2px; font-size: 13px; }
+.pane-tabs span { padding: 4px 12px; border-radius: 8px; color: var(--text-muted); }
+.pane-tabs span.on { background: var(--surface); color: var(--text); font-weight: 600; box-shadow: var(--shadow); }
+.centre-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
+.centre-head h3 { font-size: 15px; }
+
+/* Outcome marks: a mark, a word and a colour; never the colour alone */
+.out { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; padding: 2px 9px 2px 7px; border-radius: 999px; white-space: nowrap; }
+.out::before { font-family: var(--font-mono); font-weight: 700; }
+.out--found { background: var(--good-surface); color: var(--good); }
+.out--found::before { content: '✓'; }
+.out--missed { background: var(--warn-surface); color: var(--warn); }
+.out--missed::before { content: '✗'; }
+.out--extra { background: var(--danger-surface); color: var(--danger); }
+.out--extra::before { content: '+'; }
+
+/* Treatment chips */
+.leaves { display: flex; flex-wrap: wrap; gap: 5px; }
+.leaf { display: inline-flex; gap: 5px; align-items: baseline; font-size: 12px; line-height: 1.3; padding: 3px 8px; border-radius: 999px; border: 1px solid transparent; }
+.leaf::before { font: 700 11px var(--font-mono); }
+.leaf b { font-weight: 600; }
+.leaf--right { background: var(--good-surface); color: var(--good); }
+.leaf--right::before { content: '✓'; }
+.leaf--missed { border: 1px dashed var(--warn); color: var(--warn); }
+.leaf--missed::before { content: '○'; }
+.leaf--extra { background: var(--danger-surface); color: var(--danger); }
+.leaf--extra::before { content: '+'; }
+.leaf--plain { background: var(--surface-sunken); color: var(--text-muted); }
+.leaf--plain::before { content: '·'; }
+.treat-head { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--text-faint); margin-bottom: 6px; }
+.treat-head b { color: var(--text-muted); font-weight: 600; }
+
+/* The catalogue's card (rc-pcard), with an outcome */
+.pcard { background: var(--ks); border-radius: var(--radius-card); padding: 6px; box-shadow: var(--shadow); display: flex; flex-direction: column; border: 2px solid transparent; position: relative; }
+.pcard__band { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 6px 8px; font-size: 12px; color: var(--k); font-weight: 600; }
+.pcard__seal { width: 14px; height: 14px; border-radius: 50%; background: var(--k); display: inline-block; vertical-align: -2px; margin-right: 6px; }
+.pcard__face { background: var(--surface); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.pcard__name { font-size: 16px; font-weight: 600; line-height: 1.3; }
+.pcard__rule { width: 36px; height: 3px; background: var(--k); border-radius: 2px; }
+.pcard__summary { font-size: 13px; color: var(--text-muted); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.pcard__treat { border-top: 1px solid var(--border); padding-top: 9px; margin-top: auto; }
+.pcard__foot { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-faint); }
+.pcard__foot a { color: var(--accent); font-weight: 600; font-size: 13px; }
+
+/* Variant A: the outcome is the card's border and a ribbon across its corner */
+.va .pcard--found { border-color: var(--good); }
+.va .pcard--missed { border: 2px dashed var(--warn); }
+.va .pcard--extra { border-color: var(--danger); }
+.va .pcard--missed .pcard__face { opacity: .92; }
+.ribbon { position: absolute; top: -9px; right: 14px; box-shadow: var(--shadow); }
+.grid-a { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+.group-label { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+.group-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* The aside: tally + lesson */
+.tally-row { display: flex; justify-content: space-between; align-items: center; background: var(--surface-inset); border-radius: 8px; padding: 6px 10px; font-size: 13px; margin-top: 6px; }
+.tally-row b { font-family: var(--font-mono); }
+.lesson p { font-size: 13px; color: var(--text-muted); margin-top: 6px; }
+.jump { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.jump li { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; padding: 6px 8px; border-radius: 8px; background: var(--surface-inset); }
+
+/* Opened card inside the centre (as the dock's opened card) */
+.centre-dim { position: relative; }
+.centre-dim::after { content: ''; position: absolute; inset: 0; background: var(--overlay); border-radius: var(--radius-card); }
+.opened { position: absolute; z-index: 2; inset: 28px 34px; overflow: auto; }
+.opened .pcard__face { gap: 12px; }
+.opened .pcard__summary { -webkit-line-clamp: unset; }
+.compare { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.compare > div { background: var(--surface-inset); border-radius: var(--radius); padding: 10px 12px; }
+.compare h5 { font-size: 12px; color: var(--text-faint); font-weight: 600; margin-bottom: 8px; }
+.note { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 8px 12px; border-radius: 0 var(--radius) var(--radius) 0; font-size: 13px; }
+.sections { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 18px; font-size: 13px; color: var(--text-muted); }
+.sections h5 { color: var(--text); font-size: 13px; }
+.close { position: absolute; top: 10px; right: 12px; border: 0; background: var(--surface); border-radius: 50%; width: 28px; height: 28px; box-shadow: var(--shadow); }
+.walk { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--text-muted); }
+
+/* Variant B: three lanes */
+.lanes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.lane { background: var(--surface-inset); border-radius: var(--radius-card); padding: 10px; display: flex; flex-direction: column; gap: 10px; border-top: 4px solid; }
+.lane--found { border-color: var(--good); }
+.lane--missed { border-color: var(--warn); }
+.lane--extra { border-color: var(--danger); }
+.lane__head { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 600; }
+.lane__head b { font-family: var(--font-mono); }
+.lane__empty { font-size: 13px; color: var(--text-faint); text-align: center; padding: 18px 0; border: 1px dashed var(--border-strong); border-radius: var(--radius); }
+.vb .pcard__name { font-size: 15px; }
+.vb .pcard__summary { -webkit-line-clamp: 2; }
+.vb .leaf { font-size: 11.5px; }
+.pips { display: inline-flex; gap: 3px; }
+.pip { width: 9px; height: 9px; border-radius: 50%; }
+.pip--right { background: var(--good); }
+.pip--missed { box-shadow: inset 0 0 0 1.5px var(--warn); }
+.pip--extra { background: var(--danger); border-radius: 2px; }
+
+/* Variant C: ledger rows */
+.rows { display: flex; flex-direction: column; gap: 12px; }
+.row { display: grid; grid-template-columns: 250px 1fr; gap: 0; background: var(--surface); border-radius: var(--radius-card); box-shadow: var(--shadow); overflow: hidden; border-left: 6px solid; }
+.row--found { border-left-color: var(--good); }
+.row--missed { border-left-color: var(--warn); }
+.row--extra { border-left-color: var(--danger); }
+.row__card { background: var(--ks); padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+.row__card .cls { font-size: 12px; font-weight: 600; color: var(--k); }
+.row__card .pcard__name { font-size: 15px; }
+.row__card .pcard__summary { -webkit-line-clamp: 2; font-size: 12.5px; }
+.row__card .out { align-self: flex-start; }
+.row__body { padding: 10px 14px; display: grid; grid-template-columns: 1fr 1fr 70px; gap: 12px; align-items: start; }
+.row__body h5 { font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
+.row__body .pts { font: 600 13px var(--font-mono); text-align: right; color: var(--text-muted); }
+.row__body .more { grid-column: 1 / -1; font-size: 13px; color: var(--accent); font-weight: 600; }
+.vc .leaves { flex-direction: column; align-items: flex-start; }
+
+/* Phone */
+.phone { width: 375px; background: var(--page); border: 1px solid var(--border); border-radius: 28px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.phone .tabs { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--surface-sunken); border-radius: var(--radius); padding: 3px; font-size: 13px; text-align: center; }
+.phone .tabs span { padding: 5px 0; border-radius: 8px; color: var(--text-muted); }
+.phone .tabs span.on { background: var(--surface); color: var(--text); font-weight: 600; box-shadow: var(--shadow); }
+.phone .score { font-size: 22px; }
+.phone .pcard__name { font-size: 15px; }
+.boards-row { display: flex; gap: 24px; align-items: flex-start; }
+.notes { font-size: 13px; color: var(--text-muted); max-width: 46ch; }
+.notes li { margin-bottom: 6px; padding-left: 14px; position: relative; }
+.notes li::before { content: '–'; position: absolute; left: 0; }
+.rec { display: inline-block; font-size: 12px; font-weight: 600; background: var(--accent); color: var(--accent-ink); border-radius: 999px; padding: 2px 10px; margin-left: 8px; vertical-align: 3px; }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <header class="sheet__head">
+    <div>
+      <h1>Разбор: карточки проблем в центре — варианты для #242</h1>
+      <p>Разбор после «Показать ответ» в рамке рабочего места (раскладка A из #198). Задача — настоящая
+        «Выгрузка заказов маркетплейса»; выборы ученика и баллы придуманы. Найдено 2 из 3, одна карточка
+        пропущена, один лишний выбор. Цвета — только токены из DESIGN.md.</p>
+    </div>
+    <div class="theme" role="group" aria-label="Тема">
+      <button type="button" data-set="light" aria-pressed="true">Светлая</button>
+      <button type="button" data-set="dark" aria-pressed="false">Тёмная</button>
+    </div>
+  </header>
+
+  <div class="legend">
+    <span><strong>Карточка:</strong></span>
+    <span class="out out--found">Найдено</span>
+    <span class="out out--missed">Пропущено</span>
+    <span class="out out--extra">Нет в ответе</span>
+    <span><strong>Лечение на лице карточки:</strong></span>
+    <span class="leaf leaf--right">выбрано и подходит</span>
+    <span class="leaf leaf--missed">не выбрано, а подходило</span>
+    <span class="leaf leaf--extra">выбрано, а в ответе нет</span>
+    <span class="leaf leaf--plain">лечение у лишней карточки</span>
+  </div>
+
+  <!-- ===================== VARIANT A ===================== -->
+  <section class="variant va">
+    <h2>A — Сетка карточек каталога <span class="rec">рекомендую</span></h2>
+    <p class="why">Центр — карточки задачи, как в каталоге и в доке: по две в ряд, сначала найденные, затем
+      пропущенные, затем лишние. <b>Итог</b> — рамка карточки (сплошная зелёная, пунктир янтарный, сплошная
+      красная) и <b>лента</b> на углу со знаком и словом. <b>Лечение</b> — чипы на лице карточки под
+      сводкой: ✓ подходит, ○ не выбрано, + лишнее. «Подробнее» раскрывает карточку внутри центра.
+      Код — во второй вкладке центра. Справа — счёт, вывод и быстрые переходы к карточкам.</p>
+
+    <p class="board-label">A1 · 1280 · разбор</p>
+    <div class="scroll"><div class="frame">
+      <div class="col">
+        <div class="panel ctx">
+          <div class="steps"><span>Диагноз</span><span>Лечение</span><span class="on">Разбор</span></div>
+          <h3>Выгрузка заказов маркетплейса</h3>
+          <p>Три миллиона заказов, двести менеджеров; контейнеры под нагрузкой, каждая новая зависимость
+            согласуется.</p>
+          <p class="brief">«Сделай на Flask выгрузку заказов в CSV: фильтр по статусу и сортировка по
+            выбранному полю.»</p>
+        </div>
+        <div class="panel ctx">
+          <p class="eyebrow">Тот же код в другом контексте</p>
+          <a href="#">Отчёт по заказам маленького магазина →</a>
+        </div>
+      </div>
+
+      <div class="col">
+        <div class="panel score-bar">
+          <div>
+            <p class="eyebrow">Разбор</p>
+            <p class="score">5 <small>из 9 баллов</small></p>
+            <p class="composition">Найдено 2 из 3 · лишних выборов: 1 · лечение совпало: 2</p>
+          </div>
+          <div class="actions"><span class="button button--primary">Попробовать снова</span><span class="button">Следующая задача →</span></div>
+        </div>
+        <div class="panel">
+          <div class="centre-head">
+            <h3>Карточки этой задачи</h3>
+            <div class="pane-tabs"><span class="on">Карточки · 4</span><span>Код · report.py</span></div>
+          </div>
+          <div class="grid-a">
+            <p class="group-label">Было в задаче · 3</p>
+            <article class="pcard pcard--found k-hygiene">
+              <span class="out out--found ribbon">Найдено</span>
+              <div class="pcard__band"><span><i class="pcard__seal"></i>Гигиена и безопасность</span></div>
+              <div class="pcard__face">
+                <h4 class="pcard__name">Запрос, склеенный из строк</h4>
+                <i class="pcard__rule"></i>
+                <p class="pcard__summary">SQL-запрос собирается склейкой строк или f-строкой со значениями от
+                  пользователя, а не через параметры, — это SQL-инъекция.</p>
+                <div class="pcard__treat">
+                  <p class="treat-head"><span>Лечение</span><b>подходит 2 · лишнее 1</b></p>
+                  <ul class="leaves">
+                    <li class="leaf leaf--right"><b>Руками:</b> проверка входа и прав</li>
+                    <li class="leaf leaf--right"><b>Автопроверка:</b> линтер</li>
+                    <li class="leaf leaf--extra"><b>Руками:</b> обработать ошибки</li>
+                    <li class="leaf leaf--missed"><b>Правило:</b> обязательные механизмы</li>
+                  </ul>
+                </div>
+                <p class="pcard__foot"><span>3 балла</span><a href="#a2">Подробнее</a></p>
+              </div>
+            </article>
+            <article class="pcard pcard--found k-disproportion">
+              <span class="out out--found ribbon">Найдено</span>
+              <div class="pcard__band"><span><i class="pcard__seal"></i>Несоразмерность</span></div>
+              <div class="pcard__face">
+                <h4 class="pcard__name">Тяжёлая зависимость ради мелочи</h4>
+                <i class="pcard__rule"></i>
+                <p class="pcard__summary">Большая библиотека или фреймворк подключены ради одной простой
+                  операции: pandas, чтобы сложить столбец, веб-фреймворк ради одной функции.</p>
+                <div class="pcard__treat">
+                  <p class="treat-head"><span>Лечение</span><b>подходит 1</b></p>
+                  <ul class="leaves">
+                    <li class="leaf leaf--right"><b>Руками:</b> удалить лишнее</li>
+                    <li class="leaf leaf--missed"><b>Автопроверка:</b> зависимости</li>
+                    <li class="leaf leaf--missed"><b>Правило:</b> запрещённые API</li>
+                  </ul>
+                </div>
+                <p class="pcard__foot"><span>1 балл</span><a href="#">Подробнее</a></p>
+              </div>
+            </article>
+            <article class="pcard pcard--missed k-disproportion">
+              <span class="out out--missed ribbon">Пропущено</span>
+              <div class="pcard__band"><span><i class="pcard__seal"></i>Несоразмерность</span></div>
+              <div class="pcard__face">
+                <h4 class="pcard__name">Всё в память</h4>
+                <i class="pcard__rule"></i>
+                <p class="pcard__summary">Всю таблицу, файл или ответ API читают целиком, без пагинации,
+                  лимита и потоковой обработки.</p>
+                <div class="pcard__treat">
+                  <p class="treat-head"><span>Лечение автора</span><b>не выбрано</b></p>
+                  <ul class="leaves">
+                    <li class="leaf leaf--missed"><b>Постановка:</b> масштаб</li>
+                  </ul>
+                </div>
+                <p class="pcard__foot"><span>0 из 2 баллов</span><a href="#">Подробнее</a></p>
+              </div>
+            </article>
+            <p class="group-label">Лишний выбор · 1</p>
+            <article class="pcard pcard--extra k-hygiene">
+              <span class="out out--extra ribbon">Нет в ответе</span>
+              <div class="pcard__band"><span><i class="pcard__seal"></i>Гигиена и безопасность</span></div>
+              <div class="pcard__face">
+                <h4 class="pcard__name">Проглоченное исключение</h4>
+                <i class="pcard__rule"></i>
+                <p class="pcard__summary">Ошибку перехватывают и ничего с ней не делают: пустой except,
+                  широкий except Exception с одним print.</p>
+                <div class="pcard__treat">
+                  <p class="treat-head"><span>Твоё лечение</span><b>в ответе карточки нет</b></p>
+                  <ul class="leaves">
+                    <li class="leaf leaf--plain"><b>Руками:</b> обработать ошибки</li>
+                  </ul>
+                </div>
+                <p class="pcard__foot"><span>−1 балл</span><a href="#">Подробнее</a></p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </div>
+
+      <div class="col">
+        <div class="panel">
+          <p class="eyebrow">Карточки</p>
+          <ul class="jump">
+            <li>Запрос, склеенный из строк <span class="out out--found">Найдено</span></li>
+            <li>Тяжёлая зависимость <span class="out out--found">Найдено</span></li>
+            <li>Всё в память <span class="out out--missed">Пропущено</span></li>
+            <li>Проглоченное исключение <span class="out out--extra">Нет в ответе</span></li>
+          </ul>
+        </div>
+        <div class="panel lesson">
+          <p class="eyebrow">Вывод</p>
+          <p>Контекст — двести человек и миллионы строк — делает инъекцию и загрузку всего в память
+            главными; агенту не сказали ни того, ни другого.</p>
+        </div>
+      </div>
+    </div></div>
+
+    <p class="board-label" id="a2">A2 · 1280 · карточка открыта внутри центра</p>
+    <div class="scroll"><div class="frame">
+      <div class="col">
+        <div class="panel ctx">
+          <div class="steps"><span>Диагноз</span><span>Лечение</span><span class="on">Разбор</span></div>
+          <h3>Выгрузка заказов маркетплейса</h3>
+          <p>Три миллиона заказов, двести менеджеров.</p>
+        </div>
+      </div>
+      <div class="col centre-dim" style="min-height: 640px">
+        <div class="panel score-bar">
+          <div><p class="eyebrow">Разбор</p><p class="score">5 <small>из 9 баллов</small></p></div>
+          <div class="actions"><span class="button button--primary">Попробовать снова</span><span class="button">Следующая задача →</span></div>
+        </div>
+        <div class="panel" style="flex:1"></div>
+        <article class="pcard pcard--found k-hygiene opened" role="dialog" aria-label="Запрос, склеенный из строк">
+          <button class="close" type="button" aria-label="Закрыть">×</button>
+          <div class="pcard__band"><span><i class="pcard__seal"></i>Гигиена и безопасность · #sql-injection</span><span class="out out--found" style="margin-right:36px">Найдено · 3 балла</span></div>
+          <div class="pcard__face">
+            <h4 class="pcard__name" style="font-size:20px">Запрос, склеенный из строк</h4>
+            <i class="pcard__rule"></i>
+            <p class="pcard__summary">SQL-запрос собирается склейкой строк или f-строкой со значениями от пользователя, а не
+              через параметры, — это SQL-инъекция. Команды и код, собранные из чужих данных, — это «Выполнение
+              чужих данных».</p>
+            <div class="compare">
+              <div><h5>Твоё лечение</h5><ul class="leaves">
+                <li class="leaf leaf--right"><b>Руками:</b> добавить проверку входных данных и прав</li>
+                <li class="leaf leaf--right"><b>Автопроверка:</b> линтер или статический анализатор</li>
+                <li class="leaf leaf--extra"><b>Руками:</b> обработать ошибки явно</li></ul></div>
+              <div><h5>Лечение автора — подходит любое</h5><ul class="leaves">
+                <li class="leaf leaf--right"><b>Руками:</b> добавить проверку входных данных и прав</li>
+                <li class="leaf leaf--right"><b>Автопроверка:</b> линтер или статический анализатор</li>
+                <li class="leaf leaf--missed"><b>Правило:</b> обязательные механизмы — ошибки, логи, конфигурация, секреты</li></ul></div>
+            </div>
+            <div class="note"><p class="eyebrow">Комментарий автора</p>Двести человек с доступом к выгрузке — двести
+              возможностей прочитать через сортировку то, что для выгрузки не предназначено.</div>
+            <div class="sections">
+              <div><h5>Признаки</h5>f-строка или + в тексте запроса; имя поля сортировки из параметров запроса…</div>
+              <div><h5>Почему так делает ИИ</h5>Склейка короче и работает на примере из промпта…</div>
+              <div><h5>Цена</h5>Чтение и изменение чужих данных…</div>
+              <div><h5>Как обнаружить и лечить</h5>Параметры запроса; белый список полей сортировки…</div>
+            </div>
+            <p class="walk"><span>‹ 1 из 4 ›</span><span>Esc — к карточкам</span></p>
+          </div>
+        </article>
+      </div>
+      <div class="col">
+        <div class="panel lesson"><p class="eyebrow">Вывод</p><p>Контекст делает инъекцию и загрузку всего в память главными.</p></div>
+      </div>
+    </div></div>
+
+    <p class="board-label">A3 · 375 · телефон</p>
+    <div class="boards-row">
+      <div class="phone">
+        <div class="tabs"><span>Контекст</span><span class="on">Разбор</span><span>Код</span></div>
+        <div class="panel score-bar">
+          <div><p class="score">5 <small>из 9</small></p><p class="composition">Найдено 2 из 3 · лишних: 1 · лечение: 2</p></div>
+          <div class="actions"><span class="button button--primary">Попробовать снова</span><span class="button">Следующая задача →</span></div>
+        </div>
+        <article class="pcard pcard--found k-hygiene">
+          <span class="out out--found ribbon">Найдено</span>
+          <div class="pcard__band"><span><i class="pcard__seal"></i>Гигиена и безопасность</span></div>
+          <div class="pcard__face">
+            <h4 class="pcard__name">Запрос, склеенный из строк</h4>
+            <i class="pcard__rule"></i>
+            <div class="pcard__treat">
+              <p class="treat-head"><span>Лечение</span><b>подходит 2 · лишнее 1</b></p>
+              <ul class="leaves">
+                <li class="leaf leaf--right"><b>Руками:</b> проверка входа и прав</li>
+                <li class="leaf leaf--right"><b>Автопроверка:</b> линтер</li>
+                <li class="leaf leaf--extra"><b>Руками:</b> обработать ошибки</li>
+                <li class="leaf leaf--missed"><b>Правило:</b> обязательные механизмы</li>
+              </ul>
+            </div>
+            <p class="pcard__foot"><span>3 балла</span><a href="#">Подробнее</a></p>
+          </div>
+        </article>
+        <article class="pcard pcard--missed k-disproportion">
+          <span class="out out--missed ribbon">Пропущено</span>
+          <div class="pcard__band"><span><i class="pcard__seal"></i>Несоразмерность</span></div>
+          <div class="pcard__face">
+            <h4 class="pcard__name">Всё в память</h4>
+            <i class="pcard__rule"></i>
+            <div class="pcard__treat">
+              <p class="treat-head"><span>Лечение автора</span><b>не выбрано</b></p>
+              <ul class="leaves"><li class="leaf leaf--missed"><b>Постановка:</b> масштаб</li></ul>
+            </div>
+            <p class="pcard__foot"><span>0 из 2 баллов</span><a href="#">Подробнее</a></p>
+          </div>
+        </article>
+      </div>
+      <ul class="notes">
+        <li>Карточки в одну колонну, сводка скрыта — имя, итог и лечение остаются.</li>
+        <li>Вкладка «Разбор» заменяет центр; код — своя вкладка, как сейчас.</li>
+        <li>«Подробнее» открывает карточку на весь экран телефона, ‹ n из N › внизу.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ===================== VARIANT B ===================== -->
+  <section class="variant vb">
+    <h2>B — Три полосы: найдено · пропущено · лишнее</h2>
+    <p class="why">Центр разделён на три колонки, как доска задач. <b>Итог</b> — сама полоса (заголовок со
+      знаком, словом и числом, цветная кромка сверху), карточка в ней компактная: сводка в две строки.
+      <b>Лечение</b> — строка пипов (как в счёте до ответа) и чипы. Счёт читается с одного взгляда, но
+      пустая полоса занимает треть центра, а длинные чипы переносятся в узкой колонке.</p>
+    <p class="board-label">B1 · 1280 · разбор</p>
+    <div class="scroll"><div class="frame">
+      <div class="col">
+        <div class="panel ctx">
+          <div class="steps"><span>Диагноз</span><span>Лечение</span><span class="on">Разбор</span></div>
+          <h3>Выгрузка заказов маркетплейса</h3>
+          <p>Три миллиона заказов, двести менеджеров.</p>
+        </div>
+      </div>
+      <div class="col">
+        <div class="panel score-bar">
+          <div><p class="eyebrow">Разбор</p><p class="score">5 <small>из 9 баллов</small></p>
+            <p class="composition">Найдено 2 из 3 · лишних выборов: 1 · лечение совпало: 2</p></div>
+          <div class="actions"><span class="button button--primary">Попробовать снова</span><span class="button">Следующая задача →</span></div>
+        </div>
+        <div class="panel">
+          <div class="centre-head"><h3>Карточки этой задачи</h3><div class="pane-tabs"><span class="on">Карточки · 4</span><span>Код · report.py</span></div></div>
+          <div class="lanes">
+            <div class="lane lane--found">
+              <p class="lane__head"><span class="out out--found">Найдено</span><b>2</b></p>
+              <article class="pcard k-hygiene">
+                <div class="pcard__band"><span><i class="pcard__seal"></i>Гигиена</span></div>
+                <div class="pcard__face">
+                  <h4 class="pcard__name">Запрос, склеенный из строк</h4>
+                  <p class="pcard__summary">SQL-запрос собирается склейкой строк со значениями от пользователя.</p>
+                  <div class="pcard__treat">
+                    <p class="treat-head"><span class="pips"><i class="pip pip--right"></i><i class="pip pip--right"></i><i class="pip pip--missed"></i><i class="pip pip--extra"></i></span><b>подходит 2</b></p>
+                    <ul class="leaves">
+                      <li class="leaf leaf--right">проверка входа</li>
+                      <li class="leaf leaf--right">линтер</li>
+                      <li class="leaf leaf--missed">обязательные механизмы</li>
+                      <li class="leaf leaf--extra">обработать ошибки</li>
+                    </ul>
+                  </div>
+                </div>
+              </article>
+              <article class="pcard k-disproportion">
+                <div class="pcard__band"><span><i class="pcard__seal"></i>Несоразмерность</span></div>
+                <div class="pcard__face">
+                  <h4 class="pcard__name">Тяжёлая зависимость ради мелочи</h4>
+                  <p class="pcard__summary">Большая библиотека подключена ради одной простой операции.</p>
+                  <div class="pcard__treat">
+                    <p class="treat-head"><span class="pips"><i class="pip pip--right"></i><i class="pip pip--missed"></i><i class="pip pip--missed"></i></span><b>подходит 1</b></p>
+                    <ul class="leaves">
+                      <li class="leaf leaf--right">удалить лишнее</li>
+                      <li class="leaf leaf--missed">проверка зависимостей</li>
+                      <li class="leaf leaf--missed">запрещённые API</li>
+                    </ul>
+                  </div>
+                </div>
+              </article>
+            </div>
+            <div class="lane lane--missed">
+              <p class="lane__head"><span class="out out--missed">Пропущено</span><b>1</b></p>
+              <article class="pcard k-disproportion">
+                <div class="pcard__band"><span><i class="pcard__seal"></i>Несоразмерность</span></div>
+                <div class="pcard__face">
+                  <h4 class="pcard__name">Всё в память</h4>
+                  <p class="pcard__summary">Всю таблицу читают целиком, без пагинации и лимита.</p>
+                  <div class="pcard__treat">
+                    <p class="treat-head"><span>Лечение автора</span></p>
+                    <ul class="leaves"><li class="leaf leaf--missed">масштаб в постановке</li></ul>
+                  </div>
+                </div>
+              </article>
+            </div>
+            <div class="lane lane--extra">
+              <p class="lane__head"><span class="out out--extra">Нет в ответе</span><b>1</b></p>
+              <article class="pcard k-hygiene">
+                <div class="pcard__band"><span><i class="pcard__seal"></i>Гигиена</span></div>
+                <div class="pcard__face">
+                  <h4 class="pcard__name">Проглоченное исключение</h4>
+                  <p class="pcard__summary">Ошибку перехватывают и ничего с ней не делают.</p>
+                  <div class="pcard__treat">
+                    <p class="treat-head"><span>Твоё лечение</span></p>
+                    <ul class="leaves"><li class="leaf leaf--plain">обработать ошибки</li></ul>
+                  </div>
+                  <span class="button button--small">По-моему, это здесь есть</span>
+                </div>
+              </article>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="panel lesson"><p class="eyebrow">Вывод</p><p>Контекст — двести человек и миллионы строк — делает инъекцию и загрузку всего в память главными.</p></div>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- ===================== VARIANT C ===================== -->
+  <section class="variant vc">
+    <h2>C — Ряды: карточка слева, лечение рядом</h2>
+    <p class="why">Каждая карточка — широкий ряд: слева её лицо в цвете класса со знаком итога, справа две
+      колонки — <b>твоё лечение</b> и <b>лечение автора</b>, совпавшие ветки на одной высоте, и баллы. <b>Итог</b>
+      — кромка ряда и знак со словом. Сравнение видно без раскрытия, поэтому раскрытие нужно только
+      для комментария автора и полной карточки. Меньше всего похоже на карточки каталога.</p>
+    <p class="board-label">C1 · 1280 · разбор</p>
+    <div class="scroll"><div class="frame">
+      <div class="col">
+        <div class="panel ctx">
+          <div class="steps"><span>Диагноз</span><span>Лечение</span><span class="on">Разбор</span></div>
+          <h3>Выгрузка заказов маркетплейса</h3>
+          <p>Три миллиона заказов, двести менеджеров.</p>
+        </div>
+      </div>
+      <div class="col">
+        <div class="panel score-bar">
+          <div><p class="eyebrow">Разбор</p><p class="score">5 <small>из 9 баллов</small></p>
+            <p class="composition">Найдено 2 из 3 · лишних выборов: 1 · лечение совпало: 2</p></div>
+          <div class="actions"><span class="button button--primary">Попробовать снова</span><span class="button">Следующая задача →</span></div>
+        </div>
+        <div class="rows">
+          <article class="row row--found k-hygiene">
+            <div class="row__card"><span class="cls">Гигиена и безопасность</span><h4 class="pcard__name">Запрос, склеенный из строк</h4>
+              <p class="pcard__summary">SQL-запрос собирается склейкой строк со значениями от пользователя.</p><span class="out out--found">Найдено</span></div>
+            <div class="row__body">
+              <div><h5>Твоё лечение</h5><ul class="leaves">
+                <li class="leaf leaf--right"><b>Руками:</b> проверка входа и прав</li>
+                <li class="leaf leaf--right"><b>Автопроверка:</b> линтер</li>
+                <li class="leaf leaf--extra"><b>Руками:</b> обработать ошибки</li></ul></div>
+              <div><h5>Лечение автора</h5><ul class="leaves">
+                <li class="leaf leaf--right"><b>Руками:</b> проверка входа и прав</li>
+                <li class="leaf leaf--right"><b>Автопроверка:</b> линтер</li>
+                <li class="leaf leaf--missed"><b>Правило:</b> обязательные механизмы</li></ul></div>
+              <p class="pts">3 балла</p>
+              <a class="more" href="#">Комментарий автора и карточка ▾</a>
+            </div>
+          </article>
+          <article class="row row--found k-disproportion">
+            <div class="row__card"><span class="cls">Несоразмерность</span><h4 class="pcard__name">Тяжёлая зависимость ради мелочи</h4>
+              <p class="pcard__summary">Большая библиотека подключена ради одной простой операции.</p><span class="out out--found">Найдено</span></div>
+            <div class="row__body">
+              <div><h5>Твоё лечение</h5><ul class="leaves"><li class="leaf leaf--right"><b>Руками:</b> удалить лишнее</li></ul></div>
+              <div><h5>Лечение автора</h5><ul class="leaves">
+                <li class="leaf leaf--right"><b>Руками:</b> удалить лишнее</li>
+                <li class="leaf leaf--missed"><b>Автопроверка:</b> зависимости</li>
+                <li class="leaf leaf--missed"><b>Правило:</b> запрещённые API</li></ul></div>
+              <p class="pts">1 балл</p>
+            </div>
+          </article>
+          <article class="row row--missed k-disproportion">
+            <div class="row__card"><span class="cls">Несоразмерность</span><h4 class="pcard__name">Всё в память</h4>
+              <p class="pcard__summary">Всю таблицу читают целиком, без пагинации и лимита.</p><span class="out out--missed">Пропущено</span></div>
+            <div class="row__body">
+              <div><h5>Твоё лечение</h5><p class="composition">карточка не выбрана</p></div>
+              <div><h5>Лечение автора</h5><ul class="leaves"><li class="leaf leaf--missed"><b>Постановка:</b> масштаб</li></ul></div>
+              <p class="pts">0 из 2</p>
+            </div>
+          </article>
+          <article class="row row--extra k-hygiene">
+            <div class="row__card"><span class="cls">Гигиена и безопасность</span><h4 class="pcard__name">Проглоченное исключение</h4>
+              <p class="pcard__summary">Ошибку перехватывают и ничего с ней не делают.</p><span class="out out--extra">Нет в ответе</span></div>
+            <div class="row__body">
+              <div><h5>Твоё лечение</h5><ul class="leaves"><li class="leaf leaf--plain"><b>Руками:</b> обработать ошибки</li></ul></div>
+              <div><h5>Лечение автора</h5><span class="button button--small">По-моему, это здесь есть</span></div>
+              <p class="pts">−1</p>
+            </div>
+          </article>
+        </div>
+      </div>
+      <div class="col">
+        <div class="panel lesson"><p class="eyebrow">Вывод</p><p>Контекст — двести человек и миллионы строк — делает инъекцию и загрузку всего в память главными.</p></div>
+      </div>
+    </div></div>
+  </section>
+</div>
+<script>
+  document.querySelectorAll('[data-set]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var dark = b.dataset.set === 'dark';
+      if (dark) document.documentElement.setAttribute('data-theme', 'dark');
+      else document.documentElement.removeAttribute('data-theme');
+      document.querySelectorAll('[data-set]').forEach(function (o) { o.setAttribute('aria-pressed', String(o === b)); });
+    });
+  });
+</script>
+</body>
+</html>
