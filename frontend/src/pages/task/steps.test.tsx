@@ -128,6 +128,50 @@ describe('step 1: what do you see', () => {
     expect(screen.getByRole('button', { name: ru.task.raiseDock })).toBeInTheDocument();
   });
 
+  it('hides the dock down to its bar with a filter on, and shows it again with the search, the filter and the cards as they were', () => {
+    diagnosis();
+    search('секрет');
+    const [chip] = within(screen.getByRole('group', { name: ru.task.classFilter })).getAllByRole('button');
+    if (chip === undefined) {
+      throw new Error('no class chip');
+    }
+    fireEvent.click(chip);
+    const results = screen.getByRole('region', { name: ru.task.step1 }).querySelector('.dock__results');
+    if (!(results instanceof HTMLElement)) {
+      throw new Error('no results');
+    }
+    results.scrollTop = 30;
+
+    const hide = screen.getByRole('button', { name: ru.task.hideDock });
+    expect(hide).toHaveAttribute('aria-expanded', 'true');
+    fireEvent.click(hide);
+    const dock = screen.getByRole('region', { name: ru.task.step1 });
+    expect(dock).toHaveClass('dock--collapsed');
+    expect(screen.getByLabelText(ru.task.search)).not.toBeVisible();
+    expect(results).not.toBeVisible();
+    expect(within(dock).getByText(/^секрет · /)).toBeVisible();
+    expect(screen.queryByRole('button', { name: ru.task.raiseDock })).not.toBeInTheDocument();
+
+    results.scrollTop = 0;
+    const show = screen.getByRole('button', { name: ru.task.showDock });
+    expect(show).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(show);
+    expect(dock).not.toHaveClass('dock--collapsed');
+    expect(screen.getByLabelText(ru.task.search)).toBeVisible();
+    expect(screen.getByLabelText(ru.task.search)).toHaveValue('секрет');
+    expect(chip).toHaveAttribute('aria-pressed', 'true');
+    expect(results.scrollTop).toBe(30);
+    expect(screen.getByRole('button', { name: ru.task.raiseDock })).toBeInTheDocument();
+  });
+
+  it('hides the dock with nothing typed as well', () => {
+    diagnosis();
+    fireEvent.click(screen.getByRole('button', { name: ru.task.hideDock }));
+    expect(screen.getByLabelText(ru.task.search)).not.toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: ru.task.showDock }));
+    expect(screen.getByLabelText(ru.task.search)).toBeVisible();
+  });
+
   it('raises the dock with the cards scrolled down, step by step, and lowers it when scrolled up from the top', () => {
     diagnosis();
     search('секрет');
@@ -197,6 +241,23 @@ describe('step 2: what do you do with it here', () => {
     fireEvent.click(within(screen.getByRole('group', { name: ru.task.branchFilter })).getByRole('button', { name: /Оставить/ }));
     expect(screen.getAllByRole('checkbox')).toHaveLength(1);
     expect(screen.getByText(ru.task.leafMatches.one.replace('{count}', '1'))).toBeInTheDocument();
+  });
+
+  it('hides the dock to read the code, keeping the search, the branch filter and the ticks', () => {
+    render(<TreatmentStep cards={cards} tree={tree} answer={[{ card: 'god-class', leaves: [] }]} onToggleLeaf={vi.fn()} action={check} />);
+    fireEvent.change(screen.getByLabelText(ru.task.leafSearch), { target: { value: 'оставить' } });
+    fireEvent.click(within(screen.getByRole('group', { name: ru.task.branchFilter })).getByRole('button', { name: /Оставить/ }));
+
+    fireEvent.click(screen.getByRole('button', { name: ru.task.hideDock }));
+    const dock = screen.getByRole('region', { name: ru.task.step2 });
+    expect(dock).toHaveClass('dock--collapsed');
+    expect(screen.getByLabelText(ru.task.leafSearch)).not.toBeVisible();
+    expect(within(dock).getAllByText('Класс-бог').some((each) => each.closest('.dock__bar') !== null)).toBe(true);
+
+    fireEvent.click(screen.getByRole('button', { name: ru.task.showDock }));
+    expect(screen.getByLabelText(ru.task.leafSearch)).toHaveValue('оставить');
+    expect(within(screen.getByRole('group', { name: ru.task.branchFilter })).getByRole('button', { name: /Оставить/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getAllByRole('checkbox')).toHaveLength(1);
   });
 
   it('goes back to diagnosis from the findings column', () => {

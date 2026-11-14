@@ -152,6 +152,45 @@ export function FilterChips({ label, options, selected, onToggle }: { label: str
   );
 }
 
+/**
+ * The bar on top of a dock (`dock.ts`): the grip that raises or lowers a dock with results, and the
+ * control that hides the dock down to this bar, so the code behind it can be read whole, and shows
+ * it again as it was. Hidden, the bar names the step and `summary` says what the dock holds.
+ */
+export function DockBar({
+  title,
+  summary,
+  collapsed,
+  onCollapse,
+  grip,
+}: {
+  title: string;
+  summary?: string | undefined;
+  collapsed: boolean;
+  onCollapse: () => void;
+  grip?: { raised: boolean; onToggle: () => void } | undefined;
+}) {
+  const t = useT();
+  const label = collapsed ? t('task.showDock') : t('task.hideDock');
+
+  return (
+    <div className="dock__bar">
+      {collapsed ? (
+        <p className="dock__summary">
+          <span className="dock__summary-title">{title}</span>
+          {summary !== undefined && summary.length > 0 && <span className="dock__summary-detail">{summary}</span>}
+        </p>
+      ) : (
+        grip !== undefined && <DockGrip raised={grip.raised} onToggle={grip.onToggle} />
+      )}
+      <button type="button" className="dock__collapse" aria-expanded={!collapsed} aria-label={label} title={label} onClick={onCollapse}>
+        <span aria-hidden="true">{collapsed ? t('task.showDockShort') : t('task.hideDockShort')}</span>
+        <Icon name="down" />
+      </button>
+    </div>
+  );
+}
+
 /** The grip on top of a dock that has results: raises or lowers it by a click (`dock.ts`). */
 export function DockGrip({ raised, onToggle }: { raised: boolean; onToggle: () => void }) {
   const t = useT();

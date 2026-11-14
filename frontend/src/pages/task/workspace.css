@@ -404,11 +404,99 @@
   box-shadow: var(--shadow-pop);
 }
 
+/*
+ * The bar on top of every dock: the grip in the middle when there are results, and on the right
+ * the control that hides the dock down to the bar so the code behind it can be read (#240).
+ */
+.dock__bar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  min-height: 26px;
+  padding: 0 8px 0 0;
+}
+
+.dock__bar::before {
+  /* As wide as the control, so the grip stays in the middle of the dock. */
+  content: '';
+  flex: none;
+  width: 5.5rem;
+}
+
+.dock--collapsed .dock__bar {
+  min-height: 40px;
+  padding-left: 16px;
+}
+
+.dock--collapsed .dock__bar::before {
+  display: none;
+}
+
+.dock [hidden] {
+  display: none;
+}
+
+.dock__summary {
+  display: flex;
+  flex: 1;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.dock__summary-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.dock__summary-detail {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  text-overflow: ellipsis;
+}
+
+.dock__collapse {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  width: 5.5rem;
+  height: 26px;
+  margin-left: auto;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.dock__collapse:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.dock__collapse .icon {
+  width: 14px;
+  height: 14px;
+}
+
+.dock--collapsed .dock__collapse .icon {
+  transform: rotate(180deg);
+}
+
 .dock__grip {
   display: grid;
-  flex: none;
+  flex: 1;
   place-items: center;
-  width: 100%;
+  min-width: 0;
   height: 18px;
   padding: 0;
   border: 0;
@@ -433,7 +521,7 @@
   flex: none;
   flex-direction: column;
   gap: 10px;
-  padding: 14px 16px;
+  padding: 0 16px 14px;
 }
 
 .dock--results .dock__controls {

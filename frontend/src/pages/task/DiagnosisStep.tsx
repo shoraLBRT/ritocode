@@ -5,7 +5,7 @@ import { Markdown } from '../../components/Markdown';
 import { useT } from '../../i18n';
 import type { Answer } from './answer';
 import { useRisingDock } from './dock';
-import { DockGrip, FilterChips, Highlighted, Icon } from './parts';
+import { DockBar, FilterChips, Highlighted, Icon } from './parts';
 import { rank, stems } from './search';
 import { classTint, toggled } from './tint';
 
@@ -45,13 +45,14 @@ export function DiagnosisStep({
   const [classFilter, setClassFilter] = useState<readonly string[]>([]);
   const [active, setActive] = useState(0);
   const [opened, setOpened] = useState<string | null>(null);
-  const { raised, toggle, attach, reset } = useRisingDock();
+  const { raised, toggle, attach, reset, collapsed, toggleCollapsed } = useRisingDock();
 
   const terms = stems(query);
   const searchable = (card: CandidateCard) => ({ name: card.name, summary: card.summary, keywords: card.keywords.join(' ') });
   const matching = terms.length > 0 ? rank(cards, terms, searchable) : cards;
   const inFilter = (card: CandidateCard) => classFilter.length === 0 || classFilter.includes(card.class);
   const shown = terms.length > 0 || classFilter.length > 0 ? matching.filter(inFilter) : null;
+  const count = shown === null ? '' : terms.length > 0 ? t('task.matches', { count: shown.length }) : t('task.cardCount', { count: shown.length });
   const current = Math.min(active, Math.max(0, (shown?.length ?? 0) - 1));
   const picked = (slug: string) => answer.some((pick) => pick.card === slug);
   const className = (id: string) => classes.find((each) => each.id === id)?.name ?? id;
@@ -143,17 +144,18 @@ export function DiagnosisStep({
       </aside>
 
       <section
-        className={`dock dock--cards${shown !== null ? ' dock--results' : ''}${shown !== null && raised ? ' dock--raised' : ''}`}
+        className={`dock dock--cards${shown !== null ? ' dock--results' : ''}${shown !== null && raised ? ' dock--raised' : ''}${collapsed ? ' dock--collapsed' : ''}`}
         aria-labelledby="dock-title"
         inert={openIndex >= 0}
       >
-        {shown !== null && (
-          <DockGrip
-            raised={raised}
-            onToggle={toggle}
-          />
-        )}
-        <div className="dock__controls">
+        <DockBar
+          title={t('task.step1')}
+          summary={[query.trim(), count].filter((part) => part.length > 0).join(' · ')}
+          collapsed={collapsed}
+          onCollapse={toggleCollapsed}
+          grip={shown !== null ? { raised, onToggle: toggle } : undefined}
+        />
+        <div className="dock__controls" hidden={collapsed}>
           <h2 id="dock-title" className="visually-hidden">
             {t('task.step1')}
           </h2>
@@ -208,14 +210,14 @@ export function DiagnosisStep({
             />
             {shown !== null && (
               <span className="dock__count" role="status">
-                {terms.length > 0 ? t('task.matches', { count: shown.length }) : t('task.cardCount', { count: shown.length })}
+                {count}
               </span>
             )}
           </div>
         </div>
 
         {shown !== null && (
-          <div ref={attach} className="dock__results">
+          <div ref={attach} className="dock__results" hidden={collapsed}>
             {shown.length === 0 ? (
               <p className="dock__empty">{t('task.noMatch')}</p>
             ) : (
