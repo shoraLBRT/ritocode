@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useMatch, useNavigate } from 'react-router';
+import { FeedbackWidget } from '../feedback';
 import { useT } from '../i18n';
 import { readSignInReturn, SignInLinks, SignInReturnContext, useSession, withoutSignInReturn } from '../session';
 import type { SignInError, SignInReturnState } from '../session';
@@ -108,6 +109,8 @@ export function AppLayout() {
         <span>{t('app.tagline')}</span>
         <Link to="/privacy">{t('app.privacy')}</Link>
       </footer>
+
+      <FeedbackWidget />
     </div>
   );
 }

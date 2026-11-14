@@ -8,6 +8,7 @@ import type {
   Attempt,
   AttemptStep,
   AttemptSummary,
+  FeedbackSent,
   Me,
   ModuleInfo,
   Page,
@@ -118,6 +119,16 @@ export function getAttempt(client: ApiClient, id: string, signal?: AbortSignal):
  */
 export function sendSignal(client: ApiClient, attempt: string, card: string, comment: string): Promise<Signal> {
   return client.request<Signal>('/signals', { method: 'POST', body: { attempt, card, comment } });
+}
+
+/** `POST /feedback` — a message from anyone, signed in or not, becomes an issue (SPEC §9.6). */
+export function sendFeedback(
+  client: ApiClient,
+  message: string,
+  page: string,
+  captchaToken: string | null,
+): Promise<FeedbackSent> {
+  return client.request<FeedbackSent>('/feedback', { method: 'POST', body: { message, page, captchaToken } });
 }
 
 /** `GET /admin/signals` — signals, open or resolved, newest first. Admins only; anyone else gets a 404. */

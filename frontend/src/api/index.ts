@@ -20,6 +20,7 @@ export {
   recordStep,
   revealAnswer,
   resolveSignal,
+  sendFeedback,
   sendSignal,
   signInUrl,
   signOut,

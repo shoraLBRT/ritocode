@@ -2373,3 +2373,107 @@ pre {
     transition: none;
   }
 }
+
+/* Feedback (docs/DESIGN.md › Feedback): a round button in the bottom-right corner of every page, and
+   above it a small window. Under the card overlay (50), over the task screen's phone sheet (20, 30). */
+.feedback {
+  position: fixed;
+  z-index: 40;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.feedback__trigger {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--surface-pop);
+  color: var(--accent);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+}
+
+.feedback__trigger:hover,
+.feedback__trigger[aria-expanded='true'] {
+  background: var(--accent-soft);
+}
+
+.feedback__window {
+  width: min(340px, calc(100vw - 32px));
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface-pop);
+  box-shadow: var(--shadow);
+}
+
+.feedback__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.feedback__heading {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.feedback__close {
+  padding: 0 6px;
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.feedback__text {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  resize: vertical;
+}
+
+.feedback__captcha {
+  margin-top: 8px;
+}
+
+.feedback__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.feedback__status {
+  margin: 0;
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.feedback__status--good {
+  color: var(--good);
+}
+
+/* On the task screen at phone width the sheet holds the bottom edge; the button sits above its handle. */
+@media (max-width: 64rem) {
+  .app--workspace .feedback {
+    bottom: 76px;
+  }
+}
