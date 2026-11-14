@@ -177,11 +177,25 @@ under each other rather than overflow the bar. The same code in another context,
 the signal wait for the reveal.
 
 **Once revealed**, the same frame with *Разбор* current: the score with its composition, *Попробовать снова* and
-*Следующая задача →* at the top of the centre (`.review__score-bar`); under it the chosen verdict in full — the learner's leaves
-against the author's (the shared ones green, the learner's wrong ones red), the author's note, the
-whole card, and for an extra pick the signal — or the code again. The verdicts — found, missed,
-extra — are listed on the right with the lesson; the same code in another task sits under the
-context on the left.
+*Следующая задача →* at the top of the centre (`.review__score-bar`); under it, **the task's cards
+in three lanes** ([#242](https://github.com/shoraLBRT/ritocode/issues/242), variant B, the
+maintainer's choice of 2026-11-14; `ReviewLanes`, `.review-lanes`): *Найдено*, *Пропущено* and
+*Нет в ответе*, each a column on the inset surface with a top edge in `--good`, `--warn` or
+`--danger` and a head with the mark, the word and the count — an empty lane says «Нет». Every card of
+the key and every extra pick is a small catalogue card (`.lane-card.k-{class}`: the class tint as
+its frame, the band with the class, the name, the summary clamped to two lines), and on its face its
+**treatment leaves** (`.face-leaf`), each a mark and a colour with its word for a screen reader:
+✓ chosen and in the key (`--good`), + chosen though the key does not list it (`--danger`), ○ in
+the key but not chosen — a dashed `--warn` outline, «не выбрано, а подходило», not a mistake, since
+any one of the author's leaves is enough — and · the learner's leaves of an extra pick, which the
+key says nothing about; then the points and *Подробнее*. A found card's head says how many leaves
+fit; a missed card shows the author's leaves; an extra one the learner's. *Подробнее* opens the
+card in full in the lanes' place — the learner's leaves against the author's (the shared ones
+green, the learner's wrong ones red), the author's note, the whole card, and for an extra pick the
+signal — with *← Все карточки* above it, which gives the focus back to the card's *Подробнее*.
+The pane's tabs switch between *Карточки · N* and the code; a clean task with nothing picked shows
+the code. On the right, the counts (`OutcomeTally`) and the lesson; the same code in another task
+sits under the context on the left. At 64 rem and narrower the lanes stack into one column.
 
 **The next task** ([#199](https://github.com/shoraLBRT/ritocode/issues/199), the maintainer's
 decision of 2026-11-12): *Следующая задача →* is a plain button right after *Попробовать снова*, in
@@ -318,6 +332,7 @@ above. What the site already had stays as it is.
 | Class filter | `.rc-catalogue__filter` › `button.rc-catalogue__chip.k-{class}[aria-pressed]` | one class or all, with counts |
 | Workspace dock | `.dock` (`--cards`, `--leaves`, `--results`, `--raised`, `--collapsed`) › `__bar` (`__grip`, `__summary`, `__collapse`), `__controls`, `__filters`, `__results`, `__cards`; `.workspace__aside`; `.workspace__sheet` | the task screen's step at the bottom of the code (above); `pages/task/workspace.css` |
 | Feedback | `.feedback` › `button.feedback__trigger[aria-expanded]`, `.feedback__window[role=dialog]` › `__head`, `__heading`, `__close`, `__text`, `__captcha`, `__foot`, `__status` (`--good`) | every page, bottom right; see Feedback below |
+| Review lanes | `.review-lanes` › `section.review-lane--found` / `--missed` / `--extra` › `__head`, `__count`, `__empty`; `article.lane-card.k-{class}` › `__band`, `__seal`, `__face`, `__name`, `__summary`, `__treat`, `__leaves`, `__foot`, `__open`; `.face-leaf--right` / `--extra` / `--unchosen` / `--plain` | the revealed review's centre (above); `pages/task/ReviewLanes.tsx`, `lanes.ts` |
 | Card in the dock | `article.rc-pcard.rc-pcard--dock.k-{class}` › `__foot`, `__open`, `label.rc-pcard__pick`; opened: `.dock-open` › `.rc-pcard--peek` | the catalogue's card made small; the opened one shows no signs or treatment (SPEC §3.2) |
 
 **Feedback** ([#243](https://github.com/shoraLBRT/ritocode/issues/243), [ADR 0019](adr/0019-feedback-as-github-issues.md)).

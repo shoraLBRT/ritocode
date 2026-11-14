@@ -122,10 +122,15 @@ async function openReview(attempt: object, taskBody?: object) {
   await screen.findByRole('heading', { level: 2, name: ru.review.title });
 }
 
-/** Chooses a line of the result in the sidebar and returns it in full, as shown beside it. */
+/** Opens a card of the result from its lane and returns it in full, as shown in the lanes' place. */
 function line(name: string): HTMLElement {
   fireEvent.click(screen.getByRole('button', { name: new RegExp(name) }));
   return screen.getByRole('article', { name });
+}
+
+/** The lane of an outcome in the centre of the revealed review. */
+function lane(word: string) {
+  return within(within(screen.getByRole('group', { name: ru.review.lanes })).getByRole('region', { name: new RegExp(word) }));
 }
 
 describe('the review', () => {
@@ -137,15 +142,48 @@ describe('the review', () => {
     expect(within(screen.getByRole('banner')).getByRole('button', { name: /Разбор/ })).toHaveAttribute('aria-current', 'step');
   });
 
-  it('opens on the first line, and shows a found card with the learner’s leaves beside the author’s, by a mark and a word', async () => {
+  it('opens on the cards in three lanes — found, missed, not in the answer — each with its count', async () => {
     await openReview(scored);
-    const found = within(screen.getByRole('article', { name: 'Секреты в репозитории' }));
+
+    expect(lane(ru.review.lane.found).getByRole('heading', { level: 3 })).toHaveTextContent(`${ru.review.foundMark} ${ru.review.lane.found}1`);
+    expect(lane(ru.review.lane.missed).getByRole('heading', { level: 3 })).toHaveTextContent(`${ru.review.missedMark} ${ru.review.lane.missed}1`);
+    expect(lane(ru.review.lane.extra).getByRole('heading', { level: 3 })).toHaveTextContent(`${ru.review.extraMark} ${ru.review.lane.extra}1`);
+    expect(lane(ru.review.lane.found).getByRole('article', { name: 'Секреты в репозитории' })).toBeInTheDocument();
+    expect(lane(ru.review.lane.missed).getByRole('article', { name: 'Деньги во float' })).toBeInTheDocument();
+    expect(lane(ru.review.lane.extra).getByRole('article', { name: 'Класс-бог' })).toBeInTheDocument();
+  });
+
+  it('marks the treatments on each card’s face: right, extra, and the author’s not chosen', async () => {
+    await openReview(scored);
+    const found = within(lane(ru.review.lane.found).getByRole('article', { name: 'Секреты в репозитории' }));
+    const missed = within(lane(ru.review.lane.missed).getByRole('article', { name: 'Деньги во float' }));
+    const extra = within(lane(ru.review.lane.extra).getByRole('article', { name: 'Класс-бог' }));
+
+    const leaves = found.getAllByRole('listitem');
+    expect(leaves).toHaveLength(2);
+    expect(leaves[0]).toHaveTextContent(`${ru.review.leaf.right}: исправить представление данных`);
+    expect(leaves[1]).toHaveTextContent(`${ru.review.leaf.extra}: в этом контексте это нормально`);
+    expect(found.getByText('43 балла')).toBeInTheDocument();
+    expect(missed.getByRole('listitem')).toHaveTextContent(`${ru.review.leaf.unchosen}: исправить представление данных`);
+    expect(extra.getByRole('listitem')).toHaveTextContent(`${ru.review.leaf.plain}:`);
+    expect(extra.getByText('-3 балла')).toBeInTheDocument();
+  });
+
+  it('opens a found card in full, with the learner’s leaves beside the author’s, and goes back to the lanes', async () => {
+    await openReview(scored);
+    const found = within(line('Секреты в репозитории'));
 
     expect(found.getByText(ru.review.found)).toBeInTheDocument();
     expect(found.getByText(ru.review.foundMark)).toBeInTheDocument();
-    expect(found.getByText('43 балла')).toBeInTheDocument();
     expect(found.getByText('в этом контексте это нормально')).toBeInTheDocument();
     expect(found.getAllByText('исправить представление данных')).toHaveLength(2);
+    expect(screen.queryByRole('group', { name: ru.review.lanes })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: ru.review.lane.back })).toHaveFocus();
+
+    fireEvent.click(screen.getByRole('button', { name: ru.review.lane.back }));
+
+    expect(screen.getByRole('group', { name: ru.review.lanes })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: new RegExp('Секреты в репозитории') })).toHaveFocus();
   });
 
   it('shows a missed card with the author’s leaves, the note and the full card', async () => {
@@ -169,7 +207,6 @@ describe('the review', () => {
     expect(extra.getByText('-3 балла')).toBeInTheDocument();
     expect(extra.queryByText(ru.review.authorLeaves)).not.toBeInTheDocument();
     expect(extra.getByText('Доступ у всех.')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: ru.review.extras })).toBeInTheDocument();
   });
 
   it('shows the code again on asking', async () => {
@@ -193,9 +230,9 @@ describe('the review', () => {
   it('says in words that a clean task with nothing picked was answered right', async () => {
     await openReview(clean);
 
-    expect(screen.getByText('0 из 0')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: ru.review.title })).getByText('0 из 0')).toBeInTheDocument();
     expect(screen.getByText(ru.review.cleanNothing)).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: ru.review.findings })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: ru.review.lanes })).not.toBeInTheDocument();
   });
 
   it('says a clean task had nothing to find when the learner picked something anyway', async () => {
