@@ -1,0 +1,14 @@
+# From habze (templates/): the PR title becomes the squash commit, so it must be a Conventional
+# Commit. Make the check "pr-title / check" required on the default branch.
+name: PR title
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  pr-title:
+    uses: shoraLBRT/habze/.github/workflows/pr-title.yml@v1

@@ -1,5 +1,14 @@
 <Project>
 
+  <!--
+    habze: the single source of the version. release-please updates <Version> in its Release PR
+    (xpath /Project/PropertyGroup/Version); never edit it by hand. The SDK derives AssemblyVersion
+    and FileVersion from it and appends +<commit sha> to InformationalVersion.
+  -->
+  <PropertyGroup>
+    <Version>0.0.0</Version>
+  </PropertyGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <LangVersion>latest</LangVersion>

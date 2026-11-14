@@ -1,0 +1,26 @@
+# From habze (templates/): release-please opens the Release PR (version + CHANGELOG); merging it
+# tags vX.Y.Z and publishes the GitHub Release. The checks on the Release PR are approved by the
+# reusable workflow itself (GitHub holds runs on bot-opened PRs for approval).
+name: Release
+
+on:
+  push:
+    branches: [main] # the repository's default branch (the adopt skill sets it)
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: write
+
+jobs:
+  release:
+    uses: shoraLBRT/habze/.github/workflows/release.yml@v1
+
+  # Example: build and publish only when a release was created.
+  # publish:
+  #   needs: release
+  #   if: needs.release.outputs.release_created == 'true'
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - run: echo "Publishing ${{ needs.release.outputs.tag_name }}"
