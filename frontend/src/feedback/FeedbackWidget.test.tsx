@@ -41,9 +41,9 @@ describe('FeedbackWidget', () => {
     expect(await screen.findByText(ru.feedback.sent)).toBeInTheDocument();
     expect(text).toHaveValue('');
     const [url, init] = fetchStub.mock.calls[0] ?? [];
-    expect(String(url)).toBe('http://api.test/api/v1/feedback');
+    expect(url).toBe('http://api.test/api/v1/feedback');
     expect(init?.method).toBe('POST');
-    expect(JSON.parse(String(init?.body))).toEqual({ message: 'Не видно кнопку', page: '/tasks/leaked-key', captchaToken: null });
+    expect(JSON.parse(init?.body as string)).toEqual({ message: 'Не видно кнопку', page: '/tasks/leaked-key', captchaToken: null });
   });
 
   it('does not send an empty message', () => {

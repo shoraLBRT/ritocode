@@ -32,7 +32,7 @@ const outcomeByCode: Readonly<Record<string, Outcome>> = {
   feedback_unreachable: 'unavailable',
 };
 
-const siteKey = resolveTurnstileSiteKey(import.meta.env as Readonly<Record<string, string | undefined>>);
+const siteKey = resolveTurnstileSiteKey(import.meta.env);
 
 /**
  * The feedback widget (docs/DESIGN.md › Feedback, ADR 0019): a button in the bottom corner of every
@@ -126,7 +126,9 @@ export function FeedbackWidget() {
               {t('feedback.heading')}
             </h2>
             <button type="button" className="feedback__close" aria-label={t('feedback.close')} onClick={close}>
-              <span aria-hidden="true">×</span>
+              <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+                <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
             </button>
           </div>
           <form
