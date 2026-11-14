@@ -9,6 +9,7 @@
 #   VITE_API_BASE_URL  where the browser finds the API; same origin by default
 #   VITE_DEMO_TASK     the landing page's demo task; the frontend's default when empty
 #   VITE_UMAMI_SCRIPT_URL, VITE_UMAMI_WEBSITE_ID
+#   VITE_TURNSTILE_SITE_KEY  the feedback widget's captcha (ADR 0019); none when empty
 #                      Umami's script and the site's id there (SPEC §8); no analytics unless both are set
 
 # The content export is made by the backend's own parser (src/Ritocode.ContentTool).
@@ -35,12 +36,13 @@ ARG VITE_API_BASE_URL=/api/v1
 ARG VITE_DEMO_TASK=
 ARG VITE_UMAMI_SCRIPT_URL=
 ARG VITE_UMAMI_WEBSITE_ID=
+ARG VITE_TURNSTILE_SITE_KEY=
 ENV CONTENT_EXPORT=/content-export.json \
     SITE_ORIGIN=${SITE_ORIGIN} \
     VITE_API_BASE_URL=${VITE_API_BASE_URL} \
     VITE_DEMO_TASK=${VITE_DEMO_TASK} \
     VITE_UMAMI_SCRIPT_URL=${VITE_UMAMI_SCRIPT_URL} \
-    VITE_UMAMI_WEBSITE_ID=${VITE_UMAMI_WEBSITE_ID}
+    VITE_UMAMI_WEBSITE_ID=${VITE_UMAMI_WEBSITE_ID} \n    VITE_TURNSTILE_SITE_KEY=${VITE_TURNSTILE_SITE_KEY}
 
 RUN npm run build:static
 
