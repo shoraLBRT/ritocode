@@ -153,20 +153,17 @@ describe('the review', () => {
     expect(lane(ru.review.lane.extra).getByRole('article', { name: 'Класс-бог' })).toBeInTheDocument();
   });
 
-  it('marks the treatments on each card’s face: right, extra, and the author’s not chosen', async () => {
+  it('shows on each card’s face only its name and one conclusion', async () => {
     await openReview(scored);
     const found = within(lane(ru.review.lane.found).getByRole('article', { name: 'Секреты в репозитории' }));
     const missed = within(lane(ru.review.lane.missed).getByRole('article', { name: 'Деньги во float' }));
     const extra = within(lane(ru.review.lane.extra).getByRole('article', { name: 'Класс-бог' }));
 
-    const leaves = found.getAllByRole('listitem');
-    expect(leaves).toHaveLength(2);
-    expect(leaves[0]).toHaveTextContent(`${ru.review.leaf.right}: исправить представление данных`);
-    expect(leaves[1]).toHaveTextContent(`${ru.review.leaf.extra}: в этом контексте это нормально`);
-    expect(found.getByText('43 балла')).toBeInTheDocument();
-    expect(missed.getByRole('listitem')).toHaveTextContent(`${ru.review.leaf.unchosen}: исправить представление данных`);
-    expect(extra.getByRole('listitem')).toHaveTextContent(`${ru.review.leaf.plain}:`);
-    expect(extra.getByText('-3 балла')).toBeInTheDocument();
+    expect(found.getByText(ru.review.lane.treated)).toBeInTheDocument();
+    expect(found.queryByRole('listitem')).not.toBeInTheDocument();
+    expect(found.queryByText('43 балла')).not.toBeInTheDocument();
+    expect(missed.getByText(ru.review.lane.cure.replace('{leaf}', 'исправить представление данных'))).toBeInTheDocument();
+    expect(extra.getByText(ru.review.lane.absent)).toBeInTheDocument();
   });
 
   it('opens a found card in full, with the learner’s leaves beside the author’s, and goes back to the lanes', async () => {

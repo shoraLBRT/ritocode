@@ -1,36 +1,57 @@
-import type { ProblemCard } from '../../api';
 import { useT } from '../../i18n';
-import { faceLeaves, lanes } from './lanes';
-import type { LeafMark, Line } from './lanes';
-import { classTint } from './tint';
-
-const glyph: Record<LeafMark, string> = { right: '✓', extra: '+', unchosen: '○', plain: '·' };
+import { faceLine, lanes } from './lanes';
+import type { Line } from './lanes';
 
 /**
  * The centre of a revealed review (docs/DESIGN.md › The review, variant B of #242): the task's cards
- * in three lanes — found, missed, not in the answer — each lane headed by a mark, a word and a count,
- * each card with its treatment leaves marked on its face. *Подробнее* opens the card in full.
+ * in three lanes — found, missed, not in the answer — each lane headed by a mark, a word and a count.
+ * A card's face is its name and one conclusion (#256); the whole card opens it in full.
  */
 export function ReviewLanes({
   lines,
-  card,
   name,
-  classOf,
-  className,
   picked,
   label,
   onOpen,
 }: {
   lines: readonly Line[];
-  card: (slug: string) => ProblemCard | undefined;
   name: (slug: string) => string;
-  classOf: (slug: string) => string | undefined;
-  className: (slug: string) => string | undefined;
   picked: (slug: string) => readonly string[];
   label: (leaf: string) => string;
   onOpen: (slug: string) => void;
 }) {
   const t = useT();
+
+  const conclusion = (line: Line) => {
+    const face = faceLine(line, picked(line.card));
+    switch (face.kind) {
+      case 'treated':
+        return (
+          <p className="lane-card__line lane-card__line--good">
+            <span aria-hidden="true">{t('review.lane.treatedMark')}</span>
+            {t('review.lane.treated')}
+          </p>
+        );
+      case 'mistreated':
+        return (
+          <p className="lane-card__line lane-card__line--bad">
+            <span aria-hidden="true">{t('review.lane.mistreatedMark')}</span>
+            {t('review.lane.mistreated')}
+          </p>
+        );
+      case 'untreated':
+        return <p className="lane-card__line">{t('review.lane.untreated')}</p>;
+      case 'absent':
+        return <p className="lane-card__line">{t('review.lane.absent')}</p>;
+      case 'cure':
+        return face.leaf === undefined ? null : (
+          <p className="lane-card__line">
+            {t('review.lane.cure', { leaf: label(face.leaf) })}
+            {face.more > 0 && <span className="lane-card__more">{t('review.lane.more', { count: face.more })}</span>}
+          </p>
+        );
+    }
+  };
 
   return (
     <div className="review-lanes" role="group" aria-label={t('review.lanes')}>
@@ -45,63 +66,23 @@ export function ReviewLanes({
           {inLane.length === 0 ? (
             <p className="review-lane__empty">{t('review.lane.empty')}</p>
           ) : (
-            inLane.map((line) => {
-              const leaves = faceLeaves(line, picked(line.card));
-              const summary = card(line.card)?.summary;
-              const heading = line.outcome === 'found' ? 'treatment' : line.outcome === 'missed' ? 'treatmentAuthor' : 'treatmentYours';
-              const right = leaves.filter((leaf) => leaf.mark === 'right').length;
-              return (
-                <article key={line.card} className={`lane-card${classTint(classOf(line.card))}`} aria-labelledby={`lane-card-${line.card}`}>
-                  {className(line.card) !== undefined && (
-                    <p className="lane-card__band">
-                      <span className="lane-card__seal" aria-hidden="true" />
-                      {className(line.card)}
-                    </p>
-                  )}
-                  <div className="lane-card__face">
-                    <h4 id={`lane-card-${line.card}`} className="lane-card__name">
-                      {name(line.card)}
-                    </h4>
-                    {summary !== undefined && <p className="lane-card__summary">{summary}</p>}
-                    <div className="lane-card__treat">
-                      <p className="lane-card__treat-head">
-                        <span>{t(`review.lane.${heading}`)}</span>
-                        {line.outcome === 'found' && <b>{t('review.lane.matched', { count: right })}</b>}
-                      </p>
-                      {leaves.length === 0 ? (
-                        <p className="compare__none">{t('review.noLeaves')}</p>
-                      ) : (
-                        <ul className="lane-card__leaves">
-                          {leaves.map(({ leaf, mark }) => (
-                            <li key={leaf} className={`face-leaf face-leaf--${mark}`}>
-                              <span className="face-leaf__mark" aria-hidden="true">
-                                {glyph[mark]}
-                              </span>
-                              <span className="visually-hidden">{t('review.leafSaid', { word: t(`review.leaf.${mark}`) })}</span>
-                              {label(leaf)}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                    <p className="lane-card__foot">
-                      <span>{t('review.points', { count: line.points })}</span>
-                      <button
-                        type="button"
-                        id={`open-${line.card}`}
-                        className="lane-card__open"
-                        aria-label={t('review.lane.openCard', { name: name(line.card) })}
-                        onClick={() => {
-                          onOpen(line.card);
-                        }}
-                      >
-                        {t('review.lane.open')}
-                      </button>
-                    </p>
-                  </div>
-                </article>
-              );
-            })
+            inLane.map((line) => (
+              <article key={line.card} className="lane-card" aria-labelledby={`lane-card-${line.card}`}>
+                <h4 id={`lane-card-${line.card}`} className="lane-card__name">
+                  <button
+                    type="button"
+                    id={`open-${line.card}`}
+                    className="lane-card__open"
+                    onClick={() => {
+                      onOpen(line.card);
+                    }}
+                  >
+                    {name(line.card)}
+                  </button>
+                </h4>
+                {conclusion(line)}
+              </article>
+            ))
           )}
         </section>
       ))}

@@ -382,10 +382,7 @@ function FullReview({
         ) : chosen === undefined ? (
           <ReviewLanes
             lines={result.cards}
-            card={card}
             name={name}
-            classOf={classOf}
-            className={className}
             picked={picked}
             label={label}
             onOpen={(slug) => {

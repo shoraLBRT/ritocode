@@ -178,6 +178,11 @@ description. As of that day:
   read with a filter on; the search, the filters, the picks, the lift and the results' scroll are
   kept. Checked in the built-in browser at 1280 px (both steps, a class or branch filter and a
   search on, the dock raised) and 375 px (the sheet shrinks to the chips and the bar).
+  **#256** (2026-11-16): a lane card's face is its name and one conclusion — on a found card whether
+  the treatment fits, on a missed one the author's first leaf, on an extra pick «Этого в коде нет» —
+  and the whole card opens it in full; the class, the summary, the leaf chips and the points left the
+  face. Checked in the built-in browser at 1440 px (light and dark, a card opened and closed) and
+  375 px (no overflow); lint, build and vitest (404) pass.
   **#253, #254** (2026-11-16, maintainer's feedback on #242): on the review the verdict owns the
   colour — each lane tinted with its verdict under a solid badge, the cards in it neutral, the class a
   grey word — and on a desktop the cards pane scrolls on its own, so a long lane is read in full.
