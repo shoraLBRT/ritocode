@@ -154,3 +154,86 @@ export function activityLevel(count: number): 0 | 1 | 2 | 3 | 4 {
 export function activitySince(now: Date): Date {
   return new Date((moscowDay(now) - ACTIVITY_DAYS + 1) * DAY_MS - MOSCOW_OFFSET_MS);
 }
+
+/** How many weeks the profile's year of activity shows: 53 columns of seven days, today last. */
+export const YEAR_WEEKS = 53;
+
+/** The days the year's map shows. */
+export const YEAR_DAYS = YEAR_WEEKS * 7;
+
+/** The columns a month's label takes, so two labels never meet. */
+const MONTH_LABEL_COLUMNS = 3;
+
+/** The calendar date of a Moscow day, as an instant at UTC midnight: read it with `timeZone: 'UTC'`. */
+export function moscowDate(day: number): Date {
+  return new Date(day * DAY_MS);
+}
+
+export interface YearActivity {
+  /** The Moscow day of the map's first cell; cell `i` is day `firstDay + i`, today the last. */
+  readonly firstDay: number;
+  /** Attempts submitted on each of the {@link YEAR_DAYS} days, oldest first, today last. */
+  readonly days: readonly number[];
+  /** Attempts submitted inside the window. */
+  readonly total: number;
+  /** Days inside the window with at least one submitted attempt. */
+  readonly activeDays: number;
+  /** The longest run of days in a row with a submitted attempt inside the window. */
+  readonly longestStreak: number;
+  /** Where each month's label starts: the column that holds its first day, and that day. */
+  readonly months: readonly { readonly column: number; readonly day: number }[];
+}
+
+/**
+ * A year of activity for the profile, by the home page's rules: Moscow days, submitted attempts
+ * only. The columns are weeks of seven consecutive days, the last one ending today, as on the home
+ * page. A month is labelled at the column holding its first day; the window's first month too when
+ * its label has room before the next one, and none so close to the end that it would not fit.
+ */
+export function yearActivity(attempts: readonly AttemptSummary[], now: Date): YearActivity {
+  const today = moscowDay(now);
+  const firstDay = today - YEAR_DAYS + 1;
+  const days: number[] = Array.from({ length: YEAR_DAYS }, () => 0);
+
+  for (const attempt of attempts) {
+    if (attempt.submittedAt !== null) {
+      const index = moscowDay(new Date(attempt.submittedAt)) - firstDay;
+      if (index >= 0 && index < YEAR_DAYS) {
+        days[index] = (days[index] ?? 0) + 1;
+      }
+    }
+  }
+
+  let total = 0;
+  let activeDays = 0;
+  let longestStreak = 0;
+  let run = 0;
+
+  for (const count of days) {
+    total += count;
+    run = count > 0 ? run + 1 : 0;
+    if (count > 0) activeDays += 1;
+    longestStreak = Math.max(longestStreak, run);
+  }
+
+  const months: { column: number; day: number }[] = [];
+
+  for (let index = 0; index < YEAR_DAYS; index += 1) {
+    const day = firstDay + index;
+    const column = Math.floor(index / 7);
+    if (moscowDate(day).getUTCDate() === 1 && column <= YEAR_WEEKS - MONTH_LABEL_COLUMNS) {
+      months.push({ column, day });
+    }
+  }
+
+  if ((months[0]?.column ?? YEAR_WEEKS) >= MONTH_LABEL_COLUMNS) {
+    months.unshift({ column: 0, day: firstDay });
+  }
+
+  return { firstDay, days, total, activeDays, longestStreak, months };
+}
+
+/** The earliest instant the year's map needs attempts from: the start of its first day in Moscow. */
+export function yearSince(now: Date): Date {
+  return new Date((moscowDay(now) - YEAR_DAYS + 1) * DAY_MS - MOSCOW_OFFSET_MS);
+}

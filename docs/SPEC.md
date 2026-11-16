@@ -249,7 +249,8 @@ Localisation is built in from the first commit; only the Russian content is writ
 | `/tasks` | Task catalogue | public |
 | `/tasks/{slug}` | Solving a task | public to solve; sign-in to check |
 | `/tasks/{slug}/attempts/{id}` | Review of an attempt | owner only |
-| `/progress` | Progress | signed in |
+| `/profile` | The learner's profile: their progress (§4.7) | signed in |
+| `/progress` | Redirects to `/profile` (the old address of progress) | — |
 | `/privacy` | Privacy policy | public |
 | `/admin/...` | Admin (§6) | admins only |
 
@@ -406,7 +407,11 @@ The return address travels through the sign-in round trip and is accepted only a
 it cannot be used to redirect anywhere else. If the browser could not keep the answer, the learner
 sees the task restored to its start and a short note; they do not lose anything else.
 
-### 4.7 Progress
+### 4.7 The profile: progress
+
+`/profile` is the learner's own page, reached from the avatar's menu and the streak in the header.
+It shows who is signed in and a way out, and the progress below. Everything on it is computed from
+data the API already serves — the task list with each task's status, the progress, the attempts.
 
 Built from **first attempts only** (§5.4):
 
@@ -424,6 +429,17 @@ Two counts of practice, from **every** attempt, not only first ones:
 - **Activity** — the number of attempts submitted on each day, Moscow time.
 - **Streak** — how many days in a row, up to today, have at least one submitted attempt. A day
   without one breaks it; today still counts as kept until it ends.
+
+On the profile, besides:
+
+- **Tasks solved** — solved out of all published tasks, as a ring, and by difficulty (easy, medium,
+  hard); the tasks started and those whose answer was revealed are counted beside it.
+- **A year of activity** — the map of the last 53 weeks, the attempts submitted in it, the active
+  days and the longest streak inside it.
+- **Recent attempts** — the newest ten submitted ones: date of submission, task, first or practice,
+  score; each opens its review. An attempt never submitted is not listed.
+
+A learner with no attempt sees the same page with zeros and a way to the tasks.
 
 No XP, no levels, no leaderboard.
 

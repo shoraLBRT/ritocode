@@ -9,7 +9,7 @@ import { HomePage } from './pages/HomePage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { PrivacyPage } from './pages/PrivacyPage';
 import { ProblemsPage } from './pages/ProblemsPage';
-import { ProgressPage } from './pages/ProgressPage';
+import { ProfilePage } from './pages/profile/ProfilePage';
 import { TasksPage } from './pages/TasksPage';
 import { ReviewPage } from './pages/task/ReviewPage';
 import { TaskPage } from './pages/task/TaskPage';
@@ -21,7 +21,7 @@ import { RequireSignIn } from './session';
  * Kept out of the component tree so a test can mount one route with a memory router and no
  * browser history. A page that needs a signed-in learner goes under a `RequireSignIn` layout
  * route (`src/session`), which renders its children only for one: the review of an attempt and
- * the progress page. The admin area goes under `RequireAdmin`, which shows anyone but an admin the
+ * the profile. The admin area goes under `RequireAdmin`, which shows anyone but an admin the
  * page of an unknown address.
  */
 export const routes: RouteObject[] = [
@@ -36,9 +36,11 @@ export const routes: RouteObject[] = [
         Component: RequireSignIn,
         children: [
           { path: 'tasks/:slug/attempts/:id', Component: ReviewPage },
-          { path: 'progress', Component: ProgressPage },
+          { path: 'profile', Component: ProfilePage },
         ],
       },
+      // The progress page became the profile (#261); an old link still lands there.
+      { path: 'progress', element: <Navigate to="/profile" replace /> },
       {
         path: 'admin',
         Component: RequireAdmin,

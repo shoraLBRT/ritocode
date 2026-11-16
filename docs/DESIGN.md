@@ -253,7 +253,7 @@ task list and the catalogue.
 
 ## The arena
 
-The home page and, after it, the catalogue, the task list and progress
+The home page and, after it, the catalogue, the task list and the profile
 ([ADR 0015](adr/0015-arena-home-and-junior-audience.md),
 [#190](https://github.com/shoraLBRT/ritocode/issues/190)). It looks and works like LeetCode: the
 audience — junior developers who build with AI agents — recognises a trainer at first sight. The
@@ -273,14 +273,16 @@ its token names are its own, and where it differs from this document, this docum
 
 - The header, on every page; the task workspace keeps its brand, sections and right end and puts
   its steps where the search would be (above, #199): the brand (the way home), the sections
-  (Задачи, Каталог проблем; Прогресс for a learner, Админка for an admin), the search, the theme
+  (Задачи, Каталог проблем; Админка for an admin — the learner's own page is the avatar's, not a section), the search, the theme
   toggle, then the streak and the avatar — or *Войти* and *Начать* (the demo task) for a guest.
   - **The search** («Задачи и проблемы», `Ctrl K` / `⌘K` from anywhere) is a combobox: as the
     learner types, up to five tasks by title and five problems by name, keywords and summary, ranked
     by the task screen's search, in two groups. Arrow keys move, Enter opens the task or the
     problem's anchor in `/problems`, Escape closes. The lists are read on the first focus.
-  - **The streak** is «N дн.», named in full for a screen reader; read again on each page change.
-  - **The avatar** is the username's first letter; it opens a menu with the username and *Выйти*.
+  - **The streak** is «N дн.», named in full for a screen reader; read again on each page change. It
+    is a link to `/profile`.
+  - **The avatar** is the username's first letter; it opens a menu with the username, *Профиль* and
+    *Выйти*.
     *Войти* opens the providers with the sign-in notice, as before.
   - At phone width the header wraps: brand and sections, then the toggle and the session, then the
     search on a line of its own, without the shortcut. The design system's menu for the sections
@@ -344,6 +346,44 @@ maintainer's direction of 2026-11-10 (artboards «#202 C» on the canvas
   `#slug` while it is open, none after.
 - **Without JavaScript** the `<details>` unfolds in place, so the prerendered page reads in full.
 
+### The profile
+
+`/profile` ([#261](https://github.com/shoraLBRT/ritocode/issues/261)), signed in, in place of
+`/progress` (which redirects there): the learner's progress on a personal page, in the manner of a
+LeetCode profile but in the arena's look. It uses the whole width of `.app__main`, not a reading
+column. Styles in `pages/profile/profile.css`, classes `rc-profile__*`.
+
+- From 64rem two columns: 300 px on the left, the rest on the right, `calc(var(--gap) * 1.5)`
+  apart; when the window is at least 760 px tall the left column is sticky, so the person and the
+  classes stay in view while the right scrolls. Cards are the home page's (`--surface`, `--radius-card`, `--shadow`); the history is an
+  `rc-panel`.
+- **Left**: the person — a 72 px avatar (the letter on `--accent-soft`), the username as the page's
+  `h1`, the streak, a secondary *Выйти* (with the header's failure message) — and **По классам**:
+  six rows in their class colour, the name, an `rc-bar` of found out of met, «найдено X из Y» and
+  «лечение верно: Z» under it; a class never met is muted and says so.
+- **Right, a row of two** (stacked below 48rem): **Решено задач** — a 120 px ring of solved out of all
+  tasks, the number counting up, and beside it *Лёгкие / Средние / Сложные* as `solved/total` in Plex
+  Mono, in the difficulty colours, each with a thin bar; «Начато» and «Ответ открыт» small under them.
+  **Диагностика** — three `rc-stat` tiles: found of met, treated right of found, picked where it was
+  not (on `--danger-surface` when above zero), and a line that only first attempts count.
+- **Активность за год**: «N попыток за год», active days and the longest streak at the right; the
+  map, 53 columns of seven days with today last and outlined, cells filling the card (`aspect-ratio:
+  1`), each with its date and count as a `title`, the whole map one `role="img"` named in words; the
+  months' short names under it. Below 48rem the map scrolls sideways in its own region (cells at
+  least 11 px), opened on today.
+- **A panel with two tabs**, the choice in the address (`?tab=cards`): *Недавние попытки* — the ten
+  newest submitted (opening a task starts an attempt, so unsubmitted ones are left out), each a
+  whole-row link to its review: date of submission, title, a chip «Первая» / «Практика», the score
+  in Plex Mono; *По карточкам* — the class
+  filter (`rc-catalogue__chip`, only classes that have cards), the not-revealed note, and the table
+  grouped by class: zeros in `--text-faint`, missed in `--warn`, picked when absent in `--danger`,
+  treated right in `--good`, the card column held while the table scrolls on a phone.
+- **No attempt yet**: the same frame with real zeros and the real task totals, and in place of the
+  panel an invitation with a primary button to `/tasks`.
+- Each card loads with `Skeleton` blocks of its final shape and fails on its own with `ErrorState`.
+  The ring sweeps, the bars fill from zero and the big numbers count up; the cards stagger in by
+  40 ms. On a phone one column: person, solved, diagnosis, classes, activity, the panel.
+
 ### Components
 
 Everything the arena adds is a class prefixed `rc-` in `frontend/src/styles.css`, on the tokens
@@ -371,7 +411,8 @@ above. What the site already had stays as it is.
 | Daily task | `.rc-daily` › `__top`, `__title`, `__meta`, `__chip`, `__code`, `__action` | one per page |
 | Progress | `.rc-ring` (`--p`), `.rc-ring__hole`, `__value`, `__of`; `.rc-bar.k-{class}` (`--p`) | `--p` is a percentage, 0–100 |
 | Activity | `.rc-heat` › `.rc-heat__cell[data-level=0–4]` | a column per week; `aria-hidden`, the streak says it in words |
-| Streak, avatar | `.rc-streak`, `.rc-avatar` | the header's right end (`HeaderStreak`; the avatar opens `.app__menu`) |
+| Profile | `.rc-profile` › `__side`, `__main`, `__row`, `section.rc-profile__card` (`__card-head`, `__card-title`), `__person`, `__avatar`, `__name`, `__classes-list`, `__class` (`--none`), `__bar`, `__ring`, `__level--easy` / `--medium` / `--hard`, `__tiles`, `__tile` (`--danger`), `__heat-scroll`, `__heat`, `__heat-cell[data-today]`, `__months`, `__attempts`, `__attempt`, `__chip--first` / `--practice`, `__table`, `__count--zero` / `--warn` / `--danger` / `--good`, `__start` | `/profile` (above); `pages/profile/`, its styles in `profile.css` |
+| Streak, avatar | `.rc-streak` (`.rc-streak--link` in the header), `.rc-avatar`, `.app__menu-link` | the header's right end (`HeaderStreak`, a link to `/profile`; the avatar opens `.app__menu` with *Профиль*) |
 | Problem card | `article.rc-pcard.k-{class}` › `__band`, `__seal`, `__face`, `__name`, `__rule`, `__summary`, `details.rc-pcard__more`; open: `.rc-pcard--open` in `.rc-pcard-overlay` | the catalogue's card, folded and open (above) |
 | Class filter | `.rc-catalogue__filter` › `button.rc-catalogue__chip.k-{class}[aria-pressed]` | one class or all, with counts |
 | Workspace dock | `.dock` (`--cards`, `--leaves`, `--results`, `--raised`, `--collapsed`) › `__bar` (`__grip`, `__summary`, `__collapse`), `__controls`, `__filters`, `__results`, `__cards`; `.workspace__aside`; `.workspace__sheet` | the task screen's step at the bottom of the code (above); `pages/task/workspace.css` |
