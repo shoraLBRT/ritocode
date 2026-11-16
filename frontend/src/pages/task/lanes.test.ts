@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { faceLeaves, lanes } from './lanes';
+import { faceLine, lanes } from './lanes';
 import type { Line } from './lanes';
 
 const found: Line = {
@@ -12,31 +12,33 @@ const found: Line = {
 const missed: Line = { card: 'unbounded-load', outcome: 'missed', points: 0, keyLeaves: ['brief.scale'], treatment: null };
 const extra: Line = { card: 'swallowed-exception', outcome: 'extra', points: -1, keyLeaves: null, treatment: null };
 
-describe('faceLeaves', () => {
-  it('puts the right leaves first, then the extra ones, then the author’s others as not chosen', () => {
-    expect(faceLeaves(found, ['manual.handle-errors', 'manual.validate', 'auto.linter'])).toEqual([
-      { leaf: 'manual.validate', mark: 'right' },
-      { leaf: 'auto.linter', mark: 'right' },
-      { leaf: 'manual.handle-errors', mark: 'extra' },
-      { leaf: 'rule.conventions', mark: 'unchosen' },
-    ]);
+describe('faceLine', () => {
+  it('says a found card is treated when any one of the author’s leaves was chosen', () => {
+    expect(faceLine(found, ['manual.handle-errors', 'manual.validate'])).toEqual({ kind: 'treated' });
   });
 
-  it('shows the author’s leaves of a missed card as not chosen', () => {
-    expect(faceLeaves(missed, [])).toEqual([{ leaf: 'brief.scale', mark: 'unchosen' }]);
+  it('says a found card is mistreated when leaves were chosen but none fits', () => {
+    expect(faceLine({ ...found, treatment: { matched: false, matchedLeaves: [], wrongLeaves: ['brief.scale'] } }, ['brief.scale'])).toEqual({
+      kind: 'mistreated',
+    });
   });
 
-  it('shows the learner’s leaves of an extra pick plainly, as the key says nothing of them', () => {
-    expect(faceLeaves(extra, ['manual.handle-errors'])).toEqual([{ leaf: 'manual.handle-errors', mark: 'plain' }]);
+  it('says a found card is untreated when nothing was chosen', () => {
+    expect(faceLine({ ...found, treatment: null }, [])).toEqual({ kind: 'untreated' });
   });
 
-  it('works the marks out from the picks when the result does not split them', () => {
-    expect(faceLeaves({ ...found, treatment: null }, ['auto.linter', 'brief.scale']).map((each) => each.mark)).toEqual([
-      'right',
-      'extra',
-      'unchosen',
-      'unchosen',
-    ]);
+  it('works the verdict out from the picks when the result does not split them', () => {
+    expect(faceLine({ ...found, treatment: null }, ['auto.linter'])).toEqual({ kind: 'treated' });
+    expect(faceLine({ ...found, treatment: null }, ['brief.scale'])).toEqual({ kind: 'mistreated' });
+  });
+
+  it('gives a missed card the author’s first leaf and how many more', () => {
+    expect(faceLine(missed, [])).toEqual({ kind: 'cure', leaf: 'brief.scale', more: 0 });
+    expect(faceLine({ ...missed, keyLeaves: ['a', 'b', 'c'] }, [])).toEqual({ kind: 'cure', leaf: 'a', more: 2 });
+  });
+
+  it('says an extra pick is not in the code', () => {
+    expect(faceLine(extra, ['manual.handle-errors'])).toEqual({ kind: 'absent' });
   });
 });
 

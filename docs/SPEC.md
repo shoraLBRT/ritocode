@@ -371,9 +371,10 @@ beside it — or the code again.
 
 - **Score** in points, with its composition beneath: findings found out of findings present, extra
   picks, treatments that matched.
-- **The cards in three lanes** — found, missed, not in this task's answer (#242) — each card with
-  its treatment on its face: the learner's leaves the key lists, those it does not, and the
-  author's leaves not chosen (any one of them is enough, so these are not a mistake).
+- **The cards in three lanes** — found, missed, not in this task's answer (#242) — each card's face
+  its name and one conclusion (#256): for a found card whether the treatment fits (any one of the
+  author's leaves is enough), for a missed one the author's first leaf, for an extra pick that the
+  key does not see it here. The card opens in full, with the items below.
 - **Every finding in the key**, marked found or missed. For each: the learner's leaves beside the
   author's, the author's note if there is one, and the full card, expandable.
 - **Every extra pick**, marked "not in this task's answer", with the full card and a button —

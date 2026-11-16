@@ -2295,40 +2295,19 @@ button.file-tree__row:hover {
 }
 
 .lane-card {
+  position: relative;
   display: flex;
   flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   background: var(--surface);
   box-shadow: var(--shadow);
 }
 
-.lane-card__band {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 0;
-  padding: 10px 12px 0;
-  color: var(--text-faint);
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.lane-card__seal {
-  width: 8px;
-  height: 8px;
-  border: 1.5px solid var(--text-faint);
-  border-radius: 50%;
-}
-
-.lane-card__face {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 6px 12px 10px;
-  border-radius: var(--radius);
+.lane-card:hover {
+  border-color: var(--border-strong);
 }
 
 .lane-card__name {
@@ -2337,90 +2316,44 @@ button.file-tree__row:hover {
   line-height: 1.3;
 }
 
-.lane-card__summary {
-  display: -webkit-box;
-  margin: 0;
-  overflow: hidden;
-  color: var(--text-muted);
-  font-size: 0.8rem;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-
-.lane-card__treat {
-  padding-top: 8px;
-  border-top: 1px solid var(--border);
-}
-
-.lane-card__treat-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  margin: 0 0 6px;
-  color: var(--text-faint);
-  font-size: 0.75rem;
-}
-
-.lane-card__treat-head b {
-  color: var(--text-muted);
-  font-weight: 600;
-}
-
-.lane-card__leaves {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-/* A leaf on a card's face: a mark and a colour, its word for a screen reader. */
-.face-leaf {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 5px;
-  padding: 2px 8px;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  line-height: 1.35;
-}
-
-.face-leaf__mark {
-  font-family: var(--font-mono);
-  font-weight: 700;
-}
-
-.face-leaf--right { background: var(--good-surface); color: var(--good); }
-.face-leaf--extra { background: var(--danger-surface); color: var(--danger); }
-.face-leaf--unchosen { border: 1px dashed var(--warn); color: var(--warn); }
-.face-leaf--plain { background: var(--surface-sunken); color: var(--text-muted); }
-
-.lane-card__foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin: 0;
-  color: var(--text-faint);
-  font-size: 0.75rem;
-}
-
+/* The name is the card's one control; its hit area covers the whole card. */
 .lane-card__open {
-  padding: 2px 4px;
+  padding: 0;
   border: 0;
-  border-radius: 6px;
   background: none;
-  color: var(--accent);
+  color: var(--text);
   font: inherit;
-  font-size: 0.8rem;
-  font-weight: 600;
+  text-align: left;
   cursor: pointer;
 }
 
-.lane-card__open:hover {
-  text-decoration: underline;
+.lane-card__open::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.lane-card__open:focus-visible {
+  outline: none;
+}
+
+.lane-card:has(.lane-card__open:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.lane-card__line {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.lane-card__line--good { color: var(--good); font-weight: 600; }
+.lane-card__line--bad { color: var(--danger); font-weight: 600; }
+
+.lane-card__more {
+  color: var(--text-faint);
 }
 
 .review__back {

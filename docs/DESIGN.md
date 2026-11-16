@@ -185,19 +185,19 @@ maintainer's choice of 2026-11-14; `ReviewLanes`, `.review-lanes`): *Найде�
 that colour with the mark and the word, and the count — an empty lane says «Нет». **On the review the
 verdict owns the colour** ([#253](https://github.com/shoraLBRT/ritocode/issues/253)): a class
 colour there would read as a verdict (*Несоразмерность* is amber like *Пропущено*, *Гигиена* red like
-*Нет в ответе*), so the cards in the lanes are neutral. Every card of the key and every extra pick is
-a small card on `--surface` with a thin border (`.lane-card`: the class as a grey uppercase word
-beside a hollow dot, the name, the summary clamped to two lines), and on its face its
-**treatment leaves** (`.face-leaf`), each a mark and a colour with its word for a screen reader:
-✓ chosen and in the key (`--good`), + chosen though the key does not list it (`--danger`), ○ in
-the key but not chosen — a dashed `--warn` outline, «не выбрано, а подходило», not a mistake, since
-any one of the author's leaves is enough — and · the learner's leaves of an extra pick, which the
-key says nothing about; then the points and *Подробнее*. A found card's head says how many leaves
-fit; a missed card shows the author's leaves; an extra one the learner's. *Подробнее* opens the
-card in full in the lanes' place — the learner's leaves against the author's (the shared ones
-green, the learner's wrong ones red), the author's note, the whole card, and for an extra pick the
-signal — with *← Все карточки* above it, which gives the focus back to the card's *Подробнее*.
-The pane's tabs switch between *Карточки · N* and the code; a clean task with nothing picked shows
+*Нет в ответе*), so the cards in the lanes are neutral. **A card's face is its name and one
+conclusion** ([#256](https://github.com/shoraLBRT/ritocode/issues/256), the maintainer's choice of
+2026-11-16 — five equally loud layers made nothing stand out): a small card on `--surface` with a
+thin border (`.lane-card`), the name, and one line (`.lane-card__line`, `faceLine` in `lanes.ts`) —
+on a found card ✓ *Лечение верно* (`--good`) when any one of the author's leaves was chosen,
+✗ *Лечение не то* (`--danger`) when leaves were chosen and none fits, *Лечение не выбрано* when
+none was; on a missed card *Лечить: …* with the author's first leaf and *· ещё N*; on an extra pick
+*Этого в коде нет*. Only that ✓ or ✗ is coloured inside a card. The class, the summary, every leaf,
+the points and the author's note open with the card: the name is a button whose hit area covers the
+whole card, and it opens the card in full in the lanes' place — the learner's leaves against the
+author's (the shared ones green, the learner's wrong ones red), the author's note, the whole card,
+and for an extra pick the signal — with *← Все карточки* above it, which gives the focus back to the
+card. The pane's tabs switch between *Карточки · N* and the code; a clean task with nothing picked shows
 the code. On the right, the counts (`OutcomeTally`) and the lesson; the same code in another task
 sits under the context on the left. On a desktop the cards pane scrolls on its own
 (`.review__pane--cards`, [#254](https://github.com/shoraLBRT/ritocode/issues/254)), so every card can be read in full. At 64 rem and
@@ -338,7 +338,7 @@ above. What the site already had stays as it is.
 | Class filter | `.rc-catalogue__filter` › `button.rc-catalogue__chip.k-{class}[aria-pressed]` | one class or all, with counts |
 | Workspace dock | `.dock` (`--cards`, `--leaves`, `--results`, `--raised`, `--collapsed`) › `__bar` (`__grip`, `__summary`, `__collapse`), `__controls`, `__filters`, `__results`, `__cards`; `.workspace__aside`; `.workspace__sheet` | the task screen's step at the bottom of the code (above); `pages/task/workspace.css` |
 | Feedback | `.feedback` › `button.feedback__trigger[aria-expanded]`, `.feedback__window[role=dialog]` › `__head`, `__heading`, `__close`, `__text`, `__captcha`, `__foot`, `__status` (`--good`) | every page, bottom right; see Feedback below |
-| Review lanes | `.review-lanes` › `section.review-lane--found` / `--missed` / `--extra` › `__head`, `__count`, `__empty`; `article.lane-card` › `__band`, `__seal`, `__face`, `__name`, `__summary`, `__treat`, `__leaves`, `__foot`, `__open`; `.face-leaf--right` / `--extra` / `--unchosen` / `--plain` | the revealed review's centre (above); `pages/task/ReviewLanes.tsx`, `lanes.ts` |
+| Review lanes | `.review-lanes` › `section.review-lane--found` / `--missed` / `--extra` › `__head`, `__count`, `__empty`; `article.lane-card` › `__name`, `__open` (the whole card's hit area), `__line` (`--good` / `--bad`), `__more` | the revealed review's centre (above); `pages/task/ReviewLanes.tsx`, `lanes.ts` |
 | Card in the dock | `article.rc-pcard.rc-pcard--dock.k-{class}` › `__foot`, `__open`, `label.rc-pcard__pick`; opened: `.dock-open` › `.rc-pcard--peek` | the catalogue's card made small; the opened one shows no signs or treatment (SPEC §3.2) |
 
 **Feedback** ([#243](https://github.com/shoraLBRT/ritocode/issues/243), [ADR 0019](adr/0019-feedback-as-github-issues.md)).
