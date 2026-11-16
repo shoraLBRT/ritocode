@@ -178,6 +178,10 @@ description. As of that day:
   read with a filter on; the search, the filters, the picks, the lift and the results' scroll are
   kept. Checked in the built-in browser at 1280 px (both steps, a class or branch filter and a
   search on, the dock raised) and 375 px (the sheet shrinks to the chips and the bar).
+  **#253, #254** (2026-11-16, maintainer's feedback on #242): on the review the verdict owns the
+  colour — each lane tinted with its verdict under a solid badge, the cards in it neutral, the class a
+  grey word — and on a desktop the cards pane scrolls on its own, so a long lane is read in full.
+  Checked in the built-in browser at 1440 px, light and dark; lint, build and vitest (402) pass.
   **#242** (2026-11-15, PR open): the revealed review's centre is the task's cards in three lanes —
   found, missed, not in the answer (variant B, the maintainer's choice) — each card with its
   treatment leaves marked on its face (✓ fits, + not in the key, ○ the author's not chosen, a

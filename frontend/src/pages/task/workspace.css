@@ -2231,9 +2231,14 @@ button.file-tree__row:hover {
 
 /*
  * The revealed review's centre (#242, variant B): the task's cards in three lanes — found, missed,
- * not in the answer — each lane's outcome a coloured top edge plus a mark, a word and a count; each
- * card the catalogue's, made small, with its treatment leaves marked on the face.
+ * not in the answer. The verdict owns the colour (#253): each lane is tinted with its outcome, headed
+ * by a solid badge with a mark, a word and a count. The cards inside are neutral — the class is a
+ * grey word, not a colour — so no class colour can be read as a verdict.
  */
+.review__pane--cards {
+  overflow-y: auto;
+}
+
 .review-lanes {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2252,9 +2257,18 @@ button.file-tree__row:hover {
   background: var(--surface-inset);
 }
 
-.review-lane--found { border-top-color: var(--good); }
-.review-lane--missed { border-top-color: var(--warn); }
-.review-lane--extra { border-top-color: var(--danger); }
+.review-lane--found { border-top-color: var(--good); background: var(--good-surface); }
+.review-lane--missed { border-top-color: var(--warn); background: var(--warn-surface); }
+.review-lane--extra { border-top-color: var(--danger); background: var(--danger-surface); }
+
+.review-lane .verdict-badge {
+  color: var(--accent-ink);
+  font-weight: 700;
+}
+
+.review-lane--found .verdict-badge { background: var(--good); }
+.review-lane--missed .verdict-badge { background: var(--warn); }
+.review-lane--extra .verdict-badge { background: var(--danger); }
 
 .review-lane__head {
   display: flex;
@@ -2283,9 +2297,9 @@ button.file-tree__row:hover {
 .lane-card {
   display: flex;
   flex-direction: column;
-  padding: 5px;
+  border: 1px solid var(--border);
   border-radius: var(--radius-card);
-  background: var(--ks, var(--surface-sunken));
+  background: var(--surface);
   box-shadow: var(--shadow);
 }
 
@@ -2294,26 +2308,27 @@ button.file-tree__row:hover {
   align-items: center;
   gap: 6px;
   margin: 0;
-  padding: 3px 6px 7px;
-  color: var(--k, var(--text-muted));
-  font-size: 0.75rem;
+  padding: 10px 12px 0;
+  color: var(--text-faint);
+  font-size: 0.7rem;
   font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .lane-card__seal {
-  width: 12px;
-  height: 12px;
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid var(--text-faint);
   border-radius: 50%;
-  background: var(--k, var(--text-faint));
 }
 
 .lane-card__face {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 10px 12px;
+  padding: 6px 12px 10px;
   border-radius: var(--radius);
-  background: var(--surface);
 }
 
 .lane-card__name {
