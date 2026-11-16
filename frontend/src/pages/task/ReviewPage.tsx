@@ -350,7 +350,10 @@ function FullReview({
         </p>
       </section>
 
-      <section className="panel workspace__code review__pane workspace__area workspace__area--code" aria-label={t('review.cardTab')}>
+      <section
+        className={`panel workspace__code review__pane workspace__area workspace__area--code${pane === 'code' || result.cards.length === 0 ? '' : ' review__pane--cards'}`}
+        aria-label={t('review.cardTab')}
+      >
         <div className="pane-tabs" role="group" aria-label={t('review.paneTabs')}>
           <button
             type="button"
