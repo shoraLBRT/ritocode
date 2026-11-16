@@ -4,7 +4,7 @@
 in the same pull request as the work it describes — a session that skips this makes the next one
 start from nothing.
 
-- **Last updated:** 2026-11-15
+- **Last updated:** 2026-11-17
 - **Current stage:** S7 · Production — its engineering can be built against a local stack (#135's
   Compose file, #136's release command, #34's monitor, #41); the real checks wait on the VPS and domain of #134.
   S6 closed with #133: `/` and `/problems` read without JavaScript (#132), and every listed event
@@ -178,6 +178,13 @@ description. As of that day:
   read with a filter on; the search, the filters, the picks, the lift and the results' scroll are
   kept. Checked in the built-in browser at 1280 px (both steps, a class or branch filter and a
   search on, the dock raised) and 375 px (the sheet shrinks to the chips and the bar).
+  **#260** (2026-11-17): the motion system — tokens `--dur-fast/--dur/--dur-slow` and
+  `--ease-out/--ease-in-out/--ease-spring`, one global reduced-motion guard (the three per-component
+  blocks are gone), one `:focus-visible` ring, hover and press states on buttons, nav links, tabs,
+  chips, table rows, link cards and the header menu, the `rc-rise` page entrance and `rc-pop` popups
+  (header menus, search list, feedback window), and two primitives: `Skeleton` (`.rc-skeleton`) and
+  `useCountUp`. Checked in the built-in browser on `/tasks`, a task page and `/problems` (no horizontal
+  scroll at 375 px; the browser reports reduced motion, so final states only); lint, build, build:static and vitest (411) pass.
   **#258** (2026-11-17): the review opens a card the way *Диагноз* does — one `CardDialog` shared by
   both, over the whole centre column, ‹ n из N › and ← → through the lanes, ×/Esc, focus returned —
   with *В этой задаче* first and the catalogue's sections folded; *← Все карточки* is gone. Checked in
@@ -486,7 +493,7 @@ compose stack is PostgreSQL only.
 | `Ritocode.Api.Tests` | 153 |
 | `Ritocode.Modules.Content.Tests` | 78 |
 | `Ritocode.Modules.Attempts.Tests` | 31 |
-| Frontend (vitest) | 395 |
+| Frontend (vitest) | 411 |
 | `scripts/monitor-test.sh` | 9 |
 | End-to-end (`e2e/`) | 1 |
 
