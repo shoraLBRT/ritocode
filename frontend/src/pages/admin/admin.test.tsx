@@ -139,9 +139,103 @@ describe('the admin area', () => {
     expect(requested(fetchStub, '/admin/signals')).toHaveLength(0);
   });
 
-  it('opens on the signals', async () => {
-    renderApp(api('admin'), '/admin');
-    expect(await screen.findByRole('heading', { name: ru.admin.signals, level: 1 })).toBeInTheDocument();
+  it.each(['/admin', '/admin/signals', '/admin/users', '/admin/attempts'])('has one h1, the area name, at %s', async (path) => {
+    renderApp(api('admin'), path);
+
+    expect(await screen.findByRole('heading', { name: ru.admin.title, level: 1 })).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+  });
+
+  it('offers the four sections as links, the current one marked', async () => {
+    renderApp(api('admin'), '/admin/users');
+
+    const nav = within(await screen.findByRole('navigation', { name: ru.admin.nav }));
+    expect(nav.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(['/admin', '/admin/signals', '/admin/users', '/admin/attempts']);
+    expect(nav.getByRole('link', { name: ru.admin.users })).toHaveAttribute('aria-current', 'page');
+    expect(nav.getByRole('link', { name: ru.admin.overview })).not.toHaveAttribute('aria-current');
+  });
+
+  it('shows the number of open signals on the signals tab', async () => {
+    renderApp(api('admin'), '/admin/users');
+
+    const tab = await screen.findByRole('link', { name: new RegExp(ru.admin.signals) });
+    await waitFor(() => {
+      expect(tab).toHaveTextContent(`${ru.admin.signals}1`);
+    });
+  });
+
+  it('shows no number on the signals tab when it cannot be read', async () => {
+    const base = api('admin');
+    const failing = vi
+      .fn<typeof globalThis.fetch>()
+      .mockImplementation((input, init) => (urlOf(input).includes('/admin/signals') ? Promise.resolve(problemResponse(500, 'internal_error', 'x')) : base(input, init)));
+    renderApp(failing, '/admin/users');
+
+    expect(await screen.findByRole('table')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: ru.admin.signals })).toBeInTheDocument();
+  });
+});
+
+describe('the overview', () => {
+  /** The API with a count of its own on every list: the overview reads them as `totalItems`. */
+  function counted() {
+    const base = api('admin');
+    return vi.fn<typeof globalThis.fetch>().mockImplementation((input, init) => {
+      const url = new URL(urlOf(input));
+      if (url.pathname.endsWith('/admin/signals') && url.searchParams.get('pageSize') === '5') {
+        return Promise.resolve(jsonResponse(pageOf([openSignal], 1, 5, 7)));
+      }
+      if (url.pathname.endsWith('/admin/users') && url.searchParams.get('pageSize') === '1') {
+        return Promise.resolve(jsonResponse(pageOf(users.slice(0, 1), 1, 1, 42)));
+      }
+      if (url.pathname.endsWith('/admin/attempts') && url.searchParams.get('pageSize') === '1') {
+        return Promise.resolve(jsonResponse(pageOf(attempts.slice(0, 1), 1, 1, url.searchParams.get('status') === 'submitted' ? 12 : 3)));
+      }
+      return base(input, init);
+    });
+  }
+
+  it('shows four counts, each a link to its list', async () => {
+    renderApp(counted(), '/admin');
+
+    const tiles = within(await screen.findByRole('list', { name: ru.admin.overviewPage.tiles }));
+    const tile = (label: string, count: string) => tiles.findByRole('link', { name: new RegExp(`^${label}\\s*${count}`) });
+
+    expect(await tile(ru.admin.overviewPage.signals, '7')).toHaveAttribute('href', '/admin/signals');
+    expect(await tile(ru.admin.overviewPage.users, '42')).toHaveAttribute('href', '/admin/users');
+    expect(await tile(ru.admin.overviewPage.submitted, '12')).toHaveAttribute('href', '/admin/attempts?status=submitted');
+    expect(await tile(ru.admin.overviewPage.notSubmitted, '3')).toHaveAttribute('href', '/admin/attempts?status=open');
+  });
+
+  it('lists the newest open signals under the tiles, with a link to all of them', async () => {
+    renderApp(counted(), '/admin');
+
+    const table = within(await screen.findByRole('table'));
+    expect(table.getByRole('link', { name: 'flower-shop-daily-revenue' })).toHaveAttribute('href', '/tasks/flower-shop-daily-revenue');
+    expect(table.getByText('ann@example.test')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: ru.admin.overviewPage.allSignals })).toHaveAttribute('href', '/admin/signals');
+  });
+
+  it('says so calmly when there are no open signals', async () => {
+    const base = api('admin');
+    const none = vi
+      .fn<typeof globalThis.fetch>()
+      .mockImplementation((input, init) => (urlOf(input).includes('/admin/signals') ? Promise.resolve(jsonResponse(pageOf([], 1, 5))) : base(input, init)));
+    renderApp(none, '/admin');
+
+    expect(await screen.findByText(ru.admin.overviewPage.empty)).toBeInTheDocument();
+  });
+
+  it('keeps the page when one count fails', async () => {
+    const base = counted();
+    const partial = vi
+      .fn<typeof globalThis.fetch>()
+      .mockImplementation((input, init) => (urlOf(input).includes('/admin/users') ? Promise.resolve(problemResponse(500, 'internal_error', 'x')) : base(input, init)));
+    renderApp(partial, '/admin');
+
+    const tiles = within(await screen.findByRole('list', { name: ru.admin.overviewPage.tiles }));
+    expect(await tiles.findByText(ru.admin.overviewPage.tileFailed)).toBeInTheDocument();
+    expect(await tiles.findByRole('link', { name: new RegExp(`^${ru.admin.overviewPage.signals}\\s*7`) })).toBeInTheDocument();
   });
 });
 
@@ -159,8 +253,11 @@ describe('the signals page', () => {
 
     fireEvent.click(table.getByRole('button', { name: ru.admin.signalsPage.resolve }));
 
-    // Resolved, the list is read again and the signal has left it.
+    // Resolved, the list is read again and the signal has left it; the tab's count follows.
     expect(await screen.findByText(ru.admin.signalsPage.empty)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: new RegExp(ru.admin.signals) })).toHaveTextContent(`${ru.admin.signals}0`);
+    });
     expect(fetchStub.mock.calls.some(([input, init]) => urlOf(input).endsWith('/admin/signals/s-1/resolve') && init?.method === 'POST')).toBe(true);
   });
 
@@ -171,18 +268,28 @@ describe('the signals page', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent(ru.admin.signalsPage.resolveFailed);
     expect(screen.getByRole('button', { name: ru.admin.signalsPage.resolve })).toBeEnabled();
+    expect(screen.getByText('Сумма в float, строка 12.')).toBeInTheDocument();
   });
 
   it('shows the resolved ones when asked', async () => {
     const fetchStub = api('admin');
     renderApp(fetchStub, '/admin/signals');
 
-    fireEvent.change(await screen.findByRole('combobox', { name: ru.admin.signalsPage.status }), { target: { value: 'resolved' } });
+    const filter = within(await screen.findByRole('group', { name: ru.admin.signalsPage.status }));
+    expect(filter.getByRole('button', { name: new RegExp(ru.admin.signalsPage.open) })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(filter.getByRole('button', { name: ru.admin.signalsPage.resolved }));
 
     await waitFor(() => {
       expect(requested(fetchStub, '/admin/signals').at(-1)?.searchParams.get('status')).toBe('resolved');
     });
     expect(await screen.findByText(ru.admin.signalsPage.empty)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: ru.admin.signalsPage.resolved })).toHaveAttribute('aria-pressed', 'true');
+
+    // Back to the default, the filter asks for the open ones again.
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(ru.admin.signalsPage.open) }));
+    await waitFor(() => {
+      expect(requested(fetchStub, '/admin/signals').at(-1)?.searchParams.get('status')).toBe('open');
+    });
   });
 });
 
@@ -194,7 +301,8 @@ describe('the users page', () => {
     const [ann, bob] = table.getAllByRole('row').slice(1) as [HTMLElement, HTMLElement];
 
     expect(ann).toHaveTextContent('ann@example.test');
-    expect(ann).toHaveTextContent('github, google');
+    expect(within(ann).getByText('github')).toBeInTheDocument();
+    expect(within(ann).getByText('google')).toBeInTheDocument();
     expect(within(ann).getByRole('link', { name: `${ru.admin.usersPage.showAttempts}: ann@example.test` })).toHaveAttribute('href', '/admin/attempts?user=u-1');
     expect(bob).toHaveTextContent(ru.admin.usersPage.noProvider);
     expect(within(bob).queryByRole('link')).not.toBeInTheDocument();
@@ -214,6 +322,26 @@ describe('the attempts page', () => {
     expect(rows[1]).toHaveTextContent('7 из 30');
     expect(rows[2]).toHaveTextContent(ru.admin.attemptsPage.first);
     expect(rows[2]).toHaveTextContent(ru.admin.unknownUser);
+  });
+
+  it('filters by what was submitted, in the address', async () => {
+    const fetchStub = api('admin');
+    renderApp(fetchStub, '/admin/attempts');
+
+    const filter = within(await screen.findByRole('group', { name: ru.admin.attemptsPage.status }));
+    expect(filter.getByRole('button', { name: ru.admin.attemptsPage.all })).toHaveAttribute('aria-pressed', 'true');
+
+    for (const [label, status] of [
+      [ru.admin.attemptsPage.open, 'open'],
+      [ru.admin.attemptsPage.submitted, 'submitted'],
+      [ru.admin.attemptsPage.all, 'all'],
+    ] as const) {
+      fireEvent.click(filter.getByRole('button', { name: label }));
+      await waitFor(() => {
+        expect(requested(fetchStub, '/admin/attempts').at(-1)?.searchParams.get('status')).toBe(status);
+      });
+      expect(filter.getByRole('button', { name: label })).toHaveAttribute('aria-pressed', 'true');
+    }
   });
 
   it("narrows to one learner from the address, and can show everyone's again", async () => {

@@ -2,6 +2,7 @@ import { Navigate } from 'react-router';
 import type { RouteObject } from 'react-router';
 import { AppLayout } from './components/AppLayout';
 import { AdminAttemptsPage } from './pages/admin/AdminAttemptsPage';
+import { AdminOverviewPage } from './pages/admin/AdminOverviewPage';
 import { AdminSignalsPage } from './pages/admin/AdminSignalsPage';
 import { AdminUsersPage } from './pages/admin/AdminUsersPage';
 import { RequireAdmin } from './pages/admin/RequireAdmin';
@@ -45,7 +46,7 @@ export const routes: RouteObject[] = [
         path: 'admin',
         Component: RequireAdmin,
         children: [
-          { index: true, element: <Navigate to="/admin/signals" replace /> },
+          { index: true, Component: AdminOverviewPage },
           { path: 'signals', Component: AdminSignalsPage },
           { path: 'users', Component: AdminUsersPage },
           { path: 'attempts', Component: AdminAttemptsPage },

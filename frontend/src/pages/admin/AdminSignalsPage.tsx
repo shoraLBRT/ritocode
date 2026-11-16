@@ -1,14 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { listAdminSignals, resolveSignal, useApiClient } from '../../api';
 import type { AdminSignal, AdminSignalStatus } from '../../api';
-import { EmptyState } from '../../components/EmptyState';
-import { ErrorState } from '../../components/ErrorState';
-import { LoadingState } from '../../components/LoadingState';
+import { Tabs } from '../../components/TaskTable';
 import { useApiResource } from '../../hooks/useApiResource';
 import { useT } from '../../i18n';
+import { useAdmin } from './adminContext';
 import { ADMIN_PAGE_SIZE, pageParam } from './paging';
-import { AdminDate, LearnerName, Pager } from './shared';
+import { AdminDate, AdminPanel, AdminTable, AdminTotal, LearnerName, ListBody, Pager } from './shared';
+
+/** How long a resolved row takes to leave: the `--dur` token of the fade in admin.css. */
+const FADE_MS = 200;
 
 /**
  * `/admin/signals` — every signal, newest first (docs/SPEC.md §6.2): task, card, learner, comment,
@@ -18,6 +20,7 @@ import { AdminDate, LearnerName, Pager } from './shared';
 export function AdminSignalsPage() {
   const client = useApiClient();
   const t = useT();
+  const { openSignals, reloadOpenSignals } = useAdmin();
   const [params, setParams] = useSearchParams();
   const status: AdminSignalStatus = params.get('status') === 'resolved' ? 'resolved' : 'open';
   const page = pageParam(params.get('page'));
@@ -27,33 +30,34 @@ export function AdminSignalsPage() {
     [client, status, page],
   );
 
+  const resolved = () => {
+    reload();
+    reloadOpenSignals();
+  };
+
   return (
-    <>
-      <h1>{t('admin.signals')}</h1>
-      <p className="page__lead">{t('admin.signalsPage.lead')}</p>
-
-      <div className="filters">
-        <label className="filters__field">
-          <span>{t('admin.signalsPage.status')}</span>
-          <select
-            value={status}
-            onChange={(event) => {
-              setParams(event.target.value === 'resolved' ? { status: 'resolved' } : {});
-            }}
-          >
-            <option value="open">{t('admin.signalsPage.open')}</option>
-            <option value="resolved">{t('admin.signalsPage.resolved')}</option>
-          </select>
-        </label>
-      </div>
-
-      {state.status === 'loading' && <LoadingState label={t('admin.loading')} />}
-      {state.status === 'error' && <ErrorState error={state.error} onRetry={reload} />}
-      {state.status === 'success' && state.data.items.length === 0 && <EmptyState>{t('admin.signalsPage.empty')}</EmptyState>}
-      {state.status === 'success' && state.data.items.length > 0 && (
-        <>
-          <div className="table-scroll" role="region" aria-label={t('admin.signals')} tabIndex={0}>
-            <table className="admin-table">
+    <AdminPanel
+      title={t('admin.signals')}
+      lead={t('admin.signalsPage.lead')}
+      filters={
+        <Tabs
+          label={t('admin.signalsPage.status')}
+          options={[
+            { value: 'open', label: t('admin.signalsPage.open'), ...(openSignals !== null ? { count: openSignals } : {}) },
+            { value: 'resolved', label: t('admin.signalsPage.resolved') },
+          ]}
+          value={status}
+          onChange={(value) => {
+            setParams(value === 'resolved' ? { status: 'resolved' } : {});
+          }}
+        />
+      }
+      total={state.status === 'success' ? <AdminTotal count={state.data.totalItems} /> : null}
+    >
+      <ListBody state={state} reload={reload} empty={t('admin.signalsPage.empty')}>
+        {(list) => (
+          <>
+            <AdminTable label={t('admin.signals')}>
               <thead>
                 <tr>
                   <th scope="col">{t('admin.signalsPage.date')}</th>
@@ -65,21 +69,21 @@ export function AdminSignalsPage() {
                 </tr>
               </thead>
               <tbody>
-                {state.data.items.map((item) => (
-                  <SignalRow key={item.id} item={item} onResolved={reload} />
+                {list.items.map((item) => (
+                  <SignalRow key={item.id} item={item} onResolved={resolved} />
                 ))}
               </tbody>
-            </table>
-          </div>
-          <Pager
-            page={state.data}
-            onPage={(next) => {
-              setParams({ ...(status === 'resolved' ? { status } : {}), page: String(next) });
-            }}
-          />
-        </>
-      )}
-    </>
+            </AdminTable>
+            <Pager
+              page={list}
+              onPage={(next) => {
+                setParams({ ...(status === 'resolved' ? { status } : {}), page: String(next) });
+              }}
+            />
+          </>
+        )}
+      </ListBody>
+    </AdminPanel>
   );
 }
 
@@ -87,49 +91,68 @@ function SignalRow({ item, onResolved }: { item: AdminSignal; onResolved: () => 
   const client = useApiClient();
   const t = useT();
   const [resolving, setResolving] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const [failed, setFailed] = useState(false);
+  const timer = useRef<number | undefined>(undefined);
+
+  useEffect(
+    () => () => {
+      window.clearTimeout(timer.current);
+    },
+    [],
+  );
+
+  const resolve = () => {
+    setResolving(true);
+    setFailed(false);
+    resolveSignal(client, item.id).then(
+      () => {
+        // The row fades, and only then is the list read again, so it does not jump while it goes.
+        setLeaving(true);
+        timer.current = window.setTimeout(onResolved, FADE_MS);
+      },
+      () => {
+        setResolving(false);
+        setFailed(true);
+      },
+    );
+  };
 
   return (
-    <tr>
-      <td>
+    <tr className={leaving ? 'rc-admin__row rc-admin__row--leaving' : 'rc-admin__row'}>
+      <td className="rc-admin__mono">
         <AdminDate value={item.createdAt} />
       </td>
       <td>
-        <Link to={`/tasks/${item.task}`}>{item.task}</Link>
+        <Link className="rc-admin__slug" to={`/tasks/${item.task}`}>
+          {item.task}
+        </Link>
       </td>
       <td>
-        <Link to={`/problems#${item.card}`}>{item.cardName}</Link>
+        <Link className="rc-admin__link" to={`/problems#${item.card}`}>
+          {item.cardName}
+        </Link>
       </td>
-      <td>
+      <td className="rc-admin__text">
         <LearnerName learner={item.learner} />
       </td>
-      <td className="admin-table__text">{item.comment ?? <span className="admin-muted">{t('admin.signalsPage.noComment')}</span>}</td>
+      <td className="rc-admin__comment">{item.comment ?? <span className="rc-admin__muted">{t('admin.signalsPage.noComment')}</span>}</td>
       <td>
         {item.resolvedAt !== null ? (
-          <AdminDate value={item.resolvedAt} />
+          <span className="rc-admin__chip rc-admin__chip--good rc-admin__mono">
+            <AdminDate value={item.resolvedAt} />
+          </span>
         ) : (
-          <>
-            <button
-              type="button"
-              className="button button--small"
-              disabled={resolving}
-              onClick={() => {
-                setResolving(true);
-                setFailed(false);
-                resolveSignal(client, item.id).then(onResolved, () => {
-                  setResolving(false);
-                  setFailed(true);
-                });
-              }}
-            >
+          <span className="rc-admin__action">
+            <button type="button" className="button button--small" disabled={resolving} aria-busy={resolving} onClick={resolve}>
               {resolving ? t('admin.signalsPage.resolving') : t('admin.signalsPage.resolve')}
             </button>
             {failed && (
-              <span className="admin-table__error" role="alert">
+              <span className="rc-admin__error" role="alert">
                 {t('admin.signalsPage.resolveFailed')}
               </span>
             )}
-          </>
+          </span>
         )}
       </td>
     </tr>

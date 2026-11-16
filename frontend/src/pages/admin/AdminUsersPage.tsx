@@ -1,12 +1,9 @@
 import { Link, useSearchParams } from 'react-router';
 import { listAdminUsers, useApiClient } from '../../api';
-import { EmptyState } from '../../components/EmptyState';
-import { ErrorState } from '../../components/ErrorState';
-import { LoadingState } from '../../components/LoadingState';
 import { useApiResource } from '../../hooks/useApiResource';
 import { useT } from '../../i18n';
 import { ADMIN_PAGE_SIZE, pageParam } from './paging';
-import { AdminDate, Pager } from './shared';
+import { AdminDate, AdminPanel, AdminTable, AdminTotal, ListBody, Pager } from './shared';
 
 /**
  * `/admin/users` — every user, newest first (docs/SPEC.md §6.2): e-mail, provider, date registered,
@@ -21,59 +18,73 @@ export function AdminUsersPage() {
   const { state, reload } = useApiResource((signal) => listAdminUsers(client, { page, pageSize: ADMIN_PAGE_SIZE }, signal), [client, page]);
 
   return (
-    <>
-      <h1>{t('admin.users')}</h1>
-      <p className="page__lead">{t('admin.usersPage.lead')}</p>
-
-      {state.status === 'loading' && <LoadingState label={t('admin.loading')} />}
-      {state.status === 'error' && <ErrorState error={state.error} onRetry={reload} />}
-      {state.status === 'success' && state.data.items.length === 0 && <EmptyState>{t('admin.usersPage.empty')}</EmptyState>}
-      {state.status === 'success' && state.data.items.length > 0 && (
-        <>
-          <div className="table-scroll" role="region" aria-label={t('admin.users')} tabIndex={0}>
-            <table className="admin-table">
+    <AdminPanel
+      title={t('admin.users')}
+      lead={t('admin.usersPage.lead')}
+      total={state.status === 'success' ? <AdminTotal count={state.data.totalItems} /> : null}
+    >
+      <ListBody state={state} reload={reload} empty={t('admin.usersPage.empty')}>
+        {(list) => (
+          <>
+            <AdminTable label={t('admin.users')}>
               <thead>
                 <tr>
                   <th scope="col">{t('admin.usersPage.email')}</th>
                   <th scope="col">{t('admin.usersPage.username')}</th>
                   <th scope="col">{t('admin.usersPage.providers')}</th>
                   <th scope="col">{t('admin.usersPage.registered')}</th>
-                  <th scope="col">{t('admin.usersPage.attempts')}</th>
-                  <th scope="col">{t('admin.usersPage.tasksSolved')}</th>
+                  <th scope="col" className="rc-admin__num">
+                    {t('admin.usersPage.attempts')}
+                  </th>
+                  <th scope="col" className="rc-admin__num">
+                    {t('admin.usersPage.tasksSolved')}
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {state.data.items.map((user) => (
-                  <tr key={user.id}>
-                    <td>{user.email}</td>
-                    <td>{user.username}</td>
-                    <td>{user.providers.length > 0 ? user.providers.join(', ') : <span className="admin-muted">{t('admin.usersPage.noProvider')}</span>}</td>
+                {list.items.map((user) => (
+                  <tr key={user.id} className="rc-admin__row">
+                    <td className="rc-admin__text">{user.email}</td>
+                    <td className="rc-admin__text">{user.username}</td>
                     <td>
+                      {user.providers.length > 0 ? (
+                        <span className="rc-admin__chips">
+                          {user.providers.map((provider) => (
+                            <span key={provider} className="rc-admin__chip">
+                              {provider}
+                            </span>
+                          ))}
+                        </span>
+                      ) : (
+                        <span className="rc-admin__muted">{t('admin.usersPage.noProvider')}</span>
+                      )}
+                    </td>
+                    <td className="rc-admin__mono">
                       <AdminDate value={user.registeredAt} />
                     </td>
-                    <td className="admin-table__number">
+                    <td className={user.attempts === 0 ? 'rc-admin__num rc-admin__num--zero' : 'rc-admin__num'}>
                       {user.attempts > 0 ? (
-                        <Link to={`/admin/attempts?user=${user.id}`} aria-label={`${t('admin.usersPage.showAttempts')}: ${user.email}`}>
+                        <Link className="rc-admin__link" to={`/admin/attempts?user=${user.id}`} aria-label={`${t('admin.usersPage.showAttempts')}: ${user.email}`}>
                           {user.attempts}
                         </Link>
                       ) : (
                         user.attempts
                       )}
                     </td>
-                    <td className="admin-table__number">{user.tasksSolved}</td>
+                    <td className={user.tasksSolved === 0 ? 'rc-admin__num rc-admin__num--zero' : 'rc-admin__num'}>{user.tasksSolved}</td>
                   </tr>
                 ))}
               </tbody>
-            </table>
-          </div>
-          <Pager
-            page={state.data}
-            onPage={(next) => {
-              setParams({ page: String(next) });
-            }}
-          />
-        </>
-      )}
-    </>
+            </AdminTable>
+            <Pager
+              page={list}
+              onPage={(next) => {
+                setParams({ page: String(next) });
+              }}
+            />
+          </>
+        )}
+      </ListBody>
+    </AdminPanel>
   );
 }
