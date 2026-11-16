@@ -1831,15 +1831,9 @@ button.file-tree__row:hover {
 }
 
 .finding-card {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  padding: 20px 32px 48px;
-  border-top: 1px solid var(--border);
-}
-
-.finding-card > * {
-  max-width: 46rem;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .finding-card__badges {
@@ -1876,17 +1870,30 @@ button.file-tree__row:hover {
   font-size: 0.8rem;
 }
 
-.finding-card__name {
-  margin: 12px 0 6px;
-  font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-
 .finding-card__summary {
-  margin: 0 0 18px;
+  margin: 0;
+  max-width: 46rem;
   color: var(--text-muted);
   font-size: 0.95rem;
+}
+
+/* *В этой задаче*: what the review is for, first and set apart from the catalogue's reference. */
+.finding-card__task {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface-inset);
+}
+
+.finding-card__task > .eyebrow {
+  margin: 0;
+}
+
+.finding-card__task .note {
+  margin: 0;
 }
 
 .note {
@@ -1946,12 +1953,65 @@ button.file-tree__row:hover {
   font-size: 0.82rem;
 }
 
-.finding-card__sections .problem-card__section h4 {
-  margin: 20px 0 6px;
-  color: var(--text-faint);
-  font-size: 0.7rem;
+/* The catalogue's sections, folded, side by side where the width allows; an opened one takes the row. */
+.finding-card__sections {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(18rem, 100%), 1fr));
+  gap: 8px;
+  align-items: start;
+}
+
+.problem-card__section--folded {
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.problem-card__section--folded[open] {
+  grid-column: 1 / -1;
+}
+
+.problem-card__section--folded > summary {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
   letter-spacing: 0.07em;
   text-transform: uppercase;
+  cursor: pointer;
+}
+
+.problem-card__section--folded > summary:hover {
+  color: var(--text);
+}
+
+.problem-card__section--folded[open] > summary {
+  margin-bottom: 8px;
+}
+
+/*
+ * The review's opened card (#258): the same dialog as *Диагноз*'s, over the whole centre column —
+ * the score bar included — and wider, since it carries the answer and the reference.
+ */
+.workspace--review > .dock-open {
+  grid-row: score-start / code-end;
+  grid-column: code;
+}
+
+.rc-pcard--peek.review-card,
+.rc-pcard--peek.review-card:not(.rc-pcard--open):hover,
+.rc-pcard--peek.review-card:not(.rc-pcard--open):focus-within {
+  width: min(56rem, 100%);
+  height: 100%;
+}
+
+/* No class tint: on the review the verdict owns the colour (#253), so the frame is neutral. */
+.rc-pcard.review-card {
+  background: var(--surface-sunken);
+}
+
+.review-card .rc-pcard__band {
+  color: var(--text-muted);
 }
 
 /*
@@ -2220,10 +2280,6 @@ button.file-tree__row:hover {
     overflow: visible;
   }
 
-  .finding-card {
-    padding: 16px;
-  }
-
   .compare {
     grid-template-columns: 1fr;
   }
@@ -2242,10 +2298,6 @@ button.file-tree__row:hover {
 /* The lanes and the opened card's way back keep the pane tabs' inset from the pane's edges. */
 .review__pane--cards > .review-lanes {
   margin: 0 14px 14px;
-}
-
-.review__pane--cards > .review__back {
-  margin: 0 14px 4px;
 }
 
 .review-lanes {
@@ -2365,10 +2417,6 @@ button.file-tree__row:hover {
   color: var(--text-faint);
 }
 
-.review__back {
-  align-self: flex-start;
-  margin-top: 12px;
-}
 
 @media (max-width: 64rem) {
   .review-lanes {

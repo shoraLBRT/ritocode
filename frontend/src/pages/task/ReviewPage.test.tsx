@@ -122,10 +122,10 @@ async function openReview(attempt: object, taskBody?: object) {
   await screen.findByRole('heading', { level: 2, name: ru.review.title });
 }
 
-/** Opens a card of the result from its lane and returns it in full, as shown in the lanes' place. */
+/** Opens a card of the result from its lane and returns it in full, as shown over the centre. */
 function line(name: string): HTMLElement {
   fireEvent.click(screen.getByRole('button', { name: new RegExp(name) }));
-  return screen.getByRole('article', { name });
+  return screen.getByRole('dialog', { name });
 }
 
 /** The lane of an outcome in the centre of the revealed review. */
@@ -166,21 +166,44 @@ describe('the review', () => {
     expect(extra.getByText(ru.review.lane.absent)).toBeInTheDocument();
   });
 
-  it('opens a found card in full, with the learner’s leaves beside the author’s, and goes back to the lanes', async () => {
+  it('opens a found card over the centre, this task first, and closes it back to its card', async () => {
     await openReview(scored);
     const found = within(line('Секреты в репозитории'));
 
     expect(found.getByText(ru.review.found)).toBeInTheDocument();
     expect(found.getByText(ru.review.foundMark)).toBeInTheDocument();
+    expect(found.getByRole('heading', { name: ru.review.inThisTask })).toBeInTheDocument();
     expect(found.getByText('в этом контексте это нормально')).toBeInTheDocument();
     expect(found.getAllByText('исправить представление данных')).toHaveLength(2);
-    expect(screen.queryByRole('group', { name: ru.review.lanes })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: ru.review.lane.back })).toHaveFocus();
+    expect(found.getByRole('button', { name: ru.problems.close })).toHaveFocus();
 
-    fireEvent.click(screen.getByRole('button', { name: ru.review.lane.back }));
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
 
-    expect(screen.getByRole('group', { name: ru.review.lanes })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: new RegExp('Секреты в репозитории') })).toHaveFocus();
+  });
+
+  it('walks the opened card through the lanes in order, with the arrows and ‹ n из N ›', async () => {
+    await openReview(scored);
+    line('Секреты в репозитории');
+
+    expect(screen.getByText(ru.task.cardPosition.replace('{index}', '1').replace('{count}', '3'))).toBeInTheDocument();
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'ArrowRight' });
+    expect(screen.getByRole('dialog', { name: 'Деньги во float' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: ru.task.nextCard }));
+    expect(screen.getByRole('dialog', { name: 'Класс-бог' })).toBeInTheDocument();
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'ArrowRight' });
+    expect(screen.getByRole('dialog', { name: 'Секреты в репозитории' })).toBeInTheDocument();
+  });
+
+  it('folds the catalogue’s sections of an opened card', async () => {
+    await openReview(scored);
+    const sections = line('Секреты в репозитории').querySelectorAll('details.problem-card__section--folded');
+
+    expect(sections.length).toBeGreaterThan(0);
+    sections.forEach((section) => {
+      expect(section).not.toHaveAttribute('open');
+    });
   });
 
   it('shows a missed card with the author’s leaves, the note and the full card', async () => {

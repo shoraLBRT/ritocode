@@ -127,7 +127,8 @@ in the step, so the step gets the room; it replaced a 40/60 split of a sidebar a
   *Отметить* (a real checkbox named by the card). A picked card has an accent outline and is listed
   under *Отмечено* on the right, each with ×. The number of matches, or of cards in the pressed
   classes, ends the filter row.
-- **An opened card** (`.dock-open` › `.rc-pcard--peek`) shows what a task may show of a card —
+- **An opened card** (`.dock-open` › `.rc-pcard--peek`, the shared `CardDialog` that the review
+  opens its cards with too, #258) shows what a task may show of a card —
   SPEC §3.2, **no signs, no treatment**: the class, the full summary and the class's description,
   with ‹ n из N › through the matches (← → too) and *Отметить: вижу это в коде*. It opens over the
   centre column only, at the middle, the code dimmed; the side columns stay as they are. ×, Esc or a
@@ -194,10 +195,18 @@ on a found card ✓ *Лечение верно* (`--good`) when any one of the a
 none was; on a missed card *Лечить: …* with the author's first leaf and *· ещё N*; on an extra pick
 *Этого в коде нет*. Only that ✓ or ✗ is coloured inside a card. The class, the summary, every leaf,
 the points and the author's note open with the card: the name is a button whose hit area covers the
-whole card, and it opens the card in full in the lanes' place — the learner's leaves against the
-author's (the shared ones green, the learner's wrong ones red), the author's note, the whole card,
-and for an extra pick the signal — with *← Все карточки* above it, which gives the focus back to the
-card. The pane's tabs switch between *Карточки · N* and the code; a clean task with nothing picked shows
+whole card, and it opens the card **the way *Диагноз* does**
+([#258](https://github.com/shoraLBRT/ritocode/issues/258)): the same `CardDialog`, here over the
+whole centre column — the score bar included, the lanes dimmed behind — 56 rem wide at most and as
+tall as the column, on a neutral frame (no class tint; the class is a grey word on the band). ‹ n из N ›
+and ← → walk the lanes' cards in order (found, missed, not in the answer); ×, Esc or a click on the
+dimmed lanes closes it, and the focus returns to the card it was opened from. Inside: the verdict and
+the points; then **В этой задаче** on the inset surface — for an extra pick the explanation and the
+signal, the author's note, the learner's leaves against the author's (the shared ones green, the
+learner's wrong ones red); then the summary; then the catalogue's sections **folded**
+(`details.problem-card__section--folded`, `CardSectionsView folded`), side by side where they fit,
+an opened one taking the row — reference, not the point. On a phone it covers the screen, as in
+*Диагноз*. The pane's tabs switch between *Карточки · N* and the code; a clean task with nothing picked shows
 the code. On the right, the counts (`OutcomeTally`) and the lesson; the same code in another task
 sits under the context on the left. On a desktop the cards pane scrolls on its own
 (`.review__pane--cards`, [#254](https://github.com/shoraLBRT/ritocode/issues/254)), so every card can be read in full. At 64 rem and

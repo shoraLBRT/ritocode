@@ -273,6 +273,7 @@ export const ru = {
   },
   review: {
     title: 'Разбор',
+    inThisTask: 'В этой задаче',
     loading: 'Загружаем разбор…',
     cardTab: 'Карточки',
     codeTab: 'Код',
@@ -293,7 +294,6 @@ export const ru = {
       treatedMark: '✓ ',
       mistreatedMark: '✗ ',
       absent: 'Этого в коде нет',
-      back: '← Все карточки',
     },
     extraExplain: 'Признаков этой карточки автор здесь не видит. Если, по-твоему, она здесь есть, — скажи об этом: ответ задачи мог её пропустить.',
     score: '{score} из {maximum}',
