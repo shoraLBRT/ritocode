@@ -9,14 +9,15 @@ import { LoadingState } from '../../components/LoadingState';
 import { Markdown } from '../../components/Markdown';
 import { useApiResource } from '../../hooks/useApiResource';
 import { useT } from '../../i18n';
+import { CardDialog } from './CardDialog';
 import { ContextPanel } from './ContextPanel';
 import { MaterialViewer } from './MaterialViewer';
 import { nextTask } from './next';
 import { OutcomeTally, RevealAnswer } from './OutcomeTally';
+import { lanes } from './lanes';
 import { ReviewLanes } from './ReviewLanes';
 import { SignalControl } from './SignalControl';
 import { StepBar } from './StepBar';
-import { classTint } from './tint';
 
 type Line = AttemptResult['cards'][number];
 
@@ -265,18 +266,15 @@ function FullReview({
       scoreBar.current?.focus();
     }
   }, [focusScore]);
-  // The card opened in full over the lanes, or none; the one closed last takes the focus back.
+  // The card opened over the centre, or none; the one closed last takes the focus back.
   const [selected, setSelected] = useState<string | null>(null);
   const [closed, setClosed] = useState<string | null>(null);
   const [pane, setPane] = useState<'cards' | 'code'>('cards');
   const { area, tab } = useAreaTabs();
   const [contextOpen, setContextOpen] = useState(false);
-  const back = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    if (selected !== null) {
-      back.current?.focus();
-    } else if (closed !== null) {
+    if (selected === null && closed !== null) {
       document.getElementById(`open-${closed}`)?.focus();
     }
   }, [selected, closed]);
@@ -291,7 +289,10 @@ function FullReview({
   const className = (slug: string) => task.classes.find((each) => each.id === classOf(slug))?.name;
   const label = (leaf: string) => tree.branches.flatMap((branch) => branch.leaves).find((each) => each.id === leaf)?.label ?? leaf;
   const picked = (slug: string) => picks.find((pick) => pick.card === slug)?.leaves ?? [];
-  const chosen = result.cards.find((line) => line.card === selected);
+  // The opened card walks the lanes' cards in their order: found, missed, not in the answer.
+  const walk = lanes(result.cards).flatMap((each) => each.lines);
+  const chosenIndex = walk.findIndex((line) => line.card === selected);
+  const chosen = walk[chosenIndex];
 
   return (
     <section className="workspace workspace--review review" data-area={area}>
@@ -379,7 +380,7 @@ function FullReview({
 
         {pane === 'code' || result.cards.length === 0 ? (
           <MaterialViewer material={task.material} />
-        ) : chosen === undefined ? (
+        ) : (
           <ReviewLanes
             lines={result.cards}
             name={name}
@@ -390,39 +391,48 @@ function FullReview({
               setSelected(slug);
             }}
           />
-        ) : (
-          <>
-            <button
-              ref={back}
-              type="button"
-              className="button button--small review__back"
-              onClick={() => {
-                setClosed(chosen.card);
-                setSelected(null);
-              }}
-            >
-              {t('review.lane.back')}
-            </button>
-            <FindingCard
-              line={chosen}
-              name={name(chosen.card)}
-              problemClass={classOf(chosen.card)}
-              className={className(chosen.card)}
-              card={card(chosen.card)}
-              yours={picked(chosen.card).map((leaf) => ({ label: label(leaf), right: chosen.keyLeaves?.includes(leaf) === true }))}
-              authors={chosen.keyLeaves?.map((leaf) => ({ label: label(leaf), right: picked(chosen.card).includes(leaf) }))}
-              note={attempt.review?.notes[chosen.card]}
-            >
-              {chosen.outcome === 'extra' && (
-                <div className="note note--extra">
-                  <p>{t('review.extraExplain')}</p>
-                  <SignalControl attempt={attempt.id} card={chosen.card} sent={attempt.signalledCards.includes(chosen.card)} />
-                </div>
-              )}
-            </FindingCard>
-          </>
         )}
       </section>
+
+      {chosen !== undefined && (
+        <CardDialog
+          className="review-card"
+          labelledBy="review-card-name"
+          band={<span>{className(chosen.card)}</span>}
+          heading={
+            <h3 id="review-card-name" className="rc-pcard__name">
+              {name(chosen.card)}
+            </h3>
+          }
+          index={chosenIndex}
+          count={walk.length}
+          onMove={(index) => {
+            const next = walk[(index + walk.length) % walk.length];
+            if (next !== undefined) {
+              setSelected(next.card);
+            }
+          }}
+          onClose={() => {
+            setClosed(chosen.card);
+            setSelected(null);
+          }}
+        >
+          <FindingCard
+            line={chosen}
+            card={card(chosen.card)}
+            yours={picked(chosen.card).map((leaf) => ({ label: label(leaf), right: chosen.keyLeaves?.includes(leaf) === true }))}
+            authors={chosen.keyLeaves?.map((leaf) => ({ label: label(leaf), right: picked(chosen.card).includes(leaf) }))}
+            note={attempt.review?.notes[chosen.card]}
+          >
+            {chosen.outcome === 'extra' && (
+              <div className="note note--extra">
+                <p>{t('review.extraExplain')}</p>
+                <SignalControl attempt={attempt.id} card={chosen.card} sent={attempt.signalledCards.includes(chosen.card)} />
+              </div>
+            )}
+          </FindingCard>
+        </CardDialog>
+      )}
 
       <aside className="panel workspace__aside review__verdicts workspace__area workspace__area--answer" aria-labelledby="review-counts">
         <h3 id="review-counts" className="aside__title">
@@ -441,12 +451,14 @@ function FullReview({
   );
 }
 
-/** One line of the result in full: the verdict, the learner's leaves beside the author's, the note, the card. */
+/**
+ * What an opened card shows on the review (#258), inside the task screen's `CardDialog`: the verdict
+ * and the points; then *В этой задаче* — for an extra pick the explanation and the signal, the
+ * author's note, the learner's leaves beside the author's; then the summary; then the catalogue's
+ * sections, folded, as reference.
+ */
 function FindingCard({
   line,
-  name,
-  problemClass,
-  className,
   card,
   yours,
   authors,
@@ -454,9 +466,6 @@ function FindingCard({
   children,
 }: {
   line: Line;
-  name: string;
-  problemClass: string | undefined;
-  className: string | undefined;
   card: ProblemCard | undefined;
   /** The learner's leaves, each right when the key lists it. */
   yours: readonly Leaf[];
@@ -478,55 +487,53 @@ function FindingCard({
     );
 
   return (
-    <article className={`finding-card finding-card--${line.outcome}`} aria-labelledby="finding-card-name">
+    <div className={`finding-card finding-card--${line.outcome}`}>
       <p className="finding-card__badges">
         <span className={`verdict-badge verdict-badge--${line.outcome}`}>
           <span aria-hidden="true">{t(`review.${line.outcome}Mark`)}</span> {t(`review.${line.outcome}`)}
         </span>
-        {className !== undefined && (
-          <span className={`class-badge${classTint(problemClass)}`}>
-            <span className="dot" aria-hidden="true" />
-            {className}
-          </span>
-        )}
         <span className="finding-card__points">{t('review.points', { count: line.points })}</span>
       </p>
-      <h3 id="finding-card-name" className="finding-card__name">
-        {name}
-      </h3>
-      {card !== undefined && <p className="finding-card__summary">{card.summary}</p>}
 
-      {children}
+      <section className="finding-card__task" aria-labelledby="finding-card-task">
+        <h4 id="finding-card-task" className="eyebrow">
+          {t('review.inThisTask')}
+        </h4>
+        {children}
 
-      {note !== undefined && (
-        <div className="note">
-          <h4 className="eyebrow">{t('review.note')}</h4>
-          <Markdown source={note} />
-        </div>
-      )}
+        {note !== undefined && (
+          <div className="note">
+            <h5 className="eyebrow">{t('review.note')}</h5>
+            <Markdown source={note} />
+          </div>
+        )}
 
-      {(line.outcome !== 'missed' || authors !== undefined) && (
-        <dl className="compare">
-          {line.outcome !== 'missed' && (
-            <div>
-              <dt className="eyebrow">{t('review.yourLeaves')}</dt>
-              <dd className="compare__leaves">{chips(yours, 'leaf-chip--wrong')}</dd>
-            </div>
-          )}
-          {authors !== undefined && (
-            <div>
-              <dt className="eyebrow">{t('review.authorLeaves')}</dt>
-              <dd className="compare__leaves">{chips(authors, '')}</dd>
-            </div>
-          )}
-        </dl>
-      )}
+        {(line.outcome !== 'missed' || authors !== undefined) && (
+          <dl className="compare">
+            {line.outcome !== 'missed' && (
+              <div>
+                <dt className="eyebrow">{t('review.yourLeaves')}</dt>
+                <dd className="compare__leaves">{chips(yours, 'leaf-chip--wrong')}</dd>
+              </div>
+            )}
+            {authors !== undefined && (
+              <div>
+                <dt className="eyebrow">{t('review.authorLeaves')}</dt>
+                <dd className="compare__leaves">{chips(authors, '')}</dd>
+              </div>
+            )}
+          </dl>
+        )}
+      </section>
 
       {card !== undefined && (
-        <div className="finding-card__sections">
-          <CardSectionsView sections={card.sections} />
-        </div>
+        <>
+          <p className="finding-card__summary">{card.summary}</p>
+          <div className="finding-card__sections">
+            <CardSectionsView sections={card.sections} folded />
+          </div>
+        </>
       )}
-    </article>
+    </div>
   );
 }

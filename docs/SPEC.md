@@ -374,7 +374,9 @@ beside it — or the code again.
 - **The cards in three lanes** — found, missed, not in this task's answer (#242) — each card's face
   its name and one conclusion (#256): for a found card whether the treatment fits (any one of the
   author's leaves is enough), for a missed one the author's first leaf, for an extra pick that the
-  key does not see it here. The card opens in full, with the items below.
+  key does not see it here. The card opens in full over the centre, as in *Диагноз*, walking the
+  lanes' cards in order (#258): first what concerns this task (the items below), then the summary,
+  then the catalogue's sections folded.
 - **Every finding in the key**, marked found or missed. For each: the learner's leaves beside the
   author's, the author's note if there is one, and the full card, expandable.
 - **Every extra pick**, marked "not in this task's answer", with the full card and a button —

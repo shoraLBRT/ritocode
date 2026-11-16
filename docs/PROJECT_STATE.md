@@ -178,6 +178,11 @@ description. As of that day:
   read with a filter on; the search, the filters, the picks, the lift and the results' scroll are
   kept. Checked in the built-in browser at 1280 px (both steps, a class or branch filter and a
   search on, the dock raised) and 375 px (the sheet shrinks to the chips and the bar).
+  **#258** (2026-11-17): the review opens a card the way *Диагноз* does — one `CardDialog` shared by
+  both, over the whole centre column, ‹ n из N › and ← → through the lanes, ×/Esc, focus returned —
+  with *В этой задаче* first and the catalogue's sections folded; *← Все карточки* is gone. Checked in
+  the built-in browser at 1440 px (dark; a section unfolded, the walk) and 375 px (full screen), and
+  *Диагноз*'s opened card unchanged; lint, build and vitest (406) pass.
   **#256** (2026-11-16): a lane card's face is its name and one conclusion — on a found card whether
   the treatment fits, on a missed one the author's first leaf, on an extra pick «Этого в коде нет» —
   and the whole card opens it in full; the class, the summary, the leaf chips and the points left the

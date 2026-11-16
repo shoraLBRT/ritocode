@@ -1,7 +1,8 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import type { CandidateCard, ProblemClass } from '../../api';
 import { Markdown } from '../../components/Markdown';
+import { CardDialog } from './CardDialog';
 import { useT } from '../../i18n';
 import type { Answer } from './answer';
 import { useRisingDock } from './dock';
@@ -329,8 +330,8 @@ function DockCard({
 
 /**
  * The opened card, over the code only: the class, the full summary and the class's description
- * (SPEC §3.2 — no signs, no treatment), ‹ n из N › through the matches, and *Отметить*. A dialog:
- * focus moves into it and stays there, and ×, Esc or a click on the dimmed code closes it.
+ * (SPEC §3.2 — no signs, no treatment), ‹ n из N › through the matches, and *Отметить*, in the task
+ * screen's shared `CardDialog`.
  */
 function OpenedCard({
   cards,
@@ -350,14 +351,8 @@ function OpenedCard({
   onClose: () => void;
 }) {
   const t = useT();
-  const dialog = useRef<HTMLDivElement>(null);
-  const closeButton = useRef<HTMLButtonElement>(null);
   const card = cards[index];
   const problemClass = classes.find((each) => each.id === card?.class);
-
-  useLayoutEffect(() => {
-    closeButton.current?.focus();
-  }, []);
 
   if (card === undefined) {
     return null;
@@ -365,98 +360,47 @@ function OpenedCard({
 
   const on = picked(card.slug);
 
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      onClose();
-      return;
-    }
-    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-      event.preventDefault();
-      onMove(index + (event.key === 'ArrowRight' ? 1 : -1));
-      return;
-    }
-    if (event.key !== 'Tab' || dialog.current === null) {
-      return;
-    }
-    const focusable = [...dialog.current.querySelectorAll<HTMLElement>('button:not(:disabled)')];
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last?.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first?.focus();
-    }
-  };
-
   return (
-    <div className="dock-open" onKeyDown={onKeyDown}>
-      <button type="button" className="dock-open__dim" tabIndex={-1} aria-label={t('problems.close')} onClick={onClose} />
-      <div ref={dialog} className={`rc-pcard rc-pcard--peek k-${card.class}`} role="dialog" aria-modal="true" aria-labelledby="dock-open-name">
-        <div className="rc-pcard__band">
+    <CardDialog
+      className={`k-${card.class}`}
+      labelledBy="dock-open-name"
+      band={
+        <>
           <span>{problemClass?.name ?? card.class}</span>
           <span className="rc-pcard__seal" aria-hidden="true" />
-        </div>
-        <div className="rc-pcard__face">
-          <div className="rc-pcard__open-head">
-            <h3 id="dock-open-name" className="rc-pcard__name">
-              {card.name}
-            </h3>
-            <button ref={closeButton} type="button" className="icon-button" aria-label={t('problems.close')} onClick={onClose}>
-              <Icon name="close" />
-            </button>
-          </div>
-          <span className="rc-pcard__rule" aria-hidden="true" />
-          <div className="rc-pcard__summary">
-            <Markdown source={card.summary} />
-          </div>
-          {problemClass?.description != null && (
-            <p className="rc-pcard__class-note">
-              <strong>{problemClass.name}</strong>
-              {t('task.classNote', { description: problemClass.description })}
-            </p>
-          )}
-          <div className="rc-pcard__walk">
-            {cards.length > 1 && (
-              <>
-                <button
-                  type="button"
-                  className="nav-button"
-                  aria-label={t('task.previousCard')}
-                  onClick={() => {
-                    onMove(index - 1);
-                  }}
-                >
-                  <Icon name="left" />
-                </button>
-                <span className="rc-pcard__position">{t('task.cardPosition', { index: index + 1, count: cards.length })}</span>
-                <button
-                  type="button"
-                  className="nav-button"
-                  aria-label={t('task.nextCard')}
-                  onClick={() => {
-                    onMove(index + 1);
-                  }}
-                >
-                  <Icon name="right" />
-                </button>
-              </>
-            )}
-            <button
-              type="button"
-              className={`button${on ? '' : ' button--primary'} rc-pcard__mark`}
-              aria-pressed={on}
-              onClick={() => {
-                onToggle(card.slug);
-              }}
-            >
-              {on ? t('task.pickedLong') : t('task.pickLong')}
-            </button>
-          </div>
-        </div>
+        </>
+      }
+      heading={
+        <h3 id="dock-open-name" className="rc-pcard__name">
+          {card.name}
+        </h3>
+      }
+      index={index}
+      count={cards.length}
+      onMove={onMove}
+      onClose={onClose}
+      actions={
+        <button
+          type="button"
+          className={`button${on ? '' : ' button--primary'} rc-pcard__mark`}
+          aria-pressed={on}
+          onClick={() => {
+            onToggle(card.slug);
+          }}
+        >
+          {on ? t('task.pickedLong') : t('task.pickLong')}
+        </button>
+      }
+    >
+      <div className="rc-pcard__summary">
+        <Markdown source={card.summary} />
       </div>
-    </div>
+      {problemClass?.description != null && (
+        <p className="rc-pcard__class-note">
+          <strong>{problemClass.name}</strong>
+          {t('task.classNote', { description: problemClass.description })}
+        </p>
+      )}
+    </CardDialog>
   );
 }
