@@ -2239,6 +2239,15 @@ button.file-tree__row:hover {
   overflow-y: auto;
 }
 
+/* The lanes and the opened card's way back keep the pane tabs' inset from the pane's edges. */
+.review__pane--cards > .review-lanes {
+  margin: 0 14px 14px;
+}
+
+.review__pane--cards > .review__back {
+  margin: 0 14px 4px;
+}
+
 .review-lanes {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
