@@ -85,6 +85,16 @@ describe('the task catalogue', () => {
     expect(await screen.findByText(ru.tasks.noMatch)).toBeInTheDocument();
   });
 
+  it('offers to reset the filters when nothing is left under them', async () => {
+    renderApp(api(tasks), '/tasks?difficulty=medium');
+
+    expect(await screen.findByText(ru.tasks.noMatch)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: ru.tasks.resetFilters }));
+
+    expect(await rows()).toHaveLength(3);
+    expect(tab(ru.tasks.difficultyFilter, new RegExp(`^${ru.tasks.all}`))).toHaveAttribute('aria-pressed', 'true');
+  });
+
   it('opens with the filters the address names, ignoring values it does not know', async () => {
     renderApp(api(tasks), '/tasks?difficulty=easy&status=solved');
 

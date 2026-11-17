@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { ApiError } from '../api';
 import { ru } from '../i18n';
 import { ErrorState } from './ErrorState';
@@ -50,5 +50,19 @@ describe('ErrorState', () => {
 
     rerender(<ErrorState error={new ApiError('x', 'network')} />);
     expect(screen.queryByRole('button', { name: ru.state.retry })).not.toBeInTheDocument();
+  });
+
+  it('shows a retry that returns a promise as in flight until it settles', async () => {
+    let finish: () => void = () => undefined;
+    const onRetry = vi.fn(() => new Promise<void>((resolve) => { finish = resolve; }));
+    render(<ErrorState error={new ApiError('x', 'network')} onRetry={onRetry} />);
+
+    const button = screen.getByRole('button', { name: ru.state.retry });
+    act(() => { button.click(); });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute('aria-busy', 'true');
+
+    await act(async () => { finish(); await Promise.resolve(); });
+    expect(button).toBeEnabled();
   });
 });

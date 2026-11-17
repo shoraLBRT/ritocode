@@ -70,7 +70,7 @@ export function AdminAttemptsPage() {
       }
       total={state.status === 'success' ? <AdminTotal count={state.data.totalItems} /> : null}
     >
-      <ListBody state={state} reload={reload} empty={t('admin.attemptsPage.empty')}>
+      <ListBody state={state} reload={reload} empty={t('admin.attemptsPage.empty')} columns={9} icon="tasks">
         {(list) => (
           <>
             <AdminTable label={t('admin.attempts')}>

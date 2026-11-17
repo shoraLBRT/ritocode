@@ -443,6 +443,35 @@ components and the full width of `.app__main`. Styles in `pages/admin/admin.css`
 - On a phone (48rem and narrower) each table keeps its width and scrolls in its own
   `.table-scroll` region (`role="region"`, labelled, focusable), so the page never scrolls sideways.
 
+### States
+
+([#264](https://github.com/shoraLBRT/ritocode/issues/264).) A state is never a line of text that
+the page jumps over.
+
+- **Loading** is blocks in the shape of what loads, on `.rc-skeleton`, laid out with the final
+  markup's classes so the content lands at the same height (`components/skeletons.tsx`: the task
+  table's header and rows, the home page's problems-to-read, stat figures, progress ring and bars,
+  heat map and daily task, the catalogue's class headings over card-shaped blocks, an admin table).
+  `LoadingState` takes them as `skeleton`: it stays a `role="status"` region with `aria-busy`, its
+  words (`label`) visually hidden. They show only after 150 ms (`.rc-loading`: an opacity fade with
+  `animation-delay: 150ms` and a `backwards` fill), so a quick answer never flashes them. On the
+  spotlight a block is `--spotlight-raised`. Without a `skeleton` it is the old spinner and line:
+  the workspace's loading (`TaskPage`, `ReviewPage`) and the sign-in check.
+- **Empty** (`EmptyState`) is centred in its panel (`calc(var(--gap) * 3)` above and below): a
+  40 px line mark in `currentColor` on a 72 px `--surface-inset` disc (`search`, `tasks`, `inbox`,
+  `flag`), a title (1.05rem, 600), one muted line and one action, a `.button`. Under a filter the
+  action undoes it: *Сбросить фильтры* on `/tasks`, *Сбросить поиск* on `/problems`. Called with
+  children only it is the old one-line form.
+- **Error** (`ErrorState`) is the same frame with a warning mark in `--danger`, the title, what the
+  API said (muted), the request id in Plex Mono when the error carries one, and *Повторить*, which
+  shows as in flight (disabled, a spinner) while a promise returned by `onRetry` is pending.
+  `role="alert"`.
+- **Not found** (`NotFoundPage`, for an unknown address and the admin area's refusal): a large
+  «404» in Plex Mono in `--text-faint` with the brand's cross as the zero, *Такой страницы нет*,
+  a sentence and three cards — *На главную* (primary), *К задачам*, *В каталог проблем* — each with
+  a hint and an arrow, in a row, stacked on a phone. `title` and `text` props let another page use
+  the frame with its own words.
+
 ### Components
 
 Everything the arena adds is a class prefixed `rc-` in `frontend/src/styles.css`, on the tokens
@@ -452,7 +481,10 @@ above. What the site already had stays as it is.
 | --- | --- | --- |
 | Button | `.button`, `.button--primary`, `.button--small`; `.rc-daily__action` on the spotlight | shared, not `rc-` |
 | Code | `.code`, `.code__line`, `.code__token--*` | shared |
-| Skeleton | `.rc-skeleton`, `components/Skeleton.tsx` | a loading block on `--surface-sunken` with a shimmer; `aria-hidden` |
+| Skeleton | `.rc-skeleton` (`--dot`, `--ring`, `--bar`, `--stat`, `--pcard`, `--panel`, `--on-spotlight`), `components/Skeleton.tsx`, `components/skeletons.tsx` | a loading block on `--surface-sunken` with a shimmer; `aria-hidden`; the variants are the shapes of States above |
+| Loading | `.rc-loading` (with a skeleton), `.state--loading` (without) | `LoadingState`: `role="status"`, the label `.visually-hidden` beside a skeleton, shown after 150 ms |
+| Empty, error | `.rc-empty` › `.rc-disc` (`--danger`), `__title`, `__text`; `.state--error` | `EmptyState` (title, line, action, icon) and `ErrorState` share the frame |
+| Not found | `.rc-notfound` › `__code`, `__mark`, `__text`, `__ways`, `__way` (`--primary`) › `__way-label`, `__way-hint`, `__arrow` | `pages/NotFoundPage.tsx` |
 | Count-up | `hooks/useCountUp.ts` | `useCountUp(value, { duration })` eases whole numbers from the last shown value (from 0 once the app has mounted); instant under reduced motion, without `matchMedia`, and for prerendered markup |
 | Header, brand, nav | `.app__header` (`[data-scrolled]`, `[data-search='open']`), `.app__mark`, `.app__nav-link` (`--active`, underline in `::after`) | shared; sticky off the workspace |
 | Phone menu | `.app__menu-button`, `.app__search-button`, `.app__search-close`, `.app__sheet` › `__nav`, `__group`, `__item` (`--active`), `__theme`, `__start`, `.app__sheet-backdrop` | the menu button, the search icon and the sheet below 48 / 64 rem (`MobileMenu`, `AppLayout`) |

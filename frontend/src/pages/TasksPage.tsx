@@ -1,11 +1,14 @@
 import { useSearchParams } from 'react-router';
 import { difficulties, listTasks, taskStatuses, useApiClient } from '../api';
 import type { Difficulty, TaskStatus, TaskSummary } from '../api';
+import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { LoadingState } from '../components/LoadingState';
+import { TaskTableSkeleton } from '../components/skeletons';
 import { Tabs, TaskTable } from '../components/TaskTable';
 import { useApiResource } from '../hooks/useApiResource';
 import { useT } from '../i18n';
+import { useSession } from '../session';
 
 type StatusFilter = 'all' | TaskStatus;
 
@@ -20,6 +23,7 @@ type StatusFilter = 'all' | TaskStatus;
 export function TasksPage() {
   const client = useApiClient();
   const t = useT();
+  const session = useSession();
   const { state, reload } = useApiResource((signal) => listTasks(client, { pageSize: 100 }, signal), [client]);
 
   return (
@@ -30,9 +34,9 @@ export function TasksPage() {
       </header>
 
       <div className="rc-panel">
-        {state.status === 'loading' && <LoadingState label={t('tasks.loading')} />}
+        {state.status === 'loading' && <LoadingState label={t('tasks.loading')} skeleton={<TaskTableSkeleton filters rows={10} status={session.status !== 'signedOut'} />} />}
         {state.status === 'error' && <ErrorState error={state.error} onRetry={reload} />}
-        {state.status === 'success' && state.data.items.length === 0 && <p className="rc-arena__empty">{t('tasks.empty')}</p>}
+        {state.status === 'success' && state.data.items.length === 0 && <EmptyState title={t('tasks.empty')} icon="tasks" />}
         {state.status === 'success' && state.data.items.length > 0 && <TaskList tasks={state.data.items} />}
       </div>
     </section>
@@ -98,7 +102,27 @@ function TaskList({ tasks }: { tasks: readonly TaskSummary[] }) {
         </span>
       </div>
 
-      {shown.length === 0 ? <p className="rc-arena__empty">{t('tasks.noMatch')}</p> : <TaskTable tasks={shown} />}
+      {shown.length === 0 ? (
+        <EmptyState
+          title={t('tasks.noMatch')}
+          icon="search"
+          action={
+            <button
+              type="button"
+              className="button"
+              onClick={() => {
+                setParams(new URLSearchParams(), { replace: true });
+              }}
+            >
+              {t('tasks.resetFilters')}
+            </button>
+          }
+        >
+          {t('tasks.noMatchText')}
+        </EmptyState>
+      ) : (
+        <TaskTable tasks={shown} />
+      )}
     </>
   );
 }

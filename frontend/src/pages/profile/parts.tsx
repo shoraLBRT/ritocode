@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react';
+import { LoadingState } from '../../components/LoadingState';
 
 /** A card of the profile: a titled section, staggered into place by its `index` (profile.css). */
 export function ProfileCard({
@@ -31,13 +32,6 @@ export function ProfileCard({
 
 /** Skeleton blocks of a card's final shape, with the words a screen reader hears meanwhile. */
 export function CardLoading({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="rc-profile__loading" aria-busy="true">
-      <span className="visually-hidden" role="status">
-        {label}
-      </span>
-      {children}
-    </div>
-  );
+  return <LoadingState className="rc-profile__loading" label={label} skeleton={children} />;
 }
 

@@ -12,6 +12,16 @@ describe('LoadingState', () => {
     expect(status).toHaveAttribute('aria-live', 'polite');
   });
 
+  it('keeps the words for a screen reader when a skeleton is what shows', () => {
+    render(<LoadingState label="Loading problems…" skeleton={<span data-testid="blocks" />} />);
+
+    const status = screen.getByRole('status');
+    expect(status).toHaveTextContent('Loading problems…');
+    expect(status).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByText('Loading problems…')).toHaveClass('visually-hidden');
+    expect(screen.getByTestId('blocks')).toBeInTheDocument();
+  });
+
   it('says it is loading, from the catalogue, when the caller names nothing', () => {
     render(<LoadingState />);
 

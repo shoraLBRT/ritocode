@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import type { AttemptSummary, CardProgress, Progress, TaskSummary } from '../../api';
+import { EmptyState } from '../../components/EmptyState';
 import { ErrorState } from '../../components/ErrorState';
 import { Skeleton } from '../../components/Skeleton';
 import type { ApiResource } from '../../hooks/useApiResource';
@@ -79,7 +80,7 @@ function RecentAttempts({ recent, tasks }: { recent: ApiResource<AttemptSummary[
   }
 
   if (state.data.length === 0) {
-    return <p className="rc-arena__empty">{t('profile.attempts.none')}</p>;
+    return <EmptyState title={t('profile.attempts.none')} icon="flag" />;
   }
 
   const titles = new Map(tasks.map((task) => [task.slug, task.title]));
