@@ -1,6 +1,8 @@
+import { useEffect } from 'react';
 import { RouterProvider, createBrowserRouter } from 'react-router';
 import { ApiClientProvider } from './api';
 import type { ApiClient } from './api';
+import { markApplicationMounted } from './hooks/useCountUp';
 import { I18nProvider } from './i18n';
 import { routes } from './routes';
 import { SessionProvider } from './session';
@@ -15,6 +17,11 @@ const router = createBrowserRouter(routes);
  * environment — and a test mounts the same tree against a stub.
  */
 export function App({ client, config }: { client: ApiClient; config: SiteConfig }) {
+  // Components mounted after this point may count their numbers up; prerendered ones may not.
+  useEffect(() => {
+    markApplicationMounted();
+  }, []);
+
   return (
     <I18nProvider>
       <SiteConfigContext value={config}>

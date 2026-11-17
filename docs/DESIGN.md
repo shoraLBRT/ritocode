@@ -66,6 +66,33 @@ chips of picked cards, the option tags, the class badge on a card in the review.
 
 Colour never carries meaning alone: an outcome has a mark and a word, a class its name.
 
+## Motion
+
+Motion says what changed; it never decorates. Tokens in `frontend/src/styles.css`:
+
+| Token | Value | Used for |
+| --- | --- | --- |
+| `--dur-fast` | 120ms | a state change: hover, press, a row, a toggle |
+| `--dur` | 200ms | a popup or a card appearing, a lift |
+| `--dur-slow` | 360ms | a page entrance, a progress fill |
+| `--ease-out` | `cubic-bezier(0.22, 1, 0.36, 1)` | everything that appears or responds |
+| `--ease-in-out` | `cubic-bezier(0.65, 0, 0.35, 1)` | a repeating sweep (the skeleton) |
+| `--ease-spring` | `cubic-bezier(0.34, 1.56, 0.64, 1)` | a small overshoot: the toggle knob |
+
+Rules:
+
+- What moves: state changes (hover, press `scale(0.97)`, a link card's 2px lift), entrances (a
+  routed page `rc-rise`: fades and rises 8px; popups `rc-pop`: fade and scale from 0.96 at their
+  origin, top right for header menus, bottom right for feedback) and progress fills.
+- Only `transform` and `opacity` animate, plus colours on a state change; never a layout property.
+- Nothing loops except the loading shimmer and the spinner.
+- An entrance uses `backwards` fill: the final state is the element as styled, so without the
+  animation nothing stays hidden, and a finished entrance leaves no transform on the page root.
+  The workspace only fades.
+- `prefers-reduced-motion: reduce` turns it all off: one guard sets the durations to 0 and every
+  animation and transition to near zero. A rule that changes more than timing (the skeleton's
+  sweep) says so itself.
+
 ## The task workspace
 
 `/tasks/{slug}` and its review `/tasks/{slug}/attempts/{id}` (SPEC §4.4–4.5) fill the window. The
@@ -326,6 +353,8 @@ above. What the site already had stays as it is.
 | --- | --- | --- |
 | Button | `.button`, `.button--primary`, `.button--small`; `.rc-daily__action` on the spotlight | shared, not `rc-` |
 | Code | `.code`, `.code__line`, `.code__token--*` | shared |
+| Skeleton | `.rc-skeleton`, `components/Skeleton.tsx` | a loading block on `--surface-sunken` with a shimmer; `aria-hidden` |
+| Count-up | `hooks/useCountUp.ts` | `useCountUp(value, { duration })` eases whole numbers from the last shown value (from 0 once the app has mounted); instant under reduced motion, without `matchMedia`, and for prerendered markup |
 | Header, brand, nav | `.app__header`, `.app__mark`, `.app__nav-link` | shared |
 | Panel | `.rc-panel`, `.rc-panel__bar` | a page's large card: the table with its toolbar |
 | Segmented tabs | `.rc-tabs` › `button.rc-tab[aria-pressed]`, `.rc-tab__count` | a filter of 2–5 options, such as difficulty |
