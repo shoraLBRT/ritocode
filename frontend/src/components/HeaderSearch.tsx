@@ -18,7 +18,7 @@ type Lists =
  * next focus. Arrow keys move through the list, Enter opens the highlighted entry — the first one
  * when none is — Escape closes it, and Ctrl K (⌘K) reaches the field from anywhere.
  */
-export function HeaderSearch() {
+export function HeaderSearch({ overlayOpen = false, onClose }: { overlayOpen?: boolean; onClose?: (restoreFocus: boolean) => void }) {
   const client = useApiClient();
   const t = useT();
   const navigate = useNavigate();
@@ -41,6 +41,13 @@ export function HeaderSearch() {
       window.removeEventListener('keydown', onKey);
     };
   }, []);
+
+  // Below 64 rem the field is an overlay over the header, opened by the icon button: the focus goes in.
+  useEffect(() => {
+    if (overlayOpen) {
+      input.current?.focus();
+    }
+  }, [overlayOpen]);
 
   const load = () => {
     if (lists.status === 'loading' || lists.status === 'loaded') {
@@ -76,6 +83,7 @@ export function HeaderSearch() {
     setOpen(false);
     setActive(-1);
     input.current?.blur();
+    onClose?.(false);
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -107,6 +115,9 @@ export function HeaderSearch() {
           event.preventDefault();
           setOpen(false);
           setActive(-1);
+        } else if (overlayOpen && onClose !== undefined) {
+          event.preventDefault();
+          onClose(true);
         }
         return;
     }
@@ -178,6 +189,20 @@ export function HeaderSearch() {
           {t('header.search.shortcut')}
         </kbd>
       </label>
+      <button
+        type="button"
+        className="icon-button app__search-close"
+        aria-label={t('header.search.close')}
+        onClick={() => {
+          setQuery('');
+          setOpen(false);
+          onClose?.(true);
+        }}
+      >
+        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+          <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      </button>
 
       <div className="app__search-popup" hidden={!expanded}>
         <ul id={`${id}-list`} role="listbox" aria-label={t('header.search.results')}>

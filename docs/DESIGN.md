@@ -48,6 +48,9 @@ carries a faint light top edge. Every text colour meets WCAG AA (4.5:1) on every
 surface is apart from the one it sits on — `src/theme/contrast.test.ts` reads the tokens from the
 stylesheet and checks both. A new surface or text token goes into that test.
 
+`--header-height` (64 px) is the header's height, one row at every width: the header's `min-height`,
+and what a sticky column or bar offsets by (the profile's column: `top: calc(var(--header-height) + var(--gap) * 1.5)`).
+
 Radii: `--radius` 10 px for controls, `--radius-card` 14 px for cards, `--radius-panel` 18 px for a
 page's large panels (the task table, the daily task).
 
@@ -110,8 +113,8 @@ in the step, so the step gets the room; it replaced a 40/60 split of a sidebar a
   part is as wide as it needs, so the steps sit between the sections and the session rather than
   at the window's centre — on one line from 75 rem (1200 px) up, which an admin's four sections and
   the session need. Below that the steps take a line of their own under them, centred (900 px), and
-  at phone width the header wraps as the arena's does: brand and sections, then the toggle and the
-  session, then the steps (375 px). No menu: a section stays one click away.
+  at phone width (48 rem) the header is the arena's one row — brand, the session and a menu button
+  with the sections and the toggle (#263) — and the steps take the line under it (375 px).
 - **Three columns** (`pages/task/workspace.css`, `.workspace`): a narrow left column for the
   **context** (`ContextPanel`: the title, the difficulty, the agent's brief always, and *Весь
   контекст* for the context itself — open on step 1, folded from step 2 on); **the code in the
@@ -273,20 +276,47 @@ its token names are its own, and where it differs from this document, this docum
 
 - The header, on every page; the task workspace keeps its brand, sections and right end and puts
   its steps where the search would be (above, #199): the brand (the way home), the sections
-  (Задачи, Каталог проблем; Админка for an admin — the learner's own page is the avatar's, not a section), the search, the theme
-  toggle, then the streak and the avatar — or *Войти* and *Начать* (the demo task) for a guest.
+  (Задачи, Каталог проблем; Админка for an admin — the learner's own page is the avatar's, not a
+  section), the search, the theme toggle, then the streak and the avatar — or *Войти* and *Начать*
+  (the demo task) for a guest.
+  - **Sticky** (#263): on every page but the workspace the header stays at the top
+    (`position: sticky`, `--header-height`, 64 px) on `--surface` at 86 % with a 12 px backdrop blur
+    (solid `--surface` where `backdrop-filter` is missing), the bottom border as always; once the
+    page has scrolled 4 px it gains `--shadow` (`data-scrolled`, set from a passive, frame-throttled
+    scroll listener, unset on the first render so the prerendered markup matches). `html` has
+    `scroll-padding-top` of the header and a gap, so an anchor (`/problems#slug`) and a focused field
+    are not hidden under it. Stacking: page 0–3 < header 10 < the phone menu 15–16 < feedback 40 <
+    the card overlay 50.
+  - **The current section** has a 2 px `--accent` underline growing from the centre (`--dur`,
+    `--ease-out`) when it is current or hovered, with the accent colour and weight and
+    `aria-current="page"`; colour is not the only sign.
   - **The search** («Задачи и проблемы», `Ctrl K` / `⌘K` from anywhere) is a combobox: as the
     learner types, up to five tasks by title and five problems by name, keywords and summary, ranked
     by the task screen's search, in two groups. Arrow keys move, Enter opens the task or the
-    problem's anchor in `/problems`, Escape closes. The lists are read on the first focus.
+    problem's anchor in `/problems`, Escape closes. The lists are read on the first focus. Below
+    64 rem it is an icon button (*Открыть поиск*) that opens the one field as an overlay over the
+    header, with a close button; the focus goes into the field, and Escape or the close button gives
+    it back to the icon.
   - **The streak** is «N дн.», named in full for a screen reader; read again on each page change. It
     is a link to `/profile`.
   - **The avatar** is the username's first letter; it opens a menu with the username, *Профиль* and
-    *Выйти*.
-    *Войти* opens the providers with the sign-in notice, as before.
-  - At phone width the header wraps: brand and sections, then the toggle and the session, then the
-    search on a line of its own, without the shortcut. The design system's menu for the sections
-    and the search folded to an icon were not needed at 375 px.
+    *Выйти*. *Войти* opens the providers with the sign-in notice, as before.
+  - **At phone width (48 rem) the header is one row, 64 px**, signed in or out: the brand on the left;
+    on the right the search icon, the streak and the avatar — or *Войти* — and a menu button (three
+    lines, `aria-expanded`, `aria-controls`). The sections, the theme toggle and a guest's *Начать*
+    are not in the row (`display: none`, so nothing is read twice); the menu button opens a **sheet**
+    under the header (`MobileMenu`: `role="dialog"`, `aria-modal`, `--surface-pop`, `--shadow-pop`,
+    a dim `--overlay` backdrop below it, entering with an 8 px slide): the sections as 48 px rows
+    with the current one tinted, barred and bold; the theme with its words; *Профиль* and *Выйти*, or
+    *Начать* for a guest. Focus goes to the first row and Tab stays inside; Escape, a tap outside,
+    following a link, a page change and a window wider than 48 rem close it, and the focus goes back
+    to the button. On the workspace the same row is the first line and the steps the second.
+- **The footer**: on the page ground under a top border, `calc(var(--gap) * 2)` of air, in the
+  page's `min(72rem, 100%)` column: the brand with the tagline; *Разделы* (Задачи, Каталог проблем,
+  and Профиль when signed in); *О сервисе* (the privacy policy and *Обратная связь*, a button that
+  opens the feedback window — `requestFeedback()` from `feedback/`, an event the widget listens
+  for). Muted text; three columns, one on a phone; room is left at the bottom for the floating
+  feedback button. On the workspace it stays the one line it was: the tagline and the privacy link.
 - A row of two: a card with the lead and the real counts (`rc-stat`), and the **daily task**
   (`rc-daily`) — the page's only `--spotlight`. Its top line is the label and a countdown to Moscow
   midnight (`rc-daily__countdown`, a `<time>` ticking each second, not a live region); at zero the
@@ -424,7 +454,9 @@ above. What the site already had stays as it is.
 | Code | `.code`, `.code__line`, `.code__token--*` | shared |
 | Skeleton | `.rc-skeleton`, `components/Skeleton.tsx` | a loading block on `--surface-sunken` with a shimmer; `aria-hidden` |
 | Count-up | `hooks/useCountUp.ts` | `useCountUp(value, { duration })` eases whole numbers from the last shown value (from 0 once the app has mounted); instant under reduced motion, without `matchMedia`, and for prerendered markup |
-| Header, brand, nav | `.app__header`, `.app__mark`, `.app__nav-link` | shared |
+| Header, brand, nav | `.app__header` (`[data-scrolled]`, `[data-search='open']`), `.app__mark`, `.app__nav-link` (`--active`, underline in `::after`) | shared; sticky off the workspace |
+| Phone menu | `.app__menu-button`, `.app__search-button`, `.app__search-close`, `.app__sheet` › `__nav`, `__group`, `__item` (`--active`), `__theme`, `__start`, `.app__sheet-backdrop` | the menu button, the search icon and the sheet below 48 / 64 rem (`MobileMenu`, `AppLayout`) |
+| Footer | `.app__footer` › `__inner`, `__brand`, `__nav`, `__title`, `__feedback` | the arena's footer (`AppFooter`); *Обратная связь* calls `requestFeedback()` |
 | Panel | `.rc-panel`, `.rc-panel__bar` | a page's large card: the table with its toolbar |
 | Segmented tabs | `.rc-tabs` › `button.rc-tab[aria-pressed]`, `.rc-tab__count` | a filter of 2–5 options, such as difficulty |
 | Toggle | `button.rc-toggle[aria-pressed]` › `.rc-toggle__track` | a display setting that applies at once |

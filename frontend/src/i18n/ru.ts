@@ -29,6 +29,11 @@ export const ru = {
     privacy: 'Политика конфиденциальности',
     themeDark: 'Тёмная тема',
     themeLight: 'Светлая тема',
+    footer: {
+      sections: 'Разделы',
+      about: 'О сервисе',
+      feedback: 'Обратная связь',
+    },
   },
   nav: {
     label: 'Основная навигация',
@@ -40,6 +45,8 @@ export const ru = {
   header: {
     search: {
       label: 'Поиск',
+      open: 'Открыть поиск',
+      close: 'Закрыть поиск',
       placeholder: 'Задачи и проблемы',
       shortcut: 'Ctrl K',
       results: 'Найденные задачи и проблемы',
@@ -59,6 +66,8 @@ export const ru = {
     profile: 'Профиль {username}',
     toProfile: 'Профиль',
     start: 'Начать',
+    menu: 'Меню',
+    theme: 'Тема',
   },
   session: {
     requiredTitle: 'Нужно войти',

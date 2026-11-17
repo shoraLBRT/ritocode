@@ -20,9 +20,30 @@
   padding: 14px;
 }
 
+/* The footer stays a line: the tagline and the privacy link; the rest is for the pages that scroll. */
 .app--workspace .app__footer {
   padding: 0.35rem 1.25rem;
   font-size: 0.78rem;
+}
+
+.app--workspace .app__footer-inner {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.25rem var(--gap);
+  width: 100%;
+  padding: 0;
+}
+
+.app--workspace .app__footer-brand .app__brand,
+.app--workspace .app__footer-title,
+.app--workspace .app__footer-nav:nth-of-type(1),
+.app--workspace .app__footer-feedback {
+  display: none;
+}
+
+.app--workspace .app__footer-brand p {
+  margin: 0;
 }
 
 /*

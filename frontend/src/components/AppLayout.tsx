@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useMatch, useNavigate } from 'react-router';
 import { FeedbackWidget } from '../feedback';
 import { useT } from '../i18n';
@@ -6,9 +6,13 @@ import { readSignInReturn, SignInLinks, SignInReturnContext, useSession, without
 import type { SignInError, SignInReturnState } from '../session';
 import { useDocumentMeta, useSiteConfig } from '../site';
 import { ThemeToggle } from '../theme';
+import { AppFooter } from './AppFooter';
 import { HeaderSearch } from './HeaderSearch';
 import { HeaderSlotContext } from './HeaderSlot';
 import { HeaderStreak } from './HeaderStreak';
+import { MobileMenu } from './MobileMenu';
+import { SignOutButton } from './SignOutButton';
+import { useSections } from './sections';
 
 /**
  * The frame every route renders inside: a header with the primary navigation and who is signed
@@ -25,9 +29,11 @@ import { HeaderStreak } from './HeaderStreak';
  * aside so the steps have the centre, the sections stay — a review is one click from the task list
  * and the catalogue (#199) — and the page fills the window instead of a reading column.
  *
- * At phone width the header wraps rather than scrolls: brand and sections on the first line, the
- * session below them, the search — or the workspace's steps — on a line of its own (styles.css,
- * pages/task/workspace.css).
+ * Elsewhere the header is sticky and gains a shadow once the page has scrolled (`data-scrolled`).
+ * At phone width (48 rem) it is one row: the brand, the search as an icon opening the field over the
+ * header — below 64 rem —, the session, and a menu button opening the sections, the theme and the
+ * session's actions in a sheet (`MobileMenu`). Both controls are always in the markup; styles.css
+ * hides the one a width does not use with `display: none`.
  */
 export function AppLayout() {
   const t = useT();
@@ -59,13 +65,88 @@ export function AppLayout() {
   const workspace = solving || reviewing;
   const [slot, setSlot] = useState<HTMLElement | null>(null);
 
+  const headerRef = useRef<HTMLElement>(null);
+  const menuButton = useRef<HTMLButtonElement>(null);
+  const searchButton = useRef<HTMLButtonElement>(null);
+  const menuId = useId();
+  const [scrolled, setScrolled] = useState(false);
+  const [menuTop, setMenuTop] = useState(0);
+  // Each is open for the page it was opened on, so a page change ends it.
+  const [menuAt, setMenuAt] = useState<string | null>(null);
+  const [searchAt, setSearchAt] = useState<string | null>(null);
+  const menuOpen = menuAt === location.pathname;
+  const searchOpen = searchAt === location.pathname;
+
+  // Starts unset, so the server's markup and the first client render agree.
+  useEffect(() => {
+    let frame = 0;
+    const read = () => {
+      frame = 0;
+      setScrolled(window.scrollY > 4);
+    };
+    const onScroll = () => {
+      if (frame === 0) {
+        frame = window.requestAnimationFrame(read);
+      }
+    };
+    read();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (frame !== 0) {
+        window.cancelAnimationFrame(frame);
+      }
+    };
+  }, []);
+
+  const closeMenu = useCallback(() => {
+    setMenuAt(null);
+    menuButton.current?.focus();
+  }, []);
+  const closeSearch = useCallback((restoreFocus: boolean) => {
+    setSearchAt(null);
+    if (restoreFocus) {
+      searchButton.current?.focus();
+    }
+  }, []);
+
+  // A wider window ends them too: neither the sheet nor the overlay exists there.
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') {
+      return undefined;
+    }
+    const wide = window.matchMedia('(min-width: 48.0625rem)');
+    const widest = window.matchMedia('(min-width: 64.0625rem)');
+    const onWide = () => {
+      if (wide.matches) {
+        setMenuAt(null);
+      }
+    };
+    const onWidest = () => {
+      if (widest.matches) {
+        setSearchAt(null);
+      }
+    };
+    wide.addEventListener('change', onWide);
+    widest.addEventListener('change', onWidest);
+    return () => {
+      wide.removeEventListener('change', onWide);
+      widest.removeEventListener('change', onWidest);
+    };
+  }, []);
+
   return (
     <div className={workspace ? 'app app--workspace' : 'app'}>
       <a className="skip-link" href="#main">
         {t('app.skipToContent')}
       </a>
 
-      <header className="app__header">
+      <header
+        className="app__header"
+        ref={headerRef}
+        {...(scrolled ? { 'data-scrolled': '' } : {})}
+        {...(searchOpen ? { 'data-search': 'open' } : {})}
+      >
         <div className="app__header-start">
           <Link className="app__brand" to="/">
             <span className="app__mark" aria-hidden="true" />
@@ -75,11 +156,51 @@ export function AppLayout() {
         </div>
         <div className="app__header-center" ref={setSlot} />
         <div className="app__header-end">
-          {!workspace && <HeaderSearch />}
-          <ThemeToggle />
+          {!workspace && <HeaderSearch overlayOpen={searchOpen} onClose={closeSearch} />}
+          {!workspace && (
+            <button
+              ref={searchButton}
+              type="button"
+              className="icon-button app__search-button"
+              aria-label={t('header.search.open')}
+              onClick={() => {
+                setMenuAt(null);
+                setSearchAt(location.pathname);
+              }}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="icon">
+                <circle cx="11" cy="11" r="7" />
+                <path d="m20 20-3.5-3.5" />
+              </svg>
+            </button>
+          )}
+          <ThemeToggle className="app__theme" />
           <SessionStatus returnPath={location.pathname + withoutSignInReturn(location.search) + location.hash} />
+          <button
+            ref={menuButton}
+            type="button"
+            className="icon-button app__menu-button"
+            aria-label={t('header.menu')}
+            aria-expanded={menuOpen}
+            aria-controls={menuId}
+            onClick={() => {
+              if (menuOpen) {
+                closeMenu();
+              } else {
+                setSearchAt(null);
+                setMenuTop(headerRef.current?.getBoundingClientRect().bottom ?? 0);
+                setMenuAt(location.pathname);
+              }
+            }}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" className="icon">
+              <path d="M4 7h16M4 12h16M4 17h16" />
+            </svg>
+          </button>
         </div>
       </header>
+
+      {menuOpen && <MobileMenu id={menuId} top={menuTop} admin={admin} onClose={closeMenu} />}
 
       {signInError !== null && (
         <div className="notice notice--error" role="alert">
@@ -104,36 +225,25 @@ export function AppLayout() {
         </SignInReturnContext>
       </main>
 
-      <footer className="app__footer">
-        <span>{t('app.tagline')}</span>
-        <Link to="/privacy">{t('app.privacy')}</Link>
-      </footer>
+      <AppFooter />
 
       <FeedbackWidget />
     </div>
   );
 }
 
-/**
- * The sections (docs/DESIGN.md › The arena); the admin area only for an admin. The brand is the way
- * home; the learner's own page is the avatar's, not a section.
- */
+/** The sections in the header's row, the current one underlined (hidden below 48 rem: the menu has them). */
 function Navigation({ admin }: { admin: boolean }) {
   const t = useT();
+  const sections = useSections(admin);
 
   return (
     <nav className="app__nav" aria-label={t('nav.label')}>
-      <NavLink to="/tasks" className={navClass}>
-        {t('nav.tasks')}
-      </NavLink>
-      <NavLink to="/problems" className={navClass}>
-        {t('nav.problems')}
-      </NavLink>
-      {admin && (
-        <NavLink to="/admin" className={navClass}>
-          {t('nav.admin')}
+      {sections.map((section) => (
+        <NavLink key={section.to} to={section.to} className={navClass}>
+          {section.label}
         </NavLink>
-      )}
+      ))}
     </nav>
   );
 }
@@ -150,8 +260,6 @@ function SessionStatus({ returnPath }: { returnPath: string }) {
   const session = useSession();
   const t = useT();
   const { demoTask } = useSiteConfig();
-  const [signingOut, setSigningOut] = useState(false);
-  const [failed, setFailed] = useState(false);
 
   switch (session.status) {
     case 'signedIn':
@@ -169,31 +277,7 @@ function SessionStatus({ returnPath }: { returnPath: string }) {
               <Link className="app__menu-link" to="/profile">
                 {t('header.toProfile')}
               </Link>
-              <button
-                type="button"
-                className="button button--small"
-                disabled={signingOut}
-                onClick={() => {
-                  setSigningOut(true);
-                  setFailed(false);
-                  session.signOut().then(
-                    () => {
-                      setSigningOut(false);
-                    },
-                    () => {
-                      setSigningOut(false);
-                      setFailed(true);
-                    },
-                  );
-                }}
-              >
-                {signingOut ? t('session.signingOut') : t('session.signOut')}
-              </button>
-              {failed && (
-                <p className="app__session-error" role="alert">
-                  {t('session.signOutFailed')}
-                </p>
-              )}
+              <SignOutButton className="button button--small" signOut={session.signOut} />
             </div>
           </details>
         </div>
@@ -207,7 +291,7 @@ function SessionStatus({ returnPath }: { returnPath: string }) {
               <SignInLinks returnPath={returnPath} />
             </div>
           </details>
-          <Link className="button button--small button--primary" to={`/tasks/${demoTask}`}>
+          <Link className="button button--small button--primary app__start" to={`/tasks/${demoTask}`}>
             {t('header.start')}
           </Link>
         </div>

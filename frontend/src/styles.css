@@ -76,6 +76,8 @@
   --radius-card: 14px;
   --radius-panel: 18px;
   --gap: 1rem;
+  /* The header's height (one row, phone and desktop): sticky bars and columns sit below it. */
+  --header-height: 64px;
 
   /* Motion (docs/DESIGN.md > Motion): durations by kind, and three easings. */
   --dur-fast: 120ms;
@@ -182,6 +184,11 @@
   box-sizing: border-box;
 }
 
+/* An anchor (`/problems#slug`) or a focused field scrolls clear of the sticky header. */
+html {
+  scroll-padding-top: calc(var(--header-height) + var(--gap));
+}
+
 body {
   margin: 0;
   background: var(--page);
@@ -218,14 +225,41 @@ code {
 }
 
 .app__header {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   gap: 0.5rem 1.5rem;
-  min-height: 64px;
+  min-height: var(--header-height);
   padding: 0.5rem 1.25rem;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
+}
+
+/*
+ * Everywhere but the workspace the header stays at the top, over the page and under what opens
+ * over it. The stacking ladder: the page (0–3: sticky table cells, tabs) < the header (10) < the
+ * phone menu's backdrop and sheet (15, 16) < the feedback button and window (40) < the problem
+ * card's overlay (50). The workspace's own sheets (20, 30) live in a page whose header is not sticky.
+ */
+.app:not(.app--workspace) .app__header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  transition: box-shadow var(--dur) var(--ease-out);
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .app:not(.app--workspace) .app__header {
+    background: var(--surface);
+  }
+}
+
+.app:not(.app--workspace) .app__header[data-scrolled] {
+  box-shadow: var(--shadow);
 }
 
 .app__header-start {
@@ -252,7 +286,6 @@ code {
 
 .app__header-end {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: 0.5rem 0.75rem;
@@ -314,13 +347,34 @@ code {
 }
 
 .app__nav-link {
+  position: relative;
+  padding: 0.5rem 0;
   color: var(--text-muted);
   text-decoration: none;
   transition: color var(--dur-fast) var(--ease-out);
 }
 
+/* The current section — and the one under the pointer — is underlined, growing from the centre. */
+.app__nav-link::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transition: transform var(--dur) var(--ease-out);
+}
+
 .app__nav-link:hover {
   color: var(--text);
+}
+
+.app__nav-link:hover::after,
+.app__nav-link--active::after {
+  transform: scaleX(1);
 }
 
 .app__nav-link--active,
@@ -359,15 +413,54 @@ code {
   padding: calc(var(--gap) * 2) calc(var(--gap) * 1.5);
 }
 
+/* The footer (DESIGN.md › The arena): on the page ground, three columns, one on a phone. */
 .app__footer {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 0.25rem var(--gap);
-  padding: var(--gap) calc(var(--gap) * 1.5);
+  /* The bottom corner is the feedback button's. */
+  padding: calc(var(--gap) * 2) 0 calc(var(--gap) * 2 + 3.5rem);
   border-top: 1px solid var(--border);
   color: var(--text-muted);
   font-size: 0.875rem;
+}
+
+.app__footer-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr));
+  gap: calc(var(--gap) * 2);
+  width: min(72rem, 100%);
+  margin: 0 auto;
+  padding: 0 calc(var(--gap) * 1.5);
+}
+
+.app__footer-brand p {
+  max-width: 26rem;
+  margin: 0.5rem 0 0;
+}
+
+.app__footer-nav {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.app__footer-title {
+  margin: 0 0 0.25rem;
+  color: var(--text-faint);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.app__footer-nav a {
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.app__footer-nav a:hover {
+  color: var(--text);
+  text-decoration: underline;
 }
 
 /*
@@ -1312,58 +1405,200 @@ code {
 }
 
 /*
- * Phone width (SPEC §9.4). The header wraps — brand and navigation, then who is signed in on a
- * line of its own — and the page keeps a narrow margin instead of the desktop one.
+ * Below 64 rem the search is an icon opening the field as an overlay over the header; below 48 rem
+ * the header is one row — brand, search, session, menu button — and the sections, the theme and a
+ * guest's *Начать* are in the menu sheet. Each control a width does not use is `display: none`, so
+ * nothing is read twice. The rules name two classes where a later component rule (`.icon-button`,
+ * `.button`) sets `display`.
  */
-@media (max-width: 40rem) {
-  .app__header,
-  .app__footer {
-    padding: 0.75rem var(--gap);
+.app__header-end .app__search-button,
+.app__header-end .app__menu-button,
+.app__search .app__search-close {
+  display: none;
+}
+
+@media (max-width: 64rem) {
+  .app__header-end .app__search-button {
+    display: grid;
   }
 
-  .app__header {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem var(--gap);
-  }
-
-  .app__header-center {
-    order: 3;
-    flex-basis: 100%;
-  }
-
-  /* The menu spans the session's row, not the button's width: the notice in it needs the room. */
-  .app__header-end {
-    position: relative;
-    flex-basis: 100%;
-    justify-content: flex-start;
-  }
-
-  .app__menu {
-    position: static;
-  }
-
-  .app__menu-popup {
-    left: 0;
-    right: 0;
-    width: auto;
-    max-width: none;
-  }
-
-  /* The search takes a line of its own, below the session; what it found spans that line. */
   .app__search {
-    order: 1;
-    flex: 1 1 100%;
+    display: none;
+  }
+
+  .app__header[data-search='open'] .app__search {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    padding: 0 var(--gap);
+    background: var(--surface);
+  }
+
+  .app__search .rc-search {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .app__header[data-search='open'] .app__search .app__search-close {
+    display: grid;
   }
 
   .app__search-popup {
-    left: 0;
+    right: var(--gap);
+    left: var(--gap);
     width: auto;
   }
 
-  /* A phone has no keyboard to press it on. */
+  /* No keyboard shortcut is worth showing here. */
   .app__search .rc-kbd {
     display: none;
+  }
+}
+
+@keyframes rc-sheet {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+/* The phone menu: a sheet under the header, a dim backdrop below it. */
+.app__sheet-backdrop {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 15;
+  background: var(--overlay);
+  animation: rc-fade var(--dur) var(--ease-out) both;
+}
+
+.app__sheet {
+  position: fixed;
+  right: 0;
+  left: 0;
+  z-index: 16;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 0.5rem var(--gap) var(--gap);
+  border-radius: 0 0 var(--radius-panel) var(--radius-panel);
+  background: var(--surface-pop);
+  box-shadow: var(--shadow-pop);
+  animation: rc-sheet var(--dur) var(--ease-out) backwards;
+}
+
+.app__sheet-nav,
+.app__sheet-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.app__sheet-group {
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.app__sheet-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 0.75rem;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 1rem;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+.app__sheet-item:hover {
+  background: var(--surface-sunken);
+}
+
+/* The current section: tinted, bold and marked by a bar — colour is not the only sign. */
+.app__sheet-item--active,
+.app__sheet-item--active:hover {
+  background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.app__sheet-theme .icon {
+  width: 18px;
+  height: 18px;
+  color: var(--text-muted);
+}
+
+.app__sheet-start {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 0.25rem;
+  justify-content: center;
+}
+
+@media (min-width: 48.0625rem) {
+  .app__sheet,
+  .app__sheet-backdrop {
+    display: none;
+  }
+}
+
+@media (max-width: 48rem) {
+  .app__header-end .app__menu-button {
+    display: grid;
+  }
+
+  .app__nav,
+  .app__header-end .app__theme,
+  .app__session .app__start {
+    display: none;
+  }
+
+  .app:not(.app--workspace) .app__header {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .app__header {
+    padding: 0.5rem var(--gap);
+  }
+
+  .app__header-end {
+    flex: none;
+    gap: 0.5rem;
+  }
+
+  .app__session {
+    flex-wrap: nowrap;
+  }
+}
+
+/*
+ * Phone width (SPEC §9.4): the page keeps a narrow margin instead of the desktop one, and the
+ * footer's columns become one.
+ */
+@media (max-width: 40rem) {
+  .app__footer-inner {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--gap);
+    padding: 0 var(--gap);
   }
 
   .notice--error {
