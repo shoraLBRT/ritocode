@@ -3,6 +3,7 @@ import { useLocation } from 'react-router';
 import { isApiError, sendFeedback, useApiClient } from '../api';
 import { useT } from '../i18n';
 import type { MessageKey } from '../i18n';
+import { FEEDBACK_OPEN_EVENT } from './open';
 import { mountTurnstile, resolveTurnstileSiteKey } from './turnstile';
 import type { TurnstileWidget } from './turnstile';
 
@@ -54,6 +55,16 @@ export function FeedbackWidget() {
   const captcha = useRef<TurnstileWidget | null>(null);
   const textRef = useRef<HTMLTextAreaElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const onRequest = () => {
+      setOpen(true);
+    };
+    window.addEventListener(FEEDBACK_OPEN_EVENT, onRequest);
+    return () => {
+      window.removeEventListener(FEEDBACK_OPEN_EVENT, onRequest);
+    };
+  }, []);
 
   useEffect(() => {
     if (!open) {

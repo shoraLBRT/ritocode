@@ -235,3 +235,135 @@ describe('the header streak', () => {
     expect(screen.queryByRole('link', { name: /Серия/ })).not.toBeInTheDocument();
   });
 });
+
+describe('the phone menu', () => {
+  it('opens a sheet with the sections, the theme and the session actions of a learner', async () => {
+    renderApp(api().stub, '/privacy');
+    await screen.findByLabelText('Профиль developer');
+    const button = screen.getByRole('button', { name: ru.header.menu });
+    expect(button).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('dialog', { name: ru.header.menu })).not.toBeInTheDocument();
+
+    fireEvent.click(button);
+
+    const sheet = within(screen.getByRole('dialog', { name: ru.header.menu }));
+    expect(button).toHaveAttribute('aria-expanded', 'true');
+    expect(button).toHaveAttribute('aria-controls', screen.getByRole('dialog', { name: ru.header.menu }).id);
+    expect(sheet.getAllByRole('link').map((link) => link.textContent)).toEqual([ru.nav.tasks, ru.nav.problems, ru.header.toProfile]);
+    expect(sheet.getByRole('button', { name: ru.app.themeDark })).toBeInTheDocument();
+    expect(sheet.getByRole('button', { name: ru.session.signOut })).toBeInTheDocument();
+    expect(sheet.getByRole('link', { name: ru.nav.tasks })).toHaveFocus();
+  });
+
+  it('offers a guest Начать, and keeps the providers behind the header\'s own Войти', async () => {
+    renderApp(api({ signedIn: false }).stub, '/privacy');
+    await screen.findByText(ru.session.signIn);
+    fireEvent.click(screen.getByRole('button', { name: ru.header.menu }));
+
+    const sheet = within(screen.getByRole('dialog', { name: ru.header.menu }));
+    expect(sheet.getByRole('link', { name: ru.header.start })).toHaveAttribute('href', '/tasks/demo-task');
+    expect(sheet.queryByRole('button', { name: ru.session.signOut })).not.toBeInTheDocument();
+    expect(sheet.queryByText(ru.session.signIn)).not.toBeInTheDocument();
+  });
+
+  it('closes on Escape and gives the focus back to the button', () => {
+    renderApp(api({ signedIn: false }).stub, '/privacy');
+    const button = screen.getByRole('button', { name: ru.header.menu });
+    fireEvent.click(button);
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    expect(screen.queryByRole('dialog', { name: ru.header.menu })).not.toBeInTheDocument();
+    expect(button).toHaveFocus();
+  });
+
+  it('closes on following a link, and keeps Tab inside while open', async () => {
+    renderApp(api({ signedIn: false }).stub, '/privacy');
+    await screen.findByText(ru.session.signIn);
+    fireEvent.click(screen.getByRole('button', { name: ru.header.menu }));
+    const dialog = screen.getByRole('dialog', { name: ru.header.menu });
+    const items = within(dialog).getAllByRole('link');
+    const last = within(dialog).getByRole('link', { name: ru.header.start });
+
+    last.focus();
+    fireEvent.keyDown(document, { key: 'Tab' });
+    expect(items[0]).toHaveFocus();
+
+    fireEvent.click(within(dialog).getByRole('link', { name: ru.nav.problems }));
+    await screen.findByRole('heading', { level: 1, name: ru.problems.title });
+    expect(screen.queryByRole('dialog', { name: ru.header.menu })).not.toBeInTheDocument();
+  });
+
+  it('closes on a tap outside', () => {
+    renderApp(api({ signedIn: false }).stub, '/privacy');
+    fireEvent.click(screen.getByRole('button', { name: ru.header.menu }));
+
+    const backdrop = document.querySelector('.app__sheet-backdrop');
+    if (backdrop === null) {
+      throw new Error('no backdrop');
+    }
+    fireEvent.click(backdrop);
+
+    expect(screen.queryByRole('dialog', { name: ru.header.menu })).not.toBeInTheDocument();
+  });
+});
+
+describe('the search overlay', () => {
+  it('opens from the icon button with the focus in the field, and closes back to the icon', () => {
+    renderApp(api().stub, '/privacy');
+    const button = screen.getByRole('button', { name: ru.header.search.open });
+    const field = screen.getByRole('combobox', { name: ru.header.search.label });
+
+    fireEvent.click(button);
+    expect(screen.getByRole('banner')).toHaveAttribute('data-search', 'open');
+    expect(field).toHaveFocus();
+
+    fireEvent.click(screen.getByRole('button', { name: ru.header.search.close }));
+    expect(screen.getByRole('banner')).not.toHaveAttribute('data-search');
+    expect(button).toHaveFocus();
+  });
+
+  it('closes on Escape from the field', () => {
+    renderApp(api().stub, '/privacy');
+    fireEvent.click(screen.getByRole('button', { name: ru.header.search.open }));
+
+    fireEvent.keyDown(screen.getByRole('combobox', { name: ru.header.search.label }), { key: 'Escape' });
+
+    expect(screen.getByRole('banner')).not.toHaveAttribute('data-search');
+  });
+
+  it('has no icon button on the workspace', () => {
+    renderApp(api().stub, '/tasks/flower-shop');
+
+    expect(screen.queryByRole('button', { name: ru.header.search.open })).not.toBeInTheDocument();
+  });
+});
+
+describe('the footer', () => {
+  it('lists the sections and the service pages, the profile for a learner', async () => {
+    renderApp(api().stub, '/privacy');
+    await screen.findByLabelText('Профиль developer');
+
+    const sections = within(screen.getByRole('navigation', { name: ru.app.footer.sections }));
+    expect(sections.getAllByRole('link').map((link) => link.textContent)).toEqual([ru.nav.tasks, ru.nav.problems, ru.header.toProfile]);
+    const about = within(screen.getByRole('navigation', { name: ru.app.footer.about }));
+    expect(about.getByRole('link', { name: ru.app.privacy })).toHaveAttribute('href', '/privacy');
+  });
+
+  it('leaves out the profile for a guest', async () => {
+    renderApp(api({ signedIn: false }).stub, '/privacy');
+    await screen.findByText(ru.session.signIn);
+
+    const sections = within(screen.getByRole('navigation', { name: ru.app.footer.sections }));
+    expect(sections.queryByRole('link', { name: ru.header.toProfile })).not.toBeInTheDocument();
+  });
+
+  it('opens the feedback window from its Обратная связь', () => {
+    renderApp(api({ signedIn: false }).stub, '/privacy');
+    expect(screen.queryByRole('dialog', { name: ru.feedback.heading })).not.toBeInTheDocument();
+
+    fireEvent.click(within(screen.getByRole('contentinfo')).getByRole('button', { name: ru.app.footer.feedback }));
+
+    expect(screen.getByRole('dialog', { name: ru.feedback.heading })).toBeInTheDocument();
+  });
+});

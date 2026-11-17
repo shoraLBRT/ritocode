@@ -115,7 +115,7 @@ describe('the application shell', () => {
 
     const nav = within(screen.getByRole('navigation', { name: ru.nav.label }));
     expect(nav.getAllByRole('link').map((link) => link.textContent)).toEqual([ru.nav.tasks, ru.nav.problems]);
-    expect(screen.getByRole('link', { name: ru.app.name })).toHaveAttribute('href', '/');
+    expect(within(screen.getByRole('banner')).getByRole('link', { name: ru.app.name })).toHaveAttribute('href', '/');
   });
 });
 
