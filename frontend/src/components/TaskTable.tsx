@@ -8,7 +8,8 @@ import { Icon } from '../pages/task/parts';
  * difficulty, in the order given. No classes and no number of findings: either would give the answer
  * away (SPEC §4.3). The status column is there only when the API said a `status`, which it says only
  * to a signed-in caller: new (an empty ring, as before), tried, solved, or the answer revealed — each
- * a mark named in words.
+ * a mark named in words. The whole row is the target: the title's link stretches over it (CSS), so
+ * there is still one link per row, named by the task.
  */
 export function TaskTable({ tasks }: { tasks: readonly TaskSummary[] }) {
   const t = useT();
