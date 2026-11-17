@@ -178,6 +178,10 @@ description. As of that day:
   read with a filter on; the search, the filters, the picks, the lift and the results' scroll are
   kept. Checked in the built-in browser at 1280 px (both steps, a class or branch filter and a
   search on, the dock raised) and 375 px (the sheet shrinks to the chips and the bar).
+  **#252** (2026-11-17): the unsolved result's line (`review.notSolved`) is now a short offer —
+  «Пока не решена. Попробуй снова — или покажи ответ.» — matching the *Попробовать снова* and
+  *Показать ответ* buttons, without the sentence about what will not be told. Lint, build and
+  vitest (475) pass; not checked in a browser.
   **#268** (2026-11-17): `GET /me` also carries `createdAt` (the join date, UTC; `UserSummary` gained
   it) and `providers` (`github`, `google`; empty for the development identity), and the profile's
   person card shows «На Ritocode с <месяца года>» — the month in the genitive, from `Intl` with the
