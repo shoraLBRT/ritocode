@@ -4,6 +4,7 @@ import { sendSignal, useApiClient } from '../../api';
 import type { ApiError } from '../../api';
 import { ErrorState } from '../../components/ErrorState';
 import { useT } from '../../i18n';
+import { useHeldWidth } from './motion';
 
 /** The longest comment the API keeps (SPEC §4.8). */
 const COMMENT_MAX_LENGTH = 500;
@@ -22,6 +23,7 @@ export function SignalControl({ attempt, card, sent }: { attempt: string; card: 
   const [stage, setStage] = useState<Stage>(sent ? 'sent' : 'closed');
   const [comment, setComment] = useState('');
   const [failure, setFailure] = useState<ApiError | null>(null);
+  const held = useHeldWidth(stage === 'sending');
 
   if (stage === 'sent') {
     return (
@@ -93,7 +95,13 @@ export function SignalControl({ attempt, card, sent }: { attempt: string; card: 
         }}
       />
       <span className="signal__actions">
-        <button type="submit" className="button button--primary" disabled={stage === 'sending'}>
+        <button
+          ref={held}
+          type="submit"
+          className={`button button--primary${stage === 'sending' ? ' button--busy' : ''}`}
+          aria-busy={stage === 'sending'}
+          disabled={stage === 'sending'}
+        >
           {stage === 'sending' ? t('review.signalSending') : t('review.signalSend')}
         </button>
         <button

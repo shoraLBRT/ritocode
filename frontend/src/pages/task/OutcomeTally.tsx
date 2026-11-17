@@ -4,6 +4,7 @@ import { Link } from 'react-router';
 import { revealAnswer, useApiClient } from '../../api';
 import type { Attempt, AttemptOutcome } from '../../api';
 import { useT } from '../../i18n';
+import { useHeldWidth } from './motion';
 
 /** More pips than this and a row says its number only: the drawing would stop being countable. */
 const MAX_PIPS = 12;
@@ -64,7 +65,7 @@ function Row({ label, value, pips: kinds }: { label: string; value: string; pips
       {kinds.length > 0 && kinds.length <= MAX_PIPS && (
         <dd className="rc-tally__pips" aria-hidden="true">
           {kinds.map((kind, index) => (
-            <span key={index} className={`rc-tally__pip rc-tally__pip--${kind}`} />
+            <span key={index} className={`rc-tally__pip rc-tally__pip--${kind}`} style={{ ['--i' as string]: index }} />
           ))}
         </dd>
       )}
@@ -99,6 +100,7 @@ export function RevealAnswer({
   // Set by *Не сейчас*: the button that was pressed leaves the page, so focus goes back to the one
   // that opened the question rather than falling to the page's start.
   const returnFocus = useRef(false);
+  const held = useHeldWidth(stage === 'revealing');
 
   useEffect(() => {
     if (stage === 'asking') {
@@ -153,8 +155,10 @@ export function RevealAnswer({
           )}
           <p className="review__reveal-actions">
             <button
+              ref={held}
               type="button"
-              className="button button--primary"
+              className={`button button--primary${stage === 'revealing' ? ' button--busy' : ''}`}
+              aria-busy={stage === 'revealing'}
               disabled={stage === 'revealing'}
               onClick={() => {
                 void reveal();

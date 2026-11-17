@@ -177,6 +177,15 @@ in the step, so the step gets the room; it replaced a 40/60 split of a sidebar a
   and the leaves: every branch in columns, each headed by where its measure lives (`.leaf-columns`),
   or — with text or a branch pressed — the matches, each with its branch. It rises the same way.
 
+**Motion** (steps 1 and 2). A step's aside and dock ease in when the step changes (`rc-step-in`,
+opacity and 6 px, `--dur`); a pick never replays it. A mark answers at once: the *Отметить* control
+transitions and its label springs, and a leaf's box draws its check with `--ease-spring`, the card's ring pulses once,
+the picked row and chips enter with `rc-pop` (they leave without an animation), counters count up
+over 200 ms. Dock cards lift 2 px on hover and sink on a press; the results fade (opacity only) when
+the matches change; the opened card fades and scales from 0.98, and ‹ › cross-fades its face. A
+finished step's number turns into a check with a short pop. The dock's own movement is `dock.ts`'s
+and is not animated here.
+
 Search (`src/pages/task/search.ts`) cuts each word of the query to a crude stem, so Russian word
 forms match, and ranks by how many stems an option shares, then by where — name, keywords, summary.
 
@@ -253,6 +262,12 @@ for one it is simply the next task in the list. The review reads `GET /tasks` be
 requests and does not wait for it — until the list arrives, or if it fails, the link is absent.
 From a review, then, one click reaches a new attempt, the next task, and through the header the
 task list and the catalogue.
+
+**Motion** (the review). The score counts up; the tally's ring sweeps to its share and its pips fill
+30 ms apart; a solved result gets a check badge that pops once with one soft ring behind it
+(`--good` at low alpha, one iteration, no confetti); the revealed lanes come in 60 ms apart and
+their cards 30 ms apart (the delay is capped at 400 ms); *Показать ответ*'s confirmation rises into
+place.
 
 ## The arena
 
@@ -511,7 +526,7 @@ above. What the site already had stays as it is.
 
 | Component | Classes | Notes |
 | --- | --- | --- |
-| Button | `.button`, `.button--primary`, `.button--small`; `.rc-daily__action` on the spotlight | shared, not `rc-` |
+| Button | `.button`, `.button--primary`, `.button--small`, `.button--busy` (work in flight: disabled, a spinner in place of the arrow, `aria-busy`; the width is held); `.rc-daily__action` on the spotlight | shared, not `rc-` |
 | Code | `.code`, `.code__line`, `.code__token--*` | shared |
 | Skeleton | `.rc-skeleton` (`--dot`, `--ring`, `--bar`, `--stat`, `--pcard`, `--panel`, `--on-spotlight`), `components/Skeleton.tsx`, `components/skeletons.tsx` | a loading block on `--surface-sunken` with a shimmer; `aria-hidden`; the variants are the shapes of States above |
 | Loading | `.rc-loading` (with a skeleton), `.state--loading` (without) | `LoadingState`: `role="status"`, the label `.visually-hidden` beside a skeleton, shown after 150 ms |

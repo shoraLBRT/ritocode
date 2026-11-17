@@ -3,9 +3,11 @@ import type { KeyboardEvent } from 'react';
 import type { CandidateCard, ProblemClass } from '../../api';
 import { Markdown } from '../../components/Markdown';
 import { CardDialog } from './CardDialog';
+import { useCountUp } from '../../hooks/useCountUp';
 import { useT } from '../../i18n';
 import type { Answer } from './answer';
 import { useRisingDock } from './dock';
+import { useFadeOnChange } from './motion';
 import { DockBar, FilterChips, Highlighted, Icon } from './parts';
 import { rank, stems } from './search';
 import { classTint, toggled } from './tint';
@@ -58,6 +60,9 @@ export function DiagnosisStep({
   const picked = (slug: string) => answer.some((pick) => pick.card === slug);
   const className = (id: string) => classes.find((each) => each.id === id)?.name ?? id;
   const openIndex = shown === null || opened === null ? -1 : shown.findIndex((card) => card.slug === opened);
+  const pickedCount = useCountUp(answer.length, { duration: 200 });
+  // The results fade in when the set of matches changes — not on a pick, and without remounting the cards.
+  const cardsRef = useFadeOnChange<HTMLDivElement>(shown === null ? '' : shown.map((card) => card.slug).join(' '));
 
   // The card walked to with the arrow keys stays in view as the dock scrolls.
   const walked = shown?.[current]?.slug;
@@ -114,7 +119,7 @@ export function DiagnosisStep({
           <h2 id="picked-title" className="aside__title">
             {t('task.pickedTitle')}
           </h2>
-          <span className="aside__count">{answer.length}</span>
+          <span className="aside__count">{pickedCount}</span>
         </div>
         {answer.length === 0 ? (
           <p className="aside__empty">{t('task.nothingPickedYet')}</p>
@@ -222,7 +227,7 @@ export function DiagnosisStep({
             {shown.length === 0 ? (
               <p className="dock__empty">{t('task.noMatch')}</p>
             ) : (
-              <div className="dock__cards">
+              <div ref={cardsRef} className="dock__cards">
                 {shown.map((card, index) => (
                   <DockCard
                     key={card.slug}

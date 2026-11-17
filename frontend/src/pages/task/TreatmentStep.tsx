@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
 import type { CandidateCard, TreatmentTree } from '../../api';
+import { useCountUp } from '../../hooks/useCountUp';
 import { useT } from '../../i18n';
 import type { MessageKey } from '../../i18n';
 import type { Answer } from './answer';
 import { useRisingDock } from './dock';
+import { useFadeOnChange } from './motion';
 import { Chip, DockBar, FilterChips, Highlighted, Icon, Option } from './parts';
 import { rank, stems } from './search';
 import { classTint, toggled } from './tint';
@@ -71,6 +73,10 @@ export function TreatmentStep({
   const inFilter = (leaf: (typeof leaves)[number]) => branchFilter.length === 0 || branchFilter.includes(leaf.branch);
   const shown = terms.length > 0 || branchFilter.length > 0 ? matching.filter(inFilter) : null;
   const walked = Math.min(active, Math.max(0, (shown?.length ?? 0) - 1));
+  const findingsCount = useCountUp(answer.length, { duration: 200 });
+  const treatedCount = useCountUp(treated, { duration: 200 });
+  // The leaves fade in when the matches change - not on a tick, and without remounting them.
+  const leavesRef = useFadeOnChange<HTMLDivElement>(shown === null ? '' : shown.map((leaf) => leaf.id).join(' '));
 
   const ticked = (leaf: string) => pick?.leaves.includes(leaf) === true;
   const toggle = (leaf: string) => {
@@ -118,7 +124,7 @@ export function TreatmentStep({
         <h2 id="findings-title" className="aside__title">
           {t('task.findings')}
         </h2>
-        <span className="aside__count">{answer.length}</span>
+        <span className="aside__count">{findingsCount}</span>
       </div>
       {answer.length === 0 ? (
         <p className="aside__empty">{t('task.nothingPickedYet')}</p>
@@ -207,7 +213,7 @@ export function TreatmentStep({
             <h2 id="dock-title" className="dock__title">
               {t('task.step2')}
             </h2>
-            <span className="dock__count">{t('task.treated', { done: treated, total: answer.length })}</span>
+            <span className="dock__count">{t('task.treated', { done: treatedCount, total: answer.length })}</span>
           </div>
           <div className={`dock__subject${classTint(pickedCard?.class)}`} aria-live="polite">
             <p className="dock__finding">{pickedName}</p>
@@ -282,7 +288,7 @@ export function TreatmentStep({
 
         <div ref={attach} className="dock__results" hidden={collapsed}>
           {shown === null ? (
-            <div className="leaf-columns">
+            <div ref={leavesRef} className="leaf-columns">
               {tree.branches.map((branch) => (
                 <section key={branch.id} className="leaf-group" aria-labelledby={`branch-${branch.id}`}>
                   <h3 id={`branch-${branch.id}`} className="leaf-group__name">
@@ -305,7 +311,7 @@ export function TreatmentStep({
           ) : shown.length === 0 ? (
             <p className="dock__empty">{t('task.noMatch')}</p>
           ) : (
-            <div className="leaf-matches">
+            <div ref={leavesRef} className="leaf-matches">
               {shown.map((leaf, position) => (
                 <Option
                   key={leaf.id}

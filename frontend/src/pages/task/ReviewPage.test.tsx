@@ -356,6 +356,36 @@ describe('the review before the answer is revealed', () => {
     expect(screen.getByText(ru.review.revealKeepsSolved)).toBeInTheDocument();
   });
 
+  it('shows the reveal in flight in its button: busy and disabled', async () => {
+    const base = api(hidden);
+    const stub = vi.fn<typeof globalThis.fetch>().mockImplementation((input, init) => (urlOf(input).endsWith('/reveal') ? new Promise<Response>(() => undefined) : base(input, init)));
+    renderApp(stub, `/tasks/${task.slug}/attempts/attempt-1`);
+    fireEvent.click(await screen.findByRole('button', { name: ru.review.reveal }));
+    const confirm = screen.getByRole('button', { name: ru.review.revealConfirm });
+    expect(confirm).toHaveAttribute('aria-busy', 'false');
+
+    fireEvent.click(confirm);
+
+    const busy = await screen.findByRole('button', { name: ru.review.revealing });
+    expect(busy).toBeDisabled();
+    expect(busy).toHaveAttribute('aria-busy', 'true');
+    expect(busy).toHaveClass('button--busy');
+  });
+
+  it('marks a solved result with the quiet badge, and an unsolved one with nothing', async () => {
+    const solved = { ...hidden, taskStatus: 'solved', outcome: { ...hidden.outcome, solved: true } };
+    await openReview(solved);
+    expect(document.querySelectorAll('.review__solved-badge')).toHaveLength(1);
+    expect(screen.getByText(ru.review.solved).closest('.review__solved')).not.toBeNull();
+  });
+
+  it('shows no solved badge on a result that is not solved', async () => {
+    await openReview(hidden);
+
+    expect(screen.getByText(ru.review.notSolved)).toBeInTheDocument();
+    expect(document.querySelector('.review__solved-badge')).toBeNull();
+  });
+
   it('says so when the reveal fails, and stays closed', async () => {
     renderApp(api(hidden, task, undefined, () => problemResponse(500, 'internal_error', 'x')), `/tasks/${task.slug}/attempts/attempt-1`);
     fireEvent.click(await screen.findByRole('button', { name: ru.review.reveal }));

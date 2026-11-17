@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
 import { useT } from '../../i18n';
+import { useFadeOnChange } from './motion';
 import { Icon } from './parts';
 
 const focusable = 'button:not(:disabled), a[href], summary, [tabindex]:not([tabindex="-1"])';
@@ -39,6 +40,8 @@ export function CardDialog({
   const t = useT();
   const dialog = useRef<HTMLDivElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
+  // Walking with the arrows cross-fades the card's face; the controls inside it keep their focus.
+  const face = useFadeOnChange<HTMLDivElement>(String(index), { from: 0.2 });
 
   useLayoutEffect(() => {
     closeButton.current?.focus();
@@ -75,7 +78,7 @@ export function CardDialog({
       <button type="button" className="dock-open__dim" tabIndex={-1} aria-label={t('problems.close')} onClick={onClose} />
       <div ref={dialog} className={`rc-pcard rc-pcard--peek ${className}`} role="dialog" aria-modal="true" aria-labelledby={labelledBy}>
         <div className="rc-pcard__band">{band}</div>
-        <div className="rc-pcard__face">
+        <div ref={face} className="rc-pcard__face">
           <div className="rc-pcard__open-head">
             {heading}
             <button ref={closeButton} type="button" className="icon-button" aria-label={t('problems.close')} onClick={onClose}>

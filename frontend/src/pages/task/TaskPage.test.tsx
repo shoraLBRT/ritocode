@@ -150,6 +150,31 @@ describe('the task screen', () => {
     expect(screen.getByRole('button', { name: ru.review.reveal })).toBeInTheDocument();
   });
 
+  it('shows a check in flight in the button: busy, disabled, with the label of the work', async () => {
+    const stub = api();
+    const pending = vi.fn<typeof globalThis.fetch>().mockImplementation((input, init) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      return url.endsWith('/submit') ? new Promise<Response>(() => undefined) : stub.fetch(input, init);
+    });
+    renderApp(pending, `/tasks/${task.slug}`);
+    await screen.findByRole('heading', { level: 1, name: task.title });
+    await waitFor(() => {
+      expect(stub.calls.some((call) => call.method === 'POST' && call.url.endsWith('/attempts'))).toBe(true);
+    });
+    fireEvent.click(screen.getByRole('button', { name: ru.task.toStep2Clean }));
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: ru.task.check })).toBeEnabled();
+    });
+    expect(screen.getByRole('button', { name: ru.task.check })).toHaveAttribute('aria-busy', 'false');
+
+    fireEvent.click(screen.getByRole('button', { name: ru.task.check }));
+
+    const busy = await screen.findByRole('button', { name: ru.task.checking });
+    expect(busy).toBeDisabled();
+    expect(busy).toHaveAttribute('aria-busy', 'true');
+    expect(busy).toHaveClass('button--busy');
+  });
+
   it('checks an answer that picked nothing', async () => {
     await openTask(api());
 

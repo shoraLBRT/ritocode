@@ -8,12 +8,14 @@ import { ErrorState } from '../../components/ErrorState';
 import { LoadingState } from '../../components/LoadingState';
 import { Markdown } from '../../components/Markdown';
 import { useApiResource } from '../../hooks/useApiResource';
+import { useCountUp } from '../../hooks/useCountUp';
 import { useT } from '../../i18n';
 import { CardDialog } from './CardDialog';
 import { ContextPanel } from './ContextPanel';
 import { MaterialViewer } from './MaterialViewer';
 import { nextTask } from './next';
 import { OutcomeTally, RevealAnswer } from './OutcomeTally';
+import { Icon } from './parts';
 import { lanes } from './lanes';
 import { ReviewLanes } from './ReviewLanes';
 import { SignalControl } from './SignalControl';
@@ -190,6 +192,7 @@ function HiddenReview({
   const [contextOpen, setContextOpen] = useState(false);
   // Every pick has a leaf before it can be checked, so the cards picked are the cards treated.
   const picked = outcome.found + outcome.extra;
+  const score = useCountUp(outcome.total);
 
   return (
     <section className="workspace workspace--review review review--hidden" data-area={area}>
@@ -216,8 +219,8 @@ function HiddenReview({
           <h2 id="review-title" className="eyebrow">
             {t('review.title')}
           </h2>
-          <p className="review__score">{t('review.score', { score: outcome.total, maximum: outcome.maximum })}</p>
-          <p className="review__verdict-line">{outcome.solved ? t('review.solved') : t('review.notSolved')}</p>
+          <p className="review__score">{t('review.score', { score, maximum: outcome.maximum })}</p>
+          {outcome.solved ? <Solved /> : <p className="review__verdict-line">{t('review.notSolved')}</p>}
           {attempt.practice && <p className="step__hint step__hint--quiet">{t('review.practice')}</p>}
         </div>
         <RevealAnswer attempt={attempt} task={task.slug} next={next} onRevealed={onRevealed} />
@@ -260,6 +263,7 @@ function FullReview({
 }) {
   const t = useT();
   const scoreBar = useRef<HTMLElement>(null);
+  const score = useCountUp(result.total);
 
   useEffect(() => {
     if (focusScore) {
@@ -333,14 +337,14 @@ function FullReview({
           <h2 id="review-title" className="eyebrow">
             {t('review.title')}
           </h2>
-          <p className="review__score">{t('review.score', { score: result.total, maximum: result.maximum })}</p>
+          <p className="review__score">{t('review.score', { score, maximum: result.maximum })}</p>
           {!clean && (
             <p className="review__composition">
               {t('review.composition', { found: outcome.found, present: outcome.present, extra: outcome.extra, matched: outcome.treated })}
             </p>
           )}
           {clean && <p className="review__verdict-line">{extras.length === 0 ? t('review.cleanNothing') : t('review.cleanExtra')}</p>}
-          {!clean && outcome.solved && <p className="review__verdict-line">{t('review.solved')}</p>}
+          {!clean && outcome.solved && <Solved />}
           {attempt.practice && <p className="step__hint step__hint--quiet">{t('review.practice')}</p>}
         </div>
         <p className="review__actions">
@@ -448,6 +452,20 @@ function FullReview({
         )}
       </aside>
     </section>
+  );
+}
+
+/** The quiet mark of a solved task: a check that pops once, with a soft ring behind it (workspace.css). */
+function Solved() {
+  const t = useT();
+
+  return (
+    <p className="review__verdict-line review__solved">
+      <span className="review__solved-badge" aria-hidden="true">
+        <Icon name="check" />
+      </span>
+      {t('review.solved')}
+    </p>
   );
 }
 
