@@ -1830,6 +1830,27 @@ pre {
   cursor: not-allowed;
 }
 
+/* Work in flight (aria-busy): disabled, a small spinner before the label in place of the arrow. */
+.button.button--busy:disabled {
+  opacity: 0.8;
+  cursor: progress;
+}
+
+.button--busy::before {
+  content: '';
+  flex: none;
+  width: 0.85em;
+  height: 0.85em;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.button--busy .icon {
+  display: none;
+}
+
 .link-button {
   display: inline-flex;
   align-items: center;
@@ -2491,6 +2512,19 @@ pre {
   gap: 14px;
 }
 
+/* The ring's sweep, as a number the browser can tween; without it the ring simply shows its share. */
+@property --rc-tally-sweep {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 0;
+}
+
+@keyframes rc-tally-sweep {
+  from {
+    --rc-tally-sweep: 0;
+  }
+}
+
 .rc-tally__ring {
   display: grid;
   place-items: center;
@@ -2498,7 +2532,9 @@ pre {
   width: 92px;
   height: 92px;
   border-radius: 50%;
-  background: conic-gradient(var(--good) calc(var(--p, 0) * 1%), var(--surface-sunken) 0);
+  --rc-tally-sweep: var(--p, 0);
+  background: conic-gradient(var(--good) calc(var(--rc-tally-sweep) * 1%), var(--surface-sunken) 0);
+  animation: rc-tally-sweep var(--dur-slow) var(--ease-out) 100ms backwards;
 }
 
 .rc-tally__hole {

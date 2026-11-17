@@ -201,6 +201,7 @@
   font: inherit;
   font-size: 0.86rem;
   font-weight: 500;
+  transition: background-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out);
 }
 
 .step-pill__number {
@@ -214,6 +215,7 @@
   color: var(--text-muted);
   font-size: 0.75rem;
   font-weight: 700;
+  transition: background-color var(--dur) var(--ease-out), border-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out);
 }
 
 .step-pill--current {
@@ -236,6 +238,8 @@
   border-color: var(--good);
   background: var(--good);
   color: var(--surface);
+  /* The number turns into a check with a short pop. */
+  animation: rc-check-pop var(--dur-slow) var(--ease-spring) backwards;
 }
 
 .step-pill:not(:disabled) {
@@ -333,6 +337,7 @@
 }
 
 .aside__count {
+  font-variant-numeric: tabular-nums;
   color: var(--text-faint);
   font-family: var(--font-mono);
   font-size: 0.8rem;
@@ -373,6 +378,8 @@
   color: var(--text);
   font-size: 0.86rem;
   font-weight: 500;
+  /* A pick appears with a pop; it leaves with the list closing up (no exit animation). */
+  animation: rc-pop var(--dur) var(--ease-spring) backwards;
 }
 
 .picked__name {
@@ -733,6 +740,21 @@
   box-shadow: 0 0 0 2px var(--accent), var(--shadow);
 }
 
+/* The dock's cards lift a little, not the catalogue's 4px; a press sinks them. */
+.dock .rc-pcard--dock:not(.rc-pcard--open):hover,
+.dock .rc-pcard--dock:not(.rc-pcard--open):focus-within {
+  transform: translateY(-2px);
+}
+
+.dock .rc-pcard--dock:not(.rc-pcard--open):active {
+  transform: scale(0.985);
+}
+
+/* A mark answers at once: the ring pulses outwards once and settles. */
+.dock .rc-pcard--picked {
+  animation: rc-pick-ring var(--dur-slow) var(--ease-out);
+}
+
 .rc-pcard--active {
   outline: 2px dashed var(--accent);
   outline-offset: 3px;
@@ -789,6 +811,11 @@
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+
+.rc-pcard__pick:active {
+  transform: scale(0.96);
 }
 
 .rc-pcard__pick:has(:checked) {
@@ -796,9 +823,9 @@
   color: var(--accent-ink);
 }
 
-.rc-pcard__pick:has(:focus-visible) {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+/* The label springs when the card is marked. */
+.rc-pcard__pick:has(:checked) > span {
+  animation: rc-pop var(--dur) var(--ease-spring) backwards;
 }
 
 .rc-pcard__check {
@@ -829,7 +856,7 @@
   border-radius: var(--radius-card);
   background: var(--overlay);
   cursor: pointer;
-  animation: rc-fade 0.2s ease both;
+  animation: rc-fade var(--dur) var(--ease-out) both;
 }
 
 .rc-pcard--peek,
@@ -901,14 +928,14 @@
 
 @media (prefers-reduced-motion: no-preference) {
   .rc-pcard--peek {
-    animation: dock-grow 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    animation: dock-grow var(--dur) var(--ease-out) both;
   }
 }
 
 @keyframes dock-grow {
   from {
     opacity: 0;
-    transform: scale(0.9);
+    transform: scale(0.98);
   }
 }
 
@@ -1051,6 +1078,7 @@
   color: var(--text);
   font-size: 0.8rem;
   font-weight: 500;
+  animation: rc-pop var(--dur) var(--ease-spring) backwards;
 }
 
 .chip__text {
@@ -1070,6 +1098,11 @@
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+
+.chip__remove:active {
+  transform: scale(0.9);
 }
 
 .chip__remove .icon {
@@ -1103,10 +1136,16 @@
   font-size: 0.74rem;
   font-weight: 500;
   cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
 }
 
 .filter-chip:hover {
   border-color: var(--border-strong);
+}
+
+.filter-chip:active {
+  transform: scale(0.97);
 }
 
 .filter-chip[aria-pressed='true'] {
@@ -1137,6 +1176,7 @@
   padding: 8px 6px;
   border-radius: var(--radius);
   cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out);
 }
 
 .option:hover,
@@ -1163,6 +1203,7 @@
   border-radius: 6px;
   background: var(--surface);
   color: var(--accent-ink);
+  transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
 }
 
 .option__box .icon {
@@ -1170,6 +1211,12 @@
   height: 12px;
   stroke-width: 2.6;
   opacity: 0;
+  transform: scale(0.3);
+  transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur) var(--ease-spring);
+}
+
+.option:active .option__box {
+  transform: scale(0.9);
 }
 
 .option--on .option__box {
@@ -1177,8 +1224,14 @@
   background: var(--accent);
 }
 
+/* The check draws in with a spring and the row flashes once. */
 .option--on .option__box .icon {
   opacity: 1;
+  transform: none;
+}
+
+.option--on {
+  animation: rc-pick-flash var(--dur-slow) var(--ease-out);
 }
 
 .option__input:focus-visible + .option__box {
@@ -2442,5 +2495,152 @@ button.file-tree__row:hover {
 @media (max-width: 64rem) {
   .review-lanes {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/*
+ * Motion (docs/DESIGN.md > Motion). Everything here is an enhancement over a final state that is
+ * already right: the keyframes only have a `from`, nothing waits on `animationend`, and the global
+ * reduced-motion guard (styles.css) takes every duration to nothing.
+ */
+
+/* A step's content eases in when the step changes: the two steps are different components, so a pick never replays it. */
+.workspace__sheet > .workspace__aside,
+.workspace__sheet > .dock {
+  animation: rc-step-in var(--dur) var(--ease-out) backwards;
+}
+
+@keyframes rc-step-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@keyframes rc-check-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+}
+
+@keyframes rc-pick-ring {
+  from {
+    box-shadow: 0 0 0 2px var(--accent), var(--shadow), 0 0 0 9px color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+}
+
+@keyframes rc-pick-flash {
+  from {
+    background-color: var(--accent-soft);
+  }
+}
+
+.finding--done .finding__mark {
+  animation: rc-check-pop var(--dur-slow) var(--ease-spring) backwards;
+}
+
+/* The review: the tally's pips fill one after another, a solved task gets one quiet mark. */
+.rc-tally__pip {
+  animation: rc-pip var(--dur) var(--ease-spring) calc(var(--i, 0) * 30ms + 200ms) backwards;
+}
+
+@keyframes rc-pip {
+  from {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+}
+
+.review__solved {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.review__solved-badge {
+  position: relative;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--good);
+  color: var(--surface);
+  animation: rc-solved-pop var(--dur-slow) var(--ease-spring) 150ms backwards;
+}
+
+.review__solved-badge .icon {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.8;
+}
+
+/* A soft ring expands behind the check and fades: once, never looping. */
+.review__solved-badge::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--good) 35%, transparent);
+  pointer-events: none;
+  animation: rc-solved-ring 600ms var(--ease-out) 150ms both;
+}
+
+@keyframes rc-solved-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+}
+
+@keyframes rc-solved-ring {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+}
+
+/* The revealed lanes come in lane by lane, their cards after them; the delay is capped at 400 ms. */
+.review-lane {
+  animation: rc-lane-in var(--dur) var(--ease-out) min(400ms, calc(var(--lane, 0) * 60ms)) backwards;
+}
+
+.lane-card {
+  transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+  animation: rc-fade var(--dur) var(--ease-out) min(400ms, calc(var(--lane, 0) * 60ms + var(--i, 0) * 30ms + 60ms)) backwards;
+}
+
+.lane-card:hover {
+  box-shadow: var(--shadow-pop);
+  transform: translateY(-1px);
+}
+
+.lane-card:active {
+  transform: scale(0.99);
+}
+
+@keyframes rc-lane-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* *Показать ответ* asks: the confirmation rises into place. */
+.review__reveal {
+  animation: rc-lane-in var(--dur) var(--ease-out) backwards;
+}
+
+@media (max-width: 64rem) {
+  /* A tab switch swaps display, which restarts the area's animation: it fades in. */
+  .workspace .workspace__area {
+    animation: rc-fade var(--dur) var(--ease-out) backwards;
   }
 }

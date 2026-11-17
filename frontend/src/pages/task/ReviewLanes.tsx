@@ -55,8 +55,13 @@ export function ReviewLanes({
 
   return (
     <div className="review-lanes" role="group" aria-label={t('review.lanes')}>
-      {lanes(lines).map(({ outcome, lines: inLane }) => (
-        <section key={outcome} className={`review-lane review-lane--${outcome}`} aria-labelledby={`lane-${outcome}`}>
+      {lanes(lines).map(({ outcome, lines: inLane }, position) => (
+        <section
+          key={outcome}
+          className={`review-lane review-lane--${outcome}`}
+          style={{ ['--lane' as string]: position }}
+          aria-labelledby={`lane-${outcome}`}
+        >
           <h3 id={`lane-${outcome}`} className="review-lane__head">
             <span className={`verdict-badge verdict-badge--${outcome}`}>
               <span aria-hidden="true">{t(`review.${outcome}Mark`)}</span> {t(`review.lane.${outcome}`)}
@@ -66,8 +71,8 @@ export function ReviewLanes({
           {inLane.length === 0 ? (
             <p className="review-lane__empty">{t('review.lane.empty')}</p>
           ) : (
-            inLane.map((line) => (
-              <article key={line.card} className="lane-card" aria-labelledby={`lane-card-${line.card}`}>
+            inLane.map((line, index) => (
+              <article key={line.card} className="lane-card" style={{ ['--i' as string]: index }} aria-labelledby={`lane-card-${line.card}`}>
                 <h4 id={`lane-card-${line.card}`} className="lane-card__name">
                   <button
                     type="button"

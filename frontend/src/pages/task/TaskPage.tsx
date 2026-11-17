@@ -14,6 +14,7 @@ import { clearDraft, draftStorage, restoreDraft, saveDraft } from './draft';
 import { ContextPanel } from './ContextPanel';
 import { DiagnosisStep } from './DiagnosisStep';
 import { MaterialViewer } from './MaterialViewer';
+import { useHeldWidth } from './motion';
 import { Icon } from './parts';
 import { StepBar } from './StepBar';
 import { TreatmentStep } from './TreatmentStep';
@@ -153,6 +154,7 @@ function TaskScreen({ task, tree }: { task: TaskDetail; tree: TreatmentTree }) {
   // While that check is on its way, the screen says so as if *Check* had been pressed.
   const autoChecking = checkRequested && restored !== null && canCheck(restored.answer) && session.status !== 'signedOut' && session.status !== 'error';
   const busy = checking || autoChecking;
+  const held = useHeldWidth(busy);
 
   const pressCheck = () => {
     if (signedIn && attemptId !== null) {
@@ -189,8 +191,10 @@ function TaskScreen({ task, tree }: { task: TaskDetail; tree: TreatmentTree }) {
   const treated = answer.filter((pick) => pick.leaves.length > 0).length;
   const checkButton = (
     <button
+      ref={held}
       type="button"
-      className="button button--primary"
+      className={`button button--primary${busy ? ' button--busy' : ''}`}
+      aria-busy={busy}
       disabled={!canCheck(answer) || busy || !(signedOut || attemptId !== null)}
       onClick={pressCheck}
     >

@@ -209,6 +209,23 @@ description. As of that day:
   final states only): bars stuck, a card opened from a scrolled position (centred, over the stuck
   bar), a wrapped tab row, no horizontal scroll; lint, build, build:static (prerendered `/problems`
   keeps every card and the counts) and vitest (469) pass.
+  **#267** (2026-11-17): motion in the task workspace and the review, no change of behaviour or
+  layout. The step bar's pills transition their state and a finished step's number pops into a check
+  (`rc-check-pop`); a step's aside and dock ease in (`rc-step-in`, opacity and 6 px) — the steps
+  are different components, so a pick never replays it. A pick answers at once: the control's label
+  springs, the card's ring pulses (`rc-pick-ring`), a leaf's box checks and its row
+  flashes; the picked row and chips enter with `rc-pop` (they leave without an exit animation); the
+  counters count up over 200 ms (`useCountUp`). Dock cards lift 2 px and sink on a press; when the
+  matches change the results fade (`pages/task/motion.ts` `useFadeOnChange`, the Web Animations API,
+  no remount, so focus and `dock.ts` are untouched), and `CardDialog` fades its face on ‹ ›. The
+  dialog and its backdrop use the tokens. The review: the score counts up, the tally's ring sweeps
+  (`@property --rc-tally-sweep`), the pips fill 30 ms apart, a solved result gets a check badge that
+  pops once with one soft ring (`.review__solved`), the lanes come in 60 ms apart and their cards
+  30 ms apart (capped at 400 ms), the reveal confirmation rises. *Проверить*, the reveal's confirm and
+  the signal's *Отправить* show work in flight with `.button--busy` + `aria-busy` and hold their
+  width (`useHeldWidth`). At phone width a tab switch fades the area in; the sheet's height stays
+  `dock.ts`'s. Checked in the built-in browser (reduced motion, so final states only): see the
+  session report; lint, build, build:static and vitest (473) pass.
   **#264** (2026-11-17): states — loading is skeletons of the final shape (task table, catalogue
   cards, the home page's daily task, stats, progress, heat map and problems-to-read, admin tables)
   inside `LoadingState`'s `role="status"` region, shown after 150 ms; `EmptyState` is a mark, a
@@ -546,7 +563,7 @@ compose stack is PostgreSQL only.
 | `Ritocode.Api.Tests` | 153 |
 | `Ritocode.Modules.Content.Tests` | 78 |
 | `Ritocode.Modules.Attempts.Tests` | 31 |
-| Frontend (vitest) | 469 |
+| Frontend (vitest) | 473 |
 | `scripts/monitor-test.sh` | 9 |
 | End-to-end (`e2e/`) | 1 |
 
