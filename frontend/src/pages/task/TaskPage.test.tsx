@@ -41,7 +41,7 @@ function api({ signedIn = true, openAttempt = false } = {}) {
     const path = new URL(url).pathname.replace('/api/v1', '');
 
     if (path === '/me') {
-      return Promise.resolve(signedIn ? jsonResponse({ id: 'u', username: 'developer' }) : problemResponse(401, 'unauthenticated', 'x'));
+      return Promise.resolve(signedIn ? jsonResponse({ id: 'u', username: 'developer', admin: false, createdAt: '2026-03-14T09:26:53+00:00', providers: [] }) : problemResponse(401, 'unauthenticated', 'x'));
     }
     if (path === `/tasks/${task.slug}`) {
       return Promise.resolve(jsonResponse(task));

@@ -390,6 +390,12 @@ export const ru = {
   },
   // The learner's own page (docs/SPEC.md §4.7, DESIGN.md › The profile), at /profile.
   profile: {
+    person: {
+      joined: 'На Ritocode с {date}',
+      providers: 'Вход через',
+      github: 'GitHub',
+      google: 'Google',
+    },
     classes: {
       title: 'По классам',
       loading: 'Загружаем классы…',

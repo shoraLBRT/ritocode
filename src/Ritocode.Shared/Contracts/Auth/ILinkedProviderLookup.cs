@@ -2,11 +2,11 @@ namespace Ritocode.Shared.Contracts.Auth;
 
 /// <summary>
 /// Answers which providers some users have signed in with, for the admin area's list of users
-/// (docs/SPEC.md §6.2).
+/// (docs/SPEC.md §6.2) and for <c>GET /api/v1/me</c>, which the profile shows.
 /// </summary>
 /// <remarks>
 /// A cross-module contract in the sense of ADR 0007, implemented by the Auth module, which owns the
-/// linked accounts, and taken by Users. It takes many users at once (ADR 0007 §6).
+/// linked accounts, and taken by Users; Auth's own <c>/me</c> asks it too rather than a second query. It takes many users at once (ADR 0007 §6).
 /// </remarks>
 public interface ILinkedProviderLookup
 {

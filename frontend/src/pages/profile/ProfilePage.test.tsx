@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen, within } from '@testing-library/react';
-import type { AttemptSummary, TaskSummary } from '../../api';
+import type { AttemptSummary, Me, TaskSummary } from '../../api';
 import { ru } from '../../i18n';
 import { renderApp } from '../../test/render';
 import { jsonResponse, pageOf, problemResponse } from '../../test/responses';
@@ -66,18 +66,22 @@ function urlOf(input: RequestInfo | URL): string {
   return input instanceof URL ? input.href : input.url;
 }
 
+/** The caller: joined in March 2026, linked to both providers. */
+const me: Me = { id: 'u', username: 'developer', admin: false, createdAt: '2026-03-14T09:26:53+00:00', providers: ['github', 'google'] };
+
 function api({
   body = progress,
   list = attempts,
   signedIn = true,
   failProgress = false,
-}: { body?: object; list?: AttemptSummary[]; signedIn?: boolean; failProgress?: boolean } = {}) {
+  caller = me,
+}: { body?: object; list?: AttemptSummary[]; signedIn?: boolean; failProgress?: boolean; caller?: Me } = {}) {
   return vi.fn<typeof globalThis.fetch>().mockImplementation((input) => {
     const { pathname } = new URL(urlOf(input));
 
     switch (pathname) {
       case '/api/v1/me':
-        return Promise.resolve(signedIn ? jsonResponse({ id: 'u', username: 'developer' }) : problemResponse(401, 'unauthenticated', 'x'));
+        return Promise.resolve(signedIn ? jsonResponse(caller) : problemResponse(401, 'unauthenticated', 'x'));
       case '/api/v1/me/progress':
         return Promise.resolve(failProgress ? problemResponse(500, 'internal', 'Сбой.') : jsonResponse(body));
       case '/api/v1/tasks':
@@ -99,6 +103,26 @@ describe('the profile', () => {
     expect(person.getByRole('button', { name: ru.session.signOut })).toBeInTheDocument();
     // Today and yesterday each had a submitted attempt.
     expect(await person.findByRole('img', { name: 'Серия: 2 дня подряд' })).toBeInTheDocument();
+  });
+
+  it('says since when the learner is here and which providers they sign in with', async () => {
+    renderApp(api(), '/profile');
+
+    await screen.findByRole('heading', { level: 1, name: 'developer' });
+    const person = within(screen.getByRole('region', { name: 'developer' }));
+    // The month in the genitive, as «с» wants it.
+    expect(person.getByText('На Ritocode с марта 2026 г.')).toBeInTheDocument();
+    const providers = within(person.getByRole('list', { name: ru.profile.person.providers }));
+    expect(providers.getAllByRole('listitem').map((item) => item.textContent)).toEqual(['GitHub', 'Google']);
+  });
+
+  it('shows no providers for an identity linked to none', async () => {
+    renderApp(api({ caller: { ...me, providers: [] } }), '/profile');
+
+    await screen.findByRole('heading', { level: 1, name: 'developer' });
+    const person = within(screen.getByRole('region', { name: 'developer' }));
+    expect(person.getByText('На Ritocode с марта 2026 г.')).toBeInTheDocument();
+    expect(person.queryByRole('list', { name: ru.profile.person.providers })).not.toBeInTheDocument();
   });
 
   it('counts the tasks solved by difficulty from the task list', async () => {

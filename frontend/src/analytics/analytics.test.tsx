@@ -76,7 +76,7 @@ describe('a completed sign-in', () => {
 
   function api(signedIn: boolean) {
     return vi.fn<typeof globalThis.fetch>().mockImplementation(() =>
-      Promise.resolve(signedIn ? jsonResponse({ id: 'u', username: 'developer', admin: false }) : problemResponse(401, 'unauthenticated', 'x')),
+      Promise.resolve(signedIn ? jsonResponse({ id: 'u', username: 'developer', admin: false, createdAt: '2026-03-14T09:26:53+00:00', providers: [] }) : problemResponse(401, 'unauthenticated', 'x')),
     );
   }
 

@@ -50,6 +50,26 @@ export function diagnosis(progress: Progress): Diagnosis {
   };
 }
 
+/**
+ * The month and year of a date in the reader's zone, as a phrase after «с» wants it: in Russian the
+ * month in the genitive («марта 2026 г.»), which `Intl` gives only next to a day — so the date is
+ * formatted with its day and the day is dropped with the separator that follows or precedes it.
+ */
+export function monthAndYear(value: string, locale: string): string {
+  const parts = new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long', year: 'numeric' }).formatToParts(new Date(value));
+  const day = parts.findIndex((part) => part.type === 'day');
+  if (day === -1) {
+    return parts.map((part) => part.value).join('');
+  }
+
+  const separator = parts[day + 1]?.type === 'literal' ? day + 1 : day - 1;
+  return parts
+    .filter((_, index) => index !== day && index !== separator)
+    .map((part) => part.value)
+    .join('')
+    .trim();
+}
+
 /** A share as a whole percentage, 0–100; nothing of nothing is 0. */
 export function percent(part: number, whole: number): number {
   return whole === 0 ? 0 : Math.round((part / whole) * 100);

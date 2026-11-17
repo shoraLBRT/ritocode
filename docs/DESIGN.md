@@ -435,7 +435,10 @@ column. Styles in `pages/profile/profile.css`, classes `rc-profile__*`.
   classes stay in view while the right scrolls. Cards are the home page's (`--surface`, `--radius-card`, `--shadow`); the history is an
   `rc-panel`.
 - **Left**: the person — a 72 px avatar (the letter on `--accent-soft`), the username as the page's
-  `h1`, the streak, a secondary *Выйти* (with the header's failure message) — and **По классам**:
+  `h1`, a quiet line «На Ritocode с марта 2026 г.» (`--text-muted`, the month and year of `/me`'s
+  `createdAt` in the reader's zone), the streak and beside it the linked sign-in providers as small
+  outlined chips («GitHub», «Google»; nothing when there are none), a secondary *Выйти* (with the
+  header's failure message) — never the e-mail address — and **По классам**:
   six rows in their class colour, the name, an `rc-bar` of found out of met, «найдено X из Y» and
   «лечение верно: Z» under it; a class never met is muted and says so.
 - **Right, a row of two** (stacked below 48rem): **Решено задач** — a 120 px ring of solved out of all
@@ -555,7 +558,7 @@ above. What the site already had stays as it is.
 | Progress | `.rc-ring` (`--p`), `.rc-ring__hole`, `__value`, `__of`; `.rc-bar.k-{class}` (`--p`) | `--p` is a percentage, 0–100 |
 | Activity | `.rc-heat` › `.rc-heat__cell[data-level=0–4]` | a column per week; `aria-hidden`, the streak says it in words |
 | Admin area | `.rc-admin` › `__nav`, `__tab`, `__tiles`, `__tile` (`__tile-label`, `__tile-value`, `__tile-hint`), `__title`, `__total`, `__table`, `__row` (`--leaving`), `__mono`, `__num` (`--zero`), `__text`, `__comment`, `__slug`, `__link`, `__chip` (`--first`, `--warn`, `--good`, `--filter`), `__action`, `__error`, `__foot` | `pages/admin/admin.css`; the panel is `rc-panel`, the filters `Tabs` (`rc-tabs`, its count optional) |
-| Profile | `.rc-profile` › `__side`, `__main`, `__row`, `section.rc-profile__card` (`__card-head`, `__card-title`), `__person`, `__avatar`, `__name`, `__classes-list`, `__class` (`--none`), `__bar`, `__ring`, `__level--easy` / `--medium` / `--hard`, `__tiles`, `__tile` (`--danger`), `__heat-scroll`, `__heat`, `__heat-cell[data-today]`, `__months`, `__attempts`, `__attempt`, `__chip--first` / `--practice`, `__table`, `__count--zero` / `--warn` / `--danger` / `--good`, `__start` | `/profile` (above); `pages/profile/`, its styles in `profile.css` |
+| Profile | `.rc-profile` › `__side`, `__main`, `__row`, `section.rc-profile__card` (`__card-head`, `__card-title`), `__person`, `__avatar`, `__name`, `__joined`, `__person-meta`, `__providers`, `__provider`, `__classes-list`, `__class` (`--none`), `__bar`, `__ring`, `__level--easy` / `--medium` / `--hard`, `__tiles`, `__tile` (`--danger`), `__heat-scroll`, `__heat`, `__heat-cell[data-today]`, `__months`, `__attempts`, `__attempt`, `__chip--first` / `--practice`, `__table`, `__count--zero` / `--warn` / `--danger` / `--good`, `__start` | `/profile` (above); `pages/profile/`, its styles in `profile.css` |
 | Streak, avatar | `.rc-streak` (`.rc-streak--link` in the header), `.rc-avatar`, `.app__menu-link` | the header's right end (`HeaderStreak`, a link to `/profile`; the avatar opens `.app__menu` with *Профиль*) |
 | Problem card | `article.rc-pcard.k-{class}` › `__band`, `__seal`, `__face`, `__name`, `__rule`, `__summary`, `details.rc-pcard__more`; open: `.rc-pcard--open` in `.rc-pcard-overlay` | the catalogue's card, folded and open (above) |
 | Class filter | `.rc-catalogue__filter` › `button.rc-catalogue__chip.k-{class}[aria-pressed]` | one class or all, with counts |
