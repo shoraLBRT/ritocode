@@ -5,6 +5,7 @@ import { getProblemCatalogue, getProgress, listAttemptsSince, listTasks, useApiC
 import type { AttemptSummary, ProblemCard, ProblemCatalogue, Progress, TaskSummary } from '../api';
 import { ErrorState } from '../components/ErrorState';
 import { LoadingState } from '../components/LoadingState';
+import { ActivitySkeleton, DailyTaskSkeleton, StatSkeleton, ProblemsToReadSkeleton, ProgressSkeleton, TaskTableSkeleton } from '../components/skeletons';
 import { TaskTable } from '../components/TaskTable';
 import { useApiResource } from '../hooks/useApiResource';
 import { useT } from '../i18n';
@@ -66,11 +67,20 @@ function Arena({ catalogue }: { catalogue: ProblemCatalogue | null }) {
           <p className="rc-arena__lead">{t('home.lead')}</p>
 
           <div className="rc-arena__stats" role="group" aria-label={t('home.stats')}>
-            {taskList !== null && <Stat value={taskList.length} label={t('home.statTasks', { count: taskList.length })} />}
-            {catalogue !== null && (
+            {taskList !== null ? (
+              <Stat value={taskList.length} label={t('home.statTasks', { count: taskList.length })} />
+            ) : (
+              catalogue === null && <StatSkeleton />
+            )}
+            {catalogue !== null ? (
               <>
                 <Stat value={catalogue.cards.length} label={t('home.statProblems', { count: catalogue.cards.length })} />
                 <Stat value={catalogue.classes.length} label={t('home.statClasses', { count: catalogue.classes.length })} />
+              </>
+            ) : (
+              <>
+                <StatSkeleton />
+                <StatSkeleton />
               </>
             )}
           </div>
@@ -104,7 +114,7 @@ function Arena({ catalogue }: { catalogue: ProblemCatalogue | null }) {
                 {t('home.table.title')}
               </h2>
             </div>
-            {tasks.state.status === 'loading' && <LoadingState label={t('home.table.loading')} />}
+            {tasks.state.status === 'loading' && <LoadingState label={t('home.table.loading')} skeleton={<TaskTableSkeleton more rows={6} status={session.status !== 'signedOut'} />} />}
             {tasks.state.status === 'error' && <ErrorState error={tasks.state.error} onRetry={tasks.reload} />}
             {taskList !== null && <SuggestedTasks tasks={suggestedTasks(taskList, now, today?.slug ?? null)} />}
           </section>
@@ -115,7 +125,7 @@ function Arena({ catalogue }: { catalogue: ProblemCatalogue | null }) {
                 {t('home.reading.title')}
               </h2>
             </div>
-            {catalogue === null ? <LoadingState label={t('home.reading.loading')} /> : <ProblemsToRead catalogue={catalogue} now={now} />}
+            {catalogue === null ? <LoadingState label={t('home.reading.loading')} skeleton={<ProblemsToReadSkeleton />} /> : <ProblemsToRead catalogue={catalogue} now={now} />}
           </section>
         </div>
 
@@ -161,11 +171,11 @@ function DailyTask({
 
   if (task === null) {
     return loading ? (
-      <div className="rc-daily" aria-busy="true">
+      <div className="rc-daily">
         <div className="rc-daily__top">
           <span>{t('home.daily.label')}</span>
         </div>
-        <p className="rc-daily__title">{t('home.daily.loading')}</p>
+        <LoadingState className="rc-daily__loading" label={t('home.daily.loading')} skeleton={<DailyTaskSkeleton />} />
       </div>
     ) : null;
   }
@@ -282,7 +292,7 @@ function ProgressCard() {
       <h2 id="home-progress" className="rc-arena__panel-title">
         {t('home.progress.title')}
       </h2>
-      {state.status === 'loading' && <LoadingState label={t('home.progress.loading')} />}
+      {state.status === 'loading' && <LoadingState label={t('home.progress.loading')} skeleton={<ProgressSkeleton />} />}
       {state.status === 'error' && <ErrorState error={state.error} onRetry={reload} />}
       {state.status === 'success' && <ProgressBody progress={state.data} />}
     </section>
@@ -343,7 +353,7 @@ function ActivityCard({ now }: { now: Date }) {
         </h2>
         <span className="rc-arena__note">{t('home.activity.period')}</span>
       </div>
-      {state.status === 'loading' && <LoadingState label={t('home.activity.loading')} />}
+      {state.status === 'loading' && <LoadingState label={t('home.activity.loading')} skeleton={<ActivitySkeleton />} />}
       {state.status === 'error' && <ErrorState error={state.error} onRetry={reload} />}
       {state.status === 'success' && <ActivityBody attempts={state.data} now={now} />}
     </section>

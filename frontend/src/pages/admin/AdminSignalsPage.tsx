@@ -54,7 +54,7 @@ export function AdminSignalsPage() {
       }
       total={state.status === 'success' ? <AdminTotal count={state.data.totalItems} /> : null}
     >
-      <ListBody state={state} reload={reload} empty={t('admin.signalsPage.empty')}>
+      <ListBody state={state} reload={reload} empty={t('admin.signalsPage.empty')} columns={7} icon="flag">
         {(list) => (
           <>
             <AdminTable label={t('admin.signals')}>

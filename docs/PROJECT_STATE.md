@@ -185,6 +185,15 @@ description. As of that day:
   the page as DESIGN.md › The admin area describes it, no new endpoint. Checked in the built-in
   browser at 1440×900 and 375×812, light and dark, against the development API (no horizontal page
   scroll; reduced motion, so final states only); lint, build, build:static and vitest (437) pass.
+  **#264** (2026-11-17): states — loading is skeletons of the final shape (task table, catalogue
+  cards, the home page's daily task, stats, progress, heat map and problems-to-read, admin tables)
+  inside `LoadingState`'s `role="status"` region, shown after 150 ms; `EmptyState` is a mark, a
+  title, a line and one action (*Сбросить фильтры* on `/tasks`, *Сбросить поиск* on `/problems`);
+  `ErrorState` is the same frame with *Повторить* in flight; `NotFoundPage` is a large 404 with the
+  brand's cross and three ways out; the workspace's loading is unchanged; DESIGN.md › States.
+  Checked in the built-in browser at 1440×900 and 375×812, light and dark, with the API held back
+  (skeleton heights within a few pixels of the loaded content; the row counts differ by data) and
+  with it unreachable; lint, build, build:static and vitest (456) pass.
   **#263** (2026-11-17): the header is one row of at most 64 px on a phone (brand, search icon,
   streak and avatar or *Войти*, menu button; the sections, the theme and *Начать* in a sheet that
   closes on Escape, a tap outside and navigation, with focus kept), sticky with a blur and a shadow
@@ -513,7 +522,7 @@ compose stack is PostgreSQL only.
 | `Ritocode.Api.Tests` | 153 |
 | `Ritocode.Modules.Content.Tests` | 78 |
 | `Ritocode.Modules.Attempts.Tests` | 31 |
-| Frontend (vitest) | 448 |
+| Frontend (vitest) | 456 |
 | `scripts/monitor-test.sh` | 9 |
 | End-to-end (`e2e/`) | 1 |
 

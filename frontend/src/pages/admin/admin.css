@@ -142,13 +142,6 @@
   text-decoration: underline;
 }
 
-.rc-admin__loading {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  padding: 22px 18px;
-}
-
 .rc-admin__panel > .state {
   margin: 18px;
 }

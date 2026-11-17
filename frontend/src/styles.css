@@ -2683,3 +2683,260 @@ pre {
     display: none;
   }
 }
+
+/* Loading as skeletons: shown only after 150 ms (backwards fill keeps them hidden until then), so a quick answer never flashes them. */
+.rc-loading {
+  animation: rc-fade var(--dur) var(--ease-out) 150ms backwards;
+}
+
+.rc-skeleton--dot,
+.rc-skeleton--ring {
+  border-radius: 50%;
+}
+
+.rc-skeleton--bar {
+  border-radius: 999px;
+}
+
+.rc-skeleton--pcard,
+.rc-skeleton--panel {
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.rc-skeleton--pcard {
+  min-height: 360px;
+  border-radius: 18px;
+}
+
+.rc-skeleton--panel {
+  border-radius: var(--radius-panel);
+}
+
+/* On the spotlight a sunken block would vanish: a lighter raised tone reads there. */
+.rc-skeleton--on-spotlight {
+  background: var(--spotlight-raised);
+}
+
+.rc-skeleton--on-spotlight::after {
+  background: linear-gradient(90deg, transparent, var(--spotlight-raised), transparent);
+}
+
+.rc-arena__progress-skeleton,
+.rc-arena__activity-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.rc-arena__ring-note {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rc-skeleton--stat {
+  border-radius: 12px;
+}
+
+.rc-arena__problem--skeleton {
+  min-height: 170px;
+}
+
+.rc-daily__loading,
+.rc-daily__skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* Empty and failed lists: a mark on a round disc, a title, a line and one action, centred in the panel. */
+.rc-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: calc(var(--gap) * 3) var(--gap);
+  text-align: center;
+}
+
+.rc-empty.state--error {
+  border: 0;
+  border-top: 1px solid var(--danger);
+  border-radius: var(--radius);
+  padding: calc(var(--gap) * 2) var(--gap);
+}
+
+.rc-panel > .rc-empty.state--error {
+  border-radius: 0;
+}
+
+.rc-disc {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  margin-bottom: 4px;
+  border-radius: 50%;
+  background: var(--surface-inset);
+  color: var(--text-muted);
+}
+
+.rc-disc--danger {
+  border: 1px solid var(--danger);
+  background: var(--surface);
+  color: var(--danger);
+}
+
+.rc-empty__title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.rc-empty__text {
+  max-width: 32rem;
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.rc-empty .state__message {
+  font-weight: 400;
+}
+
+.rc-empty .state__fields {
+  text-align: left;
+}
+
+.rc-empty .state__request-id {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+}
+
+.rc-empty .button {
+  margin-top: 8px;
+}
+
+.rc-empty .button:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+/* Not found: a large 404 with the brand's cross for the zero, and three ways out. */
+.rc-notfound {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 56rem;
+  margin-inline: auto;
+  padding-block: calc(var(--gap) * 3);
+  text-align: center;
+}
+
+.rc-notfound__code {
+  display: flex;
+  align-items: center;
+  gap: 0.08em;
+  margin: 0 0 var(--gap);
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: clamp(5rem, 16vw, 9rem);
+  font-weight: 600;
+  line-height: 1;
+}
+
+.rc-notfound__mark {
+  width: 0.72em;
+  height: 0.72em;
+  fill: var(--accent);
+  stroke: var(--accent-ink);
+  stroke-width: 3.2;
+  stroke-linecap: round;
+}
+
+.rc-notfound h1 {
+  margin: 0;
+}
+
+.rc-notfound__text {
+  max-width: 34rem;
+  margin: 0.5rem 0 calc(var(--gap) * 2);
+  color: var(--text-muted);
+}
+
+.rc-notfound__ways {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--gap);
+  width: 100%;
+  text-align: left;
+}
+
+.rc-notfound__way {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 18px 48px 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  text-decoration: none;
+  transition: transform var(--dur) var(--ease-out), border-color var(--dur) var(--ease-out);
+}
+
+.rc-notfound__way:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.rc-notfound__way--primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.rc-notfound__way-label {
+  font-weight: 600;
+}
+
+.rc-notfound__way-hint {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.rc-notfound__way--primary .rc-notfound__way-hint {
+  color: var(--accent-ink);
+  opacity: 0.85;
+}
+
+.rc-notfound__arrow::before {
+  content: '→';
+}
+
+.rc-notfound__arrow {
+  position: absolute;
+  top: 50%;
+  right: 20px;
+  font-size: 1.25rem;
+  transform: translateY(-50%);
+  transition: transform var(--dur) var(--ease-out);
+}
+
+.rc-notfound__way:hover .rc-notfound__arrow::before {
+  content: '→';
+}
+
+.rc-notfound__arrow {
+  transform: translate(4px, -50%);
+}
+
+@media (max-width: 48rem) {
+  .rc-notfound__ways {
+    grid-template-columns: 1fr;
+  }
+}

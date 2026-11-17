@@ -1,7 +1,10 @@
 import type { ReactNode } from 'react';
 import type { AdminLearner, Page } from '../../api';
+import { EmptyState } from '../../components/EmptyState';
+import type { EmptyIcon } from '../../components/EmptyState';
 import { ErrorState } from '../../components/ErrorState';
-import { Skeleton } from '../../components/Skeleton';
+import { LoadingState } from '../../components/LoadingState';
+import { AdminRowsSkeleton } from '../../components/skeletons';
 import type { ApiResourceState } from '../../hooks/useApiResource';
 import { useLocale, useT } from '../../i18n';
 
@@ -65,38 +68,32 @@ export function AdminTotal({ count }: { count: number }) {
   );
 }
 
-/** Rows standing in for a table while it loads. */
-export function ListLoading() {
-  const t = useT();
-
-  return (
-    <div className="rc-admin__loading" role="status" aria-label={t('admin.loading')}>
-      {[0, 1, 2, 3, 4].map((row) => (
-        <Skeleton key={row} height={18} />
-      ))}
-    </div>
-  );
-}
-
 /** A list's body in each of its states: loading, failed, empty, or the table `children` draws. */
 export function ListBody<T>({
   state,
   reload,
   empty,
+  columns = 5,
+  icon = 'inbox',
   children,
 }: {
   state: ApiResourceState<Page<T>>;
   reload: () => void;
   empty: string;
+  /** How many columns the table has, so its skeleton is as wide. */
+  columns?: number;
+  icon?: EmptyIcon;
   children: (page: Page<T>) => ReactNode;
 }) {
+  const t = useT();
+
   switch (state.status) {
     case 'loading':
-      return <ListLoading />;
+      return <LoadingState label={t('admin.loading')} skeleton={<AdminRowsSkeleton columns={columns} />} />;
     case 'error':
       return <ErrorState error={state.error} onRetry={reload} />;
     case 'success':
-      return state.data.items.length === 0 ? <p className="rc-arena__empty">{empty}</p> : children(state.data);
+      return state.data.items.length === 0 ? <EmptyState title={empty} icon={icon} /> : children(state.data);
   }
 }
 

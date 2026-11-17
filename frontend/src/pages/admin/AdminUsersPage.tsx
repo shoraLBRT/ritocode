@@ -23,7 +23,7 @@ export function AdminUsersPage() {
       lead={t('admin.usersPage.lead')}
       total={state.status === 'success' ? <AdminTotal count={state.data.totalItems} /> : null}
     >
-      <ListBody state={state} reload={reload} empty={t('admin.usersPage.empty')}>
+      <ListBody state={state} reload={reload} empty={t('admin.usersPage.empty')} columns={7} icon="inbox">
         {(list) => (
           <>
             <AdminTable label={t('admin.users')}>

@@ -169,6 +169,18 @@ describe('the problem catalogue', () => {
     expect(umami.track.mock.calls).toEqual([['catalogue-search', undefined]]);
   });
 
+  it('clears the search from the empty state', async () => {
+    renderApp(api(), '/problems');
+    const search = await screen.findByLabelText(ru.problems.search);
+
+    fireEvent.change(search, { target: { value: 'ничего такого нет' } });
+    fireEvent.click(screen.getByRole('button', { name: ru.problems.resetSearch }));
+
+    expect(search).toHaveValue('');
+    expect(screen.queryByText(ru.problems.noMatch)).not.toBeInTheDocument();
+    expect(document.getElementById('money-in-float')).not.toBeNull();
+  });
+
   it('treats ё and е as the same letter', async () => {
     const withYo = { ...catalogue, cards: [{ ...catalogue.cards[0], summary: 'Всё лежит в коде.' }] };
     renderApp(api(withYo), '/problems');

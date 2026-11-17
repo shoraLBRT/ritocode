@@ -52,7 +52,7 @@ export function AdminOverviewPage() {
           </Link>
         }
       >
-        <ListBody state={signals.state} reload={signals.reload} empty={t('admin.overviewPage.empty')}>
+        <ListBody state={signals.state} reload={signals.reload} empty={t('admin.overviewPage.empty')} columns={5} icon="flag">
           {(list) => (
             <AdminTable label={t('admin.overviewPage.latest')}>
               <thead>

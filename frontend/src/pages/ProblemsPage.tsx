@@ -9,6 +9,7 @@ import { CardSectionsView } from '../components/CardSectionsView';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { LoadingState } from '../components/LoadingState';
+import { CatalogueSkeleton } from '../components/skeletons';
 import { Markdown } from '../components/Markdown';
 import { useApiResource } from '../hooks/useApiResource';
 import { useT } from '../i18n';
@@ -30,7 +31,7 @@ export function ProblemsPage() {
 
   return (
     <ProblemsFrame>
-      {state.status === 'loading' && <LoadingState label={t('problems.loading')} />}
+      {state.status === 'loading' && <LoadingState label={t('problems.loading')} skeleton={<CatalogueSkeleton />} />}
       {state.status === 'error' && <ErrorState error={state.error} onRetry={reload} />}
       {state.status === 'success' && <CatalogueOrEmpty catalogue={state.data} />}
     </ProblemsFrame>
@@ -66,7 +67,7 @@ function ProblemsFrame({ children }: { children: ReactNode }) {
 function CatalogueOrEmpty({ catalogue }: { catalogue: ProblemCatalogue }) {
   const t = useT();
 
-  return catalogue.cards.length === 0 ? <EmptyState>{t('problems.empty')}</EmptyState> : <Catalogue catalogue={catalogue} />;
+  return catalogue.cards.length === 0 ? <EmptyState title={t('problems.empty')} icon="inbox" /> : <Catalogue catalogue={catalogue} />;
 }
 
 function Catalogue({ catalogue }: { catalogue: ProblemCatalogue }) {
@@ -142,7 +143,26 @@ function Catalogue({ catalogue }: { catalogue: ProblemCatalogue }) {
         <ClassFilter classes={catalogue.classes} cards={found} value={classFilter} onChange={setClassFilter} />
       </div>
 
-      {shown.length === 0 && <EmptyState>{t('problems.noMatch')}</EmptyState>}
+      {shown.length === 0 && (
+        <EmptyState
+          title={t('problems.noMatch')}
+          icon="search"
+          action={
+            <button
+              type="button"
+              className="button"
+              onClick={() => {
+                setQuery('');
+                setClassFilter(null);
+              }}
+            >
+              {t('problems.resetSearch')}
+            </button>
+          }
+        >
+          {t('problems.noMatchText')}
+        </EmptyState>
+      )}
 
       <div className="rc-catalogue__classes" inert={openCard !== undefined}>
         {catalogue.classes.map((problemClass) => {
