@@ -5,6 +5,7 @@ import { useLocation } from 'react-router';
 import { track } from '../analytics';
 import { getProblemCatalogue, useApiClient } from '../api';
 import type { ProblemCard, ProblemCatalogue, ProblemClass } from '../api';
+import { BackToTop } from '../components/BackToTop';
 import { CardSectionsView } from '../components/CardSectionsView';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
@@ -12,6 +13,8 @@ import { LoadingState } from '../components/LoadingState';
 import { CatalogueSkeleton } from '../components/skeletons';
 import { Markdown } from '../components/Markdown';
 import { useApiResource } from '../hooks/useApiResource';
+import { useCountUp } from '../hooks/useCountUp';
+import { useStuck } from '../hooks/useStuck';
 import { useT } from '../i18n';
 import { Icon } from './task/parts';
 
@@ -60,6 +63,7 @@ function ProblemsFrame({ children }: { children: ReactNode }) {
         <p>{t('problems.lead')}</p>
       </header>
       {children}
+      <BackToTop />
     </section>
   );
 }
@@ -81,12 +85,15 @@ function Catalogue({ catalogue }: { catalogue: ProblemCatalogue }) {
   const [closedAt, setClosedAt] = useState<string | null>(null);
   const searched = useRef(false);
   const returnFocus = useRef<string | null>(null);
+  const searchInput = useRef<HTMLInputElement>(null);
+  const bar = useStuck<HTMLDivElement>();
 
   const terms = normalise(query).split(/\s+/).filter((term) => term.length > 0);
   const found = catalogue.cards.filter((card) => matches(card, terms));
   const shown = found.filter((card) => classFilter === null || card.class === classFilter);
   const named = decodeURIComponent(location.hash.slice(1));
   const fromAddress = closedAt === location.key ? null : named;
+  const foundCount = useCountUp(shown.length, { duration: 200 });
   const openCard = catalogue.cards.find((card) => card.slug === (clicked ?? fromAddress));
 
   // The address names a card: bring it into view — on arrival, and on every link to a card followed
@@ -120,25 +127,41 @@ function Catalogue({ catalogue }: { catalogue: ProblemCatalogue }) {
 
   return (
     <>
-      <div className="rc-panel rc-catalogue__bar" inert={openCard !== undefined}>
+      <div ref={bar} className="rc-panel rc-catalogue__bar" inert={openCard !== undefined}>
         <div className="rc-catalogue__search-row">
-          <label className="rc-catalogue__search">
-            <span className="visually-hidden">{t('problems.search')}</span>
-            <input
-              type="search"
-              value={query}
-              placeholder={t('problems.searchPlaceholder')}
-              onChange={(event) => {
-                // Counted once a visit, on the first thing typed — never what was typed.
-                if (!searched.current && event.target.value.trim() !== '') {
-                  searched.current = true;
-                  track('catalogue-search');
-                }
-                setQuery(event.target.value);
-              }}
-            />
-          </label>
-          <span className="rc-catalogue__count">{t('problems.count', { count: shown.length })}</span>
+          <div className="rc-catalogue__search">
+            <label>
+              <span className="visually-hidden">{t('problems.search')}</span>
+              <input
+                ref={searchInput}
+                type="search"
+                value={query}
+                placeholder={t('problems.searchPlaceholder')}
+                onChange={(event) => {
+                  // Counted once a visit, on the first thing typed — never what was typed.
+                  if (!searched.current && event.target.value.trim() !== '') {
+                    searched.current = true;
+                    track('catalogue-search');
+                  }
+                  setQuery(event.target.value);
+                }}
+              />
+            </label>
+            {query !== '' && (
+              <button
+                type="button"
+                className="rc-catalogue__clear"
+                aria-label={t('problems.clearSearch')}
+                onClick={() => {
+                  setQuery('');
+                  searchInput.current?.focus();
+                }}
+              >
+                <Icon name="close" />
+              </button>
+            )}
+          </div>
+          <span className="rc-catalogue__count">{t('problems.count', { count: foundCount })}</span>
         </div>
         <ClassFilter classes={catalogue.classes} cards={found} value={classFilter} onChange={setClassFilter} />
       </div>
@@ -167,12 +190,16 @@ function Catalogue({ catalogue }: { catalogue: ProblemCatalogue }) {
       <div className="rc-catalogue__classes" inert={openCard !== undefined}>
         {catalogue.classes.map((problemClass) => {
           const cards = shown.filter((card) => card.class === problemClass.id);
+          const total = catalogue.cards.filter((card) => card.class === problemClass.id).length;
 
           return (
             cards.length > 0 && (
               <section key={problemClass.id} className={`rc-catalogue__class k-${problemClass.id}`} aria-labelledby={`class-${problemClass.id}`}>
                 <div className="rc-catalogue__class-head">
                   <h2 id={`class-${problemClass.id}`}>{problemClass.name}</h2>
+                  <span className="rc-catalogue__class-count">
+                    {cards.length < total ? t('problems.classCountOf', { shown: cards.length, total }) : total}
+                  </span>
                   {problemClass.description !== null && <p>{problemClass.description}</p>}
                 </div>
                 <div className="rc-catalogue__grid">

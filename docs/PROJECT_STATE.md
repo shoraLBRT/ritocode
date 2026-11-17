@@ -194,6 +194,21 @@ description. As of that day:
   Checked in the built-in browser at 1440, 1920 (layout) and 375 px, light and dark, signed in
   (reduced motion, so final states only; the guest card by tests only, the dev API always signs in);
   lint, build, build:static and vitest (460) pass.
+  **#266** (2026-11-17): the two catalogues as list pages. `/tasks` opens with a **summary strip**
+  (`components/SolvedSummary.tsx`, counting with the profile's `solvedTasks`): solved of all counting
+  up, a three-part bar (a segment per difficulty, as wide as its share of the tasks, filled by its
+  solved share), the started and revealed counts — every label a button that sets its filter in the
+  address — and for a guest the counts by difficulty and an invitation to sign in. `Tabs` has one
+  moving **thumb** (measured offsets, follows a wrapped second line, none until measured); the list
+  re-enters on a filter change and its count eases (`useCountUp`). The filter bars of `/tasks` and
+  `/problems` stick under the header (`useStuck` marks `data-stuck` for the shadow); **on a phone
+  (<= 48 rem) they do not stick** — a deliberate choice, two lines of filters would cover too much.
+  `/problems`: a class heading shows its count («3 из 9» under a search), the found count eases, the
+  search field has a clear button. `BackToTop` (`/tasks`, `/problems`, the profile) after a screen of
+  scroll. Checked in the built-in browser at 1440 and 375 px, light and dark (reduced motion, so
+  final states only): bars stuck, a card opened from a scrolled position (centred, over the stuck
+  bar), a wrapped tab row, no horizontal scroll; lint, build, build:static (prerendered `/problems`
+  keeps every card and the counts) and vitest (469) pass.
   **#264** (2026-11-17): states — loading is skeletons of the final shape (task table, catalogue
   cards, the home page's daily task, stats, progress, heat map and problems-to-read, admin tables)
   inside `LoadingState`'s `role="status"` region, shown after 150 ms; `EmptyState` is a mark, a
@@ -531,7 +546,7 @@ compose stack is PostgreSQL only.
 | `Ritocode.Api.Tests` | 153 |
 | `Ritocode.Modules.Content.Tests` | 78 |
 | `Ritocode.Modules.Attempts.Tests` | 31 |
-| Frontend (vitest) | 460 |
+| Frontend (vitest) | 469 |
 | `scripts/monitor-test.sh` | 9 |
 | End-to-end (`e2e/`) | 1 |
 

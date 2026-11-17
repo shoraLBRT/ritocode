@@ -359,7 +359,20 @@ full length:
   under the other filter. The status column marks each task (`StatusMark`): new an empty dashed ring,
   tried an amber dot, solved a green check, the answer revealed a quiet grey eye — each named in
   words for a screen reader. The
-  number of tasks shown sits at the bar's right end.
+  number of tasks shown sits at the bar's right end and eases to its new value (`useCountUp`, 200 ms).
+- **The summary strip** (`rc-summary`, `components/SolvedSummary.tsx`) between the head and the
+  panel, a card on `--surface`: signed in, «Решено N из M» with N counting up, a bar of three
+  segments — one per difficulty, as wide as that difficulty's share of the tasks, filled by its
+  solved share in the `rc-difficulty` colours — with «Лёгкие 2/10 · Средние 0/8 · Сложные 0/2»
+  under it, and «Начато: n», «Ответ открыт: n» at the right; a guest sees «M задач», the same bar
+  unfilled with the counts, and a line inviting to sign in. Every label and count is a button that
+  sets the matching filter (pressed again, it clears it). The counting is the profile's
+  `solvedTasks`. One row at desktop, stacked on a phone; a skeleton while loading.
+- **The bar sticks** under the header (`rc-sticky-bar`, `top: var(--header-height)`, opaque
+  `--surface`, z-index 5 on the ladder in `styles.css`); `useStuck` sets `data-stuck` while it is held,
+  and only then it has a shadow. The panel clips with `overflow: clip` (no scroll container). At
+  ≤ 48 rem the bar does not stick: two lines of filters would cover too much of a phone.
+- When a filter changes the table re-enters (`rc-list-enter`: fade and a 4 px rise, `--dur`).
 - Every task, in the API's order, in the same table as the home page — one component,
   `components/TaskTable.tsx`. Classes and the number of findings never appear, as on the home page.
 - The filters live in the address (`?difficulty=hard&status=unsolved`), so the way back from a task
@@ -372,10 +385,13 @@ full length:
 maintainer's direction of 2026-11-10 (artboards «#202 C» on the canvas
 <https://claude.ai/artifact/HLpnMneZaDeENR3kSFyPup>).
 
-- The page head (`rc-page-head`), then a panel (`rc-catalogue__bar`) with the search, the number of
-  cards shown, and the **class filter** — *Все* and the six classes, each with its count; one class
-  at a time, pressed again it shows all.
-- Each class: its name with a dot in its colour and its description, then its cards in a grid
+- The page head (`rc-page-head`), then a panel (`rc-catalogue__bar`) with the search (a × button
+  clears it while it has text), the number of cards shown (it eases to its new value), and the
+  **class filter** — *Все* and the six classes, each with its count; one class at a time, pressed
+  again it shows all. The panel sticks under the header like the task list's bar (square-cornered
+  with a shadow while held; not on a phone); the open card's overlay (50) stays above it.
+- Each class: its name with a dot in its colour, a muted count (`rc-catalogue__class-count`: «9»,
+  under a search or class filter «3 из 9», the same in the prerendered page) and its description, then its cards in a grid
   (`rc-catalogue__grid`, as many 15.5 rem columns as fit; two on a phone).
 - **A folded card** (`article.rc-pcard.k-{class}`, at least 360 px tall) looks like a card: the
   class's tint is its frame; the band on it carries the class name and a round seal in the class's
@@ -506,7 +522,10 @@ above. What the site already had stays as it is.
 | Phone menu | `.app__menu-button`, `.app__search-button`, `.app__search-close`, `.app__sheet` › `__nav`, `__group`, `__item` (`--active`), `__theme`, `__start`, `.app__sheet-backdrop` | the menu button, the search icon and the sheet below 48 / 64 rem (`MobileMenu`, `AppLayout`) |
 | Footer | `.app__footer` › `__inner`, `__brand`, `__nav`, `__title`, `__feedback` | the arena's footer (`AppFooter`); *Обратная связь* calls `requestFeedback()` |
 | Panel | `.rc-panel`, `.rc-panel__bar` | a page's large card: the table with its toolbar |
-| Segmented tabs | `.rc-tabs` › `button.rc-tab[aria-pressed]`, `.rc-tab__count` | a filter of 2–5 options, such as difficulty |
+| Segmented tabs | `.rc-tabs` › `button.rc-tab[aria-pressed]`, `.rc-tab__count`, `.rc-tabs__thumb` | a filter of 2–5 options, such as difficulty; the pressed mark is one thumb that slides and resizes to the pressed tab (`transform` and `width`, `--dur`, measured from the tab's offsets, so it follows a wrapped second line); no thumb until measured, then the pressed tab keeps its own background |
+| Back to top | `.rc-top` (`components/BackToTop.tsx`) | a round 44 px button over the feedback button after a screen of scroll (z-index 12); smooth scroll, instant under reduced motion; focus goes to the page's `h1`; on `/tasks`, `/problems` and the profile |
+| Summary strip | `.rc-summary` › `__lead`, `__figure`, `__bar`, `__segment--{difficulty}`, `__labels`, `__counts`, `__link` | `/tasks`: solved of all, the three-part bar, the started counts; each link sets a filter |
+| Sticky filter bar | `.rc-sticky-bar`, `.rc-catalogue__bar`, `[data-stuck]` | a list page's bar held under the header, with a shadow only while held; static at ≤ 48 rem |
 | Toggle | `button.rc-toggle[aria-pressed]` › `.rc-toggle__track` | a display setting that applies at once |
 | Search | `label.rc-search` › `input`, `.rc-kbd` | the header's search over tasks and problems (`HeaderSearch`), its list in `.app__search-popup` |
 | Difficulty | `.rc-difficulty--easy` / `--medium` / `--hard` | always a word, on the state colours |

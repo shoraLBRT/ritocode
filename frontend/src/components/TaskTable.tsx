@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import type { TaskStatus, TaskSummary } from '../api';
 import { useT } from '../i18n';
@@ -79,7 +80,19 @@ export interface TabOption<T extends string> {
   readonly count?: number;
 }
 
-/** Segmented tabs (`rc-tabs`): a filter of two to five exclusive options, each with its count where there is one. */
+interface Thumb {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+}
+
+/**
+ * Segmented tabs (`rc-tabs`): a filter of two to five exclusive options, each with its count where there is one.
+ * The pressed mark is one "thumb" that slides and resizes to the pressed tab (CSS transition on `transform` and
+ * `width`); it is measured from the tab's offsets, also on a second line when the tabs wrap. Where it cannot be
+ * measured (no layout, as in tests) the pressed tab keeps its own background.
+ */
 export function Tabs<T extends string>({
   label,
   options,
@@ -91,8 +104,57 @@ export function Tabs<T extends string>({
   value: T;
   onChange: (value: T) => void;
 }) {
+  const group = useRef<HTMLDivElement>(null);
+  const [thumb, setThumb] = useState<Thumb | null>(null);
+  const [ready, setReady] = useState(false);
+
+  const measure = useCallback(() => {
+    const pressed = group.current?.querySelector<HTMLElement>('[aria-pressed="true"]');
+    if (pressed === null || pressed === undefined || pressed.offsetWidth === 0) {
+      setThumb(null);
+      return;
+    }
+    const next = { x: pressed.offsetLeft, y: pressed.offsetTop, width: pressed.offsetWidth, height: pressed.offsetHeight };
+    setThumb((previous) =>
+      previous !== null && previous.x === next.x && previous.y === next.y && previous.width === next.width && previous.height === next.height ? previous : next,
+    );
+  }, []);
+
+  useLayoutEffect(() => {
+    measure();
+  }, [measure, value, options]);
+
+  // The first measurement is painted without a transition; the thumb moves only after that.
+  useEffect(() => {
+    if (thumb === null || ready) return;
+    const frame = requestAnimationFrame(() => {
+      setReady(true);
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+    };
+  }, [thumb, ready]);
+
+  useEffect(() => {
+    const element = group.current;
+    if (element === null || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    for (const child of element.children) observer.observe(child);
+    return () => {
+      observer.disconnect();
+    };
+  }, [measure, options]);
+
   return (
-    <div className="rc-tabs" role="group" aria-label={label}>
+    <div ref={group} className="rc-tabs" role="group" aria-label={label} data-thumb={thumb !== null ? (ready ? 'ready' : 'set') : undefined}>
+      {thumb !== null && (
+        <span
+          className="rc-tabs__thumb"
+          aria-hidden="true"
+          style={{ width: thumb.width, height: thumb.height, transform: `translate(${String(thumb.x)}px, ${String(thumb.y)}px)` }}
+        />
+      )}
       {options.map((option) => (
         <button
           key={option.value}
