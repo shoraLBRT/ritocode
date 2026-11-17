@@ -11,7 +11,7 @@ import { jsonResponse, problemResponse } from './test/responses';
  * client is stubbed at `fetch`, so what is under test is this application rather than the backend.
  */
 
-const developer = { id: '0199aa00-0000-7000-8000-000000000001', username: 'developer' };
+const developer = { id: '0199aa00-0000-7000-8000-000000000001', username: 'developer', admin: false, createdAt: '2026-03-14T09:26:53+00:00', providers: [] };
 
 /** `fetch` accepts a `Request` as well as a string, so the url is read rather than stringified. */
 function urlOf(input: RequestInfo | URL): string {

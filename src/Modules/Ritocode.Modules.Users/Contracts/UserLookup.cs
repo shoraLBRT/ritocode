@@ -13,6 +13,6 @@ internal sealed class UserLookup(UsersDbContext context) : IUserLookup
         context.Users
             .AsNoTracking()
             .Where(user => user.Id == id)
-            .Select(user => new UserSummary(user.Id, user.Username))
+            .Select(user => new UserSummary(user.Id, user.Username, user.CreatedAt))
             .FirstOrDefaultAsync(cancellationToken);
 }

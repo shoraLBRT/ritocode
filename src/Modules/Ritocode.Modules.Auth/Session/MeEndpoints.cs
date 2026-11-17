@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Ritocode.Shared.Contracts.Auth;
 using Ritocode.Shared.Contracts.Users;
 using Ritocode.Shared.Errors;
 using Ritocode.Shared.Http;
@@ -11,7 +12,13 @@ namespace Ritocode.Modules.Auth.Session;
 
 /// <summary>The caller, as the frontend shows it: who is signed in.</summary>
 /// <param name="Admin">Whether the caller may open the admin area (SPEC §6.2), so the header can offer it.</param>
-public sealed record MeView(Guid Id, string Username, bool Admin);
+/// <param name="CreatedAt">The caller's join date, in UTC, which the profile shows as a month and year.</param>
+/// <param name="Providers">
+/// The sign-in providers linked to the account, lower-case as the sign-in addresses name them
+/// (<c>github</c>, <c>google</c>), in that order; empty for an identity linked to none — the
+/// development identity.
+/// </param>
+public sealed record MeView(Guid Id, string Username, bool Admin, DateTimeOffset CreatedAt, IReadOnlyList<string> Providers);
 
 /// <summary>
 /// <c>GET /api/v1/me</c> (docs/SPEC.md §9.3): the signed-in caller, or 401 — which is how the
@@ -36,6 +43,7 @@ internal static class MeEndpoints
     private static async Task<IResult> GetMeAsync(
         ICurrentUser currentUser,
         IUserLookup users,
+        ILinkedProviderLookup linkedProviders,
         IAuthorizationService authorization,
         HttpContext context,
         CancellationToken cancellationToken)
@@ -51,6 +59,13 @@ internal static class MeEndpoints
         // Asked of the admin policy, whose handler the Users module owns, rather than of a list here.
         var admin = await authorization.AuthorizeAsync(context.User, AdminPolicy.Name);
 
-        return Results.Ok(new MeView(user.Id, user.Username, admin.Succeeded));
+        var providers = await linkedProviders.FindProvidersAsync([user.Id], cancellationToken);
+
+        return Results.Ok(new MeView(
+            user.Id,
+            user.Username,
+            admin.Succeeded,
+            user.CreatedAt,
+            providers.GetValueOrDefault(user.Id) ?? []));
     }
 }

@@ -54,7 +54,7 @@ function byId(id: string): HTMLElement {
 function api(body: object = catalogue) {
   return vi.fn<typeof globalThis.fetch>().mockImplementation((input) => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-    return Promise.resolve(url.endsWith('/me') ? jsonResponse({ id: 'u', username: 'developer' }) : jsonResponse(body));
+    return Promise.resolve(url.endsWith('/me') ? jsonResponse({ id: 'u', username: 'developer', admin: false, createdAt: '2026-03-14T09:26:53+00:00', providers: [] }) : jsonResponse(body));
   });
 }
 

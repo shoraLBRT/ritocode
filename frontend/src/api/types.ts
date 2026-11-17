@@ -38,6 +38,10 @@ export interface Me {
   readonly username: string;
   /** Whether the caller may open the admin area (docs/SPEC.md §6.2). */
   readonly admin: boolean;
+  /** The join date, ISO-8601 UTC; the profile shows its month and year. */
+  readonly createdAt: string;
+  /** The sign-in providers linked to the account (`github`, `google`); empty for the development identity. */
+  readonly providers: readonly string[];
 }
 
 export type Difficulty = 'easy' | 'medium' | 'hard';

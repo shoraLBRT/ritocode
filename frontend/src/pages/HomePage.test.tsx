@@ -53,7 +53,7 @@ function api({ signedIn = false, attempts = [] as unknown[] } = {}) {
 
     switch (url.pathname) {
       case '/api/v1/me':
-        return Promise.resolve(signedIn ? jsonResponse({ id: 'u', username: 'developer' }) : problemResponse(401, 'unauthenticated', 'x'));
+        return Promise.resolve(signedIn ? jsonResponse({ id: 'u', username: 'developer', admin: false, createdAt: '2026-03-14T09:26:53+00:00', providers: [] }) : problemResponse(401, 'unauthenticated', 'x'));
       case '/api/v1/tasks':
         return Promise.resolve(jsonResponse(pageOf(tasksFor(signedIn), 1, 100)));
       case '/api/v1/problems':

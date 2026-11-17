@@ -107,7 +107,7 @@ function api(
     }
 
     const bodies: Record<string, object> = {
-      '/me': { id: 'u', username: 'developer' },
+      '/me': { id: 'u', username: 'developer', admin: false, createdAt: '2026-03-14T09:26:53+00:00', providers: [] },
       '/attempts/attempt-1': attempt,
       [`/tasks/${task.slug}`]: taskBody,
       '/treatments': tree,

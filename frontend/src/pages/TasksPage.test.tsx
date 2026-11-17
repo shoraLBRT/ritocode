@@ -22,7 +22,7 @@ function api(items: object[], { signedIn = true } = {}) {
     const url = urlOf(input);
 
     if (url.includes('/me')) {
-      return Promise.resolve(signedIn ? jsonResponse({ id: 'u', username: 'developer' }) : problemResponse(401, 'unauthenticated', 'x'));
+      return Promise.resolve(signedIn ? jsonResponse({ id: 'u', username: 'developer', admin: false, createdAt: '2026-03-14T09:26:53+00:00', providers: [] }) : problemResponse(401, 'unauthenticated', 'x'));
     }
 
     return Promise.resolve(jsonResponse(pageOf(items, 1, 100)));

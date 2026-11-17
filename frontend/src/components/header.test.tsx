@@ -37,7 +37,7 @@ const cards: ProblemCard[] = [
   { slug: 'webhook-replay', class: 'domain', name: 'Повтор вебхука', summary: 'Один платёж зачисляется дважды.', keywords: ['идемпотентность'], sections },
 ];
 
-const developer = { id: 'u', username: 'developer' };
+const developer = { id: 'u', username: 'developer', admin: false, createdAt: '2026-03-14T09:26:53+00:00', providers: [] };
 
 function urlOf(input: RequestInfo | URL): string {
   if (typeof input === 'string') {

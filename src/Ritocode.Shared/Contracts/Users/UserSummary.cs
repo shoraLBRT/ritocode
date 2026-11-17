@@ -7,4 +7,5 @@ namespace Ritocode.Shared.Contracts.Users;
 /// </summary>
 /// <param name="Id">The user's identifier, as stored in <c>users.users.id</c>.</param>
 /// <param name="Username">Stored lower-cased, as the Users module normalises it.</param>
-public sealed record UserSummary(Guid Id, string Username);
+/// <param name="CreatedAt">When the account was created — the join date <c>/me</c> reports — in UTC.</param>
+public sealed record UserSummary(Guid Id, string Username, DateTimeOffset CreatedAt);

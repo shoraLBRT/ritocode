@@ -79,7 +79,7 @@ function api(caller: 'admin' | 'learner' | 'visitor', { resolveFails = false } =
 
     if (url.pathname.endsWith('/me')) {
       return Promise.resolve(
-        caller === 'visitor' ? problemResponse(401, 'unauthenticated', 'x') : jsonResponse({ id: 'me', username: 'developer', admin: caller === 'admin' }),
+        caller === 'visitor' ? problemResponse(401, 'unauthenticated', 'x') : jsonResponse({ id: 'me', username: 'developer', admin: caller === 'admin', createdAt: '2026-03-14T09:26:53+00:00', providers: [] }),
       );
     }
 

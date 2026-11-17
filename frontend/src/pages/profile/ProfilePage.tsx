@@ -9,13 +9,14 @@ import { Skeleton } from '../../components/Skeleton';
 import { useApiResource } from '../../hooks/useApiResource';
 import type { ApiResource } from '../../hooks/useApiResource';
 import { useCountUp } from '../../hooks/useCountUp';
-import { useT } from '../../i18n';
+import { useLocale, useT } from '../../i18n';
+import type { Translate } from '../../i18n';
 import { useSession } from '../../session';
 import { activity, yearSince } from '../home/arena';
 import { ActivityCard } from './ActivityCard';
 import { HistoryPanel } from './HistoryPanel';
 import { CardLoading, ProfileCard } from './parts';
-import { diagnosis, percent, solvedTasks } from './profile';
+import { diagnosis, monthAndYear, percent, solvedTasks } from './profile';
 import './profile.css';
 
 /** How many attempts the recent list shows. */
@@ -77,6 +78,7 @@ export function ProfilePage() {
 
 function PersonCard({ year, now }: { year: ApiResource<AttemptSummary[]>; now: Date }) {
   const t = useT();
+  const locale = useLocale();
   const session = useSession();
   const [signingOut, setSigningOut] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -85,7 +87,7 @@ function PersonCard({ year, now }: { year: ApiResource<AttemptSummary[]>; now: D
     return null;
   }
 
-  const { username } = session.user;
+  const { username, createdAt, providers } = session.user;
   const streak = year.state.status === 'success' ? activity(year.state.data, now).streak : null;
 
   return (
@@ -96,6 +98,7 @@ function PersonCard({ year, now }: { year: ApiResource<AttemptSummary[]>; now: D
       <h1 id="profile-name" className="rc-profile__name">
         {username}
       </h1>
+      <p className="rc-profile__joined">{t('profile.person.joined', { date: monthAndYear(createdAt, locale) })}</p>
       <div className="rc-profile__person-meta">
         {streak === null ? (
           year.state.status === 'loading' && <Skeleton className="rc-profile__streak-skeleton" />
@@ -106,6 +109,15 @@ function PersonCard({ year, now }: { year: ApiResource<AttemptSummary[]>; now: D
             </svg>
             {t('header.streak', { count: streak })}
           </span>
+        )}
+        {providers.length > 0 && (
+          <ul className="rc-profile__providers" aria-label={t('profile.person.providers')}>
+            {providers.map((provider) => (
+              <li key={provider} className="rc-profile__provider">
+                {providerName(provider, t)}
+              </li>
+            ))}
+          </ul>
         )}
       </div>
       <button
@@ -135,6 +147,18 @@ function PersonCard({ year, now }: { year: ApiResource<AttemptSummary[]>; now: D
       )}
     </section>
   );
+}
+
+/** A linked provider as the person card names it; one the catalogue does not know, as the API names it. */
+function providerName(provider: string, t: Translate): string {
+  switch (provider) {
+    case 'github':
+      return t('profile.person.github');
+    case 'google':
+      return t('profile.person.google');
+    default:
+      return provider;
+  }
 }
 
 /** The six classes from first attempts: found of met as a bar in the class's colour, and treated right. */
