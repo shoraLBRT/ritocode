@@ -43,7 +43,11 @@ function tasksFor(signedIn: boolean) {
   ];
 }
 
-function api({ signedIn = false } = {}) {
+function submitted(at: string) {
+  return { id: at, task: 'demo-task', startedAt: at, step: 'treatment', submittedAt: at, practice: false, score: null, maxScore: null };
+}
+
+function api({ signedIn = false, attempts = [] as unknown[] } = {}) {
   return vi.fn<typeof globalThis.fetch>().mockImplementation((input) => {
     const url = new URL(urlOf(input));
 
@@ -57,7 +61,7 @@ function api({ signedIn = false } = {}) {
       case '/api/v1/me/progress':
         return Promise.resolve(jsonResponse(progress));
       case '/api/v1/attempts':
-        return Promise.resolve(jsonResponse(pageOf([], 1, 100)));
+        return Promise.resolve(jsonResponse(pageOf(attempts, 1, 100)));
       case '/api/v1/tasks/demo-task':
         return Promise.resolve(jsonResponse({ ...task, slug: 'demo-task' }));
       default:
@@ -192,5 +196,40 @@ describe('the arena', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: task.title })).toBeInTheDocument();
     expect(await within(screen.getByRole('banner')).findByText(ru.session.signIn)).toBeInTheDocument();
+  });
+
+  it('links the progress card to the profile', async () => {
+    renderApp(api({ signedIn: true }), '/');
+
+    await screen.findByText(ru.home.progress.note);
+    const card = screen.getByRole('region', { name: ru.home.progress.title });
+    expect(within(card).getByRole('link', { name: ru.home.progress.profile })).toHaveAttribute('href', '/profile');
+    expect(within(await screen.findByRole('heading', { level: 2, name: ru.home.activity.title })).getByRole('link')).toHaveAttribute('href', '/profile');
+  });
+
+  it('names each day of the activity map by its date and count, and outlines today', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-17T09:00:00Z'));
+    try {
+      renderApp(api({ signedIn: true, attempts: [submitted('2026-11-17T06:00:00Z'), submitted('2026-11-17T07:00:00Z'), submitted('2026-11-16T07:00:00Z')] }), '/');
+
+      const map = await screen.findByRole('img', { name: 'Карта активности за 12 недель: 3 попытки' });
+      expect(map.querySelectorAll('.rc-heat__cell')).toHaveLength(84);
+      expect(map.querySelector('[title="17 ноября: 2 попытки"]')).toHaveAttribute('data-today');
+      expect(map.querySelector('[title="16 ноября: 1 попытка"]')).not.toHaveAttribute('data-today');
+      expect(map.querySelector('[title="15 ноября: нет попыток"]')).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('shows a guest a decorative preview of the progress above the sign-in links', async () => {
+    renderApp(api(), '/');
+
+    const card = await screen.findByRole('region', { name: ru.home.guest.title });
+    expect(card.querySelector('figure')).toHaveAttribute('aria-hidden', 'true');
+    expect(card.querySelector('figure')).toHaveTextContent(ru.home.guest.preview);
+    expect(within(card).getAllByRole('link').length).toBeGreaterThan(0);
+    expect(card.querySelectorAll('a.button').length).toBeGreaterThan(0);
   });
 });

@@ -321,14 +321,30 @@ its token names are its own, and where it differs from this document, this docum
   (`rc-daily`) — the page's only `--spotlight`. Its top line is the label and a countdown to Moscow
   midnight (`rc-daily__countdown`, a `<time>` ticking each second, not a live region); at zero the
   next day's task takes the card. The countdown comes with the task, so the prerendered page, which
-  has no tasks, never shows a time fixed at build.
+  has no tasks, never shows a time fixed at build. The two cards share a row and a height (about
+  58 % and 42 %). The card has a soft highlight (`::before`: two radial glows from `--accent` and
+  `--spotlight-raised` through `color-mix`, drifting under 20 px over 12 s, behind the text, none
+  under reduced motion), a quiet line saying what a task is (`rc-daily__about`) and the button
+  pushed to the bottom, with a hover and an active state of its own.
+- **Motion** (#265): the hero's counts (`rc-stat`) count up with `useCountUp` when the data arrives
+  (a prerendered count is shown as it is); the page root does not rise — its cards do, 40 ms apart
+  (`rc-rise`, `backwards` fill, `animation-delay`), so the first client render still equals the
+  prerender. The sections are `calc(var(--gap) * 1.5)` apart.
 - Below, two panels: **tasks for you** (`rc-panel` › `rc-task-table`, six tasks, no tabs, *Все
   задачи →*) and **problems to read** (`rc-arena__problems` › `rc-arena__problem.k-{class}`: four
   cards in a grid, the class colour as a top edge and in the class chip, the name and the summary,
   *Все проблемы →*). Beside them an
-  aside of 300 px — **progress by class** (`rc-ring`, `rc-bar`) and **activity** (`rc-heat`) — which
-  drops under the table at phone width.
-- Signed out, the same page: the personal parts give way to a sign-in prompt. The hero's first
+  aside of 320 px — **progress by class** and **activity** — which drops under the table at phone
+  width. Progress: the ring sweeps through a registered `@property` (`--rc-sweep`), the six bars
+  fill with a `scaleX` keyframe in turn, the centre number counts up (`home.css`, as in the
+  profile), and the footer link *Весь профиль →* opens `/profile`. Activity: its heading links to
+  `/profile`; the twelve weeks are one image named in words (`role="img"`, the attempts in it);
+  each cell has a `title` («17 ноября: 3 попытки», «нет попыток»), today is outlined
+  (`data-today`), and a legend «меньше ▢▢▢▢▢ больше» (`rc-arena__legend`) names the five shades.
+- Signed out, the same page: the personal parts give way to a guest card — a heading, a line, a
+  drawn **preview** (`rc-arena__preview`, `aria-hidden`, 60 % opacity: a ring at 60 % without a
+  number and a fixed 12×7 map, with the caption «Так выглядит прогресс после первых задач»; nothing
+  in it is data), then the sign-in links. The hero's first
   button opens the easy task the page offers: «Начать с лёгкой задачи», not «демо» — any task can
   be worked signed out.
 
@@ -498,7 +514,7 @@ above. What the site already had stays as it is.
 | Status | `.rc-status--done` / `--tried` / `--todo` / `--revealed` | with an `aria-label` in words; the `StatusMark` component |
 | Outcome tally | `.rc-tally` › `__ring`, `__hole`, `__rows`, `__row`, `__label`, `__value`, `__pips`, `__pip--found` / `--missed` / `--treated` / `--untreated` / `--extra` | the review's counts before the reveal (above); `pages/task/OutcomeTally.tsx` |
 | Stat | `.rc-stat` › `.rc-stat__value`, `.rc-stat__label` | real counts only |
-| Task table | `table.rc-task-table`, `__title`, `__time`, `__number` | status (signed in) · title · time · difficulty; the time column goes on a phone; scrolls in `.table-scroll`. The `TaskTable` component |
+| Task table | `table.rc-task-table`, `__title`, `__time`, `__number` | status (signed in) · title · time · difficulty; the time column goes on a phone; scrolls in `.table-scroll`. The `TaskTable` component. The whole row is the target: the title's link stretches over it (`::after`, the row is `position: relative`, no handler — still one link per row, named by the task), the cursor is a pointer, a `›` at the right end slides 2 px on hover, and a keyboard-focused link rings the whole row (`:has(:focus-visible)`) |
 | List page head | `.rc-page-head` › `h1`, `p` | a list page's heading and lead, above its panel |
 | List filters | `.rc-list-filters` › `.rc-tabs` | the groups of tabs in a list panel's bar, wrapping on a phone |
 | Daily task | `.rc-daily` › `__top`, `__title`, `__meta`, `__chip`, `__code`, `__action` | one per page |

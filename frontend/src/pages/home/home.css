@@ -1,0 +1,141 @@
+/*
+ * The home page's motion and the parts that belong to it alone (docs/DESIGN.md › The home page).
+ * Every entrance and fill is an enhancement over a final state that is already right; the motion
+ * tokens are 0 ms under prefers-reduced-motion.
+ */
+
+/* The ring's sweep, as a number the browser can tween; without it the ring simply shows its share. */
+@property --rc-sweep {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 0;
+}
+
+@keyframes rc-arena-sweep {
+  from {
+    --rc-sweep: 0;
+  }
+}
+
+@keyframes rc-arena-fill {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+/* The page's cards rise one after another, 40 ms apart; the page root itself no longer rises. */
+.app__main > .rc-arena {
+  animation: none;
+}
+
+.rc-arena__hero,
+article.rc-daily,
+.rc-arena__lists > .rc-panel,
+.rc-arena__aside > .rc-arena__card {
+  animation: rc-rise var(--dur-slow) var(--ease-out) backwards;
+}
+
+article.rc-daily { animation-delay: 40ms; }
+.rc-arena__lists > .rc-panel:nth-child(1) { animation-delay: 80ms; }
+.rc-arena__lists > .rc-panel:nth-child(2) { animation-delay: 120ms; }
+.rc-arena__aside > .rc-arena__card:nth-child(1) { animation-delay: 160ms; }
+.rc-arena__aside > .rc-arena__card:nth-child(2) { animation-delay: 200ms; }
+
+/* Progress: the ring sweeps to its share, the bars fill from the left, one after another. */
+.rc-ring.rc-arena__ring {
+  --rc-sweep: var(--p, 0);
+  background: conic-gradient(var(--accent) calc(var(--rc-sweep) * 1%), var(--surface-sunken) 0);
+  animation: rc-arena-sweep var(--dur-slow) var(--ease-out) backwards;
+  animation-delay: 120ms;
+}
+
+.rc-arena__bars .rc-bar::after {
+  transform-origin: left;
+  animation: rc-arena-fill var(--dur-slow) var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 40ms + 160ms);
+}
+
+.rc-arena__card-foot {
+  margin-top: -2px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.rc-arena__card-foot a,
+.rc-arena__title-link {
+  text-decoration: none;
+}
+
+.rc-arena__card-foot a {
+  color: var(--accent);
+}
+
+.rc-arena__title-link {
+  color: inherit;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.rc-arena__title-link:hover {
+  color: var(--accent);
+}
+
+/* Activity: the legend under the map names its five shades. */
+.rc-arena__legend {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  color: var(--text-faint);
+  font-size: 0.72rem;
+}
+
+.rc-arena__legend > span:first-child {
+  margin-right: 4px;
+}
+
+.rc-arena__legend > span:last-child {
+  margin-left: 4px;
+}
+
+.rc-arena__legend .rc-heat__cell {
+  width: 11px;
+  height: 11px;
+  aspect-ratio: auto;
+}
+
+/* A guest: a muted, drawn preview of what signing in gives — a ring and a map, no numbers. */
+.rc-arena__preview {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 14px;
+  border-radius: var(--radius);
+  background: var(--surface-inset);
+}
+
+.rc-arena__preview-art {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  opacity: 0.6;
+}
+
+.rc-arena__preview .rc-ring {
+  width: 64px;
+  height: 64px;
+}
+
+.rc-arena__preview .rc-ring__hole {
+  width: 48px;
+  height: 48px;
+  background: var(--surface-inset);
+}
+
+.rc-arena__preview .rc-heat {
+  flex: 1;
+  min-width: 0;
+  gap: 3px;
+}

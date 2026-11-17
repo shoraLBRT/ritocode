@@ -185,6 +185,15 @@ description. As of that day:
   the page as DESIGN.md › The admin area describes it, no new endpoint. Checked in the built-in
   browser at 1440×900 and 375×812, light and dark, against the development API (no horizontal page
   scroll; reduced motion, so final states only); lint, build, build:static and vitest (437) pass.
+  **#265** (2026-11-17): the home page is livelier — the hero's counts count up, the cards enter 40 ms
+  apart, the progress ring sweeps and its bars fill, the profile is one link away (*Весь профиль →*,
+  the activity heading), each activity cell names its day and count and today is outlined, with a
+  legend; task rows are whole targets with a chevron (`TaskTable`, so `/tasks` too); the daily card
+  has a soft highlight, a line about what a task is and a bottom button; a guest sees a drawn
+  preview of the progress. The top cards share a height at 1280 px and up, the aside is 320 px.
+  Checked in the built-in browser at 1440, 1920 (layout) and 375 px, light and dark, signed in
+  (reduced motion, so final states only; the guest card by tests only, the dev API always signs in);
+  lint, build, build:static and vitest (460) pass.
   **#264** (2026-11-17): states — loading is skeletons of the final shape (task table, catalogue
   cards, the home page's daily task, stats, progress, heat map and problems-to-read, admin tables)
   inside `LoadingState`'s `role="status"` region, shown after 150 ms; `EmptyState` is a mark, a
@@ -522,7 +531,7 @@ compose stack is PostgreSQL only.
 | `Ritocode.Api.Tests` | 153 |
 | `Ritocode.Modules.Content.Tests` | 78 |
 | `Ritocode.Modules.Attempts.Tests` | 31 |
-| Frontend (vitest) | 456 |
+| Frontend (vitest) | 460 |
 | `scripts/monitor-test.sh` | 9 |
 | End-to-end (`e2e/`) | 1 |
 

@@ -8,7 +8,8 @@ import { LoadingState } from '../components/LoadingState';
 import { ActivitySkeleton, DailyTaskSkeleton, StatSkeleton, ProblemsToReadSkeleton, ProgressSkeleton, TaskTableSkeleton } from '../components/skeletons';
 import { TaskTable } from '../components/TaskTable';
 import { useApiResource } from '../hooks/useApiResource';
-import { useT } from '../i18n';
+import { useCountUp } from '../hooks/useCountUp';
+import { useLocale, useT } from '../i18n';
 import { useSession } from '../session';
 import { SignInLinks } from '../session/SignInLinks';
 import { useSiteConfig } from '../site';
@@ -17,11 +18,15 @@ import {
   activityLevel,
   activitySince,
   dailyTask,
+  ACTIVITY_DAYS,
   formatCountdown,
+  moscowDate,
+  moscowDay,
   nextMoscowMidnight,
   suggestedProblems,
   suggestedTasks,
 } from './home/arena';
+import './home/home.css';
 
 /**
  * `/` — the arena (docs/SPEC.md §4.1, ADR 0015, DESIGN.md › The arena): what Ritocode teaches with
@@ -144,9 +149,12 @@ function Arena({ catalogue }: { catalogue: ProblemCatalogue | null }) {
 }
 
 function Stat({ value, label }: { value: number; label: string }) {
+  // A prerendered count is shown as it is; one that arrives with the data counts up (useCountUp).
+  const shown = useCountUp(value);
+
   return (
     <div className="rc-stat">
-      <div className="rc-stat__value">{value}</div>
+      <div className="rc-stat__value">{shown}</div>
       <div className="rc-stat__label">{label}</div>
     </div>
   );
@@ -194,6 +202,7 @@ function DailyTask({
         <span className="rc-daily__chip">{t(`tasks.time.${task.difficulty}`)}</span>
         {task.status !== null && task.status !== 'new' && <span className="rc-daily__chip">{t(`home.daily.statuses.${task.status}`)}</span>}
       </div>
+      <p className="rc-daily__about">{t('home.daily.about')}</p>
       <Link className="button rc-daily__action" to={`/tasks/${task.slug}`}>
         {t('home.daily.start')}
       </Link>
@@ -303,6 +312,7 @@ function ProgressBody({ progress }: { progress: Progress }) {
   const t = useT();
   const met = progress.classes.reduce((sum, item) => sum + item.met, 0);
   const found = progress.classes.reduce((sum, item) => sum + item.found, 0);
+  const shown = useCountUp(found);
 
   if (met === 0) {
     return <p className="rc-arena__note">{t('home.progress.none')}</p>;
@@ -311,17 +321,17 @@ function ProgressBody({ progress }: { progress: Progress }) {
   return (
     <>
       <div className="rc-arena__ring-row">
-        <div className="rc-ring" style={{ '--p': percent(found, met) } as CSSProperties}>
+        <div className="rc-ring rc-arena__ring" style={{ '--p': percent(found, met) } as CSSProperties}>
           <div className="rc-ring__hole">
-            <span className="rc-ring__value">{found}</span>
+            <span className="rc-ring__value">{shown}</span>
             <span className="rc-ring__of">{t('home.progress.ring', { met })}</span>
           </div>
         </div>
         <p className="rc-arena__note">{t('home.progress.note')}</p>
       </div>
       <ul className="rc-arena__bars">
-        {progress.classes.map((item) => (
-          <li key={item.class} className={`k-${item.class}`}>
+        {progress.classes.map((item, index) => (
+          <li key={item.class} className={`k-${item.class}`} style={{ '--i': index } as CSSProperties}>
             <span className="rc-arena__bar-label">
               <span>{item.name}</span>
               <span className="rc-arena__bar-count">{t('home.progress.count', { found: item.found, met: item.met })}</span>
@@ -335,6 +345,9 @@ function ProgressBody({ progress }: { progress: Progress }) {
           </li>
         ))}
       </ul>
+      <div className="rc-arena__card-foot">
+        <Link to="/profile">{t('home.progress.profile')}</Link>
+      </div>
     </>
   );
 }
@@ -349,7 +362,9 @@ function ActivityCard({ now }: { now: Date }) {
     <section className="rc-arena__card" aria-labelledby="home-activity">
       <div className="rc-arena__card-head">
         <h2 id="home-activity" className="rc-arena__panel-title">
-          {t('home.activity.title')}
+          <Link className="rc-arena__title-link" to="/profile">
+            {t('home.activity.title')}
+          </Link>
         </h2>
         <span className="rc-arena__note">{t('home.activity.period')}</span>
       </div>
@@ -362,23 +377,65 @@ function ActivityCard({ now }: { now: Date }) {
 
 function ActivityBody({ attempts, now }: { attempts: readonly AttemptSummary[]; now: Date }) {
   const t = useT();
+  const locale = useLocale();
   const { days, streak } = activity(attempts, now);
+  const firstDay = moscowDay(now) - ACTIVITY_DAYS + 1;
+  const dayFormat = new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long', timeZone: 'UTC' });
+  const total = days.reduce((sum, count) => sum + count, 0);
 
   return (
     <>
       <p className="rc-arena__streak">
         <span className="rc-streak">{streak > 0 ? t('home.activity.streak', { count: streak }) : t('home.activity.noStreak')}</span>
       </p>
-      <div className="rc-heat" aria-hidden="true">
-        {days.map((count, index) => (
-          // The days are positional: the same index is the same day for this render.
-          <span key={index} className="rc-heat__cell" data-level={activityLevel(count)} />
-        ))}
+      {/* One image named in words (the streak sentence does not say the days); each day says its date and count on hover. */}
+      <div className="rc-heat" role="img" aria-label={t('home.activity.map', { count: total })}>
+        {days.map((count, index) => {
+          const date = dayFormat.format(moscowDate(firstDay + index));
+
+          return (
+            // The days are positional: the same index is the same day for this render.
+            <span
+              key={index}
+              className="rc-heat__cell"
+              data-level={activityLevel(count)}
+              data-today={index === ACTIVITY_DAYS - 1 ? '' : undefined}
+              title={count === 0 ? t('home.activity.cellNone', { date }) : t('home.activity.cell', { date, count })}
+            />
+          );
+        })}
       </div>
+      <HeatLegend />
     </>
   );
 }
 
+/** «меньше ▢▢▢▢▢ больше»: the five shades of the map, so a cell's colour can be read. */
+function HeatLegend() {
+  const t = useT();
+
+  return (
+    <div className="rc-arena__legend" aria-hidden="true">
+      <span>{t('home.activity.less')}</span>
+      {[0, 1, 2, 3, 4].map((level) => (
+        <span key={level} className="rc-heat__cell" data-level={level} />
+      ))}
+      <span>{t('home.activity.more')}</span>
+    </div>
+  );
+}
+
+/** A fixed pattern for the guest's preview: twelve weeks of seven days, the same on every render. */
+const PREVIEW_LEVELS = Array.from({ length: 84 }, (_, index) => {
+  const week = Math.floor(index / 7);
+  const day = index % 7;
+  return [0, 1, 0, 2, 3, 1, 4, 0, 2, 1][(week * 3 + day * 4 + week * day) % 10] as 0 | 1 | 2 | 3 | 4;
+});
+
+/**
+ * What signing in gives a guest: a drawn, muted preview of the ring and the map — decorative, no
+ * numbers — then the sign-in links.
+ */
 function GuestCard() {
   const t = useT();
 
@@ -388,6 +445,19 @@ function GuestCard() {
         {t('home.guest.title')}
       </h2>
       <p className="rc-arena__note">{t('home.guest.text')}</p>
+      <figure className="rc-arena__preview" aria-hidden="true">
+        <div className="rc-arena__preview-art">
+          <div className="rc-ring" style={{ '--p': 60 } as CSSProperties}>
+            <div className="rc-ring__hole" />
+          </div>
+          <div className="rc-heat">
+            {PREVIEW_LEVELS.map((level, index) => (
+              <span key={index} className="rc-heat__cell" data-level={level} />
+            ))}
+          </div>
+        </div>
+        <figcaption className="rc-arena__note">{t('home.guest.preview')}</figcaption>
+      </figure>
       <SignInLinks returnPath="/" />
     </section>
   );
