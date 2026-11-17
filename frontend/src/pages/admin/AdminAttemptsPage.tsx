@@ -1,13 +1,12 @@
 import { Link, useSearchParams } from 'react-router';
 import { listAdminAttempts, useApiClient } from '../../api';
 import type { AdminAttempt, AdminAttemptStatus } from '../../api';
-import { EmptyState } from '../../components/EmptyState';
-import { ErrorState } from '../../components/ErrorState';
-import { LoadingState } from '../../components/LoadingState';
+import { Tabs } from '../../components/TaskTable';
 import { useApiResource } from '../../hooks/useApiResource';
 import { useT } from '../../i18n';
+import { Icon } from '../task/parts';
 import { ADMIN_PAGE_SIZE, pageParam } from './paging';
-import { AdminDate, LearnerName, Pager } from './shared';
+import { AdminDate, AdminPanel, AdminTable, AdminTotal, LearnerName, ListBody, Pager } from './shared';
 
 const STATUSES: readonly AdminAttemptStatus[] = ['all', 'open', 'submitted'];
 
@@ -42,41 +41,39 @@ export function AdminAttemptsPage() {
   const learner = state.status === 'success' && user ? state.data.items[0]?.learner : undefined;
 
   return (
-    <>
-      <h1>{t('admin.attempts')}</h1>
-      <p className="page__lead">{t('admin.attemptsPage.lead')}</p>
-
-      <div className="filters">
-        <label className="filters__field">
-          <span>{t('admin.attemptsPage.status')}</span>
-          <select
-            value={status}
-            onChange={(event) => {
-              setParams(address({ status: event.target.value as AdminAttemptStatus }));
-            }}
-          >
-            {STATUSES.map((value) => (
-              <option key={value} value={value}>
-                {t(`admin.attemptsPage.${value}`)}
-              </option>
-            ))}
-          </select>
-        </label>
-        {user && (
-          <p className="filters__count">
-            {learner ? t('admin.attemptsPage.forLearner', { learner: learner.email ?? learner.id }) : null}{' '}
-            <Link to={{ search: new URLSearchParams(address({ user: undefined })).toString() }}>{t('admin.attemptsPage.allLearners')}</Link>
-          </p>
-        )}
-      </div>
-
-      {state.status === 'loading' && <LoadingState label={t('admin.loading')} />}
-      {state.status === 'error' && <ErrorState error={state.error} onRetry={reload} />}
-      {state.status === 'success' && state.data.items.length === 0 && <EmptyState>{t('admin.attemptsPage.empty')}</EmptyState>}
-      {state.status === 'success' && state.data.items.length > 0 && (
+    <AdminPanel
+      title={t('admin.attempts')}
+      lead={t('admin.attemptsPage.lead')}
+      filters={
         <>
-          <div className="table-scroll" role="region" aria-label={t('admin.attempts')} tabIndex={0}>
-            <table className="admin-table">
+          <Tabs
+            label={t('admin.attemptsPage.status')}
+            options={STATUSES.map((value) => ({ value, label: t(`admin.attemptsPage.${value}`) }))}
+            value={status}
+            onChange={(value) => {
+              setParams(address({ status: value }));
+            }}
+          />
+          {user && (
+            <span className="rc-admin__chip rc-admin__chip--filter">
+              <span>{t('admin.attemptsPage.forLearner', { learner: learner ? (learner.email ?? learner.id) : user })}</span>
+              <Link
+                to={{ search: new URLSearchParams(address({ user: undefined })).toString() }}
+                aria-label={t('admin.attemptsPage.allLearners')}
+                title={t('admin.attemptsPage.allLearners')}
+              >
+                <Icon name="close" />
+              </Link>
+            </span>
+          )}
+        </>
+      }
+      total={state.status === 'success' ? <AdminTotal count={state.data.totalItems} /> : null}
+    >
+      <ListBody state={state} reload={reload} empty={t('admin.attemptsPage.empty')}>
+        {(list) => (
+          <>
+            <AdminTable label={t('admin.attempts')}>
               <thead>
                 <tr>
                   <th scope="col">{t('admin.attemptsPage.started')}</th>
@@ -85,27 +82,44 @@ export function AdminAttemptsPage() {
                   <th scope="col">{t('admin.attemptsPage.kind')}</th>
                   <th scope="col">{t('admin.attemptsPage.step')}</th>
                   <th scope="col">{t('admin.attemptsPage.submittedColumn')}</th>
-                  <th scope="col">{t('admin.attemptsPage.timeTaken')}</th>
-                  <th scope="col">{t('admin.attemptsPage.score')}</th>
+                  <th scope="col" className="rc-admin__num">
+                    {t('admin.attemptsPage.timeTaken')}
+                  </th>
+                  <th scope="col" className="rc-admin__num">
+                    {t('admin.attemptsPage.score')}
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {state.data.items.map((attempt) => (
+                {list.items.map((attempt) => (
                   <AttemptRow key={attempt.id} attempt={attempt} />
                 ))}
               </tbody>
-            </table>
-          </div>
-          <Pager
-            page={state.data}
-            onPage={(next) => {
-              setParams(address({ page: next }));
-            }}
-          />
-        </>
-      )}
-    </>
+            </AdminTable>
+            <Pager
+              page={list}
+              onPage={(next) => {
+                setParams(address({ page: next }));
+              }}
+            />
+          </>
+        )}
+      </ListBody>
+    </AdminPanel>
   );
+}
+
+/** Time taken: minutes and seconds, and from an hour hours and minutes, so a forgotten tab stays short. */
+function takenText(t: ReturnType<typeof useT>, seconds: number): string {
+  return seconds >= 3600
+    ? t('admin.attemptsPage.hours', { hours: Math.floor(seconds / 3600), minutes: Math.floor((seconds % 3600) / 60) })
+    : t('admin.attemptsPage.minutes', { minutes: Math.floor(seconds / 60), seconds: seconds % 60 });
+}
+
+function None() {
+  const t = useT();
+
+  return <span className="rc-admin__muted">{t('admin.none')}</span>;
 }
 
 function AttemptRow({ attempt }: { attempt: AdminAttempt }) {
@@ -113,27 +127,39 @@ function AttemptRow({ attempt }: { attempt: AdminAttempt }) {
   const submitted = attempt.submittedAt !== null;
 
   return (
-    <tr className={submitted ? undefined : 'admin-table__open'}>
-      <td>
+    <tr className="rc-admin__row">
+      <td className="rc-admin__mono">
         <AdminDate value={attempt.startedAt} />
       </td>
-      <td>
+      <td className="rc-admin__text">
         <LearnerName learner={attempt.learner} />
       </td>
       <td>
-        <Link to={`/tasks/${attempt.task}`}>{attempt.task}</Link>
+        <Link className="rc-admin__slug" to={`/tasks/${attempt.task}`}>
+          {attempt.task}
+        </Link>
       </td>
-      <td>{submitted ? t(attempt.practice ? 'admin.attemptsPage.practice' : 'admin.attemptsPage.first') : t('admin.attemptsPage.notSubmitted')}</td>
+      <td>
+        {submitted ? (
+          <span className={attempt.practice ? 'rc-admin__chip' : 'rc-admin__chip rc-admin__chip--first'}>
+            {t(attempt.practice ? 'admin.attemptsPage.practice' : 'admin.attemptsPage.first')}
+          </span>
+        ) : (
+          <span className="rc-admin__chip rc-admin__chip--warn">{t('admin.attemptsPage.notSubmitted')}</span>
+        )}
+      </td>
       {/* A submitted attempt has been through both steps; the step says something only for one that was not. */}
-      <td>{submitted ? t('admin.none') : t(`admin.attemptsPage.stepName.${attempt.step}`)}</td>
-      <td>{attempt.submittedAt !== null ? <AdminDate value={attempt.submittedAt} /> : t('admin.none')}</td>
-      <td className="admin-table__number">
-        {attempt.timeTakenSeconds !== null
-          ? t('admin.attemptsPage.minutes', { minutes: Math.floor(attempt.timeTakenSeconds / 60), seconds: attempt.timeTakenSeconds % 60 })
-          : t('admin.none')}
+      <td>{submitted ? <None /> : <span className="rc-admin__chip">{t(`admin.attemptsPage.stepName.${attempt.step}`)}</span>}</td>
+      <td className="rc-admin__mono">{attempt.submittedAt !== null ? <AdminDate value={attempt.submittedAt} /> : <None />}</td>
+      <td className="rc-admin__num">
+        {attempt.timeTakenSeconds !== null ? (
+          takenText(t, attempt.timeTakenSeconds)
+        ) : (
+          <None />
+        )}
       </td>
-      <td className="admin-table__number">
-        {attempt.score !== null && attempt.maxScore !== null ? t('admin.attemptsPage.scoreOf', { score: attempt.score, max: attempt.maxScore }) : t('admin.none')}
+      <td className="rc-admin__num">
+        {attempt.score !== null && attempt.maxScore !== null ? t('admin.attemptsPage.scoreOf', { score: attempt.score, max: attempt.maxScore }) : <None />}
       </td>
     </tr>
   );

@@ -559,6 +559,9 @@ here.
 - **Attempts:** learner, task, first or practice, started, submitted, time taken, score, and the
   step reached for attempts that were never submitted — which is "where they gave up".
 
+`/admin` opens on an overview: the number of open signals, users, and submitted and unsubmitted
+attempts, each leading to its list, and the newest open signals. It holds no data of its own.
+
 Adding or editing tasks through the admin area is a later iteration (§12). In the MVP, content
 reaches the product only through the repository (§7).
 

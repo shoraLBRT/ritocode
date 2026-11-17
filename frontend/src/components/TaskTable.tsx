@@ -74,10 +74,11 @@ export function StatusMark({ status }: { status: TaskStatus }) {
 export interface TabOption<T extends string> {
   readonly value: T;
   readonly label: string;
-  readonly count: number;
+  /** Left out, the tab shows no number: a filter whose counts are not known without more requests. */
+  readonly count?: number;
 }
 
-/** Segmented tabs (`rc-tabs`): a filter of two to five exclusive options, each with its count. */
+/** Segmented tabs (`rc-tabs`): a filter of two to five exclusive options, each with its count where there is one. */
 export function Tabs<T extends string>({
   label,
   options,
@@ -102,7 +103,7 @@ export function Tabs<T extends string>({
           }}
         >
           {option.label}
-          <span className="rc-tab__count">{option.count}</span>
+          {option.count !== undefined && <span className="rc-tab__count">{option.count}</span>}
         </button>
       ))}
     </div>

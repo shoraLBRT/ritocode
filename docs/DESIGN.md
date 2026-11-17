@@ -384,6 +384,35 @@ column. Styles in `pages/profile/profile.css`, classes `rc-profile__*`.
   The ring sweeps, the bars fill from zero and the big numbers count up; the cards stagger in by
   40 ms. On a phone one column: person, solved, diagnosis, classes, activity, the panel.
 
+### The admin area
+
+`/admin/*` ([#262](https://github.com/shoraLBRT/ritocode/issues/262)), for an admin only, in the arena's
+components and the full width of `.app__main`. Styles in `pages/admin/admin.css`, classes `rc-admin__*`.
+
+- **Head and sections**: `rc-page-head` with the one `h1` (*Админка*) and a lead, then the section
+  tabs as links (`rc-admin__nav` › `rc-admin__tab`, `aria-current="page"` underlined in `--accent`):
+  *Обзор · Сигналы · Пользователи · Попытки*, the number of open signals as a count on *Сигналы*
+  (hidden until it is read, and when the read fails; read again when a signal is resolved). On a phone
+  the row scrolls sideways by itself.
+- **Overview** (`/admin`): four tiles in a row (two by two below 64rem) — open signals, users,
+  submitted attempts, attempts not submitted — each a whole-tile link to its list, the count in Plex
+  Mono counting up, a label and a one-line hint; every count is the `totalItems` of a one-row page of
+  the list's own request. A tile that fails shows «—» and says so; the others stay. Under them a panel
+  with the five newest open signals and a link to all, or a calm line when there are none.
+- **Lists** (signals, users, attempts): one `rc-panel` each; its bar holds the section's `h2` and a
+  lead, the filter as segmented tabs (signals *Открытые / Разобранные*, attempts *Все / Не сданные /
+  Сданные*; attempts for one learner add a removable chip *Ученик: …*), and the total at the right.
+  The table fills the panel edge to edge (`rc-admin__table`: header on `--surface-inset`, row hover,
+  dates and figures in Plex Mono with figures right-aligned and zeros muted, only those unwrapped so
+  text wraps and the table does not scroll sideways at 1280 px and up). States are chips (*Первая*,
+  *Практика*, *Не сдана*, the step it stopped at, a resolved signal's date, a user's providers). The
+  pager sits in the panel's foot. Filters and page stay in the address.
+- **Resolving a signal**: the button shows *Отмечаем…* while the request is out; on success the row
+  fades out over `--dur` and the list and the sections' count are read again; a failure stays beside
+  the button (`role="alert"`). Loading is `Skeleton` rows; a failed list is `ErrorState` in the panel.
+- On a phone (48rem and narrower) each table keeps its width and scrolls in its own
+  `.table-scroll` region (`role="region"`, labelled, focusable), so the page never scrolls sideways.
+
 ### Components
 
 Everything the arena adds is a class prefixed `rc-` in `frontend/src/styles.css`, on the tokens
@@ -411,6 +440,7 @@ above. What the site already had stays as it is.
 | Daily task | `.rc-daily` › `__top`, `__title`, `__meta`, `__chip`, `__code`, `__action` | one per page |
 | Progress | `.rc-ring` (`--p`), `.rc-ring__hole`, `__value`, `__of`; `.rc-bar.k-{class}` (`--p`) | `--p` is a percentage, 0–100 |
 | Activity | `.rc-heat` › `.rc-heat__cell[data-level=0–4]` | a column per week; `aria-hidden`, the streak says it in words |
+| Admin area | `.rc-admin` › `__nav`, `__tab`, `__tiles`, `__tile` (`__tile-label`, `__tile-value`, `__tile-hint`), `__title`, `__total`, `__table`, `__row` (`--leaving`), `__mono`, `__num` (`--zero`), `__text`, `__comment`, `__slug`, `__link`, `__chip` (`--first`, `--warn`, `--good`, `--filter`), `__action`, `__error`, `__foot` | `pages/admin/admin.css`; the panel is `rc-panel`, the filters `Tabs` (`rc-tabs`, its count optional) |
 | Profile | `.rc-profile` › `__side`, `__main`, `__row`, `section.rc-profile__card` (`__card-head`, `__card-title`), `__person`, `__avatar`, `__name`, `__classes-list`, `__class` (`--none`), `__bar`, `__ring`, `__level--easy` / `--medium` / `--hard`, `__tiles`, `__tile` (`--danger`), `__heat-scroll`, `__heat`, `__heat-cell[data-today]`, `__months`, `__attempts`, `__attempt`, `__chip--first` / `--practice`, `__table`, `__count--zero` / `--warn` / `--danger` / `--good`, `__start` | `/profile` (above); `pages/profile/`, its styles in `profile.css` |
 | Streak, avatar | `.rc-streak` (`.rc-streak--link` in the header), `.rc-avatar`, `.app__menu-link` | the header's right end (`HeaderStreak`, a link to `/profile`; the avatar opens `.app__menu` with *Профиль*) |
 | Problem card | `article.rc-pcard.k-{class}` › `__band`, `__seal`, `__face`, `__name`, `__rule`, `__summary`, `details.rc-pcard__more`; open: `.rc-pcard--open` in `.rc-pcard-overlay` | the catalogue's card, folded and open (above) |

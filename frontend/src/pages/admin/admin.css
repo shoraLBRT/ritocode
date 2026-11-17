@@ -1,0 +1,401 @@
+/*
+ * The admin area (docs/DESIGN.md › The admin area): a page head, a row of section tabs, then an
+ * overview of tiles or a list in a panel. Tokens only; the row's fade is an enhancement over a final
+ * state that is already right (the row is gone once the list is read again).
+ */
+
+/* The section tabs: links, underlined where the section is current; their own row scrolls on a phone. */
+.rc-admin__nav {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  box-shadow: inset 0 -1px 0 var(--border);
+}
+
+.rc-admin__nav::-webkit-scrollbar {
+  display: none;
+}
+
+.rc-admin__tab {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 14px;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+
+.rc-admin__tab:hover {
+  color: var(--text);
+}
+
+.rc-admin__tab[aria-current='page'] {
+  border-bottom-color: var(--accent);
+  color: var(--text);
+}
+
+/* The overview's tiles: a count each, the whole tile a link to its list. */
+.rc-admin__tiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rc-admin__tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  height: 100%;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  text-decoration: none;
+  transition: transform var(--dur) var(--ease-out), border-color var(--dur) var(--ease-out);
+}
+
+.rc-admin__tile:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-2px);
+}
+
+.rc-admin__tile:active {
+  transform: translateY(0);
+}
+
+.rc-admin__tile-label {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.rc-admin__tile-value {
+  font-family: var(--font-mono);
+  font-size: 2rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.rc-admin__tile-value--none {
+  color: var(--text-faint);
+}
+
+.rc-admin__tile-skeleton {
+  display: block;
+  margin: 2px 0;
+  border-radius: 8px;
+}
+
+.rc-admin__tile-hint {
+  color: var(--text-faint);
+  font-size: 0.8rem;
+}
+
+/* A panel's bar: the section's heading and lead, the filters, the total. */
+.rc-admin__title {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.rc-admin__title h2 {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.3;
+}
+
+.rc-admin__title p {
+  max-width: 40rem;
+  margin: 2px 0 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.rc-admin__total {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.rc-admin__more {
+  color: var(--accent);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.rc-admin__more:hover {
+  text-decoration: underline;
+}
+
+.rc-admin__loading {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 22px 18px;
+}
+
+.rc-admin__panel > .state {
+  margin: 18px;
+}
+
+/* The table: the arena's table style (`rc-task-table`), with text that wraps and figures that do not. */
+.rc-admin__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  overflow-wrap: normal;
+}
+
+.rc-admin__table th {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-inset);
+  color: var(--text-faint);
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.rc-admin__table td {
+  padding: 12px 8px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  vertical-align: middle;
+}
+
+.rc-admin__table th:first-child,
+.rc-admin__table td:first-child {
+  padding-left: 18px;
+}
+
+.rc-admin__table th:last-child,
+.rc-admin__table td:last-child {
+  padding-right: 18px;
+}
+
+.rc-admin__table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.rc-admin__row {
+  transition: background-color var(--dur-fast) var(--ease-out), opacity var(--dur) var(--ease-out);
+}
+
+.rc-admin__row:hover {
+  background: var(--surface-sunken);
+}
+
+/* A resolved signal: it fades, then the list is read again without it. */
+.rc-admin__row--leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.rc-admin__table .rc-admin__mono,
+.rc-admin__table .rc-admin__num {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.rc-admin__table th.rc-admin__num,
+.rc-admin__table td.rc-admin__num {
+  text-align: right;
+}
+
+.rc-admin__table .rc-admin__num {
+  color: var(--text);
+}
+
+.rc-admin__table .rc-admin__num--zero {
+  color: var(--text-faint);
+}
+
+.rc-admin__table .rc-admin__text {
+  overflow-wrap: break-word;
+}
+
+/* A learner's free text: it may hold a word as long as a line, so it wraps anywhere, and keeps room. */
+.rc-admin__table .rc-admin__comment {
+  min-width: 14rem;
+  overflow-wrap: anywhere;
+}
+
+.rc-admin__muted {
+  color: var(--text-faint);
+}
+
+.rc-admin__slug,
+.rc-admin__link {
+  color: var(--text);
+  text-decoration: none;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.rc-admin__slug {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.rc-admin__slug:hover,
+.rc-admin__link:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+/* States as chips: a word on a quiet fill, never colour alone. */
+.rc-admin__chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.rc-admin__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: var(--surface-sunken);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.rc-admin__chip--first {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.rc-admin__chip--warn {
+  background: var(--warn-surface);
+  color: var(--warn);
+}
+
+.rc-admin__chip--good {
+  background: var(--good-surface);
+  color: var(--good);
+}
+
+/* The learner an attempt list is narrowed to, removable by its cross. */
+.rc-admin__chip--filter {
+  height: 32px;
+  padding: 0 4px 0 12px;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+}
+
+.rc-admin__chip--filter a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  color: var(--text-muted);
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.rc-admin__chip--filter a:hover {
+  background: var(--surface-inset);
+  color: var(--text);
+}
+
+.rc-admin__chip--filter .icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* Resolving: the button, and a failure beside it. */
+.rc-admin__action {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
+
+.rc-admin__error {
+  color: var(--danger);
+  font-size: 0.8rem;
+}
+
+/* The panel's foot: the pager. */
+.rc-admin__foot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+@media (max-width: 64rem) {
+  .rc-admin__tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* On a phone the tiles stay two by two, and a table keeps its width and scrolls in its own region. */
+@media (max-width: 48rem) {
+  .rc-admin__tiles {
+    gap: 12px;
+  }
+
+  .rc-admin__tile {
+    padding: 14px 16px;
+  }
+
+  .rc-admin__tile-value {
+    font-size: 1.625rem;
+  }
+
+  .rc-admin__table {
+    min-width: 40rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rc-admin__tile:hover,
+  .rc-admin__tile:active {
+    transform: none;
+  }
+}
+
+/* Wide enough, the task slug stays on one line, and the figure, date and chip columns take only the
+   width they need, so the free width goes to the text columns (learner, card, comment). */
+.rc-admin__table td.rc-admin__mono,
+.rc-admin__table td.rc-admin__num,
+.rc-admin__table td:has(> .rc-admin__chip),
+.rc-admin__table td:has(> .rc-admin__chips),
+.rc-admin__table td:has(> .rc-admin__muted:only-child) {
+  width: 1%;
+  white-space: nowrap;
+}
+
+@media (min-width: 64rem) {
+  .rc-admin__slug {
+    white-space: nowrap;
+  }
+}
