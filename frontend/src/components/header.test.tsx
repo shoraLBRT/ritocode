@@ -197,7 +197,10 @@ describe('the header on the task workspace', () => {
     const sections = screen.getByRole('navigation', { name: ru.nav.label });
     expect(within(sections).getByRole('link', { name: ru.nav.tasks })).toHaveAttribute('href', '/tasks');
     expect(within(sections).getByRole('link', { name: ru.nav.problems })).toHaveAttribute('href', '/problems');
-    expect(await within(sections).findByRole('link', { name: ru.nav.progress })).toHaveAttribute('href', '/progress');
+    await screen.findByLabelText('Профиль developer');
+    // The learner's own page is the avatar's, not a section (#261).
+    expect(within(sections).queryByRole('link', { name: 'Прогресс' })).not.toBeInTheDocument();
+    expect(within(sections).queryByRole('link', { name: ru.header.toProfile })).not.toBeInTheDocument();
   });
 
   it('keeps them while a task is being solved too', () => {
@@ -216,17 +219,19 @@ describe('the header streak', () => {
     const attempts = [attempt(new Date(now).toISOString()), attempt(new Date(now - day).toISOString()), attempt(new Date(now - 3 * day).toISOString())];
     renderApp(api({ attempts }).stub, '/privacy');
 
-    const streak = await screen.findByRole('img', { name: 'Серия: 2 дня подряд' });
+    const streak = await screen.findByRole('link', { name: 'Серия: 2 дня подряд' });
     expect(streak).toHaveTextContent('2 дн.');
+    // It leads to the profile, where the whole year is.
+    expect(streak).toHaveAttribute('href', '/profile');
   });
 
   it('shows a learner with no attempt a streak of nothing, and a guest none at all', async () => {
     const signedIn = renderApp(api().stub, '/privacy');
-    expect(await screen.findByRole('img', { name: 'Серия: 0 дней подряд' })).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: 'Серия: 0 дней подряд' })).toBeInTheDocument();
     signedIn.unmount();
 
     renderApp(api({ signedIn: false }).stub, '/privacy');
     await screen.findByText(ru.session.signIn);
-    expect(screen.queryByRole('img', { name: /Серия/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Серия/ })).not.toBeInTheDocument();
   });
 });

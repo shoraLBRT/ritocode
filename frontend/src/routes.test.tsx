@@ -85,6 +85,23 @@ describe('the application shell', () => {
     expect(header.getByText('developer')).toBeInTheDocument();
   });
 
+  it('offers the profile in the avatar menu, above the way out', async () => {
+    renderApp(api(), '/privacy');
+
+    const header = within(screen.getByRole('banner'));
+    fireEvent.click(await header.findByLabelText('Профиль developer'));
+    const profile = header.getByRole('link', { name: ru.header.toProfile });
+    expect(profile).toHaveAttribute('href', '/profile');
+    const signOut = header.getByRole('button', { name: ru.session.signOut });
+    expect(profile.compareDocumentPosition(signOut) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('asks a signed-out visitor of the old progress address to sign in', async () => {
+    renderApp(api({ signedIn: false }), '/progress');
+
+    expect(await screen.findByText(ru.session.requiredText)).toBeInTheDocument();
+  });
+
   it('offers a visitor a way in and a way to start: the demo task', async () => {
     renderApp(api({ signedIn: false }), '/privacy');
 
@@ -173,7 +190,7 @@ describe('signing in and out from the header', () => {
 
     expect(await screen.findByText(ru.session.signIn)).toBeInTheDocument();
     expect(calls).toContain('POST http://api.test/auth/logout');
-    expect(screen.queryByRole('link', { name: ru.nav.progress })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: ru.header.toProfile })).not.toBeInTheDocument();
   });
 
   it('says why a sign-in reached nobody, until dismissed', async () => {

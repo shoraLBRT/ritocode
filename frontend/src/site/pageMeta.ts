@@ -19,6 +19,8 @@ export function pageMeta(pathname: string, t: Translate): PageMeta {
       return { title: t('meta.problems.title'), description: t('meta.problems.description') };
     case '/privacy':
       return { title: t('meta.privacy.title'), description: t('meta.privacy.description') };
+    case '/profile':
+      return { title: t('meta.profile.title'), description: t('app.tagline') };
     default:
       return { title: t('app.name'), description: t('app.tagline') };
   }

@@ -71,10 +71,9 @@ test('a visitor solves a task signed out, signs in on Check, and sees the review
   });
 
   await test.step('sees the attempt in the progress', async () => {
-    // The review is a workspace: the steps own its header, so the progress is reached by its address.
-    await page.goto('/progress');
-    await expect(page.getByRole('heading', { level: 1, name: t('progress.title') })).toBeVisible();
-    await expect(page.getByText(t('progress.tasks', { count: 1 }))).toBeVisible();
+    // The progress is on the profile (#261), its cards on their tab, reached by its address.
+    await page.goto('/profile?tab=cards');
+    await expect(page.getByRole('heading', { level: 1, name: /^e2e-learner-/ })).toBeVisible();
 
     // Met, found, missed, picked when absent, treated right.
     await expect(page.getByRole('row', { name: card }).getByRole('cell')).toHaveText(['1', '1', '0', '0', '1']);

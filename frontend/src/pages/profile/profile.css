@@ -1,0 +1,680 @@
+/*
+ * The profile (docs/DESIGN.md › The profile): the person and the classes on the left, the solved
+ * tasks, the diagnosis, a year of activity and the history on the right. Tokens only; every fill
+ * and entrance is an enhancement over a final state that is already right.
+ */
+
+/* The ring's sweep, as a number the browser can tween; without it the ring simply shows its share. */
+@property --rc-sweep {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 0;
+}
+
+@keyframes rc-profile-sweep {
+  from {
+    --rc-sweep: 0;
+  }
+}
+
+@keyframes rc-profile-fill {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+.rc-profile {
+  display: grid;
+  gap: calc(var(--gap) * 1.5);
+  align-items: start;
+}
+
+.rc-profile__side,
+.rc-profile__main {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--gap) * 1.5);
+  min-width: 0;
+}
+
+.rc-profile__row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: calc(var(--gap) * 1.5);
+}
+
+@media (min-width: 64rem) {
+  .rc-profile {
+    grid-template-columns: 300px minmax(0, 1fr);
+  }
+}
+
+/* The person and the classes stay in view while the right column scrolls, when they fit the window. */
+@media (min-width: 64rem) and (min-height: 760px) {
+  .rc-profile__side {
+    position: sticky;
+    top: calc(var(--gap) * 1.5);
+    align-self: start;
+  }
+}
+
+/* A phone: one column, in the order person, solved, diagnosis, classes, activity, history. */
+@media (max-width: 48rem) {
+  .rc-profile {
+    gap: var(--gap);
+  }
+
+  .rc-profile__side,
+  .rc-profile__main,
+  .rc-profile__row {
+    display: contents;
+  }
+
+  .rc-profile__person { order: 0; }
+  .rc-profile__solved { order: 1; }
+  .rc-profile__diagnosis { order: 2; }
+  .rc-profile__classes { order: 3; }
+  .rc-profile__activity { order: 4; }
+  .rc-profile__history,
+  .rc-profile__start { order: 5; }
+}
+
+/* Cards: the home page's, staggered in by 40 ms each (`--i`). */
+.rc-profile__card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.rc-profile__card,
+.rc-profile__history {
+  animation: rc-rise var(--dur-slow) var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 40ms);
+}
+
+.rc-profile__card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+
+.rc-profile__card-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.rc-profile__note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.rc-profile__small {
+  color: var(--text-faint);
+  font-size: 0.78rem;
+}
+
+.rc-profile__mono {
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.rc-profile__loading {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* The person. */
+.rc-profile__person {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px 16px;
+}
+
+.rc-profile__avatar {
+  display: inline-flex;
+  grid-row: span 2;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+.rc-profile__name {
+  align-self: end;
+  margin: 0;
+  font-size: 1.375rem;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+
+.rc-profile__person-meta {
+  display: flex;
+  align-self: start;
+  min-height: 30px;
+}
+
+.rc-profile__streak-skeleton {
+  width: 64px;
+  height: 30px;
+}
+
+.rc-profile__sign-out {
+  grid-column: 1 / -1;
+  min-height: 40px;
+  margin-top: 10px;
+}
+
+.rc-profile__person .app__session-error {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+/* The classes: a row each, in its colour. */
+.rc-profile__classes-list {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rc-profile__class {
+  display: grid;
+  gap: 6px;
+}
+
+.rc-profile__class-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 8px;
+}
+
+.rc-profile__class-name {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--text);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.rc-profile__class-name::before {
+  content: '';
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--k);
+}
+
+.rc-profile__class--none .rc-profile__class-name {
+  color: var(--text-faint);
+  font-weight: 500;
+}
+
+.rc-profile__class--none .rc-profile__class-name::before {
+  background: var(--border-strong);
+}
+
+.rc-profile__class-skeleton {
+  display: grid;
+  gap: 6px;
+  padding-bottom: 8px;
+}
+
+/* A bar fills from nothing as it appears; its final width is the share itself. */
+.rc-profile__bar::after {
+  transform-origin: left;
+  animation: rc-profile-fill var(--dur-slow) var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 40ms + 120ms);
+}
+
+/* Tasks solved: the ring, and a row per difficulty beside it. */
+.rc-profile__solved-body {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 22px;
+}
+
+.rc-profile__ring {
+  --rc-sweep: var(--p, 0);
+  width: 120px;
+  height: 120px;
+  background: conic-gradient(var(--accent) calc(var(--rc-sweep) * 1%), var(--surface-sunken) 0);
+  animation: rc-profile-sweep var(--dur-slow) var(--ease-out) backwards;
+  animation-delay: 120ms;
+}
+
+.rc-profile__ring-hole {
+  width: 94px;
+  height: 94px;
+}
+
+.rc-profile__ring-value {
+  font-size: 1.75rem;
+}
+
+.rc-profile__ring-skeleton {
+  flex: none;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+}
+
+.rc-profile__levels {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.rc-profile__level-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rc-profile__level {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 8px;
+  align-items: baseline;
+  font-size: 0.85rem;
+}
+
+.rc-profile__level--easy { --k: var(--good); }
+.rc-profile__level--medium { --k: var(--warn); }
+.rc-profile__level--hard { --k: var(--danger); }
+
+.rc-profile__level-name {
+  color: var(--k);
+  font-weight: 600;
+}
+
+.rc-profile__level-count {
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.rc-profile__level-total {
+  color: var(--text-faint);
+  font-weight: 500;
+}
+
+.rc-profile__level-bar {
+  grid-column: 1 / -1;
+  height: 4px;
+}
+
+.rc-profile__aside-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+  margin: 0;
+}
+
+/* Diagnosis: three tiles. */
+.rc-profile__tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.rc-profile__tile {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+  padding: 12px 14px;
+}
+
+.rc-profile__tile .rc-stat__value {
+  font-size: 1.5rem;
+}
+
+.rc-profile__tile-of {
+  color: var(--text-faint);
+  font-size: 0.8rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.rc-profile__tile--danger {
+  background: var(--danger-surface);
+}
+
+.rc-profile__tile--danger .rc-stat__value,
+.rc-profile__tile--danger .rc-stat__label {
+  color: var(--danger);
+}
+
+.rc-profile__tile-skeleton {
+  height: 84px;
+}
+
+.rc-profile__diagnosis .rc-profile__note {
+  margin-top: auto;
+}
+
+/* A year of activity. */
+.rc-profile__activity-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+}
+
+.rc-profile__activity-total {
+  margin: 0;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.rc-profile__activity-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.rc-profile__heat-scroll {
+  overflow-x: auto;
+  /* Room for today's outline at the edge. */
+  margin: -3px;
+  padding: 3px;
+  border-radius: var(--radius);
+}
+
+.rc-profile__heat,
+.rc-profile__months {
+  display: grid;
+  grid-template-columns: repeat(53, minmax(0, 1fr));
+  column-gap: 3px;
+}
+
+.rc-profile__heat {
+  grid-auto-flow: column;
+  grid-template-rows: repeat(7, auto);
+  row-gap: 3px;
+}
+
+.rc-profile__heat-cell {
+  border-radius: 2px;
+}
+
+.rc-profile__heat-cell[data-today] {
+  outline: 1.5px solid var(--text-muted);
+  outline-offset: 1px;
+}
+
+.rc-profile__months {
+  margin-top: 8px;
+  color: var(--text-faint);
+  font-size: 0.72rem;
+}
+
+.rc-profile__months > span {
+  grid-row: 1;
+  grid-column-end: span 4;
+  white-space: nowrap;
+}
+
+.rc-profile__heat-skeleton {
+  height: 110px;
+}
+
+/* The history: the panel with its tabs. */
+.rc-profile__history {
+  min-width: 0;
+}
+
+.rc-profile__panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+}
+
+.rc-profile__attempts {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rc-profile__attempts li + li {
+  border-top: 1px solid var(--border);
+}
+
+.rc-profile__attempt {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr) auto 5.5rem;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 8px 18px;
+  color: var(--text);
+  text-decoration: none;
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+.rc-profile__attempt:hover {
+  background: var(--surface-sunken);
+}
+
+.rc-profile__attempt:hover .rc-profile__attempt-title {
+  color: var(--accent);
+}
+
+.rc-profile__attempt-date {
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.rc-profile__attempt-title {
+  overflow: hidden;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.rc-profile__chip {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.rc-profile__chip--first { background: var(--accent-soft); color: var(--accent); }
+.rc-profile__chip--practice { background: var(--surface-sunken); color: var(--text-muted); }
+
+.rc-profile__attempt-score {
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* The cards: a table edge to edge in the panel, its card column held on a phone. */
+.rc-profile__panel-body .table-scroll {
+  max-width: none;
+  margin: 0 -18px -18px;
+}
+
+.rc-profile__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  overflow-wrap: normal;
+}
+
+.rc-profile__table th,
+.rc-profile__table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: right;
+}
+
+.rc-profile__table thead th {
+  background: var(--surface-inset);
+  color: var(--text-faint);
+  font-size: 0.8rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.rc-profile__table th:first-child,
+.rc-profile__table td:first-child {
+  padding-left: 18px;
+}
+
+.rc-profile__table th:last-child,
+.rc-profile__table td:last-child {
+  padding-right: 18px;
+}
+
+.rc-profile__table th[scope='row'],
+.rc-profile__table th[scope='col']:first-child {
+  position: sticky;
+  left: 0;
+  min-width: 10rem;
+  text-align: left;
+}
+
+.rc-profile__table th[scope='row'] {
+  background: var(--surface);
+  font-weight: 500;
+}
+
+.rc-profile__table th[scope='row'] a {
+  color: var(--text);
+  text-decoration: none;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.rc-profile__table th[scope='row'] a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.rc-profile__table-group th {
+  padding-top: 16px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.rc-profile__table tbody:last-child tr:last-child > * {
+  border-bottom: 0;
+}
+
+.rc-profile__count {
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.rc-profile__count--zero { color: var(--text-faint); }
+.rc-profile__count--warn { color: var(--warn); font-weight: 600; }
+.rc-profile__count--danger { color: var(--danger); font-weight: 600; }
+.rc-profile__count--good { color: var(--good); font-weight: 600; }
+
+/* No attempts yet: the invitation in place of the history. */
+.rc-profile__start-action {
+  margin: 0;
+}
+
+/* Below 48rem the two cards of the row stack; the map keeps a readable cell and scrolls. */
+@media (max-width: 48rem) {
+  .rc-profile__card {
+    padding: 18px;
+  }
+
+  .rc-profile__heat,
+  .rc-profile__months {
+    grid-template-columns: repeat(53, minmax(11px, 1fr));
+  }
+
+  .rc-profile__history .rc-tab,
+  .rc-profile__history .rc-catalogue__chip {
+    min-height: 40px;
+  }
+
+  .rc-profile__history .rc-tab {
+    height: 40px;
+  }
+}
+
+@media (max-width: 30rem) {
+  .rc-profile__solved-body {
+    gap: 16px;
+  }
+
+  .rc-profile__tiles {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rc-profile__tile {
+    flex-direction: row-reverse;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+
+  .rc-profile__attempt {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 2px 12px;
+    padding: 10px 18px;
+  }
+
+  .rc-profile__attempt-date { grid-area: 1 / 1; }
+  .rc-profile__attempt-title { grid-area: 2 / 1; }
+  .rc-profile__chip { grid-area: 1 / 2; justify-self: end; }
+  .rc-profile__attempt-score { grid-area: 2 / 2; }
+}

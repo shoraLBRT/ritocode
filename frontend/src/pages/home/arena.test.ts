@@ -7,6 +7,7 @@ import {
   activitySince,
   dailyTask,
   formatCountdown,
+  moscowDate,
   moscowDay,
   nextMoscowMidnight,
   shuffleByDay,
@@ -14,6 +15,10 @@ import {
   SUGGESTED_TASKS,
   suggestedProblems,
   suggestedTasks,
+  YEAR_DAYS,
+  YEAR_WEEKS,
+  yearActivity,
+  yearSince,
 } from './arena';
 
 function taskOf(slug: string, status: TaskStatus | null): TaskSummary {
@@ -183,5 +188,78 @@ describe('activity and the streak', () => {
 
     expect(moscowDay(since)).toBe(moscowDay(now) - ACTIVITY_DAYS + 1);
     expect(moscowDay(new Date(since.getTime() - 1))).toBe(moscowDay(now) - ACTIVITY_DAYS);
+  });
+});
+
+describe('a year of activity', () => {
+  const now = new Date('2026-10-28T12:00:00Z');
+
+  it('lays 53 weeks of days out, today last, and counts the submitted attempts in them', () => {
+    const year = yearActivity(
+      [
+        submittedAt('2026-10-28T08:00:00Z'),
+        submittedAt('2026-10-27T22:00:00Z'),
+        submittedAt('2026-03-02T08:00:00Z'),
+        submittedAt(null),
+        // Before the window: not counted.
+        submittedAt('2025-10-01T08:00:00Z'),
+      ],
+      now,
+    );
+
+    expect(year.days).toHaveLength(YEAR_WEEKS * 7);
+    expect(year.firstDay).toBe(moscowDay(now) - YEAR_DAYS + 1);
+    expect(year.days.at(-1)).toBe(2);
+    expect(year.total).toBe(3);
+    expect(year.activeDays).toBe(2);
+  });
+
+  it('finds the longest run of days in a row inside the window', () => {
+    const year = yearActivity(
+      [
+        submittedAt('2026-05-01T08:00:00Z'),
+        submittedAt('2026-05-02T08:00:00Z'),
+        submittedAt('2026-05-03T08:00:00Z'),
+        submittedAt('2026-05-03T09:00:00Z'),
+        submittedAt('2026-10-27T08:00:00Z'),
+        submittedAt('2026-10-28T08:00:00Z'),
+      ],
+      now,
+    );
+
+    expect(year.longestStreak).toBe(3);
+    expect(year.activeDays).toBe(5);
+  });
+
+  it('says nothing was done in a year without an attempt', () => {
+    const year = yearActivity([], now);
+
+    expect([year.total, year.activeDays, year.longestStreak]).toEqual([0, 0, 0]);
+  });
+
+  it('labels each month at the column that holds its first day, none too close to an edge', () => {
+    const { months, firstDay } = yearActivity([], now);
+    const labels = months.map(({ column, day }) => `${String(column)}:${moscowDate(day).toISOString().slice(0, 10)}`);
+
+    // The window opens on 2025-10-23; 1 November is two columns from it, too close for October's label.
+    expect(moscowDate(firstDay).toISOString().slice(0, 10)).toBe('2025-10-23');
+    expect(labels[0]).toBe('1:2025-11-01');
+    expect(labels.at(-1)).toBe('49:2026-10-01');
+    expect(labels).toHaveLength(12);
+  });
+
+  it('labels the first month when its label has room', () => {
+    // The window opens on 2025-11-02; 1 December is four columns from it.
+    const { months } = yearActivity([], new Date('2026-11-07T12:00:00Z'));
+
+    expect(months[0]?.column).toBe(0);
+    expect((months[1]?.column ?? 0) - (months[0]?.column ?? 0)).toBeGreaterThanOrEqual(3);
+  });
+
+  it('needs attempts from the start of its first day', () => {
+    const since = yearSince(now);
+
+    expect(moscowDay(since)).toBe(moscowDay(now) - YEAR_DAYS + 1);
+    expect(moscowDay(new Date(since.getTime() - 1))).toBe(moscowDay(now) - YEAR_DAYS);
   });
 });

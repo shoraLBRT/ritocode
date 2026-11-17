@@ -34,9 +34,8 @@ export function AppLayout() {
   useDocumentMeta();
   const location = useLocation();
   const navigate = useNavigate();
-  // Progress is a signed-in page, so it is offered only to a signed-in learner; the admin area only to an admin.
+  // The admin area is offered only to an admin; the profile is in the avatar's menu.
   const session = useSession();
-  const signedIn = session.status === 'signedIn';
   const admin = session.status === 'signedIn' && session.user.admin;
 
   const [returned] = useState(() => readSignInReturn(location.pathname, location.search));
@@ -72,7 +71,7 @@ export function AppLayout() {
             <span className="app__mark" aria-hidden="true" />
             {t('app.name')}
           </Link>
-          <Navigation signedIn={signedIn} admin={admin} />
+          <Navigation admin={admin} />
         </div>
         <div className="app__header-center" ref={setSlot} />
         <div className="app__header-end">
@@ -116,10 +115,10 @@ export function AppLayout() {
 }
 
 /**
- * The sections (docs/DESIGN.md › The arena); progress only for a signed-in learner, the admin area
- * only for an admin. The brand is the way home.
+ * The sections (docs/DESIGN.md › The arena); the admin area only for an admin. The brand is the way
+ * home; the learner's own page is the avatar's, not a section.
  */
-function Navigation({ signedIn, admin }: { signedIn: boolean; admin: boolean }) {
+function Navigation({ admin }: { admin: boolean }) {
   const t = useT();
 
   return (
@@ -130,11 +129,6 @@ function Navigation({ signedIn, admin }: { signedIn: boolean; admin: boolean }) 
       <NavLink to="/problems" className={navClass}>
         {t('nav.problems')}
       </NavLink>
-      {signedIn && (
-        <NavLink to="/progress" className={navClass}>
-          {t('nav.progress')}
-        </NavLink>
-      )}
       {admin && (
         <NavLink to="/admin" className={navClass}>
           {t('nav.admin')}
@@ -145,8 +139,9 @@ function Navigation({ signedIn, admin }: { signedIn: boolean; admin: boolean }) 
 }
 
 /**
- * The header's right end (docs/DESIGN.md › The arena). Signed in: the streak, and the avatar — the
- * username's first letter — opening a menu with the username and a way out. A guest: *Войти*,
+ * The header's right end (docs/DESIGN.md › The arena). Signed in: the streak, leading to the profile,
+ * and the avatar — the username's first letter — opening a menu with the username, *Профиль* and a
+ * way out. A guest: *Войти*,
  * opening the providers with a way back to this page, and *Начать*, the demo task. Says nothing
  * while it does not know yet. Each menu is a native disclosure, which opens from the keyboard and
  * closes again with no script of its own; keyed by the page, so following a link in it closes it.
@@ -171,6 +166,9 @@ function SessionStatus({ returnPath }: { returnPath: string }) {
             </summary>
             <div className="app__menu-popup">
               <p className="app__menu-user">{session.user.username}</p>
+              <Link className="app__menu-link" to="/profile">
+                {t('header.toProfile')}
+              </Link>
               <button
                 type="button"
                 className="button button--small"
