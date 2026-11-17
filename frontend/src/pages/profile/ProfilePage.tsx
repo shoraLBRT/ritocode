@@ -1,3 +1,4 @@
+import { BackToTop } from '../../components/BackToTop';
 import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Link } from 'react-router';
@@ -53,6 +54,7 @@ export function ProfilePage() {
 
   return (
     <div className="rc-profile">
+      <BackToTop />
       <div className="rc-profile__side">
         <PersonCard year={year} now={now} />
         <ClassesCard progress={progress} />

@@ -11,7 +11,7 @@ import { classTint } from './tint';
  * class's colour; nothing here knows a colour.
  */
 
-export function Icon({ name }: { name: 'search' | 'close' | 'check' | 'arrow' | 'chevron' | 'down' | 'left' | 'right' | 'file' | 'folder' | 'eye' }) {
+export function Icon({ name }: { name: 'search' | 'close' | 'check' | 'arrow' | 'chevron' | 'down' | 'left' | 'right' | 'file' | 'folder' | 'eye' | 'up' }) {
   const paths: Record<typeof name, ReactNode> = {
     search: (
       <>
@@ -20,6 +20,7 @@ export function Icon({ name }: { name: 'search' | 'close' | 'check' | 'arrow' | 
       </>
     ),
     close: <path d="M6 6l12 12M18 6L6 18" />,
+    up: <path d="M12 19V5M6 11l6-6 6 6" />,
     check: <path d="M5 12l5 5 9-10" />,
     arrow: <path d="M5 12h14M13 6l6 6-6 6" />,
     chevron: <path d="M9 6l6 6-6 6" />,

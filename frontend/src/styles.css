@@ -238,7 +238,8 @@ code {
 
 /*
  * Everywhere but the workspace the header stays at the top, over the page and under what opens
- * over it. The stacking ladder: the page (0–3: sticky table cells, tabs) < the header (10) < the
+ * over it. The stacking ladder: the page (0–5: sticky table cells, tabs, the list pages' filter bars) < the header (10) <
+ * the back-to-top button (12) < the
  * phone menu's backdrop and sheet (15, 16) < the feedback button and window (40) < the problem
  * card's overlay (50). The workspace's own sheets (20, 30) live in a page whose header is not sticky.
  */
@@ -498,6 +499,39 @@ code {
   font-size: 1rem;
 }
 
+.rc-catalogue__search {
+  position: relative;
+}
+
+.rc-catalogue__search input {
+  padding-right: 46px;
+}
+
+.rc-catalogue__search input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.rc-catalogue__clear {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.rc-catalogue__clear:hover {
+  background: var(--surface-sunken);
+  color: var(--text);
+}
+
 .rc-catalogue__count {
   color: var(--text-faint);
   font-family: var(--font-mono);
@@ -588,6 +622,18 @@ code {
   height: 12px;
   border-radius: 50%;
   background: var(--k);
+}
+
+.rc-catalogue__class-count {
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.rc-catalogue__class-count::before {
+  content: '·';
+  margin-right: 8px;
 }
 
 .rc-catalogue__class-head p {
@@ -1947,6 +1993,255 @@ pre {
   overflow: hidden;
 }
 
+/* A panel whose bar sticks: `clip` rounds the corners like `hidden` but is no scroll container, so the bar can stick. */
+.rc-panel--sticky {
+  overflow: clip;
+}
+
+/*
+ * A list page's filter bar, held under the header while the list scrolls (DESIGN.md › The task list).
+ * Opaque, so rows never show through it; `data-stuck` (hooks/useStuck) adds the shadow only while it
+ * is held. On a phone it does not stick: two lines of filters would cover too much of the screen.
+ */
+.rc-sticky-bar,
+.rc-catalogue__bar {
+  position: sticky;
+  top: var(--header-height);
+  z-index: 5;
+  background: var(--surface);
+  transition: box-shadow var(--dur) var(--ease-out);
+}
+
+.rc-sticky-bar[data-stuck],
+.rc-catalogue__bar[data-stuck] {
+  box-shadow: var(--shadow);
+}
+
+.rc-catalogue__bar[data-stuck] {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+@media (max-width: 48rem) {
+  .rc-sticky-bar,
+  .rc-catalogue__bar {
+    position: static;
+  }
+}
+
+/* The list's entrance when a filter changes: it fades and rises a little. */
+.rc-list-enter {
+  animation: rc-list-in var(--dur) var(--ease-out) backwards;
+}
+
+@keyframes rc-list-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+.rc-list-count {
+  font-variant-numeric: tabular-nums;
+}
+
+/* The task list's summary strip: solved of all, the three-part bar, the started counts. */
+.rc-summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px 28px;
+  padding: 18px 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.rc-summary__lead {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.rc-summary__word {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.rc-summary__figure {
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 1.9rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.rc-summary__figure--text {
+  font-family: inherit;
+  font-size: 1.4rem;
+  letter-spacing: -0.01em;
+}
+
+.rc-summary__levels {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.rc-summary__bar {
+  display: flex;
+  gap: 4px;
+  height: 8px;
+}
+
+.rc-summary__segment {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-sunken);
+}
+
+.rc-summary__segment::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: calc(var(--p, 0) * 1%);
+  background: var(--k);
+  transform-origin: left;
+  animation: rc-summary-fill var(--dur-slow) var(--ease-out) 120ms backwards;
+}
+
+@keyframes rc-summary-fill {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+.rc-summary__segment--easy,
+.rc-summary__link--easy { --k: var(--good); }
+.rc-summary__segment--medium,
+.rc-summary__link--medium { --k: var(--warn); }
+.rc-summary__segment--hard,
+.rc-summary__link--hard { --k: var(--danger); }
+
+.rc-summary__labels,
+.rc-summary__counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rc-summary__counts {
+  justify-content: flex-end;
+}
+
+.rc-summary__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.rc-summary__link[class*='--']::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--k);
+}
+
+.rc-summary__link:hover {
+  background: var(--surface-inset);
+  color: var(--text);
+}
+
+.rc-summary__link[aria-pressed='true'] {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.rc-summary__guest {
+  max-width: 19rem;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 64rem) {
+  .rc-summary {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .rc-summary__counts,
+  .rc-summary__guest {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+    max-width: none;
+  }
+}
+
+@media (max-width: 40rem) {
+  .rc-summary {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 16px;
+  }
+}
+
+/* Back to top: a round button above the feedback button's corner; hidden it is also out of Tab's reach. */
+.rc-top {
+  position: fixed;
+  z-index: 12;
+  right: 16px;
+  bottom: calc(16px + 44px + 10px);
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--surface-pop);
+  color: var(--accent);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(8px);
+  transition: opacity var(--dur) var(--ease-out), transform var(--dur) var(--ease-out), visibility 0s linear var(--dur),
+    background-color var(--dur-fast) var(--ease-out);
+}
+
+.rc-top[data-visible] {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition-delay: 0s;
+}
+
+.rc-top:hover {
+  background: var(--accent-soft);
+}
+
 .rc-panel__bar {
   display: flex;
   flex-wrap: wrap;
@@ -1959,6 +2254,7 @@ pre {
 
 /* A filter of two to five exclusive options, such as difficulty. */
 .rc-tabs {
+  position: relative;
   display: inline-flex;
   max-width: 100%;
   gap: 2px;
@@ -1968,6 +2264,7 @@ pre {
 }
 
 .rc-tab {
+  position: relative;
   display: inline-flex;
   flex: none;
   align-items: center;
@@ -1999,6 +2296,27 @@ pre {
   background: var(--surface);
   color: var(--text);
   box-shadow: var(--shadow-control);
+}
+
+/* The moving pressed mark: one thumb, placed from the pressed tab's offsets; without it (not measured)
+   the pressed tab draws its own background above. */
+.rc-tabs__thumb {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow-control);
+  pointer-events: none;
+}
+
+.rc-tabs[data-thumb='ready'] .rc-tabs__thumb {
+  transition: transform var(--dur) var(--ease-out), width var(--dur) var(--ease-out), height var(--dur) var(--ease-out);
+}
+
+.rc-tabs[data-thumb] .rc-tab[aria-pressed='true'] {
+  background: transparent;
+  box-shadow: none;
 }
 
 .rc-tab__count {

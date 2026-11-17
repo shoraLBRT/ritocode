@@ -1,12 +1,16 @@
 import { useSearchParams } from 'react-router';
 import { difficulties, listTasks, taskStatuses, useApiClient } from '../api';
 import type { Difficulty, TaskStatus, TaskSummary } from '../api';
+import { BackToTop } from '../components/BackToTop';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { LoadingState } from '../components/LoadingState';
 import { TaskTableSkeleton } from '../components/skeletons';
 import { Tabs, TaskTable } from '../components/TaskTable';
+import { SolvedSummary, SolvedSummarySkeleton } from '../components/SolvedSummary';
 import { useApiResource } from '../hooks/useApiResource';
+import { useCountUp } from '../hooks/useCountUp';
+import { useStuck } from '../hooks/useStuck';
 import { useT } from '../i18n';
 import { useSession } from '../session';
 
@@ -33,12 +37,17 @@ export function TasksPage() {
         <p>{t('tasks.lead')}</p>
       </header>
 
-      <div className="rc-panel">
-        {state.status === 'loading' && <LoadingState label={t('tasks.loading')} skeleton={<TaskTableSkeleton filters rows={10} status={session.status !== 'signedOut'} />} />}
-        {state.status === 'error' && <ErrorState error={state.error} onRetry={reload} />}
-        {state.status === 'success' && state.data.items.length === 0 && <EmptyState title={t('tasks.empty')} icon="tasks" />}
-        {state.status === 'success' && state.data.items.length > 0 && <TaskList tasks={state.data.items} />}
-      </div>
+      {state.status === 'loading' && <SolvedSummarySkeleton />}
+      {state.status === 'success' && state.data.items.length > 0 ? (
+        <TaskList tasks={state.data.items} />
+      ) : (
+        <div className="rc-panel">
+          {state.status === 'loading' && <LoadingState label={t('tasks.loading')} skeleton={<TaskTableSkeleton filters rows={10} status={session.status !== 'signedOut'} />} />}
+          {state.status === 'error' && <ErrorState error={state.error} onRetry={reload} />}
+          {state.status === 'success' && <EmptyState title={t('tasks.empty')} icon="tasks" />}
+        </div>
+      )}
+      <BackToTop />
     </section>
   );
 }
@@ -54,6 +63,8 @@ function TaskList({ tasks }: { tasks: readonly TaskSummary[] }) {
   const ofDifficulty = (value: Difficulty | 'all') => tasks.filter((task) => value === 'all' || task.difficulty === value);
   const ofStatus = (list: readonly TaskSummary[], value: StatusFilter) => list.filter((task) => value === 'all' || task.status === value);
   const shown = ofStatus(ofDifficulty(difficulty), status);
+  const count = useCountUp(shown.length, { duration: 200 });
+  const bar = useStuck<HTMLDivElement>();
 
   // A filter at its default leaves the address; replacing the entry keeps the back button for pages.
   const choose = (name: 'difficulty' | 'status', value: string) => {
@@ -68,61 +79,78 @@ function TaskList({ tasks }: { tasks: readonly TaskSummary[] }) {
 
   return (
     <>
-      <div className="rc-panel__bar">
-        <div className="rc-list-filters">
-          <Tabs
-            label={t('tasks.difficultyFilter')}
-            options={(['all', ...difficulties] as const).map((value) => ({
-              value,
-              label: value === 'all' ? t('tasks.all') : t(`tasks.difficulty.${value}`),
-              count: ofStatus(ofDifficulty(value), status).length,
-            }))}
-            value={difficulty}
-            onChange={(value) => {
-              choose('difficulty', value);
-            }}
-          />
-          {signedIn && (
+      <SolvedSummary
+        tasks={tasks}
+        signedIn={signedIn}
+        difficulty={difficulty}
+        status={status}
+        onDifficulty={(value) => {
+          choose('difficulty', value);
+        }}
+        onStatus={(value) => {
+          choose('status', value);
+        }}
+      />
+      <div className="rc-panel rc-panel--sticky">
+        <div className="rc-panel__bar rc-sticky-bar" ref={bar}>
+          <div className="rc-list-filters">
             <Tabs
-              label={t('tasks.statusFilter')}
-              options={(['all', ...taskStatuses] as const).map((value) => ({
+              label={t('tasks.difficultyFilter')}
+              options={(['all', ...difficulties] as const).map((value) => ({
                 value,
-                label: value === 'all' ? t('tasks.all') : t(`tasks.statuses.${value}`),
-                count: ofStatus(ofDifficulty(difficulty), value).length,
+                label: value === 'all' ? t('tasks.all') : t(`tasks.difficulty.${value}`),
+                count: ofStatus(ofDifficulty(value), status).length,
               }))}
-              value={status}
+              value={difficulty}
               onChange={(value) => {
-                choose('status', value);
+                choose('difficulty', value);
               }}
             />
-          )}
+            {signedIn && (
+              <Tabs
+                label={t('tasks.statusFilter')}
+                options={(['all', ...taskStatuses] as const).map((value) => ({
+                  value,
+                  label: value === 'all' ? t('tasks.all') : t(`tasks.statuses.${value}`),
+                  count: ofStatus(ofDifficulty(difficulty), value).length,
+                }))}
+                value={status}
+                onChange={(value) => {
+                  choose('status', value);
+                }}
+              />
+            )}
+          </div>
+          <span className="rc-arena__note rc-list-count" role="status">
+            {t('tasks.count', { count })}
+          </span>
         </div>
-        <span className="rc-arena__note" role="status">
-          {t('tasks.count', { count: shown.length })}
-        </span>
-      </div>
 
-      {shown.length === 0 ? (
-        <EmptyState
-          title={t('tasks.noMatch')}
-          icon="search"
-          action={
-            <button
-              type="button"
-              className="button"
-              onClick={() => {
-                setParams(new URLSearchParams(), { replace: true });
-              }}
-            >
-              {t('tasks.resetFilters')}
-            </button>
-          }
-        >
-          {t('tasks.noMatchText')}
-        </EmptyState>
-      ) : (
-        <TaskTable tasks={shown} />
-      )}
+        {shown.length === 0 ? (
+          <EmptyState
+            title={t('tasks.noMatch')}
+            icon="search"
+            action={
+              <button
+                type="button"
+                className="button"
+                onClick={() => {
+                  setParams(new URLSearchParams(), { replace: true });
+                }}
+              >
+                {t('tasks.resetFilters')}
+              </button>
+            }
+          >
+            {t('tasks.noMatchText')}
+          </EmptyState>
+        ) : (
+          // Keyed by the filters, so the entrance (CSS) plays again whenever the list changes.
+          <div key={`${difficulty}/${status}`} className="rc-list-enter">
+            <TaskTable tasks={shown} />
+          </div>
+        )}
+      </div>
     </>
   );
 }

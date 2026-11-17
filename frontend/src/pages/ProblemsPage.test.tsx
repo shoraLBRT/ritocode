@@ -206,4 +206,37 @@ describe('the problem catalogue', () => {
     expect(within(byId('money-in-float')).getByRole('link', { name: 'Ссылка на карточку «Деньги во float»' })).toHaveAttribute('href', '#money-in-float');
     expect(within(screen.getByRole('dialog')).getByRole('link', { name: 'Ссылка на карточку «Деньги во float»' })).toHaveAttribute('href', '#money-in-float');
   });
+
+  it('shows how many cards each class holds, and how many of them a search leaves', async () => {
+    const more = {
+      ...catalogue,
+      cards: [
+        ...catalogue.cards,
+        { slug: 'tokens-in-logs', class: 'hygiene', name: 'Токены в логах', summary: 'Ключ попадает в лог.', keywords: ['лог'], sections },
+      ],
+    };
+    renderApp(api(more), '/problems');
+    const search = await screen.findByLabelText(ru.problems.search);
+
+    const heading = (name: string) => screen.getByRole('heading', { name }).closest('.rc-catalogue__class-head');
+    expect(heading('Гигиена и безопасность')).toHaveTextContent('2');
+    expect(heading('Предметная область')).toHaveTextContent('1');
+
+    fireEvent.change(search, { target: { value: 'пароль' } });
+    expect(heading('Гигиена и безопасность')).toHaveTextContent('1 из 2');
+  });
+
+  it('clears the search with its × button, which shows only when there is text', async () => {
+    renderApp(api(), '/problems');
+    const search = await screen.findByLabelText(ru.problems.search);
+    expect(screen.queryByRole('button', { name: ru.problems.clearSearch })).not.toBeInTheDocument();
+
+    fireEvent.change(search, { target: { value: 'копейки' } });
+    fireEvent.click(screen.getByRole('button', { name: ru.problems.clearSearch }));
+
+    expect(search).toHaveValue('');
+    expect(search).toHaveFocus();
+    expect(document.getElementById('secrets-in-repo')).not.toBeNull();
+    expect(screen.queryByRole('button', { name: ru.problems.clearSearch })).not.toBeInTheDocument();
+  });
 });

@@ -123,4 +123,51 @@ describe('the task catalogue', () => {
 
     expect(await screen.findByText(ru.tasks.empty)).toBeInTheDocument();
   });
+
+  it('sums up where the signed-in learner stands: solved of all, by difficulty, started and revealed', async () => {
+    renderApp(api(tasks), '/tasks');
+    await rows();
+
+    const summary = screen.getByRole('region', { name: ru.tasks.summary.title });
+    expect(summary).toHaveTextContent('Решено');
+    expect(summary).toHaveTextContent('из 3');
+    expect(within(summary).getByRole('img', { name: 'Решено 1 из 3' })).toBeInTheDocument();
+    expect(within(summary).getByRole('button', { name: 'Лёгкие 1/2' })).toBeInTheDocument();
+    expect(within(summary).getByRole('button', { name: 'Средние 0/0' })).toBeInTheDocument();
+    expect(within(summary).getByRole('button', { name: 'Сложные 0/1' })).toBeInTheDocument();
+    expect(within(summary).getByRole('button', { name: 'Начато: 1' })).toBeInTheDocument();
+    expect(within(summary).getByRole('button', { name: 'Ответ открыт: 1' })).toBeInTheDocument();
+  });
+
+  it('sets the filter a summary label or count names, and takes it off on a second click', async () => {
+    renderApp(api(tasks), '/tasks');
+    await rows();
+    const summary = screen.getByRole('region', { name: ru.tasks.summary.title });
+
+    fireEvent.click(within(summary).getByRole('button', { name: 'Начато: 1' }));
+    expect(await rows()).toHaveLength(1);
+    expect(tab(ru.tasks.statusFilter, /Начатые/)).toHaveAttribute('aria-pressed', 'true');
+
+    fireEvent.click(within(summary).getByRole('button', { name: 'Сложные 0/1' }));
+    expect(tab(ru.tasks.difficultyFilter, /Сложная/)).toHaveAttribute('aria-pressed', 'true');
+    expect(await screen.findByText(ru.tasks.noMatch)).toBeInTheDocument();
+
+    fireEvent.click(within(summary).getByRole('button', { name: 'Сложные 0/1' }));
+    expect(tab(ru.tasks.difficultyFilter, new RegExp(`^${ru.tasks.all}`))).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('shows a guest how many tasks there are, by difficulty, and invites them to sign in', async () => {
+    renderApp(api(tasks.map((task) => ({ ...task, status: null })), { signedIn: false }), '/tasks');
+    await rows();
+
+    const summary = screen.getByRole('region', { name: ru.tasks.summary.title });
+    expect(summary).toHaveTextContent('3 задачи');
+    expect(within(summary).getByRole('button', { name: 'Лёгкие 2' })).toBeInTheDocument();
+    expect(within(summary).getByRole('button', { name: 'Сложные 1' })).toBeInTheDocument();
+    expect(within(summary).queryByRole('button', { name: /Начато/ })).not.toBeInTheDocument();
+    expect(within(summary).getByText(ru.tasks.summary.guest)).toBeInTheDocument();
+
+    fireEvent.click(within(summary).getByRole('button', { name: 'Лёгкие 2' }));
+    expect(await rows()).toHaveLength(2);
+  });
 });
