@@ -47,6 +47,9 @@ of its own in that PostgreSQL. Only Caddy publishes ports (80 and 443).
   CREATE DATABASE umami OWNER umami;`. Register the site in Umami's own pages, then set the
   repository variables `UMAMI_SCRIPT_URL` (`https://UMAMI_DOMAIN/script.js`) and `UMAMI_WEBSITE_ID`,
   which the web image is built with (#133).
+- **The feedback captcha**: the Turnstile site key is the repository variable `TURNSTILE_SITE_KEY`,
+  which the web image is built with; its secret is `TURNSTILE_SECRET_KEY` in `production.env`. Set
+  both or neither — a secret without the key in the page refuses every message (ADR 0019).
 - **Migrations and content** run from the API image as the one-off `migrate` service: `migrate`
   applies migrations, `migrate ingest content <commit>` ingests the `content/` the image was built
   with, stamped with the commit. A release runs both.
