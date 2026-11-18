@@ -4,7 +4,7 @@
 in the same pull request as the work it describes — a session that skips this makes the next one
 start from nothing.
 
-- **Last updated:** 2026-11-17
+- **Last updated:** 2026-11-18
 - **Current stage:** S7 · Production — its engineering can be built against a local stack (#135's
   Compose file, #136's release command, #34's monitor, #41); the real checks wait on the VPS and domain of #134.
   S6 closed with #133: `/` and `/problems` read without JavaScript (#132), and every listed event
@@ -289,8 +289,12 @@ description. As of that day:
   and the lesson; the verdict list it had is gone. Lint, build, vitest and build:static pass; the
   browser check at 1280 and 375 px, light and dark, was not done (the usage window ran short).
 - **Studying the problems** ([#204](https://github.com/shoraLBRT/ritocode/issues/204)): [ADR 0018](adr/0018-studying-problems.md)
-  is *Proposed* — a mark and a drill of recognising a card by its signs, no authoring — and waits on
-  the maintainer's decision and its four open questions. Nothing is built until it is accepted.
+  is *Accepted* (2026-11-18) with option A — the mark «Изучено» on `/problems`, a guest's marks in
+  the browser only, a study section with a chart on the profile, marks counting in the streak and
+  activity, kept apart from task mastery. CONCEPT §1 and SPEC §4.2/§4.7 say so; nothing is built yet:
+  [#280](https://github.com/shoraLBRT/ritocode/issues/280) (the mark, API and page), then
+  [#281](https://github.com/shoraLBRT/ritocode/issues/281) (the profile and the streak). The drill
+  and snippets wait in *Later* (#282, #283).
 - **Later** holds the post-MVP iterations that were SPEC §12; not taken until the maintainer moves one.
   Since 2026-11-11 it also holds the **incident**
   ([#227](https://github.com/shoraLBRT/ritocode/issues/227),
