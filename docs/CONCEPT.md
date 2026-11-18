@@ -23,7 +23,9 @@ The decision to change the product, and the paths rejected on the way, are in
 
 Two halves. The **problem catalogue** is what people find and link to. The **trainer** — a catalogue
 of tasks — is what they come back for. The **problem card** joins them: it is the teaching text, the
-answer a learner picks, and the explanation they read afterwards.
+answer a learner picks, and the explanation they read afterwards. The catalogue can be studied on
+its own too: a learner marks the cards they have studied, and that progress is kept apart from what
+tasks measure ([ADR 0018](adr/0018-studying-problems.md)).
 
 ## 2. Who it is for
 

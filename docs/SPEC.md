@@ -297,6 +297,13 @@ Every card has an anchor: `/problems#slug` opens that card, so a card can be lin
 of its own. Without JavaScript the prerendered page carries every card in full, and a card unfolds in
 place.
 
+**Studying** ([ADR 0018](adr/0018-studying-problems.md)): the opened card has *Изучено*, a toggle; a
+folded card shows its mark, and a class heading counts the marked cards of its class. A signed-in
+learner's marks are stored with the date they were made and count in the profile (§4.7); taking a
+mark back removes it. A guest's marks are kept in that browser only, count nowhere and are not
+carried over on sign-in. A mark changes no task's result, and a card found in tasks is not marked
+by it.
+
 ### 4.3 Task catalogue
 
 A list of tasks: title, difficulty, an expected time derived from difficulty, and — for a signed-in
@@ -426,9 +433,14 @@ Built from **first attempts only** (§5.4):
 
 Two counts of practice, from **every** attempt, not only first ones:
 
-- **Activity** — the number of attempts submitted on each day, Moscow time.
-- **Streak** — how many days in a row, up to today, have at least one submitted attempt. A day
-  without one breaks it; today still counts as kept until it ends.
+- **Activity** — the number of attempts submitted and cards marked studied (§4.2) on each day,
+  Moscow time.
+- **Streak** — how many days in a row, up to today, have at least one submitted attempt or card
+  marked studied. A day without either breaks it; today still counts as kept until it ends.
+
+**Study** — kept apart from all of the above (ADR 0018): the cards marked studied out of the
+published cards, in all and per class, and a chart of the cards studied over time. A mark on a
+retired card counts nowhere.
 
 On the profile, besides:
 

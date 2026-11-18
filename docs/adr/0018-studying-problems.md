@@ -1,6 +1,6 @@
 # 0018 — Studying the problems as a use case of its own
 
-- Status: Proposed
+- Status: Accepted (option A, 2026-11-18)
 - Date: 2026-11-04
 - Relates to: [#204](https://github.com/shoraLBRT/ritocode/issues/204)
 - Builds on: [CONCEPT.md](../CONCEPT.md) §1, §6; [SPEC.md](../SPEC.md) §3.2, §4.2, §4.7;
@@ -38,7 +38,30 @@ Three constraints shape the options:
 | **D. Snippets cut from tasks** | As C, but the snippet is the lines of a finding in an existing material | Medium, after #207 | Locations on every finding (#207) | As C, and the snippet is spoiled for that task |
 | **E. "Practise this card"** | From a card, the tasks whose key contains it | Small | None | Leaks: the learner opens a task knowing one of its answers. Rejected |
 
-## Proposal
+## Decision (2026-11-18)
+
+The maintainer chose **option A — the mark «Изучено» — with a chart of its progress on the profile.**
+B, C and D are not built now; they are filed under *Later*. The proposal below is kept as it was
+put, and the open questions are answered for A:
+
+- **What studying is.** A signed-in learner marks a card *Изучено* on the opened card (`/problems`,
+  SPEC §4.2) and can take the mark back. A folded card shows its mark, and a class heading counts
+  the marked cards of the class.
+- **A guest** (question 2: yes, without progress) can press *Изучено* too; the mark is kept in that
+  browser only, is shown on `/problems`, goes into no progress, and is not carried over on sign-in.
+- **The streak and activity** (question 1: yes) count a card marked on a day as practice on that
+  day, like a submitted attempt: a day with a mark keeps the streak, and the day's activity counts
+  attempts and marks. A mark taken back no longer counts.
+- **Progress** (question 4: apart) gets a section of its own on the profile — cards studied out of
+  the published cards, per class and in all, and a chart of the cards studied over time. Task
+  mastery, the per-card task counts and the first-attempts rule are untouched; a card found in tasks
+  does not become studied, and a mark changes no task's result.
+- Question 3 (the mark beside the drill) falls away with the drill.
+- A mark on a card later retired is kept but counted nowhere; it counts again if the card returns.
+- The marks belong to the learner's progress, so the **Attempts** module owns them, in its own
+  schema; the card is checked against Content through a contract, as attempts check tasks.
+
+## Proposal (2026-11-04)
 
 **A and B together, as one *study* mode; C and D stay open for later.**
 
@@ -57,7 +80,7 @@ the half of step 1 that tasks train least — telling apart the cards whose name
 half-knows. C is the better exercise and the expensive one; it is worth doing when the catalogue has
 settled, and D becomes cheap once #207 gives findings a location.
 
-## Open questions for the maintainer
+## Open questions for the maintainer (answered above, 2026-11-18)
 
 1. Does a drill count toward the streak and activity, or do they stay "tasks only"?
 2. A guest: may they run the drill without progress (as they may solve a task without a result), or
@@ -65,9 +88,13 @@ settled, and D becomes cheap once #207 gives findings a location.
 3. Is the mark (A) worth having beside B, or is "studied" only what the drill says?
 4. Should a card met and found in tasks count as studied, or do the two kinds of progress stay apart?
 
-## Consequences, if accepted
+## Consequences
 
-- CONCEPT.md §1 names studying as part of the catalogue half; SPEC gets a section for the study mode
-  (§4.2) and for its progress (§4.7); DOMAIN_MODEL and DATABASE_SCHEMA get the study tables.
-- Follow-up issues, filed when this is accepted: the mark and the progress section (A); the drill
-  with its scheduling (B); the docs of the bullet above. C and D are filed under *Later*.
+- CONCEPT.md §1 names studying as part of the catalogue half; SPEC §4.2 gets the mark and §4.7 its
+  progress, the streak and activity; DOMAIN_MODEL and DATABASE_SCHEMA get the marks' table with the
+  issue that builds it.
+- Follow-up issues: the mark, API and `/problems` ([#280](https://github.com/shoraLBRT/ritocode/issues/280)),
+  and the profile's study section with the streak and activity counting marks
+  ([#281](https://github.com/shoraLBRT/ritocode/issues/281)). Under *Later*: B
+  ([#282](https://github.com/shoraLBRT/ritocode/issues/282)), C and D
+  ([#283](https://github.com/shoraLBRT/ritocode/issues/283)).
