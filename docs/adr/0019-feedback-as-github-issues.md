@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-11-14
+- Amended: 2026-11-18 — the GitHub App as the preferred credential ([#285](https://github.com/shoraLBRT/ritocode/issues/285))
 - Relates to: [#243](https://github.com/shoraLBRT/ritocode/issues/243); the real check waits on
   [#134](https://github.com/shoraLBRT/ritocode/issues/134) and [#135](https://github.com/shoraLBRT/ritocode/issues/135)
 - Builds on: [ADR 0003](0003-api-conventions.md), [ADR 0011](0011-release-images.md); [SPEC.md](../SPEC.md) §9.3, §9.6
@@ -21,12 +22,23 @@ it needs protection against abuse.
 it belongs to no module and keeps nothing in the database.
 
 - **The tracker is behind `IFeedbackIssues`.** `GitHubFeedbackIssues` calls
-  `POST https://api.github.com/repos/{Feedback:Repository}/issues` with `Feedback:GitHubToken`, a
-  fine-grained token with *Issues: write* on this repository only, from the server's secrets
-  (`FEEDBACK_GITHUB_TOKEN` in `production.env`). With no token or repository, the endpoint answers
-  `503 feedback_not_configured`, not a crash. The local stack sets `Feedback:Sink: Log`
-  (`appsettings.Development.json`), which writes the issue to the log; tests replace the interface
-  with a fake.
+  `POST https://api.github.com/repos/{Feedback:Repository}/issues` with one of two credentials from the
+  server's secrets (`production.env`):
+  - **a GitHub App, preferred** (#285) — `Feedback:GitHubApp:AppId` and `Feedback:GitHubApp:PrivateKey`
+    (PEM; literal `\n` line breaks accepted), `FEEDBACK_GITHUB_APP_ID` and
+    `FEEDBACK_GITHUB_APP_PRIVATE_KEY`. `GitHubAppCredential` signs an RS256 JWT with the key (`iat` now
+    − 60 s, `exp` now + 9 min, `iss` the App ID), finds the App's installation on the repository
+    (`GET /repos/{owner}/{repo}/installation`) and exchanges the JWT for an installation access token
+    (`POST /app/installations/{id}/access_tokens`), kept in memory until five minutes before it expires
+    and dropped when GitHub answers 401. The issues are signed by the App's bot, not by a person, and
+    no token has to be rotated by hand. The maintainer reuses the Transliterator's feedback App,
+    installed on this repository too (`deploy/README.md`);
+  - **a personal token**, the alternative when no App is set — `Feedback:GitHubToken`, a fine-grained
+    token with *Issues: write* on this repository only (`FEEDBACK_GITHUB_TOKEN`).
+
+  With neither, or no repository, the endpoint answers `503 feedback_not_configured`, not a crash.
+  The local stack sets `Feedback:Sink: Log` (`appsettings.Development.json`), which writes the issue
+  to the log; tests replace the interface with a fake.
 - **The issue** has the message's first line as its title (`Feedback: …`, cut at 70 characters) and
   the message in a code fence longer than any run of backticks in it, so nothing a visitor writes is
   rendered: no `@mention` notifies anyone, no image is fetched, no link is made. Below it, the page
@@ -43,13 +55,14 @@ it belongs to no module and keeps nothing in the database.
      fails closed. With no secret, no captcha is asked for (the local stack). The page renders the
      challenge only when built with `VITE_TURNSTILE_SITE_KEY`; the secret and the site key are set
      together, or every message is refused.
-- GitHub unreachable is `503 feedback_unreachable`; GitHub refusing the request (a bad token, a
-  missing label permission) is `500 feedback_failed`, logged with GitHub's status.
+- GitHub unreachable is `503 feedback_unreachable`; GitHub refusing the request (a bad token, an App
+  not installed on the repository, a missing label permission) is `500 feedback_failed`, logged with
+  GitHub's status; an unreadable private key is `500 feedback_failed` too, logged as such.
 
 ## Consequences
 
-- No second deployable (a worker) and no second place for secrets; the token lives where the OAuth
-  secrets already do.
+- No second deployable (a worker) and no second place for secrets; the App's key or the token lives
+  where the OAuth secrets already do.
 - **Unverified, and part of the real check left for #134/#135:** whether the Russian VPS reaches
   `api.github.com` and `challenges.cloudflare.com`, and whether Turnstile's challenge loads for
   visitors in Russia. If GitHub is not reachable from the VPS, the sink can move to a worker outside

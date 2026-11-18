@@ -50,6 +50,8 @@ public static class FeedbackEndpoints
         }
         else
         {
+            // One per process: it keeps the App's installation token between messages.
+            services.TryAddSingleton<GitHubAppCredential>();
             services.AddHttpClient<IFeedbackIssues, GitHubFeedbackIssues>(http =>
             {
                 http.BaseAddress = new Uri("https://api.github.com/");

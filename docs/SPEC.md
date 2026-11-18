@@ -744,7 +744,7 @@ with the text kept:
 | 400 | `feedback_too_long` | longer than `Feedback:MaxLength` (4000) |
 | 429 | `feedback_rate_limited` | more than `Feedback:MaxPerWindow` (5) from one address in `Feedback:Window` (1 hour) |
 | 403 | `feedback_not_verified` | the Turnstile captcha failed, when `Feedback:TurnstileSecretKey` is set |
-| 503 | `feedback_not_configured` | no GitHub token or repository on the server |
+| 503 | `feedback_not_configured` | no GitHub App, no GitHub token, or no repository on the server |
 | 503 | `feedback_unreachable` | GitHub could not be reached |
 | 500 | `feedback_failed` | GitHub refused the issue |
 

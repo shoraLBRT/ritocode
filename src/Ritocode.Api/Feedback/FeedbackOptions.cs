@@ -5,7 +5,7 @@ namespace Ritocode.Api.Feedback;
 /// <summary>Where a feedback message goes (ADR 0019).</summary>
 public enum FeedbackSink
 {
-    /// <summary>An issue in the repository below, opened with the token below.</summary>
+    /// <summary>An issue in the repository below, opened as the GitHub App below or with the token below.</summary>
     GitHub,
 
     /// <summary>A line in the server log and nothing else: the local stack, where no token exists.</summary>
@@ -14,7 +14,7 @@ public enum FeedbackSink
 
 /// <summary>
 /// The feedback widget's settings (docs/SPEC.md §9.6, ADR 0019), bound from the <c>Feedback</c> section.
-/// The token and the captcha secret are server secrets: they come from the environment, never from a file
+/// The App's private key, the token and the captcha secret are server secrets: they come from the environment, never from a file
 /// in the repository.
 /// </summary>
 public sealed class FeedbackOptions
@@ -26,7 +26,16 @@ public sealed class FeedbackOptions
     /// <summary><c>owner/name</c> of the repository the issues are opened in.</summary>
     public string? Repository { get; init; }
 
-    /// <summary>A token allowed to open issues in <see cref="Repository"/>. Empty: the endpoint answers 503.</summary>
+    /// <summary>
+    /// The GitHub App installed on <see cref="Repository"/>, the preferred credential: used whenever both its
+    /// fields are set, before <see cref="GitHubToken"/>.
+    /// </summary>
+    public FeedbackGitHubAppOptions GitHubApp { get; init; } = new();
+
+    /// <summary>
+    /// A token allowed to open issues in <see cref="Repository"/>, the alternative to <see cref="GitHubApp"/>.
+    /// Neither set: the endpoint answers 503.
+    /// </summary>
     public string? GitHubToken { get; init; }
 
     /// <summary>The label every feedback issue carries.</summary>
@@ -45,4 +54,19 @@ public sealed class FeedbackOptions
 
     /// <summary>The Cloudflare Turnstile secret. Empty: no captcha is asked for (the local stack).</summary>
     public string? TurnstileSecretKey { get; init; }
+}
+
+/// <summary>A GitHub App with <i>Issues: read &amp; write</i>, installed on the feedback repository (ADR 0019).</summary>
+public sealed class FeedbackGitHubAppOptions
+{
+    /// <summary>The App's numeric ID, from its settings page.</summary>
+    public string? AppId { get; init; }
+
+    /// <summary>
+    /// The App's private key, PEM (PKCS#1 as GitHub issues it, or PKCS#8). An environment variable may carry its
+    /// line breaks as literal <c>\n</c>; both forms are accepted.
+    /// </summary>
+    public string? PrivateKey { get; init; }
+
+    public bool IsSet => !string.IsNullOrWhiteSpace(AppId) && !string.IsNullOrWhiteSpace(PrivateKey);
 }

@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
@@ -25,32 +26,55 @@ public interface IFeedbackIssues
     Task<FeedbackIssueResult> CreateAsync(FeedbackIssue issue, CancellationToken cancellationToken);
 }
 
-/// <summary><c>POST https://api.github.com/repos/{owner}/{name}/issues</c> with the configured token.</summary>
-internal sealed partial class GitHubFeedbackIssues(HttpClient http, IOptions<FeedbackOptions> options, ILogger<GitHubFeedbackIssues> logger)
+/// <summary>
+/// <c>POST https://api.github.com/repos/{owner}/{name}/issues</c> as the configured GitHub App
+/// (<see cref="GitHubAppCredential"/>) or, with no App, with the configured token.
+/// </summary>
+internal sealed partial class GitHubFeedbackIssues(
+    HttpClient http,
+    IOptions<FeedbackOptions> options,
+    GitHubAppCredential appCredential,
+    ILogger<GitHubFeedbackIssues> logger)
     : IFeedbackIssues
 {
     public async Task<FeedbackIssueResult> CreateAsync(FeedbackIssue issue, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(issue);
         var settings = options.Value;
+        var useApp = settings.GitHubApp.IsSet;
 
-        if (string.IsNullOrWhiteSpace(settings.Repository) || string.IsNullOrWhiteSpace(settings.GitHubToken))
+        if (string.IsNullOrWhiteSpace(settings.Repository) || (!useApp && string.IsNullOrWhiteSpace(settings.GitHubToken)))
         {
             return new FeedbackIssueResult(FeedbackIssueOutcome.NotConfigured);
         }
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, new Uri($"repos/{settings.Repository}/issues", UriKind.Relative))
-        {
-            Content = JsonContent.Create(new GitHubIssueRequest(issue.Title, issue.Body, [issue.Label])),
-        };
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", settings.GitHubToken);
-
         try
         {
+            var token = useApp
+                ? await appCredential.GetTokenAsync(http, settings.Repository, settings.GitHubApp, cancellationToken).ConfigureAwait(false)
+                : settings.GitHubToken;
+
+            if (token is null)
+            {
+                return new FeedbackIssueResult(FeedbackIssueOutcome.Failed);
+            }
+
+            using var request = new HttpRequestMessage(HttpMethod.Post, new Uri($"repos/{settings.Repository}/issues", UriKind.Relative))
+            {
+                Content = JsonContent.Create(new GitHubIssueRequest(issue.Title, issue.Body, [issue.Label])),
+            };
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
             using var response = await http.SendAsync(request, cancellationToken).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
             {
+                if (useApp && response.StatusCode == HttpStatusCode.Unauthorized)
+                {
+                    // A revoked installation token: the next message asks for a new one.
+                    appCredential.Forget(token);
+                }
+
                 LogRefused(logger, (int)response.StatusCode);
                 return new FeedbackIssueResult(FeedbackIssueOutcome.Failed);
             }
