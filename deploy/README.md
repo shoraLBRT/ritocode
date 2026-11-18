@@ -47,6 +47,14 @@ of its own in that PostgreSQL. Only Caddy publishes ports (80 and 443).
   CREATE DATABASE umami OWNER umami;`. Register the site in Umami's own pages, then set the
   repository variables `UMAMI_SCRIPT_URL` (`https://UMAMI_DOMAIN/script.js`) and `UMAMI_WEBSITE_ID`,
   which the web image is built with (#133).
+- **The feedback issues** are opened as a GitHub App (ADR 0019): the Transliterator's feedback App,
+  which is installable on this account only. Install it on this repository too — GitHub → Settings →
+  Applications → the App → Configure → add the repository; it needs *Issues: read & write* — and put
+  its App ID (`FEEDBACK_GITHUB_APP_ID`) and private key (`FEEDBACK_GITHUB_APP_PRIVATE_KEY`, the PEM on
+  one line with `\n` for its line breaks) into `production.env`. The API finds the installation by
+  the repository and renews its installation token itself. Renaming the App to a neutral name changes
+  only the bot's display name on the issues. `FEEDBACK_GITHUB_TOKEN`, a fine-grained personal token,
+  is the alternative when no App is set.
 - **The feedback captcha**: the Turnstile site key is the repository variable `TURNSTILE_SITE_KEY`,
   which the web image is built with; its secret is `TURNSTILE_SECRET_KEY` in `production.env`. Set
   both or neither — a secret without the key in the page refuses every message (ADR 0019).
