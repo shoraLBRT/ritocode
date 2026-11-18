@@ -4,7 +4,7 @@
 in the same pull request as the work it describes — a session that skips this makes the next one
 start from nothing.
 
-- **Last updated:** 2026-11-17
+- **Last updated:** 2026-11-18
 - **Current stage:** S7 · Production — its engineering can be built against a local stack (#135's
   Compose file, #136's release command, #34's monitor, #41); the real checks wait on the VPS and domain of #134.
   S6 closed with #133: `/` and `/problems` read without JavaScript (#132), and every listed event
@@ -178,6 +178,12 @@ description. As of that day:
   read with a filter on; the search, the filters, the picks, the lift and the results' scroll are
   kept. Checked in the built-in browser at 1280 px (both steps, a class or branch filter and a
   search on, the dock raised) and 375 px (the sheet shrinks to the chips and the bar).
+  **#232** (2026-11-18): the home page's meta title and description (`meta.home`) follow the
+  hero — «Ritocode — тренажёр ревью кода» and «Агент получил задание и собрал рабочий прототип. Твоя
+  задача — быстрое ревью: найти в нём high-level проблемы архитектуры и выбрать, как их лечить.»,
+  the maintainer's choice; «на настоящих проектах» is gone (SPEC §3.4: the material is generated to
+  order). Lint, build, `build:static` (the prerendered `/` carries both) and vitest (475) pass; not
+  checked in a browser.
   **#252** (2026-11-17): the unsolved result's line (`review.notSolved`) is now a short offer —
   «Пока не решена. Попробуй снова — или покажи ответ.» — matching the *Попробовать снова* and
   *Показать ответ* buttons, without the sentence about what will not be told. Lint, build and
