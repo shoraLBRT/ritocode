@@ -72,9 +72,12 @@ jobs:
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
           # Umami's address and site id are repository variables too, set once its server exists (#135).
+          # Turnstile's site key is public (it is in every page); the feedback widget shows the
+          # captcha only when it is set (ADR 0019), and the API's TURNSTILE_SECRET_KEY goes with it.
           build-args: |
             SITE_ORIGIN=${{ env.SITE_ORIGIN }}
             VITE_UMAMI_SCRIPT_URL=${{ vars.UMAMI_SCRIPT_URL }}
             VITE_UMAMI_WEBSITE_ID=${{ vars.UMAMI_WEBSITE_ID }}
+            VITE_TURNSTILE_SITE_KEY=${{ vars.TURNSTILE_SITE_KEY }}
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,scope=${{ matrix.image }},mode=max
