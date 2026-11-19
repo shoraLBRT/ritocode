@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router';
-import { listAttemptsSince, useApiClient } from '../api';
+import { listPracticeSince, useApiClient } from '../api';
+import { STUDY_MARKS_CHANGED } from '../hooks/useStudyMarks';
 import { useT } from '../i18n';
 import { activity, activitySince } from '../pages/home/arena';
 
 /**
  * The signed-in learner's streak in the header (docs/SPEC.md §4.7, DESIGN.md › The arena): days in
- * a row with a submitted attempt, by the home page's own rule. Read again on every page change, so
- * the review that follows a submit already counts it; the last number stays on screen meanwhile,
+ * a row with a submitted attempt or a card marked studied, by the home page's own rule. Read again on
+ * every page change, so the review that follows a submit already counts it, and on every stored or
+ * taken-back study mark; the last number stays on screen meanwhile,
  * and a failed read leaves it as it was — the header never shows an error of its own. It leads to
  * the profile, where the whole year is.
  */
@@ -16,15 +18,26 @@ export function HeaderStreak() {
   const t = useT();
   const { pathname } = useLocation();
   const [streak, setStreak] = useState<number | null>(null);
+  const [marksChanged, setMarksChanged] = useState(0);
+
+  useEffect(() => {
+    const changed = () => {
+      setMarksChanged((count) => count + 1);
+    };
+    window.addEventListener(STUDY_MARKS_CHANGED, changed);
+    return () => {
+      window.removeEventListener(STUDY_MARKS_CHANGED, changed);
+    };
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
     const now = new Date();
 
-    listAttemptsSince(client, activitySince(now), controller.signal).then(
-      (attempts) => {
+    listPracticeSince(client, activitySince(now), controller.signal).then(
+      (practice) => {
         if (!controller.signal.aborted) {
-          setStreak(activity(attempts, now).streak);
+          setStreak(activity(practice.attempts, now, practice.marks).streak);
         }
       },
       () => undefined,
@@ -33,7 +46,7 @@ export function HeaderStreak() {
     return () => {
       controller.abort();
     };
-  }, [client, pathname]);
+  }, [client, pathname, marksChanged]);
 
   if (streak === null) {
     return null;

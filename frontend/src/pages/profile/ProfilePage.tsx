@@ -2,8 +2,8 @@ import { BackToTop } from '../../components/BackToTop';
 import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Link } from 'react-router';
-import { getProgress, listAttempts, listAttemptsSince, listTasks, useApiClient } from '../../api';
-import type { AttemptSummary, Page, Progress, TaskSummary } from '../../api';
+import { getProblemCatalogue, getProgress, getStudiedCards, listAttempts, listPracticeSince, listTasks, useApiClient } from '../../api';
+import type { Page, Practice, Progress, TaskSummary } from '../../api';
 import { ErrorState } from '../../components/ErrorState';
 import { Skeleton } from '../../components/Skeleton';
 import { useApiResource } from '../../hooks/useApiResource';
@@ -15,6 +15,7 @@ import { useSession } from '../../session';
 import { activity, yearSince } from '../home/arena';
 import { ActivityCard } from './ActivityCard';
 import { HistoryPanel } from './HistoryPanel';
+import { StudyCard } from './StudyCard';
 import { CardLoading, ProfileCard } from './parts';
 import { diagnosis, monthAndYear, percent, solvedTasks } from './profile';
 import './profile.css';
@@ -24,20 +25,26 @@ export const RECENT_ATTEMPTS = 10;
 
 /**
  * `/profile` — the learner's own page (docs/SPEC.md §4.7, DESIGN.md › The profile): who they are,
- * the classes, the tasks solved by difficulty, the diagnosis, a year of activity and the recent
- * attempts and cards. Everything is read from what the API already serves — the task list, the
- * progress and the attempts — each card on its own, so one failed read does not blank the page.
+ * the classes, the tasks solved by difficulty, the diagnosis, the cards studied, a year of activity
+ * and the recent attempts and cards. Everything is read from what the API already serves — the task
+ * list, the progress, the catalogue, the study marks and the attempts — each card on its own, so one
+ * failed read does not blank the page.
  * No XP, no levels, no leaderboard.
  *
  * Signed in only: it sits under `RequireSignIn`. Two columns from 64rem; on a phone one, in the order
- * person, solved, diagnosis, classes, activity, the tabs (profile.css).
+ * person, solved, diagnosis, classes, study, activity, the tabs (profile.css).
  */
 export function ProfilePage() {
   const client = useApiClient();
   const [now] = useState(() => new Date());
   const tasks = useApiResource((signal) => listTasks(client, { pageSize: 100 }, signal), [client]);
   const progress = useApiResource((signal) => getProgress(client, signal), [client]);
-  const year = useApiResource((signal) => listAttemptsSince(client, yearSince(now), signal), [client, now]);
+  const year = useApiResource((signal) => listPracticeSince(client, yearSince(now), signal), [client, now]);
+  const study = useApiResource(
+    (signal) =>
+      Promise.all([getProblemCatalogue(client, signal), getStudiedCards(client, signal)]).then(([catalogue, studied]) => ({ catalogue, marks: studied.cards })),
+    [client],
+  );
   // Opening a task starts an attempt, so most of a learner's attempts may never be submitted; the
   // list is of answers given, read from a page large enough to find ten of them.
   const recent = useApiResource(
@@ -65,6 +72,7 @@ export function ProfilePage() {
           <SolvedCard tasks={tasks} />
           <DiagnosisCard progress={progress} />
         </div>
+        <StudyCard study={study} now={now} />
         <ActivityCard year={year} now={now} />
         {fresh ? (
           <StartCard />
@@ -76,7 +84,7 @@ export function ProfilePage() {
   );
 }
 
-function PersonCard({ year, now }: { year: ApiResource<AttemptSummary[]>; now: Date }) {
+function PersonCard({ year, now }: { year: ApiResource<Practice>; now: Date }) {
   const t = useT();
   const locale = useLocale();
   const session = useSession();
@@ -88,7 +96,7 @@ function PersonCard({ year, now }: { year: ApiResource<AttemptSummary[]>; now: D
   }
 
   const { username, createdAt, providers } = session.user;
-  const streak = year.state.status === 'success' ? activity(year.state.data, now).streak : null;
+  const streak = year.state.status === 'success' ? activity(year.state.data.attempts, now, year.state.data.marks).streak : null;
 
   return (
     <section className="rc-profile__card rc-profile__person" aria-labelledby="profile-name" style={{ '--i': 0 } as CSSProperties}>

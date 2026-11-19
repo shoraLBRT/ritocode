@@ -58,7 +58,7 @@
   }
 }
 
-/* A phone: one column, in the order person, solved, diagnosis, classes, activity, history. */
+/* A phone: one column, in the order person, solved, diagnosis, classes, study, activity, history. */
 @media (max-width: 48rem) {
   .rc-profile {
     gap: var(--gap);
@@ -74,9 +74,10 @@
   .rc-profile__solved { order: 1; }
   .rc-profile__diagnosis { order: 2; }
   .rc-profile__classes { order: 3; }
-  .rc-profile__activity { order: 4; }
+  .rc-profile__study { order: 4; }
+  .rc-profile__activity { order: 5; }
   .rc-profile__history,
-  .rc-profile__start { order: 5; }
+  .rc-profile__start { order: 6; }
 }
 
 /* Cards: the home page's, staggered in by 40 ms each (`--i`). */
@@ -416,6 +417,111 @@
 
 .rc-profile__diagnosis .rc-profile__note {
   margin-top: auto;
+}
+
+/* Study: the count of all, a row per class in its colour, and the cumulative chart. */
+.rc-profile__study-head {
+  display: grid;
+  gap: 8px;
+}
+
+.rc-profile__study-total {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+}
+
+.rc-profile__study-value {
+  color: var(--text);
+  font-size: 1.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.rc-profile__study-of {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.rc-profile__study-classes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr));
+  gap: 12px 24px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rc-profile__study-class {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+}
+
+.rc-profile__study-class-bar {
+  grid-column: 1 / -1;
+}
+
+.rc-profile__study-count {
+  color: var(--text-muted);
+}
+
+.rc-profile__study-empty {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
+
+.rc-profile__chart {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.rc-profile__chart-plot {
+  position: relative;
+  padding-left: 28px;
+  border-bottom: 1px solid var(--border-strong);
+}
+
+.rc-profile__chart-max {
+  position: absolute;
+  top: 0;
+  left: 0;
+  color: var(--text-faint);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.rc-profile__chart-svg {
+  display: block;
+  width: 100%;
+  height: 140px;
+  overflow: visible;
+}
+
+.rc-profile__chart-area {
+  fill: var(--accent-soft);
+}
+
+.rc-profile__chart-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.rc-profile__chart-axis {
+  display: flex;
+  justify-content: space-between;
+  padding-left: 28px;
+  color: var(--text-faint);
+  font-size: 0.75rem;
+}
+
+.rc-profile__chart-skeleton {
+  height: 140px;
 }
 
 /* A year of activity. */

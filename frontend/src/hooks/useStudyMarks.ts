@@ -22,6 +22,13 @@ export interface StudyMarks {
 
 export const GUEST_STUDY_KEY = 'ritocode:studied';
 
+/**
+ * Sent on `window` once the API has stored or taken back a mark, so what counts marks — the header's
+ * streak — reads them again without waiting for a page change. A guest's marks count nowhere, so
+ * theirs send nothing.
+ */
+export const STUDY_MARKS_CHANGED = 'ritocode:study-marks-changed';
+
 const NONE: ReadonlySet<string> = new Set();
 
 export function useStudyMarks(): StudyMarks {
@@ -83,6 +90,9 @@ export function useStudyMarks(): StudyMarks {
       change(marking);
       pending.current.add(card);
       (marking ? markStudied(client, card) : unmarkStudied(client, card))
+        .then(() => {
+          window.dispatchEvent(new Event(STUDY_MARKS_CHANGED));
+        })
         .catch(() => {
           // Not changed on the server: the card shows what is stored.
           change(!marking);

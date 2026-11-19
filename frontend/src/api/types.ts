@@ -357,3 +357,9 @@ export interface StudyMark {
 export interface StudiedCards {
   readonly cards: readonly StudyMark[];
 }
+
+/** A learner's practice, as the streak and the activity count it: attempts and study marks (ADR 0018). */
+export interface Practice {
+  readonly attempts: readonly AttemptSummary[];
+  readonly marks: readonly StudyMark[];
+}

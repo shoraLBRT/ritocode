@@ -1,5 +1,6 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { STUDY_MARKS_CHANGED } from '../hooks/useStudyMarks';
 import { ru } from '../i18n';
 import { renderApp } from '../test/render';
 import { jsonResponse, problemResponse } from '../test/responses';
@@ -302,6 +303,15 @@ describe('studying the catalogue', () => {
 
   it('marks the open card and takes the mark back through the API, signed in', async () => {
     const fetchStub = studyApi({ signedIn: true });
+    // Each stored or taken-back mark tells the header's streak to read the marks again.
+    let changes = 0;
+    const changed = () => {
+      changes += 1;
+    };
+    window.addEventListener(STUDY_MARKS_CHANGED, changed);
+    onTestFinished(() => {
+      window.removeEventListener(STUDY_MARKS_CHANGED, changed);
+    });
     renderApp(fetchStub, '/problems');
 
     fireEvent.click(await screen.findByLabelText(ru.problems.openCard.replace('{name}', 'Деньги во float')));
@@ -321,6 +331,9 @@ describe('studying the catalogue', () => {
     expect(toggle).toHaveAttribute('aria-pressed', 'false');
     await waitFor(() => {
       expect(requests(fetchStub, '/me/studied/money-in-float')).toEqual(['PUT', 'DELETE']);
+    });
+    await waitFor(() => {
+      expect(changes).toBe(2);
     });
     expect(localStorage.length).toBe(0);
   });

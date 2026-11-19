@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Link } from 'react-router';
-import { getProblemCatalogue, getProgress, listAttemptsSince, listTasks, useApiClient } from '../api';
-import type { AttemptSummary, ProblemCard, ProblemCatalogue, Progress, TaskSummary } from '../api';
+import { getProblemCatalogue, getProgress, listPracticeSince, listTasks, useApiClient } from '../api';
+import type { Practice, ProblemCard, ProblemCatalogue, Progress, TaskSummary } from '../api';
 import { ErrorState } from '../components/ErrorState';
 import { LoadingState } from '../components/LoadingState';
 import { ActivitySkeleton, DailyTaskSkeleton, StatSkeleton, ProblemsToReadSkeleton, ProgressSkeleton, TaskTableSkeleton } from '../components/skeletons';
@@ -352,11 +352,11 @@ function ProgressBody({ progress }: { progress: Progress }) {
   );
 }
 
-/** The streak and twelve weeks of activity, from every submitted attempt (SPEC §4.7). */
+/** The streak and twelve weeks of activity, from every submitted attempt and study mark (SPEC §4.7, ADR 0018). */
 function ActivityCard({ now }: { now: Date }) {
   const client = useApiClient();
   const t = useT();
-  const { state, reload } = useApiResource((signal) => listAttemptsSince(client, activitySince(now), signal), [client, now]);
+  const { state, reload } = useApiResource((signal) => listPracticeSince(client, activitySince(now), signal), [client, now]);
 
   return (
     <section className="rc-arena__card" aria-labelledby="home-activity">
@@ -370,18 +370,19 @@ function ActivityCard({ now }: { now: Date }) {
       </div>
       {state.status === 'loading' && <LoadingState label={t('home.activity.loading')} skeleton={<ActivitySkeleton />} />}
       {state.status === 'error' && <ErrorState error={state.error} onRetry={reload} />}
-      {state.status === 'success' && <ActivityBody attempts={state.data} now={now} />}
+      {state.status === 'success' && <ActivityBody practice={state.data} now={now} />}
     </section>
   );
 }
 
-function ActivityBody({ attempts, now }: { attempts: readonly AttemptSummary[]; now: Date }) {
+function ActivityBody({ practice, now }: { practice: Practice; now: Date }) {
   const t = useT();
   const locale = useLocale();
-  const { days, streak } = activity(attempts, now);
+  const { days, marks, streak } = activity(practice.attempts, now, practice.marks);
   const firstDay = moscowDay(now) - ACTIVITY_DAYS + 1;
   const dayFormat = new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long', timeZone: 'UTC' });
-  const total = days.reduce((sum, count) => sum + count, 0);
+  const studied = marks.reduce((sum, count) => sum + count, 0);
+  const total = days.reduce((sum, count) => sum + count, 0) - studied;
 
   return (
     <>
@@ -389,9 +390,15 @@ function ActivityBody({ attempts, now }: { attempts: readonly AttemptSummary[]; 
         <span className="rc-streak">{streak > 0 ? t('home.activity.streak', { count: streak }) : t('home.activity.noStreak')}</span>
       </p>
       {/* One image named in words (the streak sentence does not say the days); each day says its date and count on hover. */}
-      <div className="rc-heat" role="img" aria-label={t('home.activity.map', { count: total })}>
+      <div
+        className="rc-heat"
+        role="img"
+        aria-label={studied > 0 ? t('home.activity.mapStudied', { count: total, studied }) : t('home.activity.map', { count: total })}
+      >
         {days.map((count, index) => {
           const date = dayFormat.format(moscowDate(firstDay + index));
+          const marked = marks[index] ?? 0;
+          const tried = count - marked;
 
           return (
             // The days are positional: the same index is the same day for this render.
@@ -400,7 +407,15 @@ function ActivityBody({ attempts, now }: { attempts: readonly AttemptSummary[]; 
               className="rc-heat__cell"
               data-level={activityLevel(count)}
               data-today={index === ACTIVITY_DAYS - 1 ? '' : undefined}
-              title={count === 0 ? t('home.activity.cellNone', { date }) : t('home.activity.cell', { date, count })}
+              title={
+                count === 0
+                  ? t('home.activity.cellNone', { date })
+                  : marked === 0
+                    ? t('home.activity.cell', { date, count })
+                    : tried === 0
+                      ? t('home.activity.cellStudied', { date, count: marked })
+                      : t('home.activity.cellBoth', { date, count: tried, studied: marked })
+              }
             />
           );
         })}

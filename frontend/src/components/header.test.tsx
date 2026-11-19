@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import type { ProblemCard, TaskSummary } from '../api';
 import { ru } from '../i18n';
 import { renderApp } from '../test/render';
 import { jsonResponse, pageOf, problemResponse } from '../test/responses';
+import { STUDY_MARKS_CHANGED } from '../hooks/useStudyMarks';
 import { headerResults, RESULTS_PER_KIND } from './headerResults';
 
 /**
@@ -50,7 +51,12 @@ function attempt(submittedAt: string | null) {
   return { id: submittedAt ?? 'open', task: 'flower-shop', startedAt: submittedAt ?? new Date().toISOString(), step: 'diagnosis', submittedAt, practice: false, score: null, maxScore: null };
 }
 
-function api({ signedIn = true, attempts = [] as ReturnType<typeof attempt>[], lists = true } = {}) {
+function api({
+  signedIn = true,
+  attempts = [] as ReturnType<typeof attempt>[],
+  lists = true,
+  marks = [] as { card: string; studiedAt: string }[],
+} = {}) {
   const calls: string[] = [];
   const stub = vi.fn<typeof globalThis.fetch>().mockImplementation((input) => {
     const url = new URL(urlOf(input));
@@ -65,6 +71,8 @@ function api({ signedIn = true, attempts = [] as ReturnType<typeof attempt>[], l
         return Promise.resolve(lists ? jsonResponse({ classes: [], cards }) : problemResponse(503, 'unavailable', 'x'));
       case '/api/v1/attempts':
         return Promise.resolve(jsonResponse(pageOf(attempts, 1, 100)));
+      case '/api/v1/me/studied':
+        return Promise.resolve(jsonResponse({ cards: marks }));
       default:
         return Promise.resolve(jsonResponse({}));
     }
@@ -223,6 +231,36 @@ describe('the header streak', () => {
     expect(streak).toHaveTextContent('2 дн.');
     // It leads to the profile, where the whole year is.
     expect(streak).toHaveAttribute('href', '/profile');
+  });
+
+  it('counts a day with a card marked studied as a day of practice', async () => {
+    const day = 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    const attempts = [attempt(new Date(now - day).toISOString())];
+    const marks = [
+      { card: 'hardcoded-config', studiedAt: new Date(now).toISOString() },
+      { card: 'secrets-in-repo', studiedAt: new Date(now - 2 * day).toISOString() },
+    ];
+    renderApp(api({ attempts, marks }).stub, '/privacy');
+
+    expect(await screen.findByRole('link', { name: 'Серия: 3 дня подряд' })).toBeInTheDocument();
+  });
+
+  it('reads the streak again once a study mark is stored or taken back', async () => {
+    const marks = [{ card: 'hardcoded-config', studiedAt: new Date().toISOString() }];
+    const { stub, calls } = api({ marks });
+    renderApp(stub, '/privacy');
+    expect(await screen.findByRole('link', { name: 'Серия: 1 день подряд' })).toBeInTheDocument();
+
+    // The mark is taken back: no longer served, so no longer counted.
+    marks.pop();
+    const before = calls.filter((path) => path === '/api/v1/me/studied').length;
+    act(() => {
+      window.dispatchEvent(new Event(STUDY_MARKS_CHANGED));
+    });
+
+    expect(await screen.findByRole('link', { name: 'Серия: 0 дней подряд' })).toBeInTheDocument();
+    expect(calls.filter((path) => path === '/api/v1/me/studied').length).toBeGreaterThan(before);
   });
 
   it('shows a learner with no attempt a streak of nothing, and a guest none at all', async () => {

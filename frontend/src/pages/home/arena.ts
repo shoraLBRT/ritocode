@@ -1,8 +1,12 @@
-import type { AttemptSummary, ProblemCard, TaskSummary } from '../../api';
+import type { AttemptSummary, ProblemCard, StudyMark, TaskSummary } from '../../api';
 
 /**
  * The arithmetic of the home page (docs/SPEC.md §4.1, §4.7): which task is today's, and the activity
  * and streak of a learner. Pure, so the page and its tests agree on every date.
+ *
+ * A day's practice is its submitted attempts and the cards marked studied on it (ADR 0018): either
+ * makes the day active, and the day's count is both. A mark taken back is no longer served, so it
+ * no longer counts.
  */
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -112,35 +116,52 @@ export function suggestedProblems(cards: readonly ProblemCard[], now: Date): Pro
 }
 
 export interface Activity {
-  /** Attempts submitted on each of the last {@link ACTIVITY_DAYS} days, oldest first, today last. */
+  /** Attempts submitted and cards marked studied on each of the last {@link ACTIVITY_DAYS} days, oldest first, today last. */
   readonly days: readonly number[];
-  /** Days in a row with an attempt, up to today; today without one does not break it yet. */
+  /** The cards marked studied on each of those days: the part of {@link days} that is not attempts. */
+  readonly marks: readonly number[];
+  /** Days in a row with practice, up to today; today without any does not break it yet. */
   readonly streak: number;
 }
 
-/** Counts submitted attempts by Moscow day; an attempt never submitted is not practice yet. */
-export function activity(attempts: readonly AttemptSummary[], now: Date): Activity {
-  const today = moscowDay(now);
-  const perDay = new Map<number, number>();
+/** Counts per Moscow day: submitted attempts (one never submitted is not practice yet) and study marks. */
+function perDay(attempts: readonly AttemptSummary[], marks: readonly StudyMark[]): { attempts: Map<number, number>; marks: Map<number, number> } {
+  const byDay = { attempts: new Map<number, number>(), marks: new Map<number, number>() };
 
   for (const attempt of attempts) {
     if (attempt.submittedAt !== null) {
       const day = moscowDay(new Date(attempt.submittedAt));
-      perDay.set(day, (perDay.get(day) ?? 0) + 1);
+      byDay.attempts.set(day, (byDay.attempts.get(day) ?? 0) + 1);
     }
   }
 
-  const days = Array.from({ length: ACTIVITY_DAYS }, (_, index) => perDay.get(today - ACTIVITY_DAYS + 1 + index) ?? 0);
+  for (const mark of marks) {
+    const day = moscowDay(new Date(mark.studiedAt));
+    byDay.marks.set(day, (byDay.marks.get(day) ?? 0) + 1);
+  }
 
-  let day = (perDay.get(today) ?? 0) > 0 ? today : today - 1;
+  return byDay;
+}
+
+/** The streak and twelve weeks of practice: submitted attempts and study marks, by Moscow day. */
+export function activity(attempts: readonly AttemptSummary[], now: Date, marks: readonly StudyMark[] = []): Activity {
+  const today = moscowDay(now);
+  const byDay = perDay(attempts, marks);
+  const count = (day: number) => (byDay.attempts.get(day) ?? 0) + (byDay.marks.get(day) ?? 0);
+  const first = today - ACTIVITY_DAYS + 1;
+
+  const days = Array.from({ length: ACTIVITY_DAYS }, (_, index) => count(first + index));
+  const marked = Array.from({ length: ACTIVITY_DAYS }, (_, index) => byDay.marks.get(first + index) ?? 0);
+
+  let day = count(today) > 0 ? today : today - 1;
   let streak = 0;
 
-  while ((perDay.get(day) ?? 0) > 0) {
+  while (count(day) > 0) {
     streak += 1;
     day -= 1;
   }
 
-  return { days, streak };
+  return { days, marks: marked, streak };
 }
 
 /** The shade of a day on the activity map: none, one, two, three or four, five and more. */
@@ -172,49 +193,49 @@ export function moscowDate(day: number): Date {
 export interface YearActivity {
   /** The Moscow day of the map's first cell; cell `i` is day `firstDay + i`, today the last. */
   readonly firstDay: number;
-  /** Attempts submitted on each of the {@link YEAR_DAYS} days, oldest first, today last. */
+  /** Attempts submitted and cards marked studied on each of the {@link YEAR_DAYS} days, oldest first, today last. */
   readonly days: readonly number[];
+  /** The cards marked studied on each of those days. */
+  readonly marks: readonly number[];
   /** Attempts submitted inside the window. */
   readonly total: number;
-  /** Days inside the window with at least one submitted attempt. */
+  /** Cards marked studied inside the window. */
+  readonly studied: number;
+  /** Days inside the window with practice: a submitted attempt or a study mark. */
   readonly activeDays: number;
-  /** The longest run of days in a row with a submitted attempt inside the window. */
+  /** The longest run of days in a row with practice inside the window. */
   readonly longestStreak: number;
   /** Where each month's label starts: the column that holds its first day, and that day. */
   readonly months: readonly { readonly column: number; readonly day: number }[];
 }
 
 /**
- * A year of activity for the profile, by the home page's rules: Moscow days, submitted attempts
- * only. The columns are weeks of seven consecutive days, the last one ending today, as on the home
+ * A year of activity for the profile, by the home page's rules: Moscow days, submitted attempts and
+ * study marks. The columns are weeks of seven consecutive days, the last one ending today, as on the home
  * page. A month is labelled at the column holding its first day; the window's first month too when
  * its label has room before the next one, and none so close to the end that it would not fit.
  */
-export function yearActivity(attempts: readonly AttemptSummary[], now: Date): YearActivity {
+export function yearActivity(attempts: readonly AttemptSummary[], now: Date, marks: readonly StudyMark[] = []): YearActivity {
   const today = moscowDay(now);
   const firstDay = today - YEAR_DAYS + 1;
-  const days: number[] = Array.from({ length: YEAR_DAYS }, () => 0);
-
-  for (const attempt of attempts) {
-    if (attempt.submittedAt !== null) {
-      const index = moscowDay(new Date(attempt.submittedAt)) - firstDay;
-      if (index >= 0 && index < YEAR_DAYS) {
-        days[index] = (days[index] ?? 0) + 1;
-      }
-    }
-  }
+  const byDay = perDay(attempts, marks);
+  const tried = Array.from({ length: YEAR_DAYS }, (_, index) => byDay.attempts.get(firstDay + index) ?? 0);
+  const marked = Array.from({ length: YEAR_DAYS }, (_, index) => byDay.marks.get(firstDay + index) ?? 0);
+  const days = tried.map((count, index) => count + (marked[index] ?? 0));
 
   let total = 0;
+  let studied = 0;
   let activeDays = 0;
   let longestStreak = 0;
   let run = 0;
 
-  for (const count of days) {
-    total += count;
+  days.forEach((count, index) => {
+    total += tried[index] ?? 0;
+    studied += marked[index] ?? 0;
     run = count > 0 ? run + 1 : 0;
     if (count > 0) activeDays += 1;
     longestStreak = Math.max(longestStreak, run);
-  }
+  });
 
   const months: { column: number; day: number }[] = [];
 
@@ -230,7 +251,7 @@ export function yearActivity(attempts: readonly AttemptSummary[], now: Date): Ye
     months.unshift({ column: 0, day: firstDay });
   }
 
-  return { firstDay, days, total, activeDays, longestStreak, months };
+  return { firstDay, days, marks: marked, total, studied, activeDays, longestStreak, months };
 }
 
 /** The earliest instant the year's map needs attempts from: the start of its first day in Moscow. */

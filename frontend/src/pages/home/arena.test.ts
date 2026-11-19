@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { AttemptSummary, ProblemCard, TaskStatus, TaskSummary } from '../../api';
+import type { AttemptSummary, ProblemCard, StudyMark, TaskStatus, TaskSummary } from '../../api';
 import {
   ACTIVITY_DAYS,
   activity,
@@ -143,6 +143,10 @@ describe('the daily task', () => {
   });
 });
 
+function markedAt(iso: string, card = iso): StudyMark {
+  return { card, studiedAt: iso };
+}
+
 describe('activity and the streak', () => {
   const now = new Date('2026-10-28T12:00:00Z');
 
@@ -177,6 +181,33 @@ describe('activity and the streak', () => {
     const { streak } = activity([submittedAt('2026-10-26T08:00:00Z')], now);
 
     expect(streak).toBe(0);
+  });
+
+  it('counts the days of study marks only, as practice', () => {
+    const { days, marks, streak } = activity([], now, [markedAt('2026-10-28T08:00:00Z'), markedAt('2026-10-27T08:00:00Z'), markedAt('2026-10-27T09:00:00Z')]);
+
+    expect(days.slice(-2)).toEqual([2, 1]);
+    expect(marks.slice(-2)).toEqual([2, 1]);
+    expect(streak).toBe(2);
+  });
+
+  it('counts attempts and marks of one day together, and a day of either keeps the streak', () => {
+    const { days, marks, streak } = activity(
+      [submittedAt('2026-10-28T08:00:00Z'), submittedAt('2026-10-26T08:00:00Z')],
+      now,
+      [markedAt('2026-10-28T09:00:00Z'), markedAt('2026-10-27T09:00:00Z')],
+    );
+
+    expect(days.slice(-3)).toEqual([1, 1, 2]);
+    expect(marks.slice(-3)).toEqual([0, 1, 1]);
+    expect(streak).toBe(3);
+  });
+
+  it('keeps attempts alone as they were, with no mark among the days', () => {
+    const { marks, streak } = activity([submittedAt('2026-10-28T08:00:00Z')], now);
+
+    expect(marks.every((count) => count === 0)).toBe(true);
+    expect(streak).toBe(1);
   });
 
   it('shades a day by how many attempts it had', () => {
@@ -229,6 +260,21 @@ describe('a year of activity', () => {
 
     expect(year.longestStreak).toBe(3);
     expect(year.activeDays).toBe(5);
+  });
+
+  it('counts study marks as practice of their days, apart from the attempts', () => {
+    const year = yearActivity(
+      [submittedAt('2026-10-27T08:00:00Z')],
+      now,
+      [markedAt('2026-10-28T08:00:00Z'), markedAt('2026-10-27T09:00:00Z'), markedAt('2026-10-26T09:00:00Z'), markedAt('2025-10-01T08:00:00Z')],
+    );
+
+    expect(year.days.slice(-3)).toEqual([1, 2, 1]);
+    expect(year.marks.slice(-3)).toEqual([1, 1, 1]);
+    expect(year.total).toBe(1);
+    expect(year.studied).toBe(3);
+    expect(year.activeDays).toBe(3);
+    expect(year.longestStreak).toBe(3);
   });
 
   it('says nothing was done in a year without an attempt', () => {

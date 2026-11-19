@@ -14,6 +14,7 @@ import type {
   Page,
   PageQuery,
   Pick,
+  Practice,
   ProblemCatalogue,
   Progress,
   Signal,
@@ -100,6 +101,15 @@ export async function listAttemptsSince(client: ApiClient, since: Date, signal?:
       return attempts;
     }
   }
+}
+
+/**
+ * The caller's practice since `since`: the attempts started since then and every study mark on a
+ * published card — what the streak and the activity are counted from. Both are read, or neither.
+ */
+export async function listPracticeSince(client: ApiClient, since: Date, signal?: AbortSignal): Promise<Practice> {
+  const [attempts, studied] = await Promise.all([listAttemptsSince(client, since, signal), getStudiedCards(client, signal)]);
+  return { attempts, marks: studied.cards };
 }
 
 /** `POST /attempts` — starts an attempt at a published task. */

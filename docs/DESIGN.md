@@ -312,8 +312,9 @@ its token names are its own, and where it differs from this document, this docum
     64 rem it is an icon button (*Открыть поиск*) that opens the one field as an overlay over the
     header, with a close button; the focus goes into the field, and Escape or the close button gives
     it back to the icon.
-  - **The streak** is «N дн.», named in full for a screen reader; read again on each page change. It
-    is a link to `/profile`.
+  - **The streak** is «N дн.», named in full for a screen reader; days with a submitted attempt or a
+    card marked studied; read again on each page change and on each study mark stored or taken back
+    (the `ritocode:study-marks-changed` event). It is a link to `/profile`.
   - **The avatar** is the username's first letter; it opens a menu with the username, *Профиль* and
     *Выйти*. *Войти* opens the providers with the sign-in notice, as before.
   - **At phone width (48 rem) the header is one row, 64 px**, signed in or out: the brand on the left;
@@ -446,8 +447,18 @@ column. Styles in `pages/profile/profile.css`, classes `rc-profile__*`.
   Mono, in the difficulty colours, each with a thin bar; «Начато» and «Ответ открыт» small under them.
   **Диагностика** — three `rc-stat` tiles: found of met, treated right of found, picked where it was
   not (on `--danger-surface` when above zero), and a line that only first attempts count.
-- **Активность за год**: «N попыток за год», active days and the longest streak at the right; the
-  map, 53 columns of seven days with today last and outlined, cells filling the card (`aspect-ratio:
+- **Изучение** ([#281](https://github.com/shoraLBRT/ritocode/issues/281), ADR 0018): the
+  published cards marked studied — the number counting up, «из N карточек изучено» and an `rc-bar`
+  in `--accent` — then a row per class in its colour (the classes' dot, «X из Y» in Plex Mono, an
+  `rc-bar` in the class colour; two or more columns as the card allows), and a hand-drawn SVG chart
+  of the cards studied over time: a step line in `--accent` over `--accent-soft`, cumulative from
+  the first mark's day (left) to today (right), the count at the top left, the first date and
+  «сегодня» under it, the whole chart one `role="img"` named in words. A card found in a task is not
+  studied by that; a quiet line says so. **No mark yet**: the same card in zeros, and in place of
+  the chart a line and a primary button to `/problems`.
+- **Активность за год**: «N попыток за год», the cards studied in the year (when any), active days
+  and the longest streak at the right; a day with a submitted attempt or a study mark is active, and
+  its count is both (the cell's `title` names each); the map, 53 columns of seven days with today last and outlined, cells filling the card (`aspect-ratio:
   1`), each with its date and count as a `title`, the whole map one `role="img"` named in words; the
   months' short names under it. Below 48rem the map scrolls sideways in its own region (cells at
   least 11 px), opened on today.
@@ -462,7 +473,8 @@ column. Styles in `pages/profile/profile.css`, classes `rc-profile__*`.
   panel an invitation with a primary button to `/tasks`.
 - Each card loads with `Skeleton` blocks of its final shape and fails on its own with `ErrorState`.
   The ring sweeps, the bars fill from zero and the big numbers count up; the cards stagger in by
-  40 ms. On a phone one column: person, solved, diagnosis, classes, activity, the panel.
+  40 ms. On a phone one column: person, solved, diagnosis, classes, study, activity, the
+  panel.
 
 ### The admin area
 
