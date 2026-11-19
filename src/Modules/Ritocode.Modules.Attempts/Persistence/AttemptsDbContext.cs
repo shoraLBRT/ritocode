@@ -5,8 +5,8 @@ using Ritocode.Shared.Persistence;
 namespace Ritocode.Modules.Attempts.Persistence;
 
 /// <summary>
-/// The <c>attempts</c> schema: attempts and signals. Every row belongs to a user; see
-/// <see cref="OwnedAttempts"/> and <see cref="OwnedSignals"/>.
+/// The <c>attempts</c> schema: attempts, signals, reveals and study marks. Every row belongs to a user; see
+/// <see cref="OwnedAttempts"/>, <see cref="OwnedSignals"/>, <see cref="OwnedReveals"/> and <see cref="OwnedStudyMarks"/>.
 /// </summary>
 public sealed class AttemptsDbContext(DbContextOptions<AttemptsDbContext> options) : ModuleDbContext(options)
 {
@@ -20,6 +20,8 @@ public sealed class AttemptsDbContext(DbContextOptions<AttemptsDbContext> option
 
     public DbSet<Reveal> Reveals => Set<Reveal>();
 
+    public DbSet<StudyMark> StudyMarks => Set<StudyMark>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -27,5 +29,6 @@ public sealed class AttemptsDbContext(DbContextOptions<AttemptsDbContext> option
         modelBuilder.ApplyConfiguration(new AttemptConfiguration());
         modelBuilder.ApplyConfiguration(new SignalConfiguration());
         modelBuilder.ApplyConfiguration(new RevealConfiguration());
+        modelBuilder.ApplyConfiguration(new StudyMarkConfiguration());
     }
 }
