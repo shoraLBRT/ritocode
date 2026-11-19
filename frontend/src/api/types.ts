@@ -387,3 +387,31 @@ export interface Practice {
   readonly attempts: readonly AttemptSummary[];
   readonly marks: readonly StudyMark[];
 }
+
+/** `GET /admin/stats/activity` (#304): one bucket of UTC days, `start` to `end`, both included. */
+export interface ActivityBucket {
+  readonly start: string;
+  readonly end: string;
+  readonly activeLearners: number;
+  readonly newUsers: number;
+  readonly attemptsStarted: number;
+  readonly attemptsSubmitted: number;
+  readonly answersRevealed: number;
+  readonly signalsSent: number;
+  readonly cardsStudied: number;
+}
+
+/** `GET /admin/stats/activity` (#304): usage over a range of UTC days, by day or by seven-day week. */
+export interface ActivityReport {
+  readonly from: string;
+  readonly to: string;
+  readonly bucket: 'day' | 'week';
+  readonly buckets: readonly ActivityBucket[];
+  readonly summary: {
+    readonly dailyActive: number;
+    readonly weeklyActive: number;
+    readonly monthlyActive: number;
+    readonly learners: number;
+    readonly returnedAfterWeek: number;
+  };
+}

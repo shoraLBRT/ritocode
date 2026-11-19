@@ -96,6 +96,9 @@ public static class ApiSetupExtensions
         // The admin system page (#297): host-level, as it reads every module.
         builder.Services.AddSystemPage(builder.Configuration);
 
+        // The admin usage over time (#304): host-level, as it composes two modules' answers.
+        builder.Services.AddActivityStats();
+
         var apiOptions = builder.Configuration.GetSection(ApiOptions.SectionName).Get<ApiOptions>() ?? new ApiOptions();
 
         // A body larger than any request the product makes is refused by the server before it is read.
@@ -197,6 +200,7 @@ public static class ApiSetupExtensions
         api.MapMetaEndpoints();
         api.MapFeedbackEndpoints();
         api.MapSystemEndpoints();
+        api.MapActivityEndpoints();
         api.MapModules(ModuleRegistry.All);
         app.MapModuleHostEndpoints(ModuleRegistry.All);
 

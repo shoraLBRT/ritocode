@@ -22,6 +22,14 @@ internal static class EveryonesRows
     public static IQueryable<Signal> EveryonesSignals(this AttemptsDbContext context) =>
         context.Signals.AsNoTracking();
 
+    /// <summary>Every user's reveals, read-only, for the admin area's usage over time (#304).</summary>
+    public static IQueryable<Reveal> EveryonesReveals(this AttemptsDbContext context) =>
+        context.Reveals.AsNoTracking();
+
+    /// <summary>Every user's study marks, read-only, for the admin area's usage over time (#304).</summary>
+    public static IQueryable<StudyMark> EveryonesStudyMarks(this AttemptsDbContext context) =>
+        context.StudyMarks.AsNoTracking();
+
     /// <summary>The signal <paramref name="signalId"/>, tracked, whoever sent it.</summary>
     public static Task<Signal?> FindAnySignalAsync(this AttemptsDbContext context, Guid signalId, CancellationToken cancellationToken) =>
         context.Signals.FirstOrDefaultAsync(candidate => candidate.Id == signalId, cancellationToken);

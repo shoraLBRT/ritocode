@@ -69,6 +69,7 @@ public sealed class AttemptsModule : IModule
 
         services.AddScoped<IAdminReader, AdminReader>();
         services.AddScoped<IAttemptTallyLookup, AttemptTallyLookup>();
+        services.AddScoped<ILearnerActivityLookup, LearnerActivityLookup>();
 
         services.AddScoped<IStudyMarks, StudyMarks>();
 

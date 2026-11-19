@@ -42,6 +42,7 @@ public sealed class UsersModule : IModule
         services.AddScoped<IUserLookup, UserLookup>();
         services.AddScoped<IUserAccounts, UserAccounts>();
         services.AddScoped<IUserContactLookup, UserContactLookup>();
+        services.AddScoped<IUserSignupLookup, UserSignupLookup>();
 
         services.AddOptions<AdminOptions>()
             .Bind(configuration.GetSection(AdminOptions.SectionName))

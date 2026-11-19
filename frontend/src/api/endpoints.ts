@@ -1,5 +1,6 @@
 import type { ApiClient } from './client';
 import type {
+  ActivityReport,
   AdminAttempt,
   AdminAttemptStatus,
   AdminSignal,
@@ -225,4 +226,14 @@ export function listModules(client: ApiClient, signal?: AbortSignal): Promise<Mo
 /** `GET /admin/system` — the API's build, content, migrations, database and dependencies (#297). Admins only. */
 export function readAdminSystem(client: ApiClient, signal?: AbortSignal): Promise<SystemReport> {
   return client.request<SystemReport>('/admin/system', signal ? { signal } : {});
+}
+
+/** `GET /admin/stats/activity` — usage over `from`..`to` (UTC dates, both included) by `bucket` (#304). Admins only. */
+export function readAdminActivity(
+  client: ApiClient,
+  query: { from: string; to: string; bucket: 'day' | 'week' },
+  signal?: AbortSignal,
+): Promise<ActivityReport> {
+  const params = new URLSearchParams({ from: query.from, to: query.to, bucket: query.bucket });
+  return client.request<ActivityReport>(`/admin/stats/activity?${params.toString()}`, signal ? { signal } : {});
 }
