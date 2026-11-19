@@ -47,7 +47,7 @@ function submitted(at: string) {
   return { id: at, task: 'demo-task', startedAt: at, step: 'treatment', submittedAt: at, practice: false, score: null, maxScore: null };
 }
 
-function api({ signedIn = false, attempts = [] as unknown[] } = {}) {
+function api({ signedIn = false, attempts = [] as unknown[], marks = [] as unknown[] } = {}) {
   return vi.fn<typeof globalThis.fetch>().mockImplementation((input) => {
     const url = new URL(urlOf(input));
 
@@ -62,6 +62,8 @@ function api({ signedIn = false, attempts = [] as unknown[] } = {}) {
         return Promise.resolve(jsonResponse(progress));
       case '/api/v1/attempts':
         return Promise.resolve(jsonResponse(pageOf(attempts, 1, 100)));
+      case '/api/v1/me/studied':
+        return Promise.resolve(jsonResponse({ cards: marks }));
       case '/api/v1/tasks/demo-task':
         return Promise.resolve(jsonResponse({ ...task, slug: 'demo-task' }));
       default:
@@ -218,6 +220,26 @@ describe('the arena', () => {
       expect(map.querySelector('[title="17 ноября: 2 попытки"]')).toHaveAttribute('data-today');
       expect(map.querySelector('[title="16 ноября: 1 попытка"]')).not.toHaveAttribute('data-today');
       expect(map.querySelector('[title="15 ноября: нет попыток"]')).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('counts the cards marked studied in the streak and in each day of the map', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-17T09:00:00Z'));
+    try {
+      const marks = [
+        { card: 'money-in-float', studiedAt: '2026-11-17T08:00:00Z' },
+        { card: 'hardcoded-config', studiedAt: '2026-11-15T08:00:00Z' },
+      ];
+      renderApp(api({ signedIn: true, attempts: [submitted('2026-11-17T06:00:00Z'), submitted('2026-11-16T07:00:00Z')], marks }), '/');
+
+      const map = await screen.findByRole('img', { name: 'Карта активности за 12 недель: 2 попытки, изучено карточек: 2' });
+      expect(map.querySelector('[title="17 ноября: 1 попытка, изучено карточек: 1"]')).toHaveAttribute('data-level', '2');
+      expect(map.querySelector('[title="16 ноября: 1 попытка"]')).toBeInTheDocument();
+      expect(map.querySelector('[title="15 ноября: изучено карточек: 1"]')).toHaveAttribute('data-level', '1');
+      expect(screen.getByText('3 дня подряд')).toBeInTheDocument();
     } finally {
       vi.useRealTimers();
     }

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen, within } from '@testing-library/react';
-import type { AttemptSummary, Me, TaskSummary } from '../../api';
+import type { AttemptSummary, Me, ProblemCard, StudyMark, TaskSummary } from '../../api';
 import { ru } from '../../i18n';
 import { renderApp } from '../../test/render';
 import { jsonResponse, pageOf, problemResponse } from '../../test/responses';
@@ -36,6 +36,32 @@ const tasks: TaskSummary[] = [
 ];
 
 const day = 24 * 60 * 60 * 1000;
+
+const sections = { signs: null, whyAiDoesIt: null, cost: null, acceptableWhen: null, detection: null, treatment: null, sources: null, counterArguments: null };
+
+function card(slug: string, cls: string): ProblemCard {
+  return { slug, class: cls, name: slug, summary: slug, keywords: [], sections };
+}
+
+/** The published catalogue: five cards in three classes. */
+const catalogue = {
+  classes: [
+    { id: 'disproportion', name: 'Несоразмерность', description: null },
+    { id: 'hygiene', name: 'Гигиена и безопасность', description: null },
+    { id: 'domain', name: 'Предметная область', description: null },
+  ],
+  cards: [
+    card('overengineering', 'disproportion'),
+    card('hardcoded-config', 'hygiene'),
+    card('secrets-in-repo', 'hygiene'),
+    card('swallowed-error', 'hygiene'),
+    card('money-in-float', 'domain'),
+  ],
+};
+
+function mark(slug: string, daysAgo: number): StudyMark {
+  return { card: slug, studiedAt: new Date(Date.now() - daysAgo * day).toISOString() };
+}
 
 function attempt(id: string, task: string, daysAgo: number | null, extra: Partial<AttemptSummary> = {}): AttemptSummary {
   const at = new Date(Date.now() - (daysAgo ?? 0) * day).toISOString();
@@ -75,7 +101,8 @@ function api({
   signedIn = true,
   failProgress = false,
   caller = me,
-}: { body?: object; list?: AttemptSummary[]; signedIn?: boolean; failProgress?: boolean; caller?: Me } = {}) {
+  marks = [],
+}: { body?: object; list?: AttemptSummary[]; signedIn?: boolean; failProgress?: boolean; caller?: Me; marks?: StudyMark[] } = {}) {
   return vi.fn<typeof globalThis.fetch>().mockImplementation((input) => {
     const { pathname } = new URL(urlOf(input));
 
@@ -88,6 +115,10 @@ function api({
         return Promise.resolve(jsonResponse(pageOf(tasks, 1, 100)));
       case '/api/v1/attempts':
         return Promise.resolve(jsonResponse(pageOf(list, 1, 100)));
+      case '/api/v1/problems':
+        return Promise.resolve(jsonResponse(catalogue));
+      case '/api/v1/me/studied':
+        return Promise.resolve(jsonResponse({ cards: marks }));
       default:
         return Promise.resolve(jsonResponse([]));
     }
@@ -170,6 +201,53 @@ describe('the profile', () => {
     expect(activity.getByText('Активных дней: 3')).toBeInTheDocument();
     expect(activity.getByText('Самая длинная серия: 2 дн.')).toBeInTheDocument();
     expect(activity.getByRole('img', { name: /^Карта активности за год: 3 попытки/ })).toBeInTheDocument();
+  });
+
+  it('counts the cards studied out of the published ones, in all and per class, with a chart over time', async () => {
+    renderApp(api({ marks: [mark('hardcoded-config', 3), mark('secrets-in-repo', 0), mark('money-in-float', 0)] }), '/profile');
+
+    const study = within(await screen.findByRole('region', { name: ru.profile.study.title }));
+    expect(await study.findByLabelText('Изучено 3 из 5 карточек')).toBeInTheDocument();
+    expect(study.getByRole('img', { name: 'Изучено 2 из 3' })).toBeInTheDocument();
+    expect(study.getByRole('img', { name: 'Изучено 1 из 1' })).toBeInTheDocument();
+    expect(study.getByRole('img', { name: 'Изучено 0 из 1' })).toBeInTheDocument();
+    // From the first mark, one card, to today's three.
+    expect(study.getByRole('img', { name: /^График изученных карточек: с .+ по сегодня — от 1 до 3$/ })).toBeInTheDocument();
+    expect(study.queryByRole('link', { name: ru.profile.study.action })).not.toBeInTheDocument();
+  });
+
+  it('shows a learner with no mark the study section in zeros, and the way to the catalogue', async () => {
+    // The default progress has cards found in tasks: none of them is studied by that.
+    renderApp(api(), '/profile');
+
+    const study = within(await screen.findByRole('region', { name: ru.profile.study.title }));
+    expect(await study.findByLabelText('Изучено 0 из 5 карточек')).toBeInTheDocument();
+    expect(study.getByRole('img', { name: 'Изучено 0 из 3' })).toBeInTheDocument();
+    expect(study.getByRole('link', { name: ru.profile.study.action })).toHaveAttribute('href', '/problems');
+    expect(study.queryByRole('img', { name: /^График/ })).not.toBeInTheDocument();
+  });
+
+  it('counts study marks in the streak and the year, with the attempts or alone', async () => {
+    renderApp(api({ list: [], marks: [mark('hardcoded-config', 1), mark('secrets-in-repo', 0)] }), '/profile');
+
+    const person = within(await screen.findByRole('region', { name: 'developer' }));
+    expect(await person.findByRole('img', { name: 'Серия: 2 дня подряд' })).toBeInTheDocument();
+    const activity = within(screen.getByRole('region', { name: ru.profile.activity.title }));
+    expect(await activity.findByText('Изучено карточек: 2')).toBeInTheDocument();
+    expect(activity.getByText('Активных дней: 2')).toBeInTheDocument();
+    expect(activity.getByRole('img', { name: /^Карта активности за год: 0 попыток, изучено карточек: 2/ })).toBeInTheDocument();
+  });
+
+  it('counts a day with an attempt and a mark once in the streak, and both in its count', async () => {
+    // Attempts today, yesterday and five days ago; a mark two days ago joins the run.
+    renderApp(api({ marks: [mark('hardcoded-config', 2), mark('secrets-in-repo', 0)] }), '/profile');
+
+    const person = within(await screen.findByRole('region', { name: 'developer' }));
+    expect(await person.findByRole('img', { name: 'Серия: 3 дня подряд' })).toBeInTheDocument();
+    const activity = within(screen.getByRole('region', { name: ru.profile.activity.title }));
+    expect(await activity.findByText('3 попытки за год')).toBeInTheDocument();
+    expect(activity.getByText('Активных дней: 4')).toBeInTheDocument();
+    expect(activity.getByRole('img', { name: /^Карта активности за год: 3 попытки, изучено карточек: 2/ })).toBeInTheDocument();
   });
 
   it('lists the recent submitted attempts, each opening its review', async () => {
