@@ -313,6 +313,13 @@ description. As of that day:
   checked signed in in the built-in browser at 1280 and 375 px, light and dark, with marks over
   three weeks and with none. With it ADR 0018's MVP part is built; the drill and snippets wait in
   *Later* (#282, #283).
+  **#292** (2026-11-19, PR #307 open): on `/problems` a class's two counts (`rc-catalogue__class-meta`)
+  take the line under its name below 30rem instead of the study count wrapping alone; and a
+  `#slug` the browser itself sets after a card was closed (a typed address, a plain `#slug` link)
+  opens the card again — such hash changes all have the router key `default` and can repeat the
+  same location, so the page also counts `hashchange`. Lint, build and vitest (498) pass; checked in
+  the built-in browser at 375 and 1280 px, light and dark, against the exported catalogue (the header
+  search was not, it needs the API).
 - **Later** holds the post-MVP iterations that were SPEC §12; not taken until the maintainer moves one.
   Since 2026-11-11 it also holds the **incident**
   ([#227](https://github.com/shoraLBRT/ritocode/issues/227),

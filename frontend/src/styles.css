@@ -624,6 +624,24 @@ code {
   background: var(--k);
 }
 
+/* The count and the study count stay together: on a phone they take the line under the name. */
+.rc-catalogue__class-meta {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 12px;
+  white-space: nowrap;
+}
+
+@media (max-width: 30rem) {
+  .rc-catalogue__class-meta {
+    flex-basis: 100%;
+  }
+
+  .rc-catalogue__class-count::before {
+    display: none;
+  }
+}
+
 .rc-catalogue__class-count {
   color: var(--text-faint);
   font-family: var(--font-mono);
