@@ -577,6 +577,13 @@ here.
 `/admin` opens on an overview: the number of open signals, users, and submitted and unsubmitted
 attempts, each leading to its list, and the newest open signals. It holds no data of its own.
 
+**System** (`/admin/system`, #297) says what is deployed and how it is, so a release can be checked
+without SSH: the API's version and commit, the web image's commit (from the `version.json` it
+serves), the content revision ingested and when, each module's migrations applied and pending, the
+database's size, and each dependency's state — PostgreSQL, Umami, the feedback GitHub App's
+credential — as working, not answering, or not configured. The last good backup is shown once the
+backup monitoring leaves a heartbeat (#296); until then it is absent, not an error.
+
 Adding or editing tasks through the admin area is a later iteration (§12). In the MVP, content
 reaches the product only through the repository (§7).
 
@@ -705,6 +712,7 @@ Under `/api/v1`, following ADR 0003.
 | `POST /feedback` | A message from the feedback widget becomes a GitHub issue (§9.6) | public |
 | `GET /admin/signals`, `POST /admin/signals/{id}/resolve` | Signals | admin |
 | `GET /admin/users`, `GET /admin/attempts` | Users and attempts | admin |
+| `GET /admin/system` | What is deployed and how it is (§6.2 › System) | admin |
 
 Sign-in lives outside the versioned API: `GET /auth/login/{provider}?returnUrl=`, the providers'
 callbacks, and `POST /auth/logout`.

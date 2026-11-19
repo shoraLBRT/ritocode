@@ -72,6 +72,8 @@ services:
       Feedback__GitHubApp__PrivateKey: ${FEEDBACK_GITHUB_APP_PRIVATE_KEY:-}
       Feedback__GitHubToken: ${FEEDBACK_GITHUB_TOKEN:-}
       Feedback__TurnstileSecretKey: ${TURNSTILE_SECRET_KEY:-}
+      # The admin system page asks Umami's heartbeat inside the network (#297).
+      System__UmamiUrl: http://umami:3000
     volumes:
       - api-keys:/keys
     depends_on:

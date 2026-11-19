@@ -44,4 +44,4 @@ export const PRERENDERED_PATHS = ['/', '/problems', '/privacy'] as const;
  * an old address, the web image redirects to `/profile` (`deploy/web.Caddyfile`). A test holds this
  * list to the route table.
  */
-export const SHELL_PATHS = ['/tasks', '/profile', '/admin', '/admin/signals', '/admin/users', '/admin/attempts'] as const;
+export const SHELL_PATHS = ['/tasks', '/profile', '/admin', '/admin/signals', '/admin/users', '/admin/attempts', '/admin/system'] as const;

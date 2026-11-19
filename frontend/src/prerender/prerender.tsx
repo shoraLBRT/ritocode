@@ -31,6 +31,8 @@ export interface PrerenderInput {
   readonly config: SiteConfig;
   /** When the content last changed, as `YYYY-MM-DD`, for the sitemap's `lastmod`; left out when absent. */
   readonly lastmod?: string;
+  /** The commit the build is made from, for `version.json` and the admin system page (#297); `null` there when absent. */
+  readonly commit?: string;
 }
 
 const EMPTY_ROOT = '<div id="root"></div>';
@@ -42,7 +44,7 @@ const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
  * The public pages as static HTML, for search engines that do not run JavaScript — Yandex among them
  * (docs/SPEC.md §4.1): `/`, `/problems` with every card in full and its anchor, and `/privacy`, each with its title,
  * description and canonical address; `404.html`, the page the web image serves with 404 for an address
- * the site does not have; `sitemap.xml` and `robots.txt`; and the untouched shell under every other
+ * the site does not have; `sitemap.xml` and `robots.txt`; `version.json`, the commit built, for the admin system page; and the untouched shell under every other
  * address of the site — the fixed ones (`SHELL_PATHS`) and `tasks/{slug}.html` for each task of the
  * export. The files written are the site's addresses, so the web image needs no list of its own
  * (`deploy/web.Caddyfile`, #300). Once the bundle loads, the application renders over the static
@@ -50,13 +52,17 @@ const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
  *
  * Returns the files to write, by path under the build's output directory.
  */
-export function prerender({ content, template, origin, config, lastmod }: PrerenderInput): Map<string, string> {
+export function prerender({ content, template, origin, config, lastmod, commit }: PrerenderInput): Map<string, string> {
   if (!template.includes(EMPTY_ROOT)) {
     throw new Error(`The template has no empty ${EMPTY_ROOT}: prerender the index.html a fresh 'vite build' wrote.`);
   }
 
   if (lastmod !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(lastmod)) {
     throw new Error(`The content date '${lastmod}' is not YYYY-MM-DD; set CONTENT_LASTMOD, such as 2026-11-19, or leave it unset.`);
+  }
+
+  if (commit !== undefined && !/^[0-9a-f]{7,40}$/.test(commit)) {
+    throw new Error(`The commit '${commit}' is not a git commit; set SOURCE_COMMIT to one, or leave it unset.`);
   }
 
   const site = siteOrigin(origin);
@@ -95,6 +101,7 @@ export function prerender({ content, template, origin, config, lastmod }: Preren
   }
 
   files.set('sitemap.xml', sitemap(site, lastmod));
+  files.set('version.json', `${JSON.stringify({ commit: commit ?? null })}\n`);
   files.set('robots.txt', `User-agent: *\nAllow: /\n\nSitemap: ${site}/sitemap.xml\n`);
 
   return files;

@@ -235,6 +235,59 @@
   color: var(--text-faint);
 }
 
+/* The system page (#297): a panel of facts, a label and its value, two to a row where there is room. */
+.rc-admin__facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+}
+
+.rc-admin__fact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 12px 18px;
+  border-top: 1px solid var(--border);
+}
+
+.rc-admin__fact dt {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.rc-admin__fact dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.rc-admin__code {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+}
+
+.rc-admin__state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.rc-admin__state::before {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  content: '';
+}
+
+.rc-admin__state--ok { color: var(--good); }
+.rc-admin__state--failing { color: var(--danger); }
+.rc-admin__state--none { color: var(--text-faint); }
+
 .rc-admin__slug,
 .rc-admin__link {
   color: var(--text);
@@ -362,6 +415,14 @@
 
   .rc-admin__tile-value {
     font-size: 1.625rem;
+  }
+
+  .rc-admin__facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rc-admin__fact {
+    padding: 10px 16px;
   }
 
   .rc-admin__table {

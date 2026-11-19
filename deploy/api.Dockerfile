@@ -8,6 +8,12 @@
 # The migrator reads its own settings from /app/migrator wherever it is started.
 #
 # Both read `Database__ConnectionString` from the environment. Built by .github/workflows/release-images.yml.
+#
+# The build argument SOURCE_COMMIT, the commit built, is stamped into the API's informational version
+# (`0.1.0+<commit>`), which the admin system page shows (#297); without it the commit is unknown.
+#
+# SOURCE_COMMIT, the commit built, is stamped into the API's informational version (`0.1.0+<commit>`), which the
+# admin system page shows (#297); without it the commit is unknown.
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /source
@@ -15,9 +21,13 @@ WORKDIR /source
 COPY global.json Directory.Build.props Directory.Packages.props .editorconfig ./
 COPY src/ src/
 
+ARG SOURCE_COMMIT=
+
+ARG SOURCE_COMMIT=
+
 # The migrator references the API, so the API's appsettings.json reaches its output too; the last
 # line fails the build unless the migrator's own settings are the ones kept.
-RUN dotnet publish src/Ritocode.Api --configuration Release --output /out/api \
+RUN dotnet publish src/Ritocode.Api --configuration Release --output /out/api -p:SourceRevisionId="$SOURCE_COMMIT" \
  && dotnet publish src/Ritocode.DbMigrator --configuration Release --output /out/migrator \
  && grep -q MaxRetryCount /out/migrator/appsettings.json
 

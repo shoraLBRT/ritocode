@@ -5,6 +5,7 @@
 //
 // CONTENT_LASTMOD (YYYY-MM-DD), when the content last changed, gives the sitemap its `lastmod`;
 // a release sets it from git (`git log -1 --format=%cs -- content`), and it is left out when unset.
+// SOURCE_COMMIT, the commit built, goes into `version.json` for the admin system page (#297); null when unset.
 //
 // Everything that decides what a page says is in src/prerender/prerender.tsx, where it is tested;
 // this file only reads and writes.
@@ -29,6 +30,7 @@ const files = prerender({
   origin,
   config: resolveSiteConfig(process.env),
   lastmod: process.env.CONTENT_LASTMOD || undefined,
+  commit: process.env.SOURCE_COMMIT || undefined,
 });
 
 for (const [path, text] of files) {

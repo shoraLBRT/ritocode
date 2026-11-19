@@ -118,7 +118,7 @@ describe('the prerendered privacy policy', () => {
 
 describe('what else the build writes', () => {
   it('writes the untouched shell under every other address of the site, and under no other', () => {
-    for (const path of ['tasks.html', 'profile.html', 'admin.html', 'admin/signals.html', 'admin/users.html', 'admin/attempts.html']) {
+    for (const path of ['tasks.html', 'profile.html', 'admin.html', 'admin/signals.html', 'admin/users.html', 'admin/attempts.html', 'admin/system.html']) {
       expect(page(path)).toBe(template);
     }
 
@@ -143,6 +143,14 @@ describe('what else the build writes', () => {
     expect(page('sitemap.xml')).toContain('<loc>https://ritocode.example/privacy</loc>');
     expect(page('sitemap.xml')).not.toContain('/404');
     expect(page('robots.txt')).toContain('Sitemap: https://ritocode.example/sitemap.xml');
+  });
+
+  it('writes the commit built into version.json, and null without one', () => {
+    const built = prerender({ content, template, origin: 'https://ritocode.example', config: { demoTask: 'x' }, commit: 'ac1caf1b2c3d4e5f' });
+
+    expect(JSON.parse(built.get('version.json') ?? '')).toEqual({ commit: 'ac1caf1b2c3d4e5f' });
+    expect(JSON.parse(page('version.json'))).toEqual({ commit: null });
+    expect(() => prerender({ content, template, origin: 'https://ritocode.example', config: { demoTask: 'x' }, commit: 'main' })).toThrow(/SOURCE_COMMIT/);
   });
 
   it('leaves the date out of the sitemap when the content has none', () => {

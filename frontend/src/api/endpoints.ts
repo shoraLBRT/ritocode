@@ -5,6 +5,7 @@ import type {
   AdminSignal,
   AdminSignalStatus,
   AdminUser,
+  SystemReport,
   Attempt,
   AttemptStep,
   AttemptSummary,
@@ -219,4 +220,9 @@ export function signOut(client: ApiClient): Promise<void> {
 /** `GET /meta/modules` — which modules this host composed in. Diagnostics, not a product surface. */
 export function listModules(client: ApiClient, signal?: AbortSignal): Promise<ModuleInfo[]> {
   return client.request<ModuleInfo[]>('/meta/modules', { ...(signal ? { signal } : {}) });
+}
+
+/** `GET /admin/system` — the API's build, content, migrations, database and dependencies (#297). Admins only. */
+export function readAdminSystem(client: ApiClient, signal?: AbortSignal): Promise<SystemReport> {
+  return client.request<SystemReport>('/admin/system', signal ? { signal } : {});
 }
