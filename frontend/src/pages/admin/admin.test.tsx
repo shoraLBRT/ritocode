@@ -432,9 +432,10 @@ describe('the system page', () => {
     renderApp(api('admin'), '/admin/system');
 
     const table = within(await screen.findByRole('table'));
-    const rows = table.getAllByRole('row').slice(1);
-    expect(rows).toHaveLength(2);
-    expect(rows[0]).toHaveTextContent(`attempts${ru.admin.systemPage.upToDate}720261101_AddStudied`);
-    expect(within(rows[1]!).getByText('ждёт 1')).toHaveAttribute('title', '20261119_AddRevision');
+    const [, upToDate, pending] = table.getAllByRole('row');
+    expect(table.getAllByRole('row')).toHaveLength(3);
+    expect(upToDate).toHaveTextContent(`attempts${ru.admin.systemPage.upToDate}720261101_AddStudied`);
+    expect(pending).toContainElement(table.getByText('ждёт 1'));
+    expect(table.getByText('ждёт 1')).toHaveAttribute('title', '20261119_AddRevision');
   });
 });
