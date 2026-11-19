@@ -185,6 +185,27 @@ namespace Ritocode.Modules.Attempts.Persistence.Migrations
                     b.ToTable("signals", "attempts");
                 });
 
+            modelBuilder.Entity("Ritocode.Modules.Attempts.Domain.StudyMark", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<string>("CardSlug")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("card_slug");
+
+                    b.Property<DateTimeOffset>("StudiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("studied_at");
+
+                    b.HasKey("UserId", "CardSlug")
+                        .HasName("pk_study_marks");
+
+                    b.ToTable("study_marks", "attempts");
+                });
+
             modelBuilder.Entity("Ritocode.Modules.Attempts.Domain.Signal", b =>
                 {
                     b.HasOne("Ritocode.Modules.Attempts.Domain.Attempt", null)

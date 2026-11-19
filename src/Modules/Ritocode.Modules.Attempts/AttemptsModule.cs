@@ -11,6 +11,7 @@ using Ritocode.Modules.Attempts.Persistence;
 using Ritocode.Modules.Attempts.Progress;
 using Ritocode.Modules.Attempts.Scoring;
 using Ritocode.Modules.Attempts.Signals;
+using Ritocode.Modules.Attempts.Studying;
 using Ritocode.Shared.Contracts.Attempts;
 using Ritocode.Shared.Modules;
 using Ritocode.Shared.Persistence;
@@ -19,13 +20,14 @@ namespace Ritocode.Modules.Attempts;
 
 /// <summary>
 /// A learner's attempts at tasks, their scoring and progress, and the signals sent from their reviews
-/// (docs/SPEC.md §4.7, §4.8, §5).
+/// and the marks «Изучено» on problem cards (docs/SPEC.md §4.2, §4.7, §4.8, §5).
 /// </summary>
 /// <remarks>
 /// Owns the <c>attempts</c> schema. Reads a task and its answer key through
 /// <see cref="Shared.Contracts.Content.ITaskForAttemptLookup"/>, and answers the task catalogue's
 /// statuses through <see cref="ITaskStatusLookup"/> and the admin list of users' counts through
-/// <see cref="IAttemptTallyLookup"/>. Serves the admin area's signals and attempts (SPEC §6.2).
+/// <see cref="IAttemptTallyLookup"/>. Checks the card of a study mark through
+/// <see cref="Shared.Contracts.Content.IPublishedCardLookup"/>. Serves the admin area's signals and attempts (SPEC §6.2).
 /// </remarks>
 public sealed class AttemptsModule : IModule
 {
@@ -68,6 +70,8 @@ public sealed class AttemptsModule : IModule
         services.AddScoped<IAdminReader, AdminReader>();
         services.AddScoped<IAttemptTallyLookup, AttemptTallyLookup>();
 
+        services.AddScoped<IStudyMarks, StudyMarks>();
+
         // TryAdd, as the other modules do: the clock is host infrastructure.
         services.TryAddSingleton(TimeProvider.System);
     }
@@ -79,6 +83,7 @@ public sealed class AttemptsModule : IModule
         endpoints.MapGroup(RoutePrefix).MapAttemptEndpoints();
         endpoints.MapProgressEndpoints();
         endpoints.MapSignalEndpoints();
+        endpoints.MapStudyEndpoints();
         endpoints.MapAdminEndpoints();
     }
 }

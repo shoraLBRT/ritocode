@@ -17,6 +17,8 @@ import type {
   ProblemCatalogue,
   Progress,
   Signal,
+  StudiedCards,
+  StudyMark,
   TaskDetail,
   TaskSummary,
   TreatmentTree,
@@ -36,6 +38,21 @@ export function getMe(client: ApiClient, signal?: AbortSignal): Promise<Me> {
 /** `GET /me/progress` — the caller's progress, from first attempts only. */
 export function getProgress(client: ApiClient, signal?: AbortSignal): Promise<Progress> {
   return client.request<Progress>('/me/progress', { ...(signal ? { signal } : {}) });
+}
+
+/** `GET /me/studied` — the cards the caller has marked «Изучено», oldest first. */
+export function getStudiedCards(client: ApiClient, signal?: AbortSignal): Promise<StudiedCards> {
+  return client.request<StudiedCards>('/me/studied', { ...(signal ? { signal } : {}) });
+}
+
+/** `PUT /me/studied/{card}` — marks a card «Изучено»; marking it again keeps the first date. */
+export function markStudied(client: ApiClient, card: string): Promise<StudyMark> {
+  return client.request<StudyMark>(`/me/studied/${encodeURIComponent(card)}`, { method: 'PUT' });
+}
+
+/** `DELETE /me/studied/{card}` — takes the mark back, whether or not there was one. */
+export async function unmarkStudied(client: ApiClient, card: string): Promise<void> {
+  await client.request<undefined>(`/me/studied/${encodeURIComponent(card)}`, { method: 'DELETE' });
 }
 
 /** `GET /problems` — the whole problem catalogue, one object rather than a page (SPEC §4.2). */

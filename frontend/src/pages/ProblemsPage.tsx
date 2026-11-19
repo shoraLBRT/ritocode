@@ -15,6 +15,8 @@ import { Markdown } from '../components/Markdown';
 import { useApiResource } from '../hooks/useApiResource';
 import { useCountUp } from '../hooks/useCountUp';
 import { useStuck } from '../hooks/useStuck';
+import { useStudyMarks } from '../hooks/useStudyMarks';
+import type { StudyMarks } from '../hooks/useStudyMarks';
 import { useT } from '../i18n';
 import { Icon } from './task/parts';
 
@@ -22,7 +24,8 @@ import { Icon } from './task/parts';
  * `/problems` — the problem catalogue (docs/SPEC.md §4.2, DESIGN.md › The problem catalogue): every
  * card as a card in its class's colours, grouped by the six classes, with a search and a class
  * filter. A folded card shows its name and summary; opening it grows it to the centre of the screen
- * with all its sections. `/problems#god-class` opens at that card, already open.
+ * with all its sections. `/problems#god-class` opens at that card, already open. The open card has
+ * the toggle «Изучено» (ADR 0018); a folded card shows its mark, and a class heading counts them.
  *
  * Every card's sections are in the page, inside a native `<details>`: without JavaScript — the
  * prerendered page — a card unfolds in place, so the catalogue is readable and indexable as it is.
@@ -87,6 +90,7 @@ function Catalogue({ catalogue }: { catalogue: ProblemCatalogue }) {
   const returnFocus = useRef<string | null>(null);
   const searchInput = useRef<HTMLInputElement>(null);
   const bar = useStuck<HTMLDivElement>();
+  const marks = useStudyMarks();
 
   const terms = normalise(query).split(/\s+/).filter((term) => term.length > 0);
   const found = catalogue.cards.filter((card) => matches(card, terms));
@@ -190,7 +194,9 @@ function Catalogue({ catalogue }: { catalogue: ProblemCatalogue }) {
       <div className="rc-catalogue__classes" inert={openCard !== undefined}>
         {catalogue.classes.map((problemClass) => {
           const cards = shown.filter((card) => card.class === problemClass.id);
-          const total = catalogue.cards.filter((card) => card.class === problemClass.id).length;
+          const ofClass = catalogue.cards.filter((card) => card.class === problemClass.id);
+          const total = ofClass.length;
+          const studied = ofClass.filter((card) => marks.studied.has(card.slug)).length;
 
           return (
             cards.length > 0 && (
@@ -200,11 +206,21 @@ function Catalogue({ catalogue }: { catalogue: ProblemCatalogue }) {
                   <span className="rc-catalogue__class-count">
                     {cards.length < total ? t('problems.classCountOf', { shown: cards.length, total }) : total}
                   </span>
+                  {marks.ready && (
+                    <span className="rc-catalogue__class-studied">{t('problems.classStudied', { studied, total })}</span>
+                  )}
                   {problemClass.description !== null && <p>{problemClass.description}</p>}
                 </div>
                 <div className="rc-catalogue__grid">
                   {cards.map((card) => (
-                    <Card key={card.slug} card={card} className={problemClass.name} lifted={openCard?.slug === card.slug} onOpen={openAt} />
+                    <Card
+                      key={card.slug}
+                      card={card}
+                      className={problemClass.name}
+                      lifted={openCard?.slug === card.slug}
+                      studied={marks.studied.has(card.slug)}
+                      onOpen={openAt}
+                    />
                   ))}
                 </div>
               </section>
@@ -217,6 +233,7 @@ function Catalogue({ catalogue }: { catalogue: ProblemCatalogue }) {
         <OpenCard
           card={openCard}
           className={catalogue.classes.find((each) => each.id === openCard.class)?.name ?? openCard.class}
+          marks={marks}
           onClose={close}
         />
       )}
@@ -278,11 +295,13 @@ function Card({
   card,
   className,
   lifted,
+  studied,
   onOpen,
 }: {
   card: ProblemCard;
   className: string;
   lifted: boolean;
+  studied: boolean;
   onOpen: (card: ProblemCard) => void;
 }) {
   const t = useT();
@@ -293,7 +312,11 @@ function Card({
   };
 
   return (
-    <article id={card.slug} className={`rc-pcard k-${card.class}${lifted ? ' rc-pcard--lifted' : ''}`} aria-labelledby={`${card.slug}-name`}>
+    <article
+      id={card.slug}
+      className={`rc-pcard k-${card.class}${lifted ? ' rc-pcard--lifted' : ''}${studied ? ' rc-pcard--studied' : ''}`}
+      aria-labelledby={`${card.slug}-name`}
+    >
       <div className="rc-pcard__band">
         <span>{className}</span>
         {/* The seal is the card's anchor: a link to it that works without JavaScript too. */}
@@ -316,6 +339,13 @@ function Card({
           </div>
         </details>
       </div>
+      {/* The mark sits on the face's last line, across from «Открыть», and lets clicks through to it. */}
+      {studied && (
+        <span className="rc-pcard__studied" role="img" aria-label={t('problems.studiedCard', { name: card.name })}>
+          <Icon name="check" />
+          <span aria-hidden="true">{t('problems.studied')}</span>
+        </span>
+      )}
     </article>
   );
 }
@@ -325,7 +355,7 @@ function Card({
  * every section. It grows out of the folded card's place unless motion is reduced; ×, Esc and a
  * click outside close it, and Tab stays inside it while it is open.
  */
-function OpenCard({ card, className, onClose }: { card: ProblemCard; className: string; onClose: () => void }) {
+function OpenCard({ card, className, marks, onClose }: { card: ProblemCard; className: string; marks: StudyMarks; onClose: () => void }) {
   const t = useT();
   const dialog = useRef<HTMLDivElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
@@ -410,6 +440,22 @@ function OpenCard({ card, className, onClose }: { card: ProblemCard; className: 
           <div className="rc-pcard__summary">
             <Markdown source={card.summary} />
           </div>
+          {marks.ready && (
+            <div className="rc-pcard__study">
+              <button
+                type="button"
+                className={`button rc-pcard__study-toggle${marks.studied.has(card.slug) ? ' button--primary' : ''}`}
+                aria-pressed={marks.studied.has(card.slug)}
+                onClick={() => {
+                  marks.toggle(card.slug);
+                }}
+              >
+                <Icon name="check" />
+                {t('problems.studied')}
+              </button>
+              {marks.guest && <span className="rc-pcard__study-note">{t('problems.guestStudied')}</span>}
+            </div>
+          )}
           <div className="rc-pcard__sections">
             <CardSectionsView sections={card.sections} />
           </div>

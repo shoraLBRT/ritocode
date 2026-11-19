@@ -214,6 +214,10 @@ export const ru = {
     openCard: 'Открыть карточку «{name}»',
     close: 'Закрыть карточку',
     slug: '#{slug}',
+    studied: 'Изучено',
+    studiedCard: 'Карточка «{name}» изучена',
+    classStudied: 'изучено {studied} из {total}',
+    guestStudied: 'Без входа отметка хранится только в этом браузере.',
     sections: {
       signs: 'Признаки',
       whyAiDoesIt: 'Почему так делает ИИ',

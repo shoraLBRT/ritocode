@@ -636,6 +636,19 @@ code {
   margin-right: 8px;
 }
 
+.rc-catalogue__class-studied {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.rc-catalogue__class-studied::before {
+  content: '·';
+  margin-right: 8px;
+  color: var(--text-faint);
+}
+
 .rc-catalogue__class-head p {
   margin: 0;
   color: var(--text-muted);
@@ -713,6 +726,61 @@ code {
   border-radius: 50%;
   background: var(--k);
   box-shadow: inset 0 0 0 4px var(--ks), 0 0 0 1.5px var(--k);
+}
+
+/* A folded card the learner marked «Изучено»: the mark sits on the face's last line, across from «Открыть». */
+.rc-pcard__studied {
+  position: absolute;
+  bottom: 22px;
+  left: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--k);
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.rc-pcard__studied svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Two narrow columns on a phone: the check alone, so it never crowds «Открыть». */
+@media (max-width: 30rem) {
+  .rc-pcard__studied > span {
+    display: none;
+  }
+
+  .rc-pcard__studied svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.rc-pcard__study {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+
+.rc-pcard__study-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rc-pcard__study-toggle svg {
+  width: 16px;
+  height: 16px;
+}
+
+.rc-pcard__study-note {
+  color: var(--text-faint);
+  font-size: 0.85rem;
 }
 
 .rc-pcard__face {

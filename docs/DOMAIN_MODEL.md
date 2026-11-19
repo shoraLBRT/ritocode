@@ -99,6 +99,16 @@ task, nothing picked); from then on every attempt at the task in full. The task'
 learner — new, tried, solved, gave up — is a pure function of their submitted attempts and the
 reveal's time; a task solved before the reveal stays solved.
 
+## StudyMark
+
+Owned by the **Attempts** module ([ADR 0018](adr/0018-studying-problems.md)). A learner's mark
+«Изучено» on a problem card: the user, the card, when — one per learner and card. Marking a card
+already marked keeps the first date; taking the mark back deletes it. Only a **published** card can
+be marked (checked through `IPublishedCardLookup`); a mark on a card later **retired** is kept but
+shown and counted nowhere, and counts again if the card returns. A mark changes no task's result, and
+a card found in tasks is not marked by it. A guest's marks never reach the server: they live in that
+browser only.
+
 ## Scoring
 
 Owned by the **Attempts** module and stored in an attempt's result. Scoring is a pure function of an
