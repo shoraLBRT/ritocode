@@ -346,3 +346,14 @@ export interface AdminAttempt {
 export interface FeedbackSent {
   readonly number: number | null;
 }
+
+/** A card the caller has marked «Изучено» (SPEC §4.2 › Studying, ADR 0018), and when. */
+export interface StudyMark {
+  readonly card: string;
+  readonly studiedAt: string;
+}
+
+/** `GET /api/v1/me/studied`: the caller's marks on the cards published now, oldest first. */
+export interface StudiedCards {
+  readonly cards: readonly StudyMark[];
+}

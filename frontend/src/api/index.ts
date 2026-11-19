@@ -7,6 +7,8 @@ export {
   getMe,
   getProblemCatalogue,
   getProgress,
+  getStudiedCards,
+  markStudied,
   getTask,
   getTreatments,
   isLocalPath,
@@ -27,6 +29,7 @@ export {
   SIGN_IN_PROVIDERS,
   startAttempt,
   submitAttempt,
+  unmarkStudied,
 } from './endpoints';
 export type { SignInProvider } from './endpoints';
 export { DEFAULT_API_BASE_URL, resolveApiBaseUrl } from './config';
@@ -64,6 +67,8 @@ export type {
   ProblemClass,
   Progress,
   Signal,
+  StudiedCards,
+  StudyMark,
   TaskDetail,
   TaskSummary,
   TreatmentBranch,
