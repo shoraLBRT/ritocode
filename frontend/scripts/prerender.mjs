@@ -3,6 +3,9 @@
 //
 //   CONTENT_EXPORT=<file from `content export`> SITE_ORIGIN=https://ritocode.ru npm run build:static
 //
+// CONTENT_LASTMOD (YYYY-MM-DD), when the content last changed, gives the sitemap its `lastmod`;
+// a release sets it from git (`git log -1 --format=%cs -- content`), and it is left out when unset.
+//
 // Everything that decides what a page says is in src/prerender/prerender.tsx, where it is tested;
 // this file only reads and writes.
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
@@ -25,11 +28,13 @@ const files = prerender({
   template: await readFile(join(dist, 'index.html'), 'utf8'),
   origin,
   config: resolveSiteConfig(process.env),
+  lastmod: process.env.CONTENT_LASTMOD || undefined,
 });
 
 for (const [path, text] of files) {
   const target = join(dist, path);
   await mkdir(dirname(target), { recursive: true });
   await writeFile(target, text, 'utf8');
-  console.log(`dist/${path}`);
 }
+
+console.log(`dist/: ${files.size} files, ${[...files.keys()].filter((path) => path.startsWith('tasks/')).length} of them task addresses.`);

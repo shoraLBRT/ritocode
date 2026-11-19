@@ -40,9 +40,10 @@ const content: ContentExport = {
       { slug: 'money-in-float', class: 'domain', name: 'Деньги во float', summary: 'Копейки теряются.', keywords: [], sections: { ...sections, cost: 'Расхождение с бухгалтерией.' } },
     ],
   },
+  tasks: ['flower-shop-daily-revenue', 'orders-report-small-shop'],
 };
 
-const files = prerender({ content, template, origin: 'https://ritocode.example/', config: { demoTask: 'flower-shop-daily-revenue' } });
+const files = prerender({ content, template, origin: 'https://ritocode.example/', config: { demoTask: 'flower-shop-daily-revenue' }, lastmod: '2026-11-19' });
 
 function page(path: string): string {
   const html = files.get(path);
@@ -116,15 +117,43 @@ describe('the prerendered privacy policy', () => {
 });
 
 describe('what else the build writes', () => {
-  it('keeps the untouched shell for every other route', () => {
-    expect(page('spa.html')).toBe(template);
+  it('writes the untouched shell under every other address of the site, and under no other', () => {
+    for (const path of ['tasks.html', 'profile.html', 'admin.html', 'admin/signals.html', 'admin/users.html', 'admin/attempts.html']) {
+      expect(page(path)).toBe(template);
+    }
+
+    expect(page('tasks/flower-shop-daily-revenue.html')).toBe(template);
+    expect(page('tasks/orders-report-small-shop.html')).toBe(template);
+    expect([...files.keys()].filter((path) => path.startsWith('tasks/'))).toHaveLength(2);
+    expect(files.has('spa.html')).toBe(false);
   });
 
-  it('lists the public pages in the sitemap, and points robots at it', () => {
-    expect(page('sitemap.xml')).toContain('<loc>https://ritocode.example/</loc>');
+  it('writes the page of an unknown address, not to be indexed', () => {
+    const html = page('404.html');
+
+    expect(html).toContain(`<h1>${ru.notFound.title}</h1>`);
+    expect(html).toContain(`<title>${ru.meta.notFound.title}</title>`);
+    expect(html).toContain('<meta name="robots" content="noindex" />');
+    expect(html).not.toContain('rel="canonical"');
+  });
+
+  it('lists the public pages in the sitemap with the content date, and points robots at it', () => {
+    expect(page('sitemap.xml')).toContain('<url><loc>https://ritocode.example/</loc><lastmod>2026-11-19</lastmod></url>');
     expect(page('sitemap.xml')).toContain('<loc>https://ritocode.example/problems</loc>');
     expect(page('sitemap.xml')).toContain('<loc>https://ritocode.example/privacy</loc>');
+    expect(page('sitemap.xml')).not.toContain('/404');
     expect(page('robots.txt')).toContain('Sitemap: https://ritocode.example/sitemap.xml');
+  });
+
+  it('leaves the date out of the sitemap when the content has none', () => {
+    const undated = prerender({ content, template, origin: 'https://ritocode.example', config: { demoTask: 'x' } });
+
+    expect(undated.get('sitemap.xml')).toContain('<url><loc>https://ritocode.example/</loc></url>');
+  });
+
+  it('refuses a content date that is not a date, and a task slug that cannot name a file', () => {
+    expect(() => prerender({ content, template, origin: 'https://ritocode.example', config: { demoTask: 'x' }, lastmod: '19.11.2026' })).toThrow(/CONTENT_LASTMOD/);
+    expect(() => prerender({ content: { ...content, tasks: ['../escape'] }, template, origin: 'https://ritocode.example', config: { demoTask: 'x' } })).toThrow(/cannot name a file/);
   });
 
   it('refuses a template already prerendered, and an origin that is not an address', () => {

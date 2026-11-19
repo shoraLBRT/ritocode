@@ -96,7 +96,7 @@ static int Export(string file, string root)
     }
 
     File.WriteAllText(file, export.ToJson(), new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
-    Console.WriteLine($"{Path.GetFullPath(file)}: {export.Problems.Classes.Count} classes, {export.Problems.Cards.Count} cards.");
+    Console.WriteLine($"{Path.GetFullPath(file)}: {export.Problems.Classes.Count} classes, {export.Problems.Cards.Count} cards, {export.Tasks.Count} tasks.");
     return 0;
 }
 

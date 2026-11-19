@@ -51,9 +51,17 @@ with `build:static`. It renders `src/prerender/prerender.tsx` with Vite's SSR bu
 | File | Served for |
 | --- | --- |
 | `index.html` | `/` — the landing page, rendered |
-| `problems.html` | `/problems` — every card in full, each with its anchor |
-| `spa.html` | every other route — the untouched shell |
-| `sitemap.xml`, `robots.txt` | themselves |
+| `problems.html`, `privacy.html` | `/problems` — every card in full, each with its anchor — and `/privacy` |
+| `tasks.html`, `profile.html`, `admin.html`, `admin/*.html` | the other fixed routes (`SHELL_PATHS` in `src/site/pageMeta.ts`) — the untouched shell |
+| `tasks/{slug}.html` | `/tasks/{slug}` and its attempts, for each task of the export — the untouched shell |
+| `404.html` | any other address, with status 404 — the not-found page, rendered, `noindex` |
+| `sitemap.xml`, `robots.txt` | themselves; the sitemap's `lastmod` is `CONTENT_LASTMOD` when set |
+
+So the files written are the site's addresses, and the server needs no list of its own: it tries the
+path, then the path with `.html` (an attempt's review takes its task's file), and answers 404 with
+`404.html` for anything else. It redirects `/index.html`, any `*.html`, a trailing slash and
+`/progress` to the one canonical address (`deploy/web.Caddyfile`). A route added to `src/routes.tsx`
+must be added to `SHELL_PATHS` too — a test fails until it is.
 
 It needs the content export, made by the backend's own parser, and the site's address:
 
@@ -62,9 +70,17 @@ dotnet run --project src/Ritocode.ContentTool -- export content-export.json cont
 CONTENT_EXPORT=../content-export.json SITE_ORIGIN=https://ritocode.ru npm run build:static
 ```
 
-The server tries the path, then the path with `.html`, then `spa.html` (Caddy:
-`try_files {path} {path}.html /spa.html`). Once the bundle loads, the application renders over the
-static markup; `/problems` then reads the catalogue from the API as it always does.
+Once the bundle loads, the application renders over the static markup; `/problems` then reads the
+catalogue from the API as it always does.
+
+### The Lighthouse budget
+
+`npm run lighthouse`, after `build:static`, serves `dist/` the way the web image does and runs
+Lighthouse in headless Chrome on `/`, `/problems` and `/privacy`, failing when a category is under
+its budget (`scripts/lighthouse.mjs`): accessibility and SEO at 90, performance at 45 — where it
+stands, since the application renders over the prerendered markup and waits for the bundle and the
+API to paint the page again. `LIGHTHOUSE_RUNS` (3) sets how many runs the performance median takes,
+`LIGHTHOUSE_REPORTS=<dir>` keeps the reports, and `CHROME_PATH` names Chrome when it is not found.
 
 ## How it is put together
 

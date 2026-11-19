@@ -257,7 +257,10 @@ Localisation is built in from the first commit; only the Russian content is writ
 `/` and `/problems` must be **readable by search engines without running JavaScript** — including
 Yandex, which matters for a Russian-language audience. They are prerendered to static HTML at build
 time from the content export; the single-page application takes over once loaded. This revisits
-ADR 0001's "revisit if catalog SEO becomes a goal" without adding a server-rendering layer.
+ADR 0001's "revisit if catalog SEO becomes a goal" without adding a server-rendering layer. An address
+that is not a route of the application — a task slug the export does not name among them — is
+answered 404 with a prerendered not-found page, and each address has one form: a trailing slash and
+`/index.html` redirect to it (#300).
 
 **The home page is an arena** ([ADR 0015](adr/0015-arena-home-and-junior-audience.md),
 [DESIGN.md](DESIGN.md) › The arena; decided by the maintainer on 2026-10-28 in
@@ -284,7 +287,7 @@ ADR 0001's "revisit if catalog SEO becomes a goal" without adding a server-rende
 - **Progress** for a signed-in learner: found out of met, by class (§4.7), the **streak** and
   the **activity** of the last twelve weeks. A guest sees a sign-in prompt there.
 - **Without JavaScript** the prerendered page carries the lead, the catalogue's counts and the
-  problems to read; the content export has no tasks, so the daily task and the suggested tasks are
+  problems to read; the content export names the tasks only by slug, so the daily task and the suggested tasks are
   filled in by the application.
 
 ### 4.2 Problem catalogue
