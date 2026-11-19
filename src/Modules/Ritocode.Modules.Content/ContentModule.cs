@@ -44,6 +44,7 @@ public sealed class ContentModule : IModule
         services.AddScoped<ITaskForAttemptLookup, TaskForAttemptLookup>();
         services.AddScoped<ICardClassLookup, CardClassLookup>();
         services.AddScoped<IPublishedCardLookup, PublishedCardLookup>();
+        services.AddScoped<IContentRevisionLookup, ContentRevisionLookup>();
 
         // TryAdd: the clock is host infrastructure any module may want.
         services.TryAddSingleton(TimeProvider.System);

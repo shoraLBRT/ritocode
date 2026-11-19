@@ -282,6 +282,7 @@ public sealed class NonAdminEndpointTests(NonAdminContentTestApi api) : IClassFi
         { "POST", $"/api/v1/admin/signals/{Guid.CreateVersion7()}/resolve" },
         { "GET", "/api/v1/admin/users" },
         { "GET", "/api/v1/admin/attempts?user=someone" },
+        { "GET", "/api/v1/admin/system" },
     };
 
     [Theory]
@@ -334,6 +335,7 @@ public sealed class AnonymousAdminEndpointTests(AnonymousTestApi api) : IClassFi
     [InlineData("/api/v1/admin/signals")]
     [InlineData("/api/v1/admin/users")]
     [InlineData("/api/v1/admin/attempts")]
+    [InlineData("/api/v1/admin/system")]
     [InlineData("/api/v1/admin/no-such-list")]
     public async Task ASignedOutCaller_IsUnauthenticated(string path)
     {

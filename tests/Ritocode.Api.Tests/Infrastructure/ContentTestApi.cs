@@ -148,3 +148,13 @@ public sealed class NonAdminContentTestApi(PostgresTestServer postgres) : Conten
         ["Users:Admin:Emails:0"] = "admin@example.test",
     };
 }
+
+/// <summary>As <see cref="AdminContentTestApi"/>, with Umami at an address nothing answers on.</summary>
+public sealed class AdminUnreachableUmamiTestApi(PostgresTestServer postgres) : ContentTestApi(postgres)
+{
+    protected override IReadOnlyDictionary<string, string?>? Settings { get; } = new Dictionary<string, string?>
+    {
+        ["Users:Admin:Emails:0"] = "developer@ritocode.local",
+        ["System:UmamiUrl"] = "http://127.0.0.1:1",
+    };
+}

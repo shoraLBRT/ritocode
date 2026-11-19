@@ -52,17 +52,22 @@ public static class FeedbackEndpoints
         {
             // One per process: it keeps the App's installation token between messages.
             services.TryAddSingleton<GitHubAppCredential>();
-            services.AddHttpClient<IFeedbackIssues, GitHubFeedbackIssues>(http =>
-            {
-                http.BaseAddress = new Uri("https://api.github.com/");
-                http.Timeout = TimeSpan.FromSeconds(15);
-                http.DefaultRequestHeaders.UserAgent.ParseAdd("ritocode-feedback");
-                http.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
-                http.DefaultRequestHeaders.Add("X-GitHub-Api-Version", "2022-11-28");
-            });
+            services.AddHttpClient<IFeedbackIssues, GitHubFeedbackIssues>(http => ConfigureGitHub(http, TimeSpan.FromSeconds(15)));
         }
 
+        // The admin system page asks whether the App still signs in (#297), and waits less for the answer.
+        services.AddHttpClient<FeedbackCredentialCheck>(http => ConfigureGitHub(http, TimeSpan.FromSeconds(5)));
+
         return services;
+    }
+
+    private static void ConfigureGitHub(HttpClient http, TimeSpan timeout)
+    {
+        http.BaseAddress = new Uri("https://api.github.com/");
+        http.Timeout = timeout;
+        http.DefaultRequestHeaders.UserAgent.ParseAdd("ritocode-feedback");
+        http.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
+        http.DefaultRequestHeaders.Add("X-GitHub-Api-Version", "2022-11-28");
     }
 
     public static IEndpointRouteBuilder MapFeedbackEndpoints(this IEndpointRouteBuilder endpoints)

@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Ritocode.Api.Admin;
 using Ritocode.Api.Feedback;
 
 namespace Ritocode.Api.Tests.Feedback;
@@ -167,6 +168,40 @@ public sealed class GitHubFeedbackIssuesTests : IDisposable
         Assert.Empty(_github.Issues);
     }
 
+    [Fact]
+    public async Task CredentialCheck_AnAppGitHubSignsIn_IsOk()
+    {
+        var status = await Check(App(AppKey.ExportRSAPrivateKeyPem())).CheckAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(DependencyStatus.Ok, status);
+        Assert.Equal(1, _github.Count("POST /app/installations/42/access_tokens"));
+        Assert.Empty(_github.Issues);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.Forbidden)]
+    [InlineData(null)]
+    public async Task CredentialCheck_GitHubRefusesOrIsUnreachable_IsFailing(HttpStatusCode? status)
+    {
+        _github.Fail("POST /app/installations/42/access_tokens", status ?? FakeGitHub.Unreachable);
+
+        Assert.Equal(DependencyStatus.Failing, await Check(App(AppKey.ExportRSAPrivateKeyPem())).CheckAsync(TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task CredentialCheck_NoApp_OrMessagesToTheLog_IsNotConfigured()
+    {
+        var tokenOnly = new FeedbackOptions { Repository = Repository, GitHubToken = "a-token" };
+        var toTheLog = new FeedbackOptions { Sink = FeedbackSink.Log, Repository = Repository, GitHubApp = App(AppKey.ExportRSAPrivateKeyPem()).GitHubApp };
+
+        Assert.Equal(DependencyStatus.NotConfigured, await Check(tokenOnly).CheckAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(DependencyStatus.NotConfigured, await Check(toTheLog).CheckAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(
+            DependencyStatus.NotConfigured,
+            await new FeedbackCredentialCheck(_http, Options.Create(App(AppKey.ExportRSAPrivateKeyPem()))).CheckAsync(TestContext.Current.CancellationToken));
+        Assert.Empty(_github.Requests);
+    }
+
     public void Dispose()
     {
         _http.Dispose();
@@ -176,6 +211,8 @@ public sealed class GitHubFeedbackIssuesTests : IDisposable
 
     private GitHubFeedbackIssues Issues(FeedbackOptions options) =>
         new(_http, Options.Create(options), _credential, NullLogger<GitHubFeedbackIssues>.Instance);
+
+    private FeedbackCredentialCheck Check(FeedbackOptions options) => new(_http, Options.Create(options), _credential);
 
     private static FeedbackOptions App(string privateKey) => new()
     {
