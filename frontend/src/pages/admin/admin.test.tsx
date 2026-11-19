@@ -263,6 +263,52 @@ describe('the overview', () => {
     expect(await screen.findByText(ru.admin.overviewPage.empty)).toBeInTheDocument();
   });
 
+  /** A report of two UTC days with something on the second. */
+  const activity = {
+    from: '2026-11-18',
+    to: '2026-11-19',
+    bucket: 'day',
+    buckets: [
+      { start: '2026-11-18', end: '2026-11-18', activeLearners: 0, newUsers: 0, attemptsStarted: 0, attemptsSubmitted: 0, answersRevealed: 0, signalsSent: 0, cardsStudied: 0 },
+      { start: '2026-11-19', end: '2026-11-19', activeLearners: 3, newUsers: 2, attemptsStarted: 5, attemptsSubmitted: 4, answersRevealed: 1, signalsSent: 1, cardsStudied: 6 },
+    ],
+    summary: { dailyActive: 3, weeklyActive: 4, monthlyActive: 9, learners: 4, returnedAfterWeek: 1 },
+  };
+
+  function withActivity() {
+    const base = counted();
+    return vi
+      .fn<typeof globalThis.fetch>()
+      .mockImplementation((input, init) => (urlOf(input).includes('/admin/stats/activity') ? Promise.resolve(jsonResponse(activity)) : base(input, init)));
+  }
+
+  it('charts the activity over 30 UTC days by default, and 90 by week', async () => {
+    const fetchStub = withActivity();
+    renderApp(fetchStub, '/admin');
+
+    expect(await screen.findByText(ru.admin.activity.dau)).toBeInTheDocument();
+    expect(screen.getByText('25%')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: `${ru.admin.activity.cardsStudied}: 0, 6` })).toBeInTheDocument();
+    expect(screen.getByText(ru.admin.activity.noteDay)).toBeInTheDocument();
+
+    const first = requested(fetchStub, '/admin/stats/activity')[0];
+    expect(first?.searchParams.get('bucket')).toBe('day');
+    const days = (Date.parse(first?.searchParams.get('to') ?? '') - Date.parse(first?.searchParams.get('from') ?? '')) / 86_400_000;
+    expect(days).toBe(29);
+
+    fireEvent.click(screen.getByRole('button', { name: '90 дн.' }));
+    await waitFor(() => {
+      expect(requested(fetchStub, '/admin/stats/activity').at(-1)?.searchParams.get('bucket')).toBe('week');
+    });
+  });
+
+  it('keeps the tiles when the activity fails', async () => {
+    renderApp(counted(), '/admin');
+
+    expect(await screen.findByText(ru.admin.activity.failed)).toBeInTheDocument();
+    expect(await screen.findByRole('list', { name: ru.admin.overviewPage.tiles })).toBeInTheDocument();
+  });
+
   it('keeps the page when one count fails', async () => {
     const base = counted();
     const partial = vi

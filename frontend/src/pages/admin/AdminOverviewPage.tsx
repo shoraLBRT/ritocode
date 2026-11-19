@@ -6,6 +6,7 @@ import { useApiResource } from '../../hooks/useApiResource';
 import type { ApiResourceState } from '../../hooks/useApiResource';
 import { useCountUp } from '../../hooks/useCountUp';
 import { useT } from '../../i18n';
+import { AdminActivity } from './AdminActivity';
 import { AdminDate, AdminPanel, AdminTable, LearnerName, ListBody } from './shared';
 
 /** How many of the newest open signals the overview lists. */
@@ -13,7 +14,7 @@ const LATEST = 5;
 
 /**
  * `/admin` — the overview: four tiles, each a count read as the `totalItems` of a one-row page of its
- * own list and leading to that list, and the newest open signals under them. No data of its own
+ * own list and leading to that list, the usage over time (#304), and the newest open signals. No data of its own
  * (docs/SPEC.md §6.2). A tile that fails says so and does not blank the page.
  */
 export function AdminOverviewPage() {
@@ -43,6 +44,8 @@ export function AdminOverviewPage() {
           state={notSubmitted.state}
         />
       </ul>
+
+      <AdminActivity />
 
       <AdminPanel
         title={t('admin.overviewPage.latest')}
