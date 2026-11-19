@@ -211,6 +211,21 @@ describe('the problem catalogue', () => {
     expect(within(screen.getByRole('dialog')).getByRole('link', { name: 'Ссылка на карточку «Деньги во float»' })).toHaveAttribute('href', '#money-in-float');
   });
 
+  it('opens the card again when the browser changes the hash to it after it was closed', async () => {
+    renderApp(api(), '/problems#money-in-float');
+
+    const dialog = await screen.findByRole('dialog', { name: 'Деньги во float' });
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    // A hash change the browser makes itself (a typed address, a plain #slug link) can leave the
+    // router's location as it was — same hash, same "default" key — so only the event tells it apart.
+    window.history.replaceState(null, '', '/problems#money-in-float');
+    fireEvent(window, new HashChangeEvent('hashchange'));
+
+    expect(await screen.findByRole('dialog', { name: 'Деньги во float' })).toBeInTheDocument();
+  });
+
   it('shows how many cards each class holds, and how many of them a search leaves', async () => {
     const more = {
       ...catalogue,

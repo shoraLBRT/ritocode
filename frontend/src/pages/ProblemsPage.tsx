@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router';
+import type { Location } from 'react-router';
 import { track } from '../analytics';
 import { getProblemCatalogue, useApiClient } from '../api';
 import type { ProblemCard, ProblemCatalogue, ProblemClass } from '../api';
@@ -83,9 +84,13 @@ function Catalogue({ catalogue }: { catalogue: ProblemCatalogue }) {
   const [query, setQuery] = useState('');
   const [classFilter, setClassFilter] = useState<string | null>(null);
   // The card the learner opened with a click, and the navigation whose card they closed: a card the
-  // address names is open until it is closed, and opens again on the next link to it.
+  // address names is open until it is closed, and opens again on the next link to it. The router's
+  // location alone does not tell such links apart: a hash change the browser makes itself (a typed
+  // address, `location.hash`, a plain `#slug` link) has no history state, so each has the key
+  // "default", and the same `#slug` twice is the same location. Those are counted by `hashchange`.
   const [clicked, setClicked] = useState<string | null>(null);
-  const [closedAt, setClosedAt] = useState<string | null>(null);
+  const [closedAt, setClosedAt] = useState<{ location: Location; hashChanges: number } | null>(null);
+  const hashChanges = useHashChanges();
   const searched = useRef(false);
   const returnFocus = useRef<string | null>(null);
   const searchInput = useRef<HTMLInputElement>(null);
@@ -96,18 +101,18 @@ function Catalogue({ catalogue }: { catalogue: ProblemCatalogue }) {
   const found = catalogue.cards.filter((card) => matches(card, terms));
   const shown = found.filter((card) => classFilter === null || card.class === classFilter);
   const named = decodeURIComponent(location.hash.slice(1));
-  const fromAddress = closedAt === location.key ? null : named;
+  const fromAddress = closedAt?.location === location && closedAt.hashChanges === hashChanges ? null : named;
   const foundCount = useCountUp(shown.length, { duration: 200 });
   const openCard = catalogue.cards.find((card) => card.slug === (clicked ?? fromAddress));
 
   // The address names a card: bring it into view — on arrival, and on every link to a card followed
-  // later (the same `#slug` twice is two navigations, so this follows the location).
+  // later (the same `#slug` twice is two navigations, so this follows the location and the hash changes).
   useEffect(() => {
     const card = named === '' ? null : document.getElementById(named);
     if (card?.classList.contains('rc-pcard') === true) {
       card.scrollIntoView({ block: 'center' });
     }
-  }, [location, named]);
+  }, [location, named, hashChanges]);
 
   const openAt = useCallback((card: ProblemCard) => {
     setClicked(card.slug);
@@ -117,9 +122,9 @@ function Catalogue({ catalogue }: { catalogue: ProblemCatalogue }) {
   const close = useCallback(() => {
     returnFocus.current = openCard?.slug ?? null;
     setClicked(null);
-    setClosedAt(location.key);
+    setClosedAt({ location, hashChanges });
     replaceHash(null);
-  }, [openCard, location.key]);
+  }, [openCard, location, hashChanges]);
 
   // Focus goes back to the card the open one came from, once that card is shown again.
   useEffect(() => {
@@ -203,12 +208,14 @@ function Catalogue({ catalogue }: { catalogue: ProblemCatalogue }) {
               <section key={problemClass.id} className={`rc-catalogue__class k-${problemClass.id}`} aria-labelledby={`class-${problemClass.id}`}>
                 <div className="rc-catalogue__class-head">
                   <h2 id={`class-${problemClass.id}`}>{problemClass.name}</h2>
-                  <span className="rc-catalogue__class-count">
-                    {cards.length < total ? t('problems.classCountOf', { shown: cards.length, total }) : total}
+                  <span className="rc-catalogue__class-meta">
+                    <span className="rc-catalogue__class-count">
+                      {cards.length < total ? t('problems.classCountOf', { shown: cards.length, total }) : total}
+                    </span>
+                    {marks.ready && (
+                      <span className="rc-catalogue__class-studied">{t('problems.classStudied', { studied, total })}</span>
+                    )}
                   </span>
-                  {marks.ready && (
-                    <span className="rc-catalogue__class-studied">{t('problems.classStudied', { studied, total })}</span>
-                  )}
                   {problemClass.description !== null && <p>{problemClass.description}</p>}
                 </div>
                 <div className="rc-catalogue__grid">
@@ -467,6 +474,23 @@ function OpenCard({ card, className, marks, onClose }: { card: ProblemCard; clas
 }
 
 /** Puts a card's slug in the address — or takes it out — without a navigation, keeping the router's state. */
+/** How many times the browser has changed the address's hash while the page is shown. */
+function useHashChanges(): number {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    const onHashChange = () => {
+      setCount((value) => value + 1);
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => {
+      window.removeEventListener('hashchange', onHashChange);
+    };
+  }, []);
+
+  return count;
+}
+
 function replaceHash(slug: string | null) {
   const url = `${window.location.pathname}${window.location.search}${slug === null ? '' : `#${slug}`}`;
   window.history.replaceState(window.history.state, '', url);

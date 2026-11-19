@@ -407,7 +407,9 @@ maintainer's direction of 2026-11-10 (artboards «#202 C» on the canvas
   again it shows all. The panel sticks under the header like the task list's bar (square-cornered
   with a shadow while held; not on a phone); the open card's overlay (50) stays above it.
 - Each class: its name with a dot in its colour, a muted count (`rc-catalogue__class-count`: «9»,
-  under a search or class filter «3 из 9», the same in the prerendered page) and its description, then its cards in a grid
+  under a search or class filter «3 из 9», the same in the prerendered page), *изучено N из M*
+  beside it (both in `rc-catalogue__class-meta`, which on a phone takes the line under the name and
+  drops its leading dot) and its description, then its cards in a grid
   (`rc-catalogue__grid`, as many 15.5 rem columns as fit; two on a phone).
 - **A folded card** (`article.rc-pcard.k-{class}`, at least 360 px tall) looks like a card: the
   class's tint is its frame; the band on it carries the class name and a round seal in the class's
