@@ -319,12 +319,6 @@ function Card({
     >
       <div className="rc-pcard__band">
         <span>{className}</span>
-        {studied && (
-          <span className="rc-pcard__studied" role="img" aria-label={t('problems.studiedCard', { name: card.name })}>
-            <Icon name="check" />
-            <span aria-hidden="true">{t('problems.studied')}</span>
-          </span>
-        )}
         {/* The seal is the card's anchor: a link to it that works without JavaScript too. */}
         <a className="rc-pcard__seal" href={`#${card.slug}`} aria-label={t('problems.anchor', { name: card.name })} />
       </div>
@@ -345,6 +339,13 @@ function Card({
           </div>
         </details>
       </div>
+      {/* The mark sits on the face's last line, across from «Открыть», and lets clicks through to it. */}
+      {studied && (
+        <span className="rc-pcard__studied" role="img" aria-label={t('problems.studiedCard', { name: card.name })}>
+          <Icon name="check" />
+          <span aria-hidden="true">{t('problems.studied')}</span>
+        </span>
+      )}
     </article>
   );
 }
