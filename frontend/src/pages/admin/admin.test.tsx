@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
-import type { AdminAttempt, AdminSignal, AdminUser } from '../../api';
+import type { AdminAttempt, AdminSignal, AdminUser, SystemReport } from '../../api';
 import { ru } from '../../i18n';
 import { renderApp } from '../../test/render';
 import { jsonResponse, pageOf, problemResponse } from '../../test/responses';
@@ -63,6 +63,39 @@ const attempts: AdminAttempt[] = [
   },
 ];
 
+const systemReport: SystemReport = {
+  api: { version: '0.1.0', commit: 'ac1caf1b2c3d4e5f60718293a4b5c6d7e8f90123' },
+  content: { revision: '9f8e7d6c5b4a', ingestedAt: '2026-11-19T08:00:00Z' },
+  database: { status: 'ok', sizeBytes: 12_582_912 },
+  migrations: [
+    { module: 'attempts', status: 'upToDate', applied: 7, last: '20261101_AddStudied', pending: [] },
+    { module: 'content', status: 'pending', applied: 3, last: '20261001_Initial', pending: ['20261119_AddRevision'] },
+  ],
+  dependencies: [
+    { name: 'postgresql', status: 'ok' },
+    { name: 'umami', status: 'failing' },
+    { name: 'feedbackGitHubApp', status: 'notConfigured' },
+  ],
+  backup: null,
+  checkedAt: '2026-11-19T09:00:00Z',
+};
+
+/** The site's own `version.json`: the web image's commit, or a 404 as the development server answers. */
+function stubVersionFile(commit: string | null) {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn<typeof globalThis.fetch>().mockResolvedValue(commit === null ? new Response('', { status: 404 }) : jsonResponse({ commit })),
+  );
+}
+
+beforeEach(() => {
+  stubVersionFile(null);
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
 function urlOf(input: RequestInfo | URL): string {
   if (typeof input === 'string') {
     return input;
@@ -102,6 +135,10 @@ function api(caller: 'admin' | 'learner' | 'visitor', { resolveFails = false } =
       return Promise.resolve(jsonResponse(pageOf(status === 'resolved' ? closed : open, 1, 50)));
     }
 
+    if (url.pathname.endsWith('/admin/system')) {
+      return Promise.resolve(jsonResponse(systemReport));
+    }
+
     if (url.pathname.endsWith('/admin/users')) {
       return Promise.resolve(jsonResponse(pageOf(users, 1, 50)));
     }
@@ -139,18 +176,18 @@ describe('the admin area', () => {
     expect(requested(fetchStub, '/admin/signals')).toHaveLength(0);
   });
 
-  it.each(['/admin', '/admin/signals', '/admin/users', '/admin/attempts'])('has one h1, the area name, at %s', async (path) => {
+  it.each(['/admin', '/admin/signals', '/admin/users', '/admin/attempts', '/admin/system'])('has one h1, the area name, at %s', async (path) => {
     renderApp(api('admin'), path);
 
     expect(await screen.findByRole('heading', { name: ru.admin.title, level: 1 })).toBeInTheDocument();
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
   });
 
-  it('offers the four sections as links, the current one marked', async () => {
+  it('offers the five sections as links, the current one marked', async () => {
     renderApp(api('admin'), '/admin/users');
 
     const nav = within(await screen.findByRole('navigation', { name: ru.admin.nav }));
-    expect(nav.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(['/admin', '/admin/signals', '/admin/users', '/admin/attempts']);
+    expect(nav.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(['/admin', '/admin/signals', '/admin/users', '/admin/attempts', '/admin/system']);
     expect(nav.getByRole('link', { name: ru.admin.users })).toHaveAttribute('aria-current', 'page');
     expect(nav.getByRole('link', { name: ru.admin.overview })).not.toHaveAttribute('aria-current');
   });
@@ -360,5 +397,44 @@ describe('the attempts page', () => {
       expect(requested(fetchStub, '/admin/attempts').at(-1)?.searchParams.get('user')).toBeNull();
     });
     expect(requested(fetchStub, '/admin/attempts').at(-1)?.searchParams.get('status')).toBe('open');
+  });
+});
+
+describe('the system page', () => {
+  it('names the builds, the content, each dependency and the database', async () => {
+    stubVersionFile('0123456789abcdef0123');
+    renderApp(api('admin'), '/admin/system');
+
+    const deployed = within(await screen.findByRole('region', { name: ru.admin.systemPage.deployed }));
+    expect(deployed.getByText('0.1.0')).toBeInTheDocument();
+    expect(deployed.getByText('ac1caf1b2c3d')).toHaveAttribute('title', systemReport.api.commit);
+    expect(await deployed.findByText('0123456789ab')).toHaveAttribute('title', '0123456789abcdef0123');
+    expect(deployed.getByText('9f8e7d6c5b4a')).toBeInTheDocument();
+
+    const health = within(screen.getByRole('region', { name: ru.admin.systemPage.health }));
+    expect(health.getByText(ru.admin.systemPage.dependency.postgresql).nextElementSibling).toHaveTextContent(ru.admin.systemPage.status.ok);
+    expect(health.getByText(ru.admin.systemPage.dependency.umami).nextElementSibling).toHaveTextContent(ru.admin.systemPage.status.failing);
+    expect(health.getByText(ru.admin.systemPage.dependency.feedbackGitHubApp).nextElementSibling).toHaveTextContent(ru.admin.systemPage.status.notConfigured);
+    expect(health.getByText(ru.admin.systemPage.databaseSize).nextElementSibling).toHaveTextContent(/12/);
+  });
+
+  it('shows the backup as absent and an unknown web commit calmly, not as errors', async () => {
+    renderApp(api('admin'), '/admin/system');
+
+    const health = within(await screen.findByRole('region', { name: ru.admin.systemPage.health }));
+    expect(health.getByText(ru.admin.systemPage.noBackup)).toBeInTheDocument();
+    const deployed = within(screen.getByRole('region', { name: ru.admin.systemPage.deployed }));
+    expect(deployed.getByText(ru.admin.systemPage.webCommit).nextElementSibling).toHaveTextContent(ru.admin.systemPage.unknown);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('lists each module with its migrations, and says which wait', async () => {
+    renderApp(api('admin'), '/admin/system');
+
+    const table = within(await screen.findByRole('table'));
+    const rows = table.getAllByRole('row').slice(1);
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveTextContent(`attempts${ru.admin.systemPage.upToDate}720261101_AddStudied`);
+    expect(within(rows[1]!).getByText('ждёт 1')).toHaveAttribute('title', '20261119_AddRevision');
   });
 });

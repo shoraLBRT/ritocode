@@ -76,6 +76,9 @@ function AdminShell() {
         <NavLink to="/admin/attempts" className="rc-admin__tab">
           {t('admin.attempts')}
         </NavLink>
+        <NavLink to="/admin/system" className="rc-admin__tab">
+          {t('admin.system')}
+        </NavLink>
       </nav>
 
       <AdminOutletContext value={{ openSignals, reloadOpenSignals }}>

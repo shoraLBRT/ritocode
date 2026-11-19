@@ -324,6 +324,30 @@ export interface AdminUser {
   readonly tasksSolved: number;
 }
 
+/** A dependency's state on the system page; `notConfigured` is not an error. */
+export type SystemStatus = 'ok' | 'failing' | 'notConfigured';
+
+/** One module's schema: migrations applied, and those the release carries that are not. */
+export interface ModuleMigrations {
+  readonly module: string;
+  readonly status: 'upToDate' | 'pending' | 'failing';
+  readonly applied: number | null;
+  readonly last: string | null;
+  readonly pending: readonly string[];
+}
+
+/** `GET /admin/system` (#297): what is deployed and how it is. The web image's commit is read from `/version.json`. */
+export interface SystemReport {
+  readonly api: { readonly version: string; readonly commit: string | null };
+  readonly content: { readonly revision: string; readonly ingestedAt: string } | null;
+  readonly database: { readonly status: SystemStatus; readonly sizeBytes: number | null };
+  readonly migrations: readonly ModuleMigrations[];
+  readonly dependencies: readonly { readonly name: string; readonly status: SystemStatus }[];
+  /** Always `null` until the backup monitoring leaves a heartbeat (#296): absent, not an error. */
+  readonly backup: { readonly at: string } | null;
+  readonly checkedAt: string;
+}
+
 export type AdminAttemptStatus = 'all' | 'open' | 'submitted';
 
 /** One row of `GET /admin/attempts`. */

@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import type { ReactNode } from 'react';
 import type { AdminLearner, Page } from '../../api';
 import { EmptyState } from '../../components/EmptyState';
@@ -42,11 +43,13 @@ export function AdminPanel({
   total?: ReactNode;
   children: ReactNode;
 }) {
+  const headingId = useId();
+
   return (
-    <section className="rc-panel rc-admin__panel">
+    <section className="rc-panel rc-admin__panel" aria-labelledby={headingId}>
       <div className="rc-panel__bar">
         <div className="rc-admin__title">
-          <h2>{title}</h2>
+          <h2 id={headingId}>{title}</h2>
           {lead && <p>{lead}</p>}
         </div>
         {filters && <div className="rc-list-filters">{filters}</div>}

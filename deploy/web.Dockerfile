@@ -12,6 +12,7 @@
 #   VITE_DEMO_TASK     the landing page's demo task; the frontend's default when empty
 #   VITE_UMAMI_SCRIPT_URL, VITE_UMAMI_WEBSITE_ID
 #   VITE_TURNSTILE_SITE_KEY  the feedback widget's captcha (ADR 0019); none when empty
+#   SOURCE_COMMIT      the commit built, served as /version.json for the admin system page (#297); null when empty
 #                      Umami's script and the site's id there (SPEC §8); no analytics unless both are set
 
 # The content export is made by the backend's own parser (src/Ritocode.ContentTool).
@@ -40,7 +41,9 @@ ARG VITE_DEMO_TASK=
 ARG VITE_UMAMI_SCRIPT_URL=
 ARG VITE_UMAMI_WEBSITE_ID=
 ARG VITE_TURNSTILE_SITE_KEY=
+ARG SOURCE_COMMIT=
 ENV CONTENT_EXPORT=/content-export.json \
+    SOURCE_COMMIT=${SOURCE_COMMIT} \
     SITE_ORIGIN=${SITE_ORIGIN} \
     CONTENT_LASTMOD=${CONTENT_LASTMOD} \
     VITE_API_BASE_URL=${VITE_API_BASE_URL} \
