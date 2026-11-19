@@ -6,17 +6,20 @@ import { AppLayout } from '../components/AppLayout';
 import { I18nProvider, ru, translate } from '../i18n';
 import type { Translate } from '../i18n';
 import { StaticHomePage } from '../pages/HomePage';
+import { NotFoundPage } from '../pages/NotFoundPage';
 import { PrivacyPage } from '../pages/PrivacyPage';
 import { StaticProblemsPage } from '../pages/ProblemsPage';
 import { SessionProvider } from '../session';
-import { PRERENDERED_PATHS, SiteConfigContext, pageMeta } from '../site';
+import { NOT_FOUND_PATH, PRERENDERED_PATHS, SHELL_PATHS, SiteConfigContext, pageMeta } from '../site';
 import type { SiteConfig } from '../site';
 
 export { resolveSiteConfig } from '../site';
 
-/** What `content export` writes (`src/Ritocode.ContentTool`): the catalogue as `GET /problems` serves it. */
+/** What `content export` writes (`src/Ritocode.ContentTool`): the catalogue as `GET /problems` serves it, and the tasks. */
 export interface ContentExport {
   readonly problems: ProblemCatalogue;
+  /** The slugs of the tasks: `/tasks/{slug}` is an address of the site for these and no other. */
+  readonly tasks: readonly string[];
 }
 
 export interface PrerenderInput {
@@ -26,47 +29,72 @@ export interface PrerenderInput {
   /** Where the site is served, such as `https://ritocode.ru`: the sitemap needs absolute addresses. */
   readonly origin: string;
   readonly config: SiteConfig;
+  /** When the content last changed, as `YYYY-MM-DD`, for the sitemap's `lastmod`; left out when absent. */
+  readonly lastmod?: string;
 }
 
 const EMPTY_ROOT = '<div id="root"></div>';
 
+/** A slug as the content format allows it — and so a safe file name. */
+const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
 /**
  * The public pages as static HTML, for search engines that do not run JavaScript — Yandex among them
  * (docs/SPEC.md §4.1): `/`, `/problems` with every card in full and its anchor, and `/privacy`, each with its title,
- * description and canonical address; `sitemap.xml` and `robots.txt`; and `spa.html`, the untouched
- * shell every other route is served. Once the bundle loads, the application renders over the static
+ * description and canonical address; `404.html`, the page the web image serves with 404 for an address
+ * the site does not have; `sitemap.xml` and `robots.txt`; and the untouched shell under every other
+ * address of the site — the fixed ones (`SHELL_PATHS`) and `tasks/{slug}.html` for each task of the
+ * export. The files written are the site's addresses, so the web image needs no list of its own
+ * (`deploy/web.Caddyfile`, #300). Once the bundle loads, the application renders over the static
  * markup and takes over.
  *
  * Returns the files to write, by path under the build's output directory.
  */
-export function prerender({ content, template, origin, config }: PrerenderInput): Map<string, string> {
+export function prerender({ content, template, origin, config, lastmod }: PrerenderInput): Map<string, string> {
   if (!template.includes(EMPTY_ROOT)) {
     throw new Error(`The template has no empty ${EMPTY_ROOT}: prerender the index.html a fresh 'vite build' wrote.`);
+  }
+
+  if (lastmod !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(lastmod)) {
+    throw new Error(`The content date '${lastmod}' is not YYYY-MM-DD; set CONTENT_LASTMOD, such as 2026-11-19, or leave it unset.`);
   }
 
   const site = siteOrigin(origin);
   const t: Translate = (key, params) => translate(ru, 'ru', key, params);
   const files = new Map<string, string>();
 
-  for (const path of PRERENDERED_PATHS) {
+  /** The page at `path` rendered into the shell, with its title, its description and `head`. */
+  const render = (path: string, head: string): string => {
     const markup = renderToString(<Page path={path} content={content} config={config} />);
     const meta = pageMeta(path, t);
+
     // Replaced through functions: a replacement string would read `$&` in a card's text as a pattern.
-    const html = template
+    return template
       .replace(EMPTY_ROOT, () => `<div id="root">${markup}</div>`)
       .replace(/<title>[^<]*<\/title>/, () => `<title>${escape(meta.title)}</title>`)
-      .replace(
-        '</head>',
-        () =>
-          `  <meta name="description" content="${escape(meta.description)}" />\n`
-          + `    <link rel="canonical" href="${escape(site + path)}" />\n  </head>`,
-      );
+      .replace('</head>', () => `  <meta name="description" content="${escape(meta.description)}" />\n    ${head}\n  </head>`);
+  };
 
-    files.set(path === '/' ? 'index.html' : `${path.slice(1)}.html`, html);
+  for (const path of PRERENDERED_PATHS) {
+    files.set(path === '/' ? 'index.html' : `${path.slice(1)}.html`, render(path, `<link rel="canonical" href="${escape(site + path)}" />`));
   }
 
-  files.set('spa.html', template);
-  files.set('sitemap.xml', sitemap(site));
+  // Served under any address the site lacks: not to be indexed, and no canonical address of its own.
+  files.set('404.html', render(NOT_FOUND_PATH, '<meta name="robots" content="noindex" />'));
+
+  for (const path of SHELL_PATHS) {
+    files.set(`${path.slice(1)}.html`, template);
+  }
+
+  for (const slug of content.tasks) {
+    if (!SLUG.test(slug)) {
+      throw new Error(`The task slug '${slug}' is not lowercase words joined by hyphens, so it cannot name a file.`);
+    }
+
+    files.set(`tasks/${slug}.html`, template);
+  }
+
+  files.set('sitemap.xml', sitemap(site, lastmod));
   files.set('robots.txt', `User-agent: *\nAllow: /\n\nSitemap: ${site}/sitemap.xml\n`);
 
   return files;
@@ -94,6 +122,7 @@ function Page({ path, content, config }: { path: string; content: ContentExport;
                   <Route index element={<StaticHomePage catalogue={content.problems} />} />
                   <Route path="problems" element={<StaticProblemsPage catalogue={content.problems} />} />
                   <Route path="privacy" element={<PrivacyPage />} />
+                  <Route path="*" element={<NotFoundPage />} />
                 </Route>
               </Routes>
             </StaticRouter>
@@ -104,8 +133,9 @@ function Page({ path, content, config }: { path: string; content: ContentExport;
   );
 }
 
-function sitemap(site: string): string {
-  const urls = PRERENDERED_PATHS.map((path) => `  <url><loc>${escape(site + path)}</loc></url>`);
+function sitemap(site: string, lastmod: string | undefined): string {
+  const date = lastmod === undefined ? '' : `<lastmod>${lastmod}</lastmod>`;
+  const urls = PRERENDERED_PATHS.map((path) => `  <url><loc>${escape(site + path)}</loc>${date}</url>`);
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>\n`;
 }
 

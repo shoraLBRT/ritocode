@@ -1,6 +1,8 @@
-# Serves the frontend's static build (frontend/README.md, "The prerendered pages"): `/` as the
-# landing page, then the path, the path as a prerendered page, and the application's shell. Plain HTTP inside the Compose
-# network; the edge terminates TLS.
+# Serves the frontend's static build (frontend/README.md, "The prerendered pages"). The build writes
+# a file for every address of the site — the prerendered pages, the application's shell under each
+# fixed route and each task of the content export — so an address with no file is not the site's
+# and gets 404 with the prerendered not-found page (#300). Plain HTTP inside the Compose network; the
+# edge terminates TLS.
 {
 	admin off
 	auto_https off
@@ -14,9 +16,35 @@
 	@assets path /assets/*
 	header @assets Cache-Control "public, max-age=31536000, immutable"
 
-	# `/` is the rendered landing page; try_files alone would take the root for a missing file and
-	# serve the shell. Caddy runs rewrite before try_files.
+	# One form per address: the files' own names, `/index.html` and a trailing slash redirect to the
+	# canonical address, the query kept. Caddy runs redir before rewrite, so these see the request
+	# as it came.
+	@index path /index.html /index
+	redir @index /{?query} 308
+	@html path_regexp html ^(/.+)\.html$
+	redir @html {re.html.1}{?query} 308
+	@slash path_regexp slash ^(/.+)/$
+	redir @slash {re.slash.1}{?query} 308
+	# The progress page became the profile (#261).
+	redir /progress /profile{?query} 308
+
+	# The not-found page is no address of its own; matched after try_files has added `.html`.
+	@internal path /404 /404.html
+	error @internal 404
+
+	# `/` is the rendered landing page; try_files alone would take the root for a missing file.
 	rewrite / /index.html
-	try_files {path} {path}.html /spa.html
+
+	# The review of an attempt exists for every task that does; its id is the API's to check.
+	@attempt path_regexp attempt ^/tasks/([a-z0-9-]+)/attempts/[^/]+$
+	rewrite @attempt /tasks/{re.attempt.1}.html
+
+	# The path, then the path as a page of the build; anything else falls to file_server's 404.
+	try_files {path} {path}.html
 	file_server
+
+	handle_errors 404 {
+		rewrite * /404.html
+		file_server
+	}
 }

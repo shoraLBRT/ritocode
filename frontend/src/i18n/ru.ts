@@ -629,6 +629,9 @@ export const ru = {
     profile: {
       title: 'Профиль — Ritocode',
     },
+    notFound: {
+      title: 'Такой страницы нет — Ritocode',
+    },
     privacy: {
       title: 'Политика конфиденциальности — Ritocode',
       description: 'Какие данные Ritocode получает при входе через GitHub или Google и что с ними делает.',

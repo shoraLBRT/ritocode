@@ -27,4 +27,18 @@ public sealed class ContentExportTests(ContentTestApi api) : IClassFixture<Conte
         Assert.NotEmpty(served!["cards"]!.AsArray());
         Assert.True(JsonNode.DeepEquals(served, exported), $"GET /problems:\n{served}\n\nexport:\n{exported}");
     }
+
+    /// <summary>The web image answers 404 for a task address the export does not name (#300).</summary>
+    [Fact]
+    public void TheExport_NamesEveryTaskOfTheFiles_InOrder()
+    {
+        var (content, report) = ContentLoader.Load(api.ContentRoot);
+        Assert.False(report.HasErrors, string.Join("\n", report.Issues));
+        var tasks = JsonNode.Parse(ContentExport.From(content).ToJson())!["tasks"]!.AsArray()
+            .Select(slug => slug!.GetValue<string>())
+            .ToList();
+
+        Assert.NotEmpty(tasks);
+        Assert.Equal(content.Tasks.Select(task => task.Slug).Order(StringComparer.Ordinal), tasks);
+    }
 }

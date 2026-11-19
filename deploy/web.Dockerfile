@@ -1,11 +1,13 @@
 # syntax=docker/dockerfile:1
 
 # The frontend: the bundle with `/` and `/problems` prerendered from content/ (docs/SPEC.md §4.1),
-# served by Caddy on port 80 with the rule the prerender needs (deploy/web.Caddyfile). TLS and the
+# served by Caddy on port 80 with the rules the prerender needs (deploy/web.Caddyfile): a file for
+# every address of the site, 404 with the not-found page for any other (#300). TLS and the
 # route to the API are the edge's, in the production Compose file of #135.
 #
 # Build arguments are read at build time and inlined, as `npm run build` always does:
 #   SITE_ORIGIN        the site's address, for the sitemap and canonical links — required
+#   CONTENT_LASTMOD    when content/ last changed (YYYY-MM-DD), the sitemap's lastmod; none when empty
 #   VITE_API_BASE_URL  where the browser finds the API; same origin by default
 #   VITE_DEMO_TASK     the landing page's demo task; the frontend's default when empty
 #   VITE_UMAMI_SCRIPT_URL, VITE_UMAMI_WEBSITE_ID
@@ -32,6 +34,7 @@ COPY frontend/ ./
 COPY --from=content /out/content-export.json /content-export.json
 
 ARG SITE_ORIGIN
+ARG CONTENT_LASTMOD=
 ARG VITE_API_BASE_URL=/api/v1
 ARG VITE_DEMO_TASK=
 ARG VITE_UMAMI_SCRIPT_URL=
@@ -39,6 +42,7 @@ ARG VITE_UMAMI_WEBSITE_ID=
 ARG VITE_TURNSTILE_SITE_KEY=
 ENV CONTENT_EXPORT=/content-export.json \
     SITE_ORIGIN=${SITE_ORIGIN} \
+    CONTENT_LASTMOD=${CONTENT_LASTMOD} \
     VITE_API_BASE_URL=${VITE_API_BASE_URL} \
     VITE_DEMO_TASK=${VITE_DEMO_TASK} \
     VITE_UMAMI_SCRIPT_URL=${VITE_UMAMI_SCRIPT_URL} \
