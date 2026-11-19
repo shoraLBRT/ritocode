@@ -331,6 +331,10 @@ description. As of that day:
   build argument `SOURCE_COMMIT`; passing it from the release workflow is a second PR
   (`claude/297-version-ci`, protected `.github/workflows/`). Until the owner merges it the page shows
   both commits as «неизвестен» in production — everything else works without it.
+  **#293** (2026-11-19, PR open): [ADR 0020](adr/0020-observability.md), **Proposed**, awaiting the
+  maintainer — errors in the product's PostgreSQL on `/admin/errors`, Dozzle behind Caddy for logs,
+  threshold checks in `deploy/check.sh`, alerts as the `monitoring-alert` issue plus Telegram. #294,
+  #295 and #296 are built once it is accepted (Open questions › Observability).
 - **Later** holds the post-MVP iterations that were SPEC §12; not taken until the maintainer moves one.
   Since 2026-11-11 it also holds the **incident**
   ([#227](https://github.com/shoraLBRT/ritocode/issues/227),
@@ -374,6 +378,12 @@ avatar ([#195](https://github.com/shoraLBRT/ritocode/issues/195)). DESIGN.md lay
 
 Decisions the specification left open are listed in [SPEC.md](SPEC.md) §13. Add here anything a
 future session would otherwise have to rediscover.
+
+- **Observability** (#293, [ADR 0020](adr/0020-observability.md), Proposed): the maintainer accepts
+  it by merging its PR and setting the status to Accepted (or by changing the status later); until
+  then #294, #295 and #296 are not taken. The ADR assumes a 2 GB RAM / 30 GB VPS and asks whether that
+  holds, whether the server's own alerts should open GitHub issues too, and the retention numbers
+  (14 days of logs, 30 of error occurrences).
 
 - **What the two catalogues are called** (the maintainer, 2026-11-04): «Задачи» beside «Каталог
   проблем» feels wrong — perhaps «Каталог задач» and «Каталог проблем», perhaps something else. Not
