@@ -11,7 +11,7 @@ a module cannot reach another module's data through EF at all.
 | `users` | Users | `users` |
 | `auth` | Auth | `linked_accounts`, `sessions` |
 | `content` | Content | `taxonomy`, `cards`, `materials`, `tasks` |
-| `attempts` | Attempts | `attempts`, `signals`, `reveals` |
+| `attempts` | Attempts | `attempts`, `signals`, `reveals`, `study_marks` |
 
 Each schema also holds its own `__migrations_history`, so module migrations are independent.
 
@@ -35,6 +35,8 @@ erDiagram
     CARDS ||..o{ SIGNALS : "card (no FK)"
     USERS ||..o{ REVEALS : "user_id (no FK)"
     TASKS ||..o{ REVEALS : "task_slug (no FK)"
+    USERS ||..o{ STUDY_MARKS : "user_id (no FK)"
+    CARDS ||..o{ STUDY_MARKS : "card_slug (no FK)"
 
     USERS {
         uuid id PK
@@ -132,6 +134,12 @@ erDiagram
         text task_slug PK "no FK"
         timestamptz revealed_at "the first reveal, kept for good"
     }
+
+    STUDY_MARKS {
+        uuid user_id PK "no FK, with card_slug"
+        text card_slug PK "no FK"
+        timestamptz studied_at "the first mark; taking it back deletes the row"
+    }
 ```
 
 ## Conventions
@@ -169,6 +177,8 @@ schemas would reinstate exactly the coupling the schema split removes.
 | `attempts.signals.user_id`, `task_slug` | `users.users.id`, `content.tasks.slug` | copied from the attempt the signal is sent from |
 | `attempts.signals.card` | `content.cards.slug` | Attempts module on send: the card is an extra pick in the attempt's stored result |
 | `attempts.reveals.user_id`, `task_slug` | `users.users.id`, `content.tasks.slug` | copied from the submitted attempt the answer is revealed from (ADR 0017) |
+| `attempts.study_marks.user_id` | `users.users.id` | Attempts module on marking, through `IUserLookup` |
+| `attempts.study_marks.card_slug` | `content.cards.slug` | Attempts module on marking, through `IPublishedCardLookup` (a published card only); a mark on a card since retired is kept, and left out when read (ADR 0018) |
 
 "Validated by" means through a contract in `Ritocode.Shared/Contracts` — such as `IUserLookup` — never
 by opening the owning module's `DbContext` ([ADR 0007](adr/0007-cross-module-contract-form.md)).
@@ -190,6 +200,7 @@ never deleted, and ingest validates the reference before it writes anything.
 | `ux_signals_attempt_id_card` | one signal per extra pick of an attempt |
 | `fk_signals_attempts_attempt_id` | a signal names an attempt that exists, in the same schema |
 | `pk_reveals` | one reveal per user and task; a second racing the first is refused and taken as revealed |
+| `pk_study_marks` | one mark per user and card; a second racing the first is refused and taken as marked |
 | `ck_*_<enum column>` | the column holds a value from its enum |
 
 ## Indexes that exist for a specific query

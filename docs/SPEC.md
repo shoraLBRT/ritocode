@@ -696,6 +696,8 @@ Under `/api/v1`, following ADR 0003.
 | `GET /attempts/{id}` | An attempt, its outcome, and once the answer is revealed its result | owner |
 | `GET /attempts` | The caller's attempts, optionally for one task | signed in |
 | `GET /me`, `GET /me/progress` | The caller, and their progress | signed in |
+| `GET /me/studied` | The caller's marks «Изучено» on published cards, with their dates (§4.2 › Studying) | signed in |
+| `PUT /me/studied/{card}`, `DELETE /me/studied/{card}` | Mark a card studied, keeping the first date; take the mark back. Both idempotent; a card not published is `404 card_not_found` on `PUT` | signed in |
 | `POST /signals` | Send a signal from an attempt | owner of the attempt |
 | `POST /feedback` | A message from the feedback widget becomes a GitHub issue (§9.6) | public |
 | `GET /admin/signals`, `POST /admin/signals/{id}/resolve` | Signals | admin |
