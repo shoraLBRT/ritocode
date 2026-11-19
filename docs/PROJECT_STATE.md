@@ -313,7 +313,7 @@ description. As of that day:
   checked signed in in the built-in browser at 1280 and 375 px, light and dark, with marks over
   three weeks and with none. With it ADR 0018's MVP part is built; the drill and snippets wait in
   *Later* (#282, #283).
-  **#292** (2026-11-19, PR open): on `/problems` a class's two counts (`rc-catalogue__class-meta`)
+  **#292** (2026-11-19, PR #307 open): on `/problems` a class's two counts (`rc-catalogue__class-meta`)
   take the line under its name below 30rem instead of the study count wrapping alone; and a
   `#slug` the browser itself sets after a card was closed (a typed address, a plain `#slug` link)
   opens the card again — such hash changes all have the router key `default` and can repeat the
