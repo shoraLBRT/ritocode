@@ -111,3 +111,19 @@ jobs:
             if (cards.length === 0 || missing.length > 0) { console.error("Missing from dist/problems.html:", missing); process.exit(1); }
             console.log(`${cards.length} cards on dist/problems.html`);
           '
+
+      # The Lighthouse budget of the prerendered pages (#300, frontend/README.md › The Lighthouse
+      # budget): accessibility and SEO at 90, performance where it stands. The runner has Chrome.
+      - name: Check the Lighthouse budget
+        working-directory: frontend
+        env:
+          LIGHTHOUSE_REPORTS: ${{ runner.temp }}/lighthouse
+        run: npm run lighthouse
+
+      - name: Keep the Lighthouse reports
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: lighthouse-reports
+          path: ${{ runner.temp }}/lighthouse
+          if-no-files-found: ignore
