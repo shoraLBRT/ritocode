@@ -79,5 +79,6 @@ jobs:
             VITE_UMAMI_SCRIPT_URL=${{ vars.UMAMI_SCRIPT_URL }}
             VITE_UMAMI_WEBSITE_ID=${{ vars.UMAMI_WEBSITE_ID }}
             VITE_TURNSTILE_SITE_KEY=${{ vars.TURNSTILE_SITE_KEY }}
+            SOURCE_COMMIT=${{ github.sha }}
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,scope=${{ matrix.image }},mode=max
