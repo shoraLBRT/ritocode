@@ -4,6 +4,7 @@ import { AppLayout } from './components/AppLayout';
 import { AdminAttemptsPage } from './pages/admin/AdminAttemptsPage';
 import { AdminOverviewPage } from './pages/admin/AdminOverviewPage';
 import { AdminSignalsPage } from './pages/admin/AdminSignalsPage';
+import { AdminStatsPage } from './pages/admin/AdminStatsPage';
 import { AdminSystemPage } from './pages/admin/AdminSystemPage';
 import { AdminUsersPage } from './pages/admin/AdminUsersPage';
 import { RequireAdmin } from './pages/admin/RequireAdmin';
@@ -51,6 +52,7 @@ export const routes: RouteObject[] = [
           { path: 'signals', Component: AdminSignalsPage },
           { path: 'users', Component: AdminUsersPage },
           { path: 'attempts', Component: AdminAttemptsPage },
+          { path: 'stats', Component: AdminStatsPage },
           { path: 'system', Component: AdminSystemPage },
         ],
       },

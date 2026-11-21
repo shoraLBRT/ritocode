@@ -388,6 +388,62 @@ export interface Practice {
   readonly marks: readonly StudyMark[];
 }
 
+/** One task in `GET /admin/stats/tasks` (#305). Shares are of `learners`, null when there are none. */
+export interface TaskStats {
+  readonly task: string;
+  readonly title: string;
+  /** Null when the content no longer knows the task, as are `lines` and `band`. */
+  readonly difficulty: Difficulty | null;
+  readonly published: boolean;
+  readonly lines: number | null;
+  readonly band: { readonly maxLines: number; readonly minutesFrom: number; readonly minutesTo: number } | null;
+  readonly firstAttempts: number;
+  readonly practiceAttempts: number;
+  /** Learners with a submitted attempt at the task. */
+  readonly learners: number;
+  readonly solvedShare: number | null;
+  readonly revealedShare: number | null;
+  /** From start to submit over first attempts: the median and the quartiles, in seconds. */
+  readonly time: {
+    readonly count: number;
+    readonly medianSeconds: number;
+    readonly lowerQuartileSeconds: number;
+    readonly upperQuartileSeconds: number;
+  } | null;
+  /** Attempts never submitted, by the step they stopped at. */
+  readonly open: { readonly diagnosis: number; readonly treatment: number };
+  /** The mean of score over maximum across first attempts, 0 to 1. */
+  readonly meanScoreShare: number | null;
+  /** Solved by almost nobody: enough learners and a small solved share. */
+  readonly rarelySolved: boolean;
+}
+
+/** `GET /admin/stats/tasks` (#305). */
+export interface TaskStatsReport {
+  readonly tasks: readonly TaskStats[];
+}
+
+/** One card in `GET /admin/stats/cards` (#305): the progress measures over every learner's first attempts. */
+export interface CardStats {
+  readonly card: string;
+  readonly name: string;
+  readonly class: string | null;
+  readonly className: string | null;
+  readonly met: number;
+  readonly found: number;
+  readonly missed: number;
+  readonly pickedWhenAbsent: number;
+  readonly treatedRight: number;
+  /** Picked when absent more often than found. */
+  readonly pickedMoreThanFound: boolean;
+}
+
+/** `GET /admin/stats/cards` (#305). */
+export interface CardStatsReport {
+  readonly firstAttempts: number;
+  readonly cards: readonly CardStats[];
+}
+
 /** `GET /admin/stats/activity` (#304): one bucket of UTC days, `start` to `end`, both included. */
 export interface ActivityBucket {
   readonly start: string;

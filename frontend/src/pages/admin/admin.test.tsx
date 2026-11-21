@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
-import type { AdminAttempt, AdminSignal, AdminUser, SystemReport } from '../../api';
+import type { AdminAttempt, AdminSignal, AdminUser, CardStatsReport, SystemReport, TaskStatsReport } from '../../api';
 import { ru } from '../../i18n';
 import { renderApp } from '../../test/render';
 import { jsonResponse, pageOf, problemResponse } from '../../test/responses';
@@ -80,6 +80,55 @@ const systemReport: SystemReport = {
   checkedAt: '2026-11-19T09:00:00Z',
 };
 
+const band = { maxLines: 300, minutesFrom: 10, minutesTo: 15 };
+
+const taskStats: TaskStatsReport = {
+  tasks: [
+    {
+      task: 'flower-shop-daily-revenue',
+      title: 'Выручка цветочного магазина',
+      difficulty: 'medium',
+      published: true,
+      lines: 210,
+      band,
+      firstAttempts: 6,
+      practiceAttempts: 2,
+      learners: 6,
+      solvedShare: 0.1,
+      revealedShare: 0.5,
+      time: { count: 6, medianSeconds: 1500, lowerQuartileSeconds: 900, upperQuartileSeconds: 1800 },
+      open: { diagnosis: 2, treatment: 1 },
+      meanScoreShare: 0.42,
+      rarelySolved: true,
+    },
+    {
+      task: 'invoice-mailer-monthly',
+      title: 'Счёт клиенту по почте',
+      difficulty: 'easy',
+      published: true,
+      lines: 60,
+      band: { maxLines: 80, minutesFrom: 5, minutesTo: 5 },
+      firstAttempts: 9,
+      practiceAttempts: 0,
+      learners: 9,
+      solvedShare: 0.9,
+      revealedShare: 0.1,
+      time: { count: 9, medianSeconds: 240, lowerQuartileSeconds: 200, upperQuartileSeconds: 300 },
+      open: { diagnosis: 0, treatment: 0 },
+      meanScoreShare: 0.8,
+      rarelySolved: false,
+    },
+  ],
+};
+
+const cardStats: CardStatsReport = {
+  firstAttempts: 15,
+  cards: [
+    { card: 'money-in-float', name: 'Деньги не в десятичном типе', class: 'correctness', className: 'Корректность', met: 6, found: 2, missed: 4, pickedWhenAbsent: 5, treatedRight: 1, pickedMoreThanFound: true },
+    { card: 'secrets-in-repo', name: 'Секреты в репозитории', class: 'hygiene', className: 'Гигиена', met: 9, found: 8, missed: 1, pickedWhenAbsent: 0, treatedRight: 7, pickedMoreThanFound: false },
+  ],
+};
+
 /** The site's own `version.json`: the web image's commit, or a 404 as the development server answers. */
 function stubVersionFile(commit: string | null) {
   vi.stubGlobal(
@@ -135,6 +184,14 @@ function api(caller: 'admin' | 'learner' | 'visitor', { resolveFails = false } =
       return Promise.resolve(jsonResponse(pageOf(status === 'resolved' ? closed : open, 1, 50)));
     }
 
+    if (url.pathname.endsWith('/admin/stats/tasks')) {
+      return Promise.resolve(jsonResponse(taskStats));
+    }
+
+    if (url.pathname.endsWith('/admin/stats/cards')) {
+      return Promise.resolve(jsonResponse(cardStats));
+    }
+
     if (url.pathname.endsWith('/admin/system')) {
       return Promise.resolve(jsonResponse(systemReport));
     }
@@ -183,11 +240,11 @@ describe('the admin area', () => {
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
   });
 
-  it('offers the five sections as links, the current one marked', async () => {
+  it('offers the six sections as links, the current one marked', async () => {
     renderApp(api('admin'), '/admin/users');
 
     const nav = within(await screen.findByRole('navigation', { name: ru.admin.nav }));
-    expect(nav.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(['/admin', '/admin/signals', '/admin/users', '/admin/attempts', '/admin/system']);
+    expect(nav.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(['/admin', '/admin/signals', '/admin/users', '/admin/attempts', '/admin/stats', '/admin/system']);
     expect(nav.getByRole('link', { name: ru.admin.users })).toHaveAttribute('aria-current', 'page');
     expect(nav.getByRole('link', { name: ru.admin.overview })).not.toHaveAttribute('aria-current');
   });
@@ -427,6 +484,24 @@ describe('the attempts page', () => {
     }
   });
 
+  it('narrows to one task or one card from the address, as the statistics link them', async () => {
+    const fetchStub = api('admin');
+    renderApp(fetchStub, '/admin/attempts?task=flower-shop-daily-revenue&card=money-in-float');
+
+    expect(await screen.findByText(ru.admin.attemptsPage.forTask.replace('{task}', 'flower-shop-daily-revenue'))).toBeInTheDocument();
+    expect(screen.getByText(ru.admin.attemptsPage.forCard.replace('{card}', 'money-in-float'))).toBeInTheDocument();
+    const asked = requested(fetchStub, '/admin/attempts')[0];
+    expect(asked?.searchParams.get('task')).toBe('flower-shop-daily-revenue');
+    expect(asked?.searchParams.get('card')).toBe('money-in-float');
+
+    fireEvent.click(screen.getByRole('link', { name: ru.admin.attemptsPage.allCards }));
+
+    await waitFor(() => {
+      expect(requested(fetchStub, '/admin/attempts').at(-1)?.searchParams.get('card')).toBeNull();
+    });
+    expect(requested(fetchStub, '/admin/attempts').at(-1)?.searchParams.get('task')).toBe('flower-shop-daily-revenue');
+  });
+
   it("narrows to one learner from the address, and can show everyone's again", async () => {
     const fetchStub = api('admin');
     renderApp(fetchStub, '/admin/attempts?user=u-1&status=open');
@@ -443,6 +518,52 @@ describe('the attempts page', () => {
       expect(requested(fetchStub, '/admin/attempts').at(-1)?.searchParams.get('user')).toBeNull();
     });
     expect(requested(fetchStub, '/admin/attempts').at(-1)?.searchParams.get('status')).toBe('open');
+  });
+});
+
+describe('the statistics page', () => {
+  it('shows each task with its figures against its band, marks the rarely solved one, and links to its attempts', async () => {
+    renderApp(api('admin'), '/admin/stats');
+
+    const flower = await screen.findByRole('link', { name: 'Выручка цветочного магазина' });
+    expect(flower).toHaveAttribute('href', '/admin/attempts?task=flower-shop-daily-revenue');
+
+    const row = flower.closest('tr');
+    expect(row).not.toBeNull();
+    const cells = within(row as HTMLElement);
+    expect(cells.getByText(ru.admin.statsPage.rarelySolved)).toBeInTheDocument();
+    expect(cells.getByText('10%')).toBeInTheDocument();
+    expect(cells.getByText('25:00')).toBeInTheDocument();
+    expect(cells.getByText('15:00–30:00')).toBeInTheDocument();
+    expect(cells.getByText('оценка 10–15 мин · 210/300 строк')).toBeInTheDocument();
+    expect(cells.getByText('2 · 1')).toBeInTheDocument();
+  });
+
+  it('sorts a table by the heading pressed, and turns the order when it is pressed again', async () => {
+    renderApp(api('admin'), '/admin/stats');
+
+    const table = (await screen.findByRole('link', { name: 'Выручка цветочного магазина' })).closest('table') as HTMLElement;
+    const titles = () => within(table).getAllByRole('link').map((link) => link.textContent);
+
+    // By first attempts, most first.
+    expect(titles()).toEqual(['Счёт клиенту по почте', 'Выручка цветочного магазина']);
+
+    fireEvent.click(within(table).getByRole('button', { name: ru.admin.statsPage.time }));
+    expect(titles()).toEqual(['Выручка цветочного магазина', 'Счёт клиенту по почте']);
+    expect(within(table).getByRole('columnheader', { name: new RegExp(ru.admin.statsPage.time) })).toHaveAttribute('aria-sort', 'descending');
+
+    fireEvent.click(within(table).getByRole('button', { name: ru.admin.statsPage.time }));
+    expect(titles()).toEqual(['Счёт клиенту по почте', 'Выручка цветочного магазина']);
+  });
+
+  it('shows each card with its measures, marks one picked when absent more often than found, and links to its attempts', async () => {
+    renderApp(api('admin'), '/admin/stats');
+
+    const money = await screen.findByRole('link', { name: 'Деньги не в десятичном типе' });
+    const table = money.closest('table') as HTMLElement;
+    expect(money).toHaveAttribute('href', '/admin/attempts?card=money-in-float');
+    expect(within(money.closest('tr') as HTMLElement).getByText(ru.admin.statsPage.pickedMoreThanFound)).toBeInTheDocument();
+    expect(within(table).getAllByText(ru.admin.statsPage.pickedMoreThanFound)).toHaveLength(1);
   });
 });
 

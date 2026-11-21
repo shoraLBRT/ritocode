@@ -2,6 +2,8 @@ import type { ApiClient } from './client';
 import type {
   ActivityReport,
   AdminAttempt,
+  CardStatsReport,
+  TaskStatsReport,
   AdminAttemptStatus,
   AdminSignal,
   AdminSignalStatus,
@@ -182,10 +184,27 @@ export function listAdminUsers(client: ApiClient, query: PageQuery = {}, signal?
 /** `GET /admin/attempts` — every user's attempts, newest first, optionally open or submitted only, or one learner's. Admins only. */
 export function listAdminAttempts(
   client: ApiClient,
-  query: PageQuery & { readonly status?: AdminAttemptStatus; readonly user?: string } = {},
+  query: PageQuery & {
+    readonly status?: AdminAttemptStatus;
+    readonly user?: string;
+    /** One task's attempts (#305). */
+    readonly task?: string;
+    /** The submitted attempts whose result names this card (#305). */
+    readonly card?: string;
+  } = {},
   signal?: AbortSignal,
 ): Promise<Page<AdminAttempt>> {
   return client.request<Page<AdminAttempt>>('/admin/attempts', { query: { ...query }, ...(signal ? { signal } : {}) });
+}
+
+/** `GET /admin/stats/tasks` — every task, how learners fare at it (#305). Admins only. */
+export function readAdminTaskStats(client: ApiClient, signal?: AbortSignal): Promise<TaskStatsReport> {
+  return client.request<TaskStatsReport>('/admin/stats/tasks', signal ? { signal } : {});
+}
+
+/** `GET /admin/stats/cards` — every card met or picked in a first attempt (#305). Admins only. */
+export function readAdminCardStats(client: ApiClient, signal?: AbortSignal): Promise<CardStatsReport> {
+  return client.request<CardStatsReport>('/admin/stats/cards', signal ? { signal } : {});
 }
 
 /** The providers a learner can sign in with (docs/SPEC.md §6.1), in the order they are offered. */
