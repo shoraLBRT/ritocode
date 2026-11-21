@@ -37,7 +37,14 @@ jobs:
       SITE_ORIGIN: ${{ vars.SITE_ORIGIN || 'https://ritocode.example' }}
 
     steps:
+      # The whole history: the sitemap's lastmod is the date content/ last changed.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Date the content
+        id: content
+        run: echo "lastmod=$(git log -1 --format=%cs -- content)" >> "$GITHUB_OUTPUT"
 
       # Registry paths are lower-case; the owner's name is not.
       - name: Name the image
@@ -76,6 +83,7 @@ jobs:
           # captcha only when it is set (ADR 0019), and the API's TURNSTILE_SECRET_KEY goes with it.
           build-args: |
             SITE_ORIGIN=${{ env.SITE_ORIGIN }}
+            CONTENT_LASTMOD=${{ steps.content.outputs.lastmod }}
             VITE_UMAMI_SCRIPT_URL=${{ vars.UMAMI_SCRIPT_URL }}
             VITE_UMAMI_WEBSITE_ID=${{ vars.UMAMI_WEBSITE_ID }}
             VITE_TURNSTILE_SITE_KEY=${{ vars.TURNSTILE_SITE_KEY }}
