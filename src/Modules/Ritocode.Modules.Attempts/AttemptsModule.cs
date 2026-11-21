@@ -27,7 +27,8 @@ namespace Ritocode.Modules.Attempts;
 /// <see cref="Shared.Contracts.Content.ITaskForAttemptLookup"/>, and answers the task catalogue's
 /// statuses through <see cref="ITaskStatusLookup"/> and the admin list of users' counts through
 /// <see cref="IAttemptTallyLookup"/>. Checks the card of a study mark through
-/// <see cref="Shared.Contracts.Content.IPublishedCardLookup"/>. Serves the admin area's signals and attempts (SPEC §6.2).
+/// <see cref="Shared.Contracts.Content.IPublishedCardLookup"/>. Serves the admin area's signals and attempts (SPEC §6.2), and its per-task and per-card statistics
+/// (#305), with the tasks' titles and size bands through <see cref="Shared.Contracts.Content.ITaskSummaryLookup"/>.
 /// </remarks>
 public sealed class AttemptsModule : IModule
 {
@@ -68,6 +69,7 @@ public sealed class AttemptsModule : IModule
         services.AddScoped<IValidator<SendSignalRequest>, SendSignalRequestValidator>();
 
         services.AddScoped<IAdminReader, AdminReader>();
+        services.AddScoped<IStatsReader, StatsReader>();
         services.AddScoped<IAttemptTallyLookup, AttemptTallyLookup>();
         services.AddScoped<ILearnerActivityLookup, LearnerActivityLookup>();
 

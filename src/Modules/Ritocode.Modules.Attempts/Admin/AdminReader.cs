@@ -18,7 +18,7 @@ public interface IAdminReader
 
     Task<Result<AdminSignalView>> ResolveSignalAsync(Guid signalId, CancellationToken cancellationToken);
 
-    Task<Page<AdminAttemptView>> ListAttemptsAsync(AttemptStatus status, Guid? userId, PageRequest page, CancellationToken cancellationToken);
+    Task<Page<AdminAttemptView>> ListAttemptsAsync(AttemptStatus status, AttemptFilter filter, PageRequest page, CancellationToken cancellationToken);
 }
 
 internal sealed class AdminReader(
@@ -72,10 +72,11 @@ internal sealed class AdminReader(
 
     public async Task<Page<AdminAttemptView>> ListAttemptsAsync(
         AttemptStatus status,
-        Guid? userId,
+        AttemptFilter filter,
         PageRequest page,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(filter);
         ArgumentNullException.ThrowIfNull(page);
 
         var query = status switch
@@ -85,9 +86,21 @@ internal sealed class AdminReader(
             _ => context.EveryonesAttempts(),
         };
 
-        if (userId is { } user)
+        if (filter.UserId is { } user)
         {
             query = query.Where(attempt => attempt.UserId == user);
+        }
+
+        if (filter.Task is { } task)
+        {
+            query = query.Where(attempt => attempt.TaskSlug == task);
+        }
+
+        if (filter.Card is { } card)
+        {
+            // A result names a card on one of its lines, met or picked: a containment test on the jsonb column.
+            var line = AttemptsJson.Write(new { cards = new[] { new { card } } });
+            query = query.Where(attempt => attempt.Result != null && EF.Functions.JsonContains(attempt.Result, line));
         }
 
         var total = await query.LongCountAsync(cancellationToken).ConfigureAwait(false);

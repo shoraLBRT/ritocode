@@ -32,6 +32,18 @@ public static partial class ContentRules
         _ => throw new ArgumentOutOfRangeException(nameof(difficulty), difficulty, null),
     };
 
+    /// <summary>
+    /// The estimate of a whole task of each difficulty in minutes (SPEC §3.4, "Whole task"), from and to;
+    /// easy's "~5 min" is 5 to 5. Estimates to calibrate from recorded attempt times (§8, #305).
+    /// </summary>
+    public static (int From, int To) TaskMinutes(TaskDifficulty difficulty) => difficulty switch
+    {
+        TaskDifficulty.Easy => (5, 5),
+        TaskDifficulty.Medium => (10, 15),
+        TaskDifficulty.Hard => (20, 25),
+        _ => throw new ArgumentOutOfRangeException(nameof(difficulty), difficulty, null),
+    };
+
     public static bool IsSlug(string value) => value.Length <= SlugMaxLength && SlugPattern().IsMatch(value);
 
     public static bool IsLocale(string value) => LocalePattern().IsMatch(value);

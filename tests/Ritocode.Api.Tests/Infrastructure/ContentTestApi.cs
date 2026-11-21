@@ -158,3 +158,12 @@ public sealed class AdminUnreachableUmamiTestApi(PostgresTestServer postgres) : 
         ["System:UmamiUrl"] = "http://127.0.0.1:1",
     };
 }
+
+/// <summary>As <see cref="AdminContentTestApi"/>, in a database of its own, so the statistics over every attempt see only their test's rows.</summary>
+public sealed class AdminStatsTestApi(PostgresTestServer postgres) : ContentTestApi(postgres)
+{
+    protected override IReadOnlyDictionary<string, string?>? Settings { get; } = new Dictionary<string, string?>
+    {
+        ["Users:Admin:Emails:0"] = "developer@ritocode.local",
+    };
+}
