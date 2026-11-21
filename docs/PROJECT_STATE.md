@@ -4,7 +4,7 @@
 in the same pull request as the work it describes — a session that skips this makes the next one
 start from nothing.
 
-- **Last updated:** 2026-11-19
+- **Last updated:** 2026-11-21
 - **Current stage:** S7 · Production — its engineering can be built against a local stack (#135's
   Compose file, #136's release command, #34's monitor, #41); the real checks wait on the VPS and domain of #134.
   S6 closed with #133: `/` and `/problems` read without JavaScript (#132), and every listed event
@@ -83,7 +83,7 @@ Content.
 | Modular monolith | Solution, module boundaries enforced by tests, options validated at startup, request id, unified error body, health endpoints, `/api/v1/meta/modules` | `src/`, `tests/Ritocode.Architecture.Tests` |
 | API conventions | [ADR 0003](adr/0003-api-conventions.md): RFC 9457 errors, pagination envelope, validation filter. A request that cannot be read — a body that is not UTF-8 JSON, a query value of the wrong type, a body over the cap or without a JSON content type — is `400 request_invalid`, `413 request_too_large` or `415 unsupported_media_type` in every environment, not a 500. What routing refuses before any endpoint runs gets the same body (`RoutingRefusals`): a wrong method is `405 method_not_allowed` with `Allow`, a body in a non-JSON content type `415 unsupported_media_type`, an unknown address under `/api/v1` `404 not_found` | `src/Ritocode.Shared` |
 | Persistence | PostgreSQL, EF Core per module, one schema each, migrations applied by `Ritocode.DbMigrator`, drift check in CI ([ADR 0004](adr/0004-persistence-and-migrations.md)) | `src/Ritocode.DbMigrator`, `scripts/` |
-| Test harness | One PostgreSQL container per test assembly, one migrated database per test class | `tests/Ritocode.TestSupport` |
+| Test harness | One PostgreSQL container per test assembly, one migrated database per test class. Before the container it waits up to two minutes for the Docker engine to answer (`DockerEngine`); the container is started once per assembly and a failed start is removed and reported to every caller rather than retried per test class ([#315](https://github.com/shoraLBRT/ritocode/issues/315)) | `tests/Ritocode.TestSupport` |
 | Identity seam | `ICurrentUser`, real authentication schemes, authenticated by default ([ADR 0008](adr/0008-authentication-seam.md), Accepted). `GET /api/v1/me` answers the caller (id, username, `admin`, the join date `createdAt` from Users through `IUserLookup`, the linked `providers` through `ILinkedProviderLookup` — #268) or 401 | `src/Ritocode.Shared/Identity`, `src/Modules/Ritocode.Modules.Auth` |
 | Sessions ([#6](https://github.com/shoraLBRT/ritocode/issues/6)) | [ADR 0012](adr/0012-sessions.md): an opaque token in `__Host-ritocode-session` (Secure, HttpOnly, SameSite=Lax), the session in `auth.sessions` by the token's SHA-256 — the token is never stored — with its expiry (30 days, `Auth:Session:Lifetime`), revocation and CSRF token. A request with the cookie is the `Session` scheme's, any other the development identity's (off outside development). Every state-changing request under a session repeats its CSRF token — from the readable `__Host-ritocode-csrf` cookie — in `X-CSRF-Token`, or gets `403 csrf_token_invalid` (`CsrfProtectionMiddleware`); `ApiClient` sends it. `POST /auth/logout` (outside `/api/v1`, through the new `IModule.MapHostEndpoints`) revokes the session and clears both cookies. `ISessionIssuer.StartAsync` + `SessionCookies.Write` are what #7's sign-in calls. Sign-in (#7) issues one; the header has no sign-in or sign-out button yet | `src/Modules/Ritocode.Modules.Auth/Session`, `src/Ritocode.Shared/Identity/CsrfProtectionMiddleware.cs` |
 | Sign-in ([#7](https://github.com/shoraLBRT/ritocode/issues/7)) | `GET /auth/login/{github,google}?returnUrl=` sends the browser to the provider through ASP.NET's OAuth handler — state with its correlation cookie, PKCE (S256) — and the provider returns to `/auth/callback/{provider}`. There `AccountLinker` resolves the user: an identity already linked signs in as its user (the stored login follows a rename); a new one with a **verified** address joins the user with that address or a new user made for it (`IUserAccounts`, answered by Users; the username from the GitHub login or the address's local part, made unique); a new one without a verified address reaches nobody. GitHub's address is the **primary** one of `/user/emails`; Google's is userinfo's `email` with `email_verified`. Then a session starts (`ISessionIssuer`, `SessionCookies.Write`) and the browser returns to `returnUrl`, accepted only as a local path (`400` otherwise); a refusal or a provider failure returns there with `?signInError=email_unverified`, `provider_already_linked` or `provider_failed`. A provider is offered only when `Auth:GitHub` / `Auth:Google` (`ClientId`, `ClientSecret`) is configured. `Auth:SignIn:AppOrigin` prefixes the return path where the pages are served from another origin (Vite's `http://localhost:5173` in development; empty in production). Tested against a fake provider through the real handler. **Not yet**: a real round trip against GitHub and Google, which needs the OAuth apps of #134 | `src/Modules/Ritocode.Modules.Auth/SignIn` |
@@ -560,6 +560,11 @@ Run from the repository root. All of these must be clean before opening a PR.
 
 **A Docker daemon has to be running.** Tests that need PostgreSQL start their own container through
 Testcontainers. Without Docker, `dotnet test` fails in a way that looks like a code problem.
+Right after Docker Desktop starts, its engine refuses every call with `500 Internal Server Error`
+for up to a minute; the harness waits up to two minutes for it to answer, so a run started in that
+window is slower, not red ([#315](https://github.com/shoraLBRT/ritocode/issues/315)). If the first
+full run still fails while a second passes, keep the failures (`--logger trx`) and add them to #315
+— the cause seen in #280 and #281 was never captured.
 
 ```bash
 dotnet build Ritocode.slnx --warnaserror
@@ -630,7 +635,7 @@ compose stack is PostgreSQL only.
 | --- | --- |
 | `Ritocode.Architecture.Tests` | 14 |
 | `Ritocode.Shared.Tests` | 58 |
-| `Ritocode.Api.Tests` | 198 |
+| `Ritocode.Api.Tests` | 201 |
 | `Ritocode.Modules.Content.Tests` | 78 |
 | `Ritocode.Modules.Attempts.Tests` | 31 |
 | Frontend (vitest) | 510 |

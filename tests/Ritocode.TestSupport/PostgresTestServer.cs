@@ -38,14 +38,25 @@ public sealed class PostgresTestServer : IAsyncDisposable
     private const int MaxIdentifierLength = 63;
 
     /// <summary>
-    /// Serialises container start and database creation. <c>CREATE DATABASE ... TEMPLATE</c> fails
-    /// while any session is connected to the template, and concurrent copies of one template
-    /// contend in the server; the copy is fast enough that serialising it costs nothing.
+    /// Serialises database creation. <c>CREATE DATABASE ... TEMPLATE</c> fails while any session
+    /// is connected to the template, and concurrent copies of one template contend in the server;
+    /// the copy is fast enough that serialising it costs nothing.
     /// </summary>
     private readonly SemaphoreSlim _gate = new(1, 1);
 
-    private PostgreSqlContainer? _container;
+    /// <summary>Cancels a start still in flight when the assembly ends.</summary>
+    private readonly CancellationTokenSource _lifetime = new();
+
+    /// <summary>
+    /// The one start of the container, shared by every caller and never retried. A failed start
+    /// fails every later caller with the same first error, rather than each test class starting
+    /// another container of its own: on Docker Desktop those pile up in the VM until the run ends.
+    /// </summary>
+    private readonly Lazy<Task<PostgreSqlContainer>> _start;
+
     private int _databasesCreated;
+
+    public PostgresTestServer() => _start = new(() => StartContainerAsync(_lifetime.Token));
 
     /// <summary>
     /// Creates a database of its own, already migrated to the current model, and returns its
@@ -56,7 +67,7 @@ public sealed class PostgresTestServer : IAsyncDisposable
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(label);
 
-        var container = await StartAsync(cancellationToken);
+        var container = await _start.Value.WaitAsync(cancellationToken);
         var name = DatabaseName(label, Interlocked.Increment(ref _databasesCreated));
 
         await _gate.WaitAsync(cancellationToken);
@@ -74,42 +85,49 @@ public sealed class PostgresTestServer : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        if (_container is not null)
+        await _lifetime.CancelAsync();
+
+        if (_start.IsValueCreated)
         {
-            await _container.DisposeAsync();
-            _container = null;
+            try
+            {
+                await (await _start.Value).DisposeAsync();
+            }
+            catch (Exception) when (!_start.Value.IsCompletedSuccessfully)
+            {
+                // The start failed and already removed what it had created; its error was
+                // reported to every caller.
+            }
         }
 
+        _lifetime.Dispose();
         _gate.Dispose();
     }
 
-    private async Task<PostgreSqlContainer> StartAsync(CancellationToken cancellationToken)
+    private static async Task<PostgreSqlContainer> StartContainerAsync(CancellationToken cancellationToken)
     {
-        await _gate.WaitAsync(cancellationToken);
+        await DockerEngine.WaitUntilAnsweringAsync(cancellationToken);
+
+        var container = new PostgreSqlBuilder(Image)
+            .WithDatabase(MaintenanceDatabase)
+            .WithUsername("ritocode")
+            .WithPassword("ritocode")
+            // The same ICU locale as compose.yaml and CI. Text ordering differing between
+            // locales would surface as flaky pagination tests rather than as a locale bug.
+            .WithEnvironment("POSTGRES_INITDB_ARGS", "--locale-provider=icu --icu-locale=en-US --encoding=UTF8")
+            .Build();
+
         try
         {
-            if (_container is null)
-            {
-                var container = new PostgreSqlBuilder(Image)
-                    .WithDatabase(MaintenanceDatabase)
-                    .WithUsername("ritocode")
-                    .WithPassword("ritocode")
-                    // The same ICU locale as compose.yaml and CI. Text ordering differing between
-                    // locales would surface as flaky pagination tests rather than as a locale bug.
-                    .WithEnvironment("POSTGRES_INITDB_ARGS", "--locale-provider=icu --icu-locale=en-US --encoding=UTF8")
-                    .Build();
+            await container.StartAsync(cancellationToken);
+            await PrepareTemplateAsync(container, cancellationToken);
 
-                await container.StartAsync(cancellationToken);
-                await PrepareTemplateAsync(container, cancellationToken);
-
-                _container = container;
-            }
-
-            return _container;
+            return container;
         }
-        finally
+        catch
         {
-            _gate.Release();
+            await container.DisposeAsync();
+            throw;
         }
     }
 
