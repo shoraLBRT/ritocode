@@ -8,6 +8,7 @@ using Ritocode.Modules.Attempts.Admin;
 using Ritocode.Modules.Attempts.Contracts;
 using Ritocode.Modules.Attempts.Lifecycle;
 using Ritocode.Modules.Attempts.Persistence;
+using Ritocode.Modules.Attempts.PersonalData;
 using Ritocode.Modules.Attempts.Progress;
 using Ritocode.Modules.Attempts.Scoring;
 using Ritocode.Modules.Attempts.Signals;
@@ -15,6 +16,7 @@ using Ritocode.Modules.Attempts.Studying;
 using Ritocode.Shared.Contracts.Attempts;
 using Ritocode.Shared.Modules;
 using Ritocode.Shared.Persistence;
+using Ritocode.Shared.PersonalData;
 
 namespace Ritocode.Modules.Attempts;
 
@@ -74,6 +76,9 @@ public sealed class AttemptsModule : IModule
         services.AddScoped<ILearnerActivityLookup, LearnerActivityLookup>();
 
         services.AddScoped<IStudyMarks, StudyMarks>();
+
+        // A learner's attempts, signals, reveals and study marks, exported and erased on their request (ADR 0021).
+        services.AddScoped<IPersonalData, AttemptsPersonalData>();
 
         // TryAdd, as the other modules do: the clock is host infrastructure.
         services.TryAddSingleton(TimeProvider.System);

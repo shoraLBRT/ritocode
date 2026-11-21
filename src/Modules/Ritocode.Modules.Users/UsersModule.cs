@@ -7,8 +7,10 @@ using Ritocode.Modules.Users.Admin;
 using Ritocode.Modules.Users.Contracts;
 using Ritocode.Modules.Users.Identity;
 using Ritocode.Modules.Users.Persistence;
+using Ritocode.Modules.Users.PersonalData;
 using Ritocode.Shared.Contracts.Users;
 using Ritocode.Shared.Modules;
+using Ritocode.Shared.PersonalData;
 using Ritocode.Shared.Persistence;
 
 namespace Ritocode.Modules.Users;
@@ -43,6 +45,9 @@ public sealed class UsersModule : IModule
         services.AddScoped<IUserAccounts, UserAccounts>();
         services.AddScoped<IUserContactLookup, UserContactLookup>();
         services.AddScoped<IUserSignupLookup, UserSignupLookup>();
+
+        // The account row, exported and erased on its owner's request (ADR 0021).
+        services.AddScoped<IPersonalData, UsersPersonalData>();
 
         services.AddOptions<AdminOptions>()
             .Bind(configuration.GetSection(AdminOptions.SectionName))
