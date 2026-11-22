@@ -8,9 +8,10 @@ namespace Ritocode.Modules.Attempts.Persistence;
 /// of users — the one place in the module where the owner is deliberately not in the query.
 /// </summary>
 /// <remarks>
-/// Called only from <c>AdminReader</c>, whose endpoints are mapped behind the admin policy, and from
-/// <c>AttemptTallyLookup</c>, which answers counts for the Users module's admin list and nothing about
-/// a row. <c>OwnershipRuleTests</c> names this class as an allowance with that reason.
+/// Called only from <c>AdminReader</c> and <c>StatsReader</c>, whose endpoints are mapped behind the
+/// admin policy, from <c>AttemptTallyLookup</c>, which answers counts for the Users module's admin list
+/// and nothing about a row, and from <c>LearnerActivityLookup</c>, which answers moments for the usage
+/// over time. <c>OwnershipRuleTests</c> names this class as an allowance with that reason.
 /// </remarks>
 internal static class EveryonesRows
 {

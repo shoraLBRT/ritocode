@@ -193,9 +193,13 @@ function Share({ value }: { value: number | null }) {
   return value === null ? <span className="rc-admin__muted">{t('admin.none')}</span> : <>{t('admin.statsPage.percent', { value: Math.round(value * 100) })}</>;
 }
 
-/** Minutes and seconds, as `m:ss`. */
+/** Minutes and seconds as `m:ss`, and from an hour `h:mm:ss`, so a tab left open reads as hours. */
 function clock(seconds: number): string {
-  return `${String(Math.floor(seconds / 60))}:${String(seconds % 60).padStart(2, '0')}`;
+  const ss = String(seconds % 60).padStart(2, '0');
+  if (seconds < 3600) {
+    return `${String(Math.floor(seconds / 60))}:${ss}`;
+  }
+  return `${String(Math.floor(seconds / 3600))}:${String(Math.floor((seconds % 3600) / 60)).padStart(2, '0')}:${ss}`;
 }
 
 function TaskRow({ item: task }: { item: TaskStats }) {
@@ -236,9 +240,11 @@ function TaskRow({ item: task }: { item: TaskStats }) {
         {task.time ? (
           <span title={t('admin.statsPage.timeTitle', { count: task.time.count })}>
             <span className={slower ? 'rc-admin__over' : undefined}>{clock(task.time.medianSeconds)}</span>
-            <span className="rc-admin__sub">
-              {t('admin.statsPage.spread', { from: clock(task.time.lowerQuartileSeconds), to: clock(task.time.upperQuartileSeconds) })}
-            </span>
+            {task.time.count > 1 && (
+              <span className="rc-admin__sub">
+                {t('admin.statsPage.spread', { from: clock(task.time.lowerQuartileSeconds), to: clock(task.time.upperQuartileSeconds) })}
+              </span>
+            )}
           </span>
         ) : (
           <span className="rc-admin__muted">{t('admin.none')}</span>

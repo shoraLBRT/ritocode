@@ -485,7 +485,7 @@ components and the full width of `.app__main`. Styles in `pages/admin/admin.css`
 
 - **Head and sections**: `rc-page-head` with the one `h1` (*Админка*) and a lead, then the section
   tabs as links (`rc-admin__nav` › `rc-admin__tab`, `aria-current="page"` underlined in `--accent`):
-  *Обзор · Сигналы · Пользователи · Попытки · Система*, the number of open signals as a count on *Сигналы*
+  *Обзор · Сигналы · Пользователи · Попытки · Статистика · Система*, the number of open signals as a count on *Сигналы*
   (hidden until it is read, and when the read fails; read again when a signal is resolved). On a phone
   the row scrolls sideways by itself.
 - **Overview** (`/admin`): four tiles in a row (two by two below 64rem) — open signals, users,
@@ -508,7 +508,16 @@ components and the full width of `.app__main`. Styles in `pages/admin/admin.css`
   dates and figures in Plex Mono with figures right-aligned and zeros muted, only those unwrapped so
   text wraps and the table does not scroll sideways at 1280 px and up). States are chips (*Первая*,
   *Практика*, *Не сдана*, the step it stopped at, a resolved signal's date, a user's providers). The
-  pager sits in the panel's foot. Filters and page stay in the address.
+  pager sits in the panel's foot. Filters and page stay in the address. The attempts list also takes
+  a removable *Задача: …* and *Карточка: …* chip, as the statistics link it.
+- **Statistics** (`/admin/stats`, [#305](https://github.com/shoraLBRT/ritocode/issues/305)): two
+  panels, *Задачи* and *Карточки*, each one table sorted on the client by any column — a heading is a
+  button (`rc-admin__sort`, the arrow `__sort-mark` in `--accent`, `aria-sort` on the `th`); figures
+  sort largest first, text from A, a missing value last. A task or card is a link to its attempts, its
+  slug a second line in Plex Mono (`rc-admin__sub`), an outlier a `--warn` chip under it (*почти никто
+  не решает*, *выбирают зря чаще, чем находят*); a task's time is the median, the quartiles under it and
+  the band's estimate and lines under them, the median in `--warn` (`rc-admin__over`) when slower than
+  the band. Shares are whole percents. On a phone each table scrolls in its own region.
 - **Resolving a signal**: the button shows *Отмечаем…* while the request is out; on success the row
   fades out over `--dur` and the list and the sections' count are read again; a failure stays beside
   the button (`role="alert"`). Loading is `Skeleton` rows; a failed list is `ErrorState` in the panel.
@@ -579,7 +588,7 @@ above. What the site already had stays as it is.
 | Daily task | `.rc-daily` › `__top`, `__title`, `__meta`, `__chip`, `__code`, `__action` | one per page |
 | Progress | `.rc-ring` (`--p`), `.rc-ring__hole`, `__value`, `__of`; `.rc-bar.k-{class}` (`--p`) | `--p` is a percentage, 0–100 |
 | Activity | `.rc-heat` › `.rc-heat__cell[data-level=0–4]` | a column per week; `aria-hidden`, the streak says it in words |
-| Admin area | `.rc-admin` › `__nav`, `__tab`, `__tiles`, `__tile` (`__tile-label`, `__tile-value`, `__tile-hint`), `__title`, `__total`, `__table`, `__row` (`--leaving`), `__mono`, `__num` (`--zero`), `__text`, `__comment`, `__slug`, `__link`, `__chip` (`--first`, `--warn`, `--good`, `--filter`), `__action`, `__error`, `__foot`, `__facts`, `__fact`, `__code`, `__state` (`--ok`, `--failing`, `--none`) | `pages/admin/admin.css`; the panel is `rc-panel`, the filters `Tabs` (`rc-tabs`, its count optional) |
+| Admin area | `.rc-admin` › `__nav`, `__tab`, `__tiles`, `__tile` (`__tile-label`, `__tile-value`, `__tile-hint`), `__title`, `__total`, `__table`, `__row` (`--leaving`), `__mono`, `__num` (`--zero`), `__text`, `__comment`, `__slug`, `__link`, `__chip` (`--first`, `--warn`, `--good`, `--filter`), `__action`, `__error`, `__foot`, `__facts`, `__fact`, `__code`, `__state` (`--ok`, `--failing`, `--none`), `__sort`, `__sort-mark`, `__sub`, `__over` | `pages/admin/admin.css`; the panel is `rc-panel`, the filters `Tabs` (`rc-tabs`, its count optional) |
 | Profile | `.rc-profile` › `__side`, `__main`, `__row`, `section.rc-profile__card` (`__card-head`, `__card-title`), `__person`, `__avatar`, `__name`, `__joined`, `__person-meta`, `__providers`, `__provider`, `__classes-list`, `__class` (`--none`), `__bar`, `__ring`, `__level--easy` / `--medium` / `--hard`, `__tiles`, `__tile` (`--danger`), `__heat-scroll`, `__heat`, `__heat-cell[data-today]`, `__months`, `__attempts`, `__attempt`, `__chip--first` / `--practice`, `__table`, `__count--zero` / `--warn` / `--danger` / `--good`, `__start` | `/profile` (above); `pages/profile/`, its styles in `profile.css` |
 | Streak, avatar | `.rc-streak` (`.rc-streak--link` in the header), `.rc-avatar`, `.app__menu-link` | the header's right end (`HeaderStreak`, a link to `/profile`; the avatar opens `.app__menu` with *Профиль*) |
 | Problem card | `article.rc-pcard.k-{class}` › `__band`, `__seal`, `__face`, `__name`, `__rule`, `__summary`, `details.rc-pcard__more`; open: `.rc-pcard--open` in `.rc-pcard-overlay` | the catalogue's card, folded and open (above) |
