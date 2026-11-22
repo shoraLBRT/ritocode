@@ -7,7 +7,7 @@ import { ApiClient, resolveApiBaseUrl } from './api';
 import { App } from './App';
 import { installErrorReporter } from './errors/reporter';
 import { routes } from './routes';
-import { readPrerendered, resolveSiteConfig } from './site';
+import { loadPrerendered, resolveSiteConfig } from './site';
 import { applyTheme, readTheme, themeStorage } from './theme';
 // IBM Plex, served with the site rather than from a font CDN (docs/DESIGN.md).
 import '@fontsource/ibm-plex-sans/400.css';
@@ -45,12 +45,13 @@ if (analytics !== null) {
 // A prerendered page is hydrated with the data it was rendered from, so its markup stays as it is
 // and nothing it shows is fetched again (#310). Under another address than its own — the task page
 // under an attempt's, 404.html under any — or with a query, which a page may read but the prerender
-// never had, the application renders afresh over it instead.
-const prerendered = window.location.search === '' ? readPrerendered(document, window.location.pathname) : null;
+// never had, the application renders afresh over it instead. The data is a file the page preloads
+// (site/prerendered.ts), read here while the route's chunk loads.
+const loading = window.location.search === '' ? loadPrerendered(document, window.location.pathname, window.fetch.bind(window)) : Promise.resolve(null);
 const router = createBrowserRouter(routes);
 
 // A route of its own chunk (routes.tsx) is loaded before the first render, so that render is the page.
-void routerReady(router).then(() => {
+void Promise.all([loading, routerReady(router)]).then(([prerendered]) => {
   const app = (
     <StrictMode>
       <App client={client} config={config} router={router} prerendered={prerendered} />
