@@ -9,12 +9,29 @@
 # — another mention — is added only when the set of FAIL lines changes, so a check that fails every
 # five minutes sends one notification, not one a run. A report with no FAIL line closes it.
 # MONITOR_RUN_URL, when set, links the run that saw it.
+#
+# With TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID set (repository secrets, ADR 0020 decision 4), each of
+# those notifications — opened, changed, closed — is also a Telegram message from the server's bot
+# (deploy/alert.sh), naming the checks and nothing else. A message Telegram refuses is a warning: the
+# issue is the alert of record. TELEGRAM_API_BASE replaces https://api.telegram.org, for the tests.
 set -euo pipefail
 
 report="${1:?usage: $0 <report of monitor-check.sh>}"
 label="${MONITOR_LABEL:-monitoring-alert}"
 owner="${GITHUB_REPOSITORY_OWNER:?set GITHUB_REPOSITORY_OWNER}"
 run="${MONITOR_RUN_URL:-}"
+
+telegram() {
+	if [ -z "${TELEGRAM_BOT_TOKEN:-}" ] || [ -z "${TELEGRAM_CHAT_ID:-}" ]; then
+		return 0
+	fi
+	# The token on standard input, not on the command line.
+	if ! printf 'url = "%s/bot%s/sendMessage"
+' "${TELEGRAM_API_BASE:-https://api.telegram.org}" "$TELEGRAM_BOT_TOKEN" |
+		curl --silent --show-error --fail --max-time 20 --output /dev/null --config - 			--data-urlencode "chat_id=$TELEGRAM_CHAT_ID" --data-urlencode "text=$(printf '%s' "$1" | head -c 3500)"; then
+		echo "::warning::Telegram did not take the message" >&2
+	fi
+}
 
 failing="$(grep '^FAIL ' "$report" | sort || true)"
 open="$(gh issue list --label "$label" --state open --json number --jq '.[0].number // empty')"
@@ -23,6 +40,7 @@ if [ -z "$failing" ]; then
 	if [ -n "$open" ]; then
 		gh issue comment "$open" --body "Every check passes again.${run:+ ($run)}"
 		gh issue close "$open"
+		telegram "The site, seen from GitHub: every check passes again.${run:+ $run}"
 		echo "Closed alert #$open"
 	fi
 	exit 0
@@ -45,6 +63,9 @@ $failing
 if [ -z "$open" ]; then
 	gh label create "$label" --color B60205 --description "An alert of the uptime check (#34)" --force >/dev/null
 	gh issue create --title "Monitoring: the site needs attention" --label "$label" --body "$body"
+	telegram "The site, seen from GitHub, needs attention (RUNBOOK.md › Monitoring):
+
+$(cat "$report")"
 	exit 0
 fi
 
@@ -61,4 +82,7 @@ gh issue comment "$open" --body "@$owner what fails has changed:
 \`\`\`
 $failing
 \`\`\`"
+telegram "The site, seen from GitHub: what fails has changed:
+
+$failing"
 echo "Updated alert #$open"

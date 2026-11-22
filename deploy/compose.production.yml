@@ -81,8 +81,11 @@ services:
       Traffic__UmamiToken: ${UMAMI_API_TOKEN:-}
       Traffic__UmamiWebsiteId: ${UMAMI_WEBSITE_ID:-}
       Traffic__UmamiDashboardUrl: https://${UMAMI_DOMAIN:?set UMAMI_DOMAIN}
+      # The backup's heartbeat (#296), which backup.sh writes on the host, for the system page's backup line.
+      System__BackupHeartbeatPath: /backup-heartbeat/last-good
     volumes:
       - api-keys:/keys
+      - ${BACKUP_DIR:-/var/backups/ritocode}/heartbeat:/backup-heartbeat:ro
     depends_on:
       postgres:
         condition: service_healthy

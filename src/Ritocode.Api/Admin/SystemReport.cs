@@ -10,8 +10,8 @@ namespace Ritocode.Api.Admin;
 /// <param name="Migrations">Each module's schema: migrations applied and pending.</param>
 /// <param name="Dependencies">Each service the API depends on and its state.</param>
 /// <param name="Backup">
-/// The last good backup. Always <see langword="null"/> until the backup monitoring leaves a heartbeat (#296):
-/// absent, not an error.
+/// The last good backup, from the heartbeat <c>deploy/backup.sh</c> leaves (#296), or <see langword="null"/> when
+/// none is recorded: absent, not an error.
 /// </param>
 /// <param name="CheckedAt">When this report was made.</param>
 public sealed record SystemReport(
@@ -84,5 +84,5 @@ public enum DependencyStatus
     NotConfigured,
 }
 
-/// <summary>The last good backup, once #296 leaves a heartbeat to read.</summary>
+/// <summary>The last good backup: dumped and copied off the server (#296).</summary>
 public sealed record BackupInfo(DateTimeOffset At);

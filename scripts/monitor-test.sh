@@ -2,7 +2,8 @@
 # Tests of the uptime check's alert (#34), run by .github/workflows/monitor.yml on a pull request that
 # touches it: scripts/monitor-alert.sh against a fake gh that keeps one issue in a directory, through
 # down, still down, something else down, and back up. Then scripts/monitor-check.sh against an address
-# nothing answers. Needs bash, curl and openssl; no network beyond localhost.
+# nothing answers, and the Telegram message beside the issue against a fake curl. Last, the server's own
+# checks (deploy/check-test.sh, #296). Needs bash, curl and openssl; no network beyond localhost.
 set -euo pipefail
 
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -113,6 +114,44 @@ elif [ "$(grep '^FAIL ' <<<"$output")" = "FAIL health http://127.0.0.1:9/health/
 else
 	echo "FAIL the check names the failing health address"
 	printf '%s\n' "$output"
+	failures=$((failures + 1))
+fi
+
+# Telegram beside the issue (ADR 0020 decision 4): a fake curl, put first on PATH only now, so the
+# health check above used the real one.
+cat >"$work/bin/curl" <<'FAKE'
+#!/usr/bin/env bash
+config="$(cat)"
+for argument in "$@"; do
+	if [[ $argument == text=* ]]; then
+		echo "telegram ${config#url = }: $(head -n 1 <<<"${argument#text=}")" >>"$FAKE_GH_STATE/log"
+	fi
+done
+FAKE
+chmod +x "$work/bin/curl"
+export TELEGRAM_BOT_TOKEN=123:secret TELEGRAM_CHAT_ID=42 TELEGRAM_API_BASE=http://telegram.test
+sent='telegram "http://telegram.test/bot123:secret/sendMessage"'
+
+alert "FAIL health https://site.example/health/ready" "     HTTP 503"
+expect_log "with a bot, an opened alert is also a Telegram message" \
+	"create
+$sent: The site, seen from GitHub, needs attention (RUNBOOK.md › Monitoring):"
+alert "FAIL health https://site.example/health/ready" "     HTTP 502"
+expect_log "and the same failure sends none" ""
+alert "FAIL certificate site.example" "     expired"
+expect_log "a change is one" \
+	"edit 7
+comment 7: @owner what fails has changed:
+$sent: The site, seen from GitHub: what fails has changed:"
+alert "ok   certificate site.example"
+expect_log "and so is the recovery" \
+	"comment 7: Every check passes again.
+close 7
+$sent: The site, seen from GitHub: every check passes again."
+unset TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID TELEGRAM_API_BASE
+rm "$work/bin/curl"
+
+if ! "$here/../deploy/check-test.sh"; then
 	failures=$((failures + 1))
 fi
 

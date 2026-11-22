@@ -49,8 +49,8 @@ internal sealed partial class SystemReader(
             new("feedbackGitHubApp", await feedback.ConfigureAwait(false)),
         ];
 
-        // No heartbeat to read yet (#296): absent, not an error.
-        return new SystemReport(Build, content, database, migrations, dependencies, Backup: null, clock.GetUtcNow());
+        var backup = await ReadBackupAsync(cancellationToken).ConfigureAwait(false);
+        return new SystemReport(Build, content, database, migrations, dependencies, backup, clock.GetUtcNow());
     }
 
     private async Task<ModuleMigrations> ReadMigrationsAsync(ModuleDbContextRegistration registration, CancellationToken cancellationToken)
@@ -133,6 +133,19 @@ internal sealed partial class SystemReader(
         {
             LogFailed(logger, "Umami", exception);
             return DependencyStatus.Failing;
+        }
+    }
+
+    private async Task<BackupInfo?> ReadBackupAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await BackupHeartbeat.ReadAsync(options.Value.BackupHeartbeatPath, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            LogFailed(logger, "the backup's heartbeat", exception);
+            return null;
         }
     }
 
