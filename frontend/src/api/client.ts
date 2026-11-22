@@ -1,3 +1,4 @@
+import { ApiAvailability, isUnavailable } from './availability';
 import { ApiError, parseProblemBody } from './errors';
 
 /**
@@ -20,6 +21,8 @@ export interface ApiClientOptions {
   readonly fetch?: typeof globalThis.fetch;
   /** The session's CSRF token, if there is one. Injected in tests; defaults to reading its cookie. */
   readonly csrfToken?: () => string | undefined;
+  /** Where the outcome of every request is reported (#298). Injected in tests; defaults to a fresh one. */
+  readonly availability?: ApiAvailability;
 }
 
 export interface RequestOptions {
@@ -51,6 +54,7 @@ export class ApiClient {
   readonly #baseUrl: string;
   readonly #fetch: typeof globalThis.fetch;
   readonly #csrfToken: () => string | undefined;
+  readonly #availability: ApiAvailability;
 
   constructor(options: ApiClientOptions) {
     this.#baseUrl = options.baseUrl.replace(/\/+$/, '');
@@ -58,6 +62,12 @@ export class ApiClient {
     // in the browser the moment it is called as a bare function reference.
     this.#fetch = options.fetch ?? globalThis.fetch.bind(globalThis);
     this.#csrfToken = options.csrfToken ?? readCsrfCookie;
+    this.#availability = options.availability ?? new ApiAvailability();
+  }
+
+  /** Whether the API answered the last request; `ApiUnavailableBanner` reads it. */
+  get availability(): ApiAvailability {
+    return this.#availability;
   }
 
   get baseUrl(): string {
@@ -110,12 +120,17 @@ export class ApiClient {
         throw cause;
       }
 
+      this.#availability.report(false);
       throw new ApiError('The server could not be reached.', 'network', { cause });
     }
 
     if (!response.ok) {
-      throw await toApiError(response);
+      const error = await toApiError(response);
+      this.#availability.report(!isUnavailable(error));
+      throw error;
     }
+
+    this.#availability.report(true);
 
     return (await decodeBody(response)) as T;
   }

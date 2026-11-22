@@ -35,6 +35,13 @@ of its own in that PostgreSQL. Only Caddy publishes ports (80 and 443).
 - **Headers.** The edge adds HSTS, `nosniff`, frame denial, a referrer policy and a permissions policy
   to everything, and a content policy to the pages that allows Umami's script and its `/api/send`.
   The API sets its own stricter ones on its responses (#35).
+- **When nothing answers** (#298): if the API or the web image cannot be reached (Caddy's 502 or
+  504) the edge serves `maintenance/index.html` itself, mounted read-only at `/srv/maintenance`, with
+  503 and `Retry-After: 60` — the site's look, Russian, no script. While `maintenance/on` exists the
+  edge answers every request on `SITE_DOMAIN` that way; a release creates and removes it, and
+  [docs/RUNBOOK.md](../docs/RUNBOOK.md#maintenance) says how by hand. A status the API answered
+  itself, its own 503 included, passes through. The pages show one banner while the API does not
+  answer (`frontend/src/components/ApiUnavailableBanner.tsx`).
 - **Secrets** live in `production.env` beside the Compose file on the server, never in the repository;
   `production.env.example` lists them. The API gets the database, the OAuth apps of #134 and the
   admin's address from it.
@@ -75,8 +82,9 @@ RITOCODE_SERVER=deploy@server ./scripts/release.sh
 
 It releases `origin/main` (or the commit given as its argument), whose images the release-images
 workflow has built: it copies that commit's `deploy/` to `~/ritocode` on the server and runs
-`deploy/release.sh <commit>` there — pull the images, apply migrations, ingest the content with the
-commit, start the services on the new images, wait for `/health/ready`. **Rolling back is releasing
+`deploy/release.sh <commit>` there — pull the images, switch maintenance on, apply migrations,
+ingest the content with the commit, start the services on the new images, wait for `/health/ready`,
+switch maintenance off (a failed release leaves it on). **Rolling back is releasing
 the previous commit.** A migration is never undone by a rollback; one that must be reversed needs a
 new migration.
 

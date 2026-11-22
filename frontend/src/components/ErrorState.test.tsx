@@ -11,16 +11,20 @@ describe('ErrorState', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Problem does not exist.');
   });
 
-  it('writes its own sentence for an unreachable server, which has nothing to quote', () => {
-    render(<ErrorState error={new ApiError('The server could not be reached.', 'network')} />);
+  it.each([
+    ['an unreachable server', new ApiError('The server could not be reached.', 'network')],
+    ['the edge answering for it', new ApiError('x', 'http', { status: 503 })],
+    ['a gateway failure', new ApiError('x', 'http', { status: 502 })],
+  ])('leaves the outage to the banner for %s', (_, error) => {
+    render(<ErrorState error={error} />);
 
-    expect(screen.getByRole('alert')).toHaveTextContent(ru.state.unreachable);
+    expect(screen.getByRole('alert')).toHaveTextContent(ru.state.unavailable);
   });
 
   it('names the status for a response that was not the documented envelope', () => {
-    render(<ErrorState error={new ApiError('x', 'http', { status: 502 })} />);
+    render(<ErrorState error={new ApiError('x', 'http', { status: 500 })} />);
 
-    expect(screen.getByRole('alert')).toHaveTextContent('502');
+    expect(screen.getByRole('alert')).toHaveTextContent('500');
   });
 
   it('shows the request id, which is what maps a report to a log line', () => {

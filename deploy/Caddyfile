@@ -18,6 +18,17 @@
 	import site_headers
 	encode zstd gzip
 
+	# Maintenance (#298): while maintenance/on exists beside this file, every request is answered
+	# with the page below. deploy/release.sh creates it before migrating and removes it once the API
+	# is healthy; docs/RUNBOOK.md says how to do it by hand. Checked on every request, no reload.
+	@maintenance file {
+		root /srv/maintenance
+		try_files /on
+	}
+	handle @maintenance {
+		error 503
+	}
+
 	# The API: the versioned endpoints, sign-in and its callbacks, the health checks.
 	@api path /api/* /auth/* /health/*
 	handle @api {
@@ -30,6 +41,25 @@
 	handle {
 		header Content-Security-Policy "default-src 'self'; script-src 'self' https://{$UMAMI_DOMAIN} https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; connect-src 'self' https://{$UMAMI_DOMAIN}; img-src 'self' data:; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 		reverse_proxy web:80
+	}
+
+	# Nothing behind the edge answered (the API or the web image is down: 502 or 504), or maintenance
+	# is on (503): the edge's own page (deploy/maintenance/index.html), never Caddy's bare status.
+	# Always 503 with Retry-After, which tells a crawler and the pages' banner it is temporary. An
+	# answer the API gave itself, a 503 of its own included, passes through untouched.
+	handle_errors 502 503 504 {
+		# An error starts a fresh response: the site's headers again, then the page's own.
+		import site_headers
+		header {
+			Content-Security-Policy "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+			Cache-Control "no-store"
+			Retry-After "60"
+		}
+		root * /srv/maintenance
+		rewrite * /index.html
+		file_server {
+			status 503
+		}
 	}
 }
 

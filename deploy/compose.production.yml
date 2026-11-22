@@ -41,6 +41,8 @@ services:
       UMAMI_DOMAIN: ${UMAMI_DOMAIN:?set UMAMI_DOMAIN}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # The page served when nothing behind answers, and the maintenance switch `maintenance/on` (#298).
+      - ./maintenance:/srv/maintenance:ro
       # Certificates and the ACME account: lost, they are issued again, within Let's Encrypt's limits.
       - caddy-data:/data
       - caddy-config:/config

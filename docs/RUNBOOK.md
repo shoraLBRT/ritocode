@@ -68,8 +68,10 @@ RITOCODE_SERVER=deploy@server ./scripts/release.sh
 ```
 
 It releases `origin/main`; give a commit to release another. It prints each step and ends with
-`Released <commit>`. If the API does not become healthy it prints the API's last log lines and stops:
-the new images are already running, so [roll back](#roll-back).
+`Released <commit>`. From the migrations until the API is healthy the site is in
+[maintenance](#maintenance): every address answers 503 with the maintenance page. If the API does not
+become healthy it prints the API's last log lines and stops with maintenance still on: the new images
+are already running, so [roll back](#roll-back) — the rollback's release takes maintenance off.
 
 Check: `https://SITE_DOMAIN/health/ready` answers `Healthy`, and the site opens.
 
@@ -84,6 +86,25 @@ RITOCODE_SERVER=deploy@server ./scripts/release.sh <previous commit>
 Migrations are not undone. The previous code runs on the newer schema only if the migration added
 rather than removed or renamed — which is why the checklist reads it first. If it did not, restore the
 backup taken before the release instead ([Restore a backup](#restore-a-backup)).
+
+## Maintenance
+
+While the file `maintenance/on` exists, Caddy answers every request to `SITE_DOMAIN` — the pages, the
+API, `/health/ready` — with 503, `Retry-After: 60` and the page `maintenance/index.html` (Russian, no
+script). It reads the file on every request: no restart. The same page is what visitors get whenever
+the API or the web image does not answer. A release switches it on and off by itself; by hand, for
+work of your own on the server:
+
+**server**, in `~/ritocode`:
+
+```bash
+touch maintenance/on    # on
+rm maintenance/on       # off
+```
+
+Check: `curl -sI https://SITE_DOMAIN/ | head -1` says `503` while it is on and `200` once it is off.
+For planned work longer than a few minutes, clear `MONITOR_ORIGINS` too ([Monitoring](#monitoring)),
+or the monitor opens an alert.
 
 ## Restore a backup
 
@@ -191,8 +212,7 @@ added only when what fails changes. When every check passes again the workflow c
 | It says | Look at |
 | --- | --- |
 | `FAIL health`, `curl: (7)` or a timeout | The server or Caddy: `dc ps`, then `dc logs --since 15m caddy`. The VPS's console if SSH fails too. |
-| `FAIL health`, `returned error: 502` | The API is down behind Caddy: `dc ps api`, `dc logs --since 15m api`, `dc up -d api`. |
-| `FAIL health`, `returned error: 503` | The API is up and a database check fails: `dc ps postgres`, `dc logs --since 15m postgres`, disk space (`df -h`). |
+| `FAIL health`, `returned error: 503` | Three causes, in this order. [Maintenance](#maintenance) is on: `ls maintenance/on` — a release that failed leaves it on. The API is down behind Caddy, which answers with its maintenance page instead of a 502: `dc ps api`, `dc logs --since 15m api`, `dc up -d api`. The API is up and a database check fails: `dc ps postgres`, `dc logs --since 15m postgres`, disk space (`df -h`). |
 | `FAIL certificate`, `expires within 14 days` or `expired` | Caddy has failed to renew for two weeks or more: `dc logs caddy \| grep -i -E "acme\|certificate"`. Usually DNS or port 80 closed. |
 | `FAIL reachable` (Umami's address) | `dc ps umami`, `dc logs --since 15m umami`. |
 

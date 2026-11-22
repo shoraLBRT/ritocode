@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ApiError } from '../api';
+import { ApiError, isUnavailable } from '../api';
 import { useT } from '../i18n';
 import type { Translate } from '../i18n';
 import { Glyph } from './EmptyState';
@@ -61,11 +61,16 @@ export function ErrorState({ error, onRetry }: { error: ApiError; onRetry?: () =
 }
 
 function describe(error: ApiError, t: Translate): string {
+  // The outage itself is the banner's to explain (`ApiUnavailableBanner`, #298).
+  if (isUnavailable(error)) {
+    return t('state.unavailable');
+  }
+
   switch (error.kind) {
     case 'problem':
       return error.message;
     case 'network':
-      return t('state.unreachable');
+      return t('state.unavailable');
     case 'http':
       return error.status === undefined ? t('state.unexpectedResponse') : t('state.unexpectedStatus', { status: String(error.status) });
   }

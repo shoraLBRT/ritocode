@@ -1,5 +1,6 @@
 export { ApiClient, CSRF_HEADER, REQUEST_ID_HEADER } from './client';
 export type { ApiClientOptions, RequestOptions } from './client';
+export { ApiAvailability, isUnavailable } from './availability';
 export { ApiError, isApiError, parseProblemBody } from './errors';
 export type { ApiErrorKind, ApiProblemBody } from './errors';
 export {

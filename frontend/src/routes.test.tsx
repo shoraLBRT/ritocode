@@ -59,12 +59,13 @@ describe('the application shell', () => {
     expect(screen.getByRole('status')).toHaveTextContent(ru.tasks.loading);
   });
 
-  it('shows the failure panel when the API cannot be reached', async () => {
+  it('explains an unreachable API once, in the banner above the failed panel', async () => {
     renderApp(vi.fn<typeof globalThis.fetch>().mockRejectedValue(new TypeError('Failed to fetch')), '/tasks');
 
     await waitFor(() => {
-      expect(screen.getByRole('alert')).toHaveTextContent(ru.state.unreachable);
+      expect(screen.getByText(ru.state.unavailableBanner)).toBeInTheDocument();
     });
+    expect(screen.getByText(ru.state.unavailable)).toBeInTheDocument();
   });
 
   it('renders the not-found page for an unrouted address', () => {
