@@ -124,6 +124,26 @@ volume (no `content` schema); `restore.sh ritocode` restored the dump; the site 
 (the same three cards), the task, the landing page and a healthy `/health/ready`. Repeat it on the
 server once it exists, and after any change to these scripts.
 
+A run is good only when every dump was made **and** copied to `BACKUP_REMOTE`: then it writes the
+time to `BACKUP_DIR/heartbeat/last-good`; any failure writes `last-failed`. With `BACKUP_REMOTE`
+empty the dumps are still made, but the run counts as failed. `check.sh` alerts on both (below), and
+the admin system page shows `last-good` — the API mounts `BACKUP_DIR/heartbeat` read-only, and
+`release.sh` creates that directory so Docker does not create it as root.
+
+## Checks
+
+`check.sh` checks the server every five minutes — disk, memory, load, containers, the database,
+the backup's heartbeat — and `alert.sh` sends Telegram when what fails changes and on recovery
+([ADR 0020](../docs/adr/0020-observability.md), #296):
+
+```
+*/5 * * * * cd /home/deploy/ritocode && ./check.sh >> /var/log/ritocode-check.log 2>&1
+```
+
+The bot's token and chat id and every threshold are in `production.env`; what each alert means is in
+[RUNBOOK.md › The server's checks](../docs/RUNBOOK.md#the-servers-checks). `check-test.sh` tests both
+scripts against fakes (`DeployScriptTests` runs it in the backend's tests).
+
 ## Logs
 
 The API writes **one JSON object per line** to standard output (the console's `json` formatter,

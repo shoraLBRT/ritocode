@@ -15,6 +15,11 @@ cd "$(dirname "$0")"
 export RITOCODE_VERSION="$version"
 compose="docker compose -f compose.production.yml --env-file production.env"
 
+# The API mounts the backup's heartbeat directory (#296); made here, by this user, so Docker does not
+# make it as root, where backup.sh could not write.
+backup_dir="$(sed -n 's/^BACKUP_DIR=//p' production.env)"
+mkdir -p "${backup_dir:-/var/backups/ritocode}/heartbeat"
+
 echo "Releasing $version"
 $compose pull --quiet api migrate web
 

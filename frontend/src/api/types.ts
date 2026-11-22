@@ -350,7 +350,7 @@ export interface SystemReport {
   readonly database: { readonly status: SystemStatus; readonly sizeBytes: number | null };
   readonly migrations: readonly ModuleMigrations[];
   readonly dependencies: readonly { readonly name: string; readonly status: SystemStatus }[];
-  /** Always `null` until the backup monitoring leaves a heartbeat (#296): absent, not an error. */
+  /** The last good backup, from deploy/backup.sh's heartbeat (#296); `null` when none is recorded: absent, not an error. */
   readonly backup: { readonly at: string } | null;
   readonly checkedAt: string;
 }

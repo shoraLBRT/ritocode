@@ -10,4 +10,10 @@ public sealed class SystemOptions
     /// <c>/api/heartbeat</c> is asked. Unset: Umami is shown as not configured.
     /// </summary>
     public Uri? UmamiUrl { get; init; }
+
+    /// <summary>
+    /// The backup's heartbeat (#296) as the API sees it — in production <c>BACKUP_DIR/heartbeat</c> mounted
+    /// read-only, so <c>/backup-heartbeat/last-good</c>. Unset or missing: no good backup is recorded.
+    /// </summary>
+    public string? BackupHeartbeatPath { get; init; }
 }

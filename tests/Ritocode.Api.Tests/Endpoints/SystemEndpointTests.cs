@@ -40,7 +40,7 @@ public sealed class SystemEndpointTests(AdminContentTestApi api) : IClassFixture
             root.GetProperty("dependencies").EnumerateArray()
                 .Select(dependency => $"{dependency.GetProperty("name").GetString()}:{dependency.GetProperty("status").GetString()}"));
 
-        // Until the backup monitoring leaves a heartbeat (#296): absent, not an error.
+        // No heartbeat configured here (#296; BackupHeartbeatTests reads one): absent, not an error.
         Assert.Equal(JsonValueKind.Null, root.GetProperty("backup").ValueKind);
         Assert.EndsWith("Z", root.GetProperty("checkedAt").GetString(), StringComparison.Ordinal);
     }

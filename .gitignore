@@ -80,3 +80,5 @@ deploy/maintenance/on
 # The end-to-end test (#39)
 e2e/test-results/
 e2e/playwright-report/
+# What the server's alert last sent (deploy/alert.sh).
+deploy/monitor-state
