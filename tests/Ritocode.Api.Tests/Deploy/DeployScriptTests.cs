@@ -3,14 +3,20 @@ using System.Diagnostics;
 namespace Ritocode.Api.Tests.Deploy;
 
 /// <summary>
-/// The server's checks and their alert (#296) are shell scripts in <c>deploy/</c>, tested by
-/// <c>deploy/check-test.sh</c> against fakes. Running it here makes every pull request run it, as the backend's
-/// tests run on each one; the Monitor workflow runs it too, but only when <c>scripts/monitor-*.sh</c> change.
+/// The server's checks and their alert (#296), and the IndexNow call after a release (#303), are shell scripts
+/// in <c>deploy/</c>, tested by <c>deploy/check-test.sh</c> and <c>deploy/indexnow-test.sh</c> against fakes.
+/// Running them here makes every pull request run them, as the backend's tests run on each one; the Monitor
+/// workflow runs the first too, but only when <c>scripts/monitor-*.sh</c> change.
 /// </summary>
 public sealed class DeployScriptTests
 {
     [Fact]
-    public async Task TheServerChecks_AndTheirAlert_PassTheirTests()
+    public Task TheServerChecks_AndTheirAlert_PassTheirTests() => RunScriptTest("check-test.sh");
+
+    [Fact]
+    public Task TheIndexNowCall_SendsTheChangedPages_ToAFakeCurl() => RunScriptTest("indexnow-test.sh");
+
+    private static async Task RunScriptTest(string name)
     {
         var shell = FindShell();
         if (shell is null)
@@ -18,7 +24,7 @@ public sealed class DeployScriptTests
             Assert.Skip("No POSIX sh here (on Windows, Git for Windows provides one).");
         }
 
-        var script = Path.Combine(RepositoryRoot(), "deploy", "check-test.sh").Replace('\\', '/');
+        var script = Path.Combine(RepositoryRoot(), "deploy", name).Replace('\\', '/');
         var start = new ProcessStartInfo(shell, [script])
         {
             RedirectStandardOutput = true,
@@ -29,7 +35,7 @@ public sealed class DeployScriptTests
         var errors = process.StandardError.ReadToEndAsync(TestContext.Current.CancellationToken);
         await process.WaitForExitAsync(TestContext.Current.CancellationToken);
 
-        Assert.True(process.ExitCode == 0, $"deploy/check-test.sh failed:\n{await output}\n{await errors}");
+        Assert.True(process.ExitCode == 0, $"deploy/{name} failed:\n{await output}\n{await errors}");
     }
 
     private static string? FindShell()

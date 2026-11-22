@@ -500,3 +500,46 @@ describe('the link previews and structured data (#302)', () => {
     expect(checkPages(content, files, fewer)).toEqual(['/tasks: its preview image og/tasks.png was not made.']);
   });
 });
+
+describe('the page hashes a release tells IndexNow from (#303)', () => {
+  const build = (input: Partial<Parameters<typeof prerender>[0]> = {}) => {
+    const written = prerender({ content, template, origin: 'https://ritocode.example', config: { demoTask: 'flower-shop-daily-revenue' }, builtAt: new Date('2026-11-20T10:00:00Z'), ...input });
+    const text = written.get('page-hashes.txt') ?? '';
+    return new Map(text.trimEnd().split('\n').map((line) => {
+      const [hash, path] = line.split(' ');
+      return [path, hash] as const;
+    }));
+  };
+  const before = build();
+
+  it('lists every page of the sitemap, and only those, each with a hash', () => {
+    const sitemap = page('sitemap.xml');
+    const paths = [...sitemap.matchAll(/<loc>https:\/\/ritocode\.example([^<]*)<\/loc>/g)].map((match) => match[1] ?? '');
+    expect([...before.keys()].sort()).toEqual(paths.sort());
+    for (const hash of before.values()) {
+      expect(hash).toMatch(/^[0-9a-f]{16}$/);
+    }
+  });
+
+  it('stays the same when only the bundle changes, as on a release of code alone', () => {
+    expect(build({ template: template.replace('index-abc.js', 'index-def.js') })).toEqual(before);
+  });
+
+  it('changes on another day only for the landing page, whose arena turns daily', () => {
+    const tomorrow = build({ builtAt: new Date('2026-11-21T10:00:00Z') });
+    const changed = [...tomorrow].filter(([path, hash]) => before.get(path) !== hash).map(([path]) => path);
+    expect(changed.filter((path) => path !== '/')).toEqual([]);
+  });
+
+  it('changes for the pages whose text changed, and for no other', () => {
+    const edited: ContentExport = {
+      ...content,
+      problems: { ...content.problems, cards: content.problems.cards.map((card) => (card.slug === 'money-in-float' ? { ...card, summary: 'Копейки теряются при округлении.' } : card)) },
+    };
+    const after = build({ content: edited });
+    const changed = [...after].filter(([path, hash]) => before.get(path) !== hash).map(([path]) => path);
+    expect(changed).toContain('/problems/money-in-float');
+    expect(changed).not.toContain('/problems/secrets-in-repo');
+    expect(changed).not.toContain('/tasks/orders-report-small-shop');
+  });
+});

@@ -30,4 +30,4 @@ git archive "$commit" deploy | tar -x -C "$staging"
 
 ssh "$server" "mkdir -p '$directory'"
 scp -q -r "$staging/deploy/." "$server:$directory/"
-ssh "$server" "cd '$directory' && chmod +x release.sh backup.sh restore.sh postgres-init/*.sh && ./release.sh '$commit'"
+ssh "$server" "cd '$directory' && chmod +x release.sh indexnow.sh backup.sh restore.sh postgres-init/*.sh && ./release.sh '$commit'"

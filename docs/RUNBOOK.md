@@ -65,6 +65,7 @@ Once, by the maintainer (#134 provides the server, the domain and the OAuth apps
    sign-in offer carries the notice linking `/privacy`.
 10. Turn on [monitoring](#monitoring): set the repository variable `MONITOR_ORIGINS` to
     `https://SITE_DOMAIN https://UMAMI_DOMAIN`.
+11. Register the site in the [search consoles](#search-consoles) and set the IndexNow key.
 
 ## Release
 
@@ -79,6 +80,9 @@ It releases `origin/main`; give a commit to release another. It prints each step
 [maintenance](#maintenance): every address answers 503 with the maintenance page. If the API does not
 become healthy it prints the API's last log lines and stops with maintenance still on: the new images
 are already running, so [roll back](#roll-back) — the rollback's release takes maintenance off.
+
+After maintenance is off it tells [IndexNow](#indexnow) which public pages changed — a line starting
+`IndexNow:`. A failure there is reported and does not fail the release.
 
 Check: `https://SITE_DOMAIN/health/ready` answers `Healthy`, and the site opens.
 
@@ -355,3 +359,54 @@ Content reaches production only through the repository (SPEC §7).
 
 The prerendered `/problems` page is rebuilt with the web image, so it shows the new cards after the
 same release.
+
+## Search consoles
+
+Yandex Webmaster and Google Search Console show what is indexed, for which queries, and what is
+broken (#303). Russian traffic comes largely from Yandex, so look there first.
+
+### Register the site
+
+1. **Yandex Webmaster** (<https://webmaster.yandex.ru>): add `https://SITE_DOMAIN`; choose the
+   *meta tag* check and copy the tag's `content` value only.
+2. **Google Search Console** (<https://search.google.com/search-console>): add a *URL prefix*
+   property `https://SITE_DOMAIN/`; choose *HTML tag* and copy its `content` value only.
+3. **local** Set the repository variables `YANDEX_VERIFICATION` and `GOOGLE_SITE_VERIFICATION`
+   (GitHub → Settings → Variables) to those values. The web image is built with them (as
+   `VITE_YANDEX_VERIFICATION`, `VITE_GOOGLE_SITE_VERIFICATION`): each puts its meta tag in the head
+   of every page; unset, no tag. A value that is not letters, digits, `-` and `_` fails the build.
+   The release-images workflow must pass them as build arguments — see deploy/README.md › The search
+   consoles.
+4. Push to `main` (or re-run the release-images workflow), [release](#release), check that
+   `curl -s https://SITE_DOMAIN/ | grep verification` shows both tags, and press *Verify* in each
+   console. Keep the tags: the consoles re-check them and drop a site whose tag is gone.
+5. In each console submit the sitemap `https://SITE_DOMAIN/sitemap.xml` (Yandex: *Indexing →
+   Sitemap files*; Google: *Sitemaps*). `robots.txt` names it too.
+
+### IndexNow
+
+After each release `deploy/release.sh` compares the running web image's `page-hashes.txt` with the
+new one's and sends the pages that are new, changed or gone to IndexNow (`deploy/indexnow.sh`), which
+shares them with Yandex and Bing. A release of code alone sends nothing but `/`, whose arena turns
+daily.
+
+1. **server** Make a key, `openssl rand -hex 16`, put it in `production.env` as `INDEXNOW_KEY`,
+   then `dc up -d caddy`. The edge serves it at `https://SITE_DOMAIN/<key>.txt`: check that
+   `curl -s https://SITE_DOMAIN/<key>.txt` prints the key.
+2. The next release sends every public page once (the old image had no list), then only the changed.
+   In Yandex Webmaster, *Indexing → IndexNow* (or *Crawl statistics*) shows the addresses received.
+
+Rotating the key: a new value in `production.env`, `dc up -d caddy`; nothing else keeps it.
+
+### Weekly
+
+Ten minutes, once a week, in both consoles:
+
+- **Coverage** (Yandex: *Indexing → Pages in search*, *Excluded pages*; Google: *Pages*): every card
+  and task should be indexed. A page *excluded* as a duplicate, *noindex* or *not found* is a bug —
+  check its canonical link and that the sitemap lists it.
+- **Queries** (Yandex: *Search queries*; Google: *Performance*): which queries bring people, and
+  which pages they land on. Cards with impressions and no clicks want a better title or summary.
+- **Errors** (Yandex: *Diagnostics* / *Site quality*; Google: *Pages* errors, *Core Web Vitals*): server
+  errors, unreachable robots.txt or sitemap, slow pages. A 5xx burst lines up with
+  [an error report](#an-error-was-reported) or a release's maintenance window.

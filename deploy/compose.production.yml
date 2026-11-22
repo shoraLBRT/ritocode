@@ -50,6 +50,8 @@ services:
     environment:
       SITE_DOMAIN: ${SITE_DOMAIN:?set SITE_DOMAIN}
       UMAMI_DOMAIN: ${UMAMI_DOMAIN:?set UMAMI_DOMAIN}
+      # IndexNow's key, served as its key file (#303); empty serves none.
+      INDEXNOW_KEY: ${INDEXNOW_KEY:-}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       # The page served when nothing behind answers, and the maintenance switch `maintenance/on` (#298).
