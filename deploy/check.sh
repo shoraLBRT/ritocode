@@ -197,7 +197,7 @@ check_backup() {
 	fi
 
 	if [ -n "$bad" ] && { [ -z "$good" ] || [ "$bad" -gt "$good" ]; }; then
-		fail "backup last run" "failed $(((now - bad) / 60)) min ago; its log is /var/log/ritocode-backup.log"
+		fail "backup last run" "failed $(((now - bad) / 60)) min ago; its log says why"
 	else
 		pass "backup last run"
 	fi

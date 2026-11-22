@@ -58,6 +58,9 @@ Once, by the maintainer (#134 provides the server, the domain and the OAuth apps
    depends on it.
 8. **server** Schedule the backup: `crontab -e`, then
    `15 3 * * * cd ~/ritocode && ./backup.sh >> ~/ritocode-backup.log 2>&1`.
+   And the server's own checks ([Monitoring](#monitoring)), every five minutes, in the same crontab:
+   `*/5 * * * * cd ~/ritocode && ./check.sh >> ~/ritocode-check.log 2>&1`. Make their Telegram bot
+   first ([The server's checks](#the-servers-checks)).
 9. Sign in with GitHub and with Google; open `/admin` — it is there only for `ADMIN_EMAIL`. Each
    sign-in offer carries the notice linking `/privacy`.
 10. Turn on [monitoring](#monitoring): set the repository variable `MONITOR_ORIGINS` to
@@ -181,6 +184,7 @@ Every secret is in `~/ritocode/production.env` on the server; nothing else holds
 | `UMAMI_APP_SECRET` | Put a new one in `production.env`, `dc up -d umami`; everyone signed in to Umami signs in again, and `UMAMI_API_TOKEN` stops working — get a new one (below). |
 | `UMAMI_API_TOKEN` | [Get an Umami token](#get-an-umami-token), put it in `production.env`, `dc up -d api`. A token outlives Umami's restarts; changing that Umami account's password or `UMAMI_APP_SECRET` ends it, so get a new one after either. |
 | The rclone key | Make a new key at the provider, `rclone config` to update the remote, delete the old key. |
+| `TELEGRAM_BOT_TOKEN` | @BotFather → `/revoke` for the monitoring bot, put the new token in `production.env` (`check.sh` reads it on its next run; nothing to restart) **and** in the repository secret of the same name, which the *Monitor* workflow sends with. |
 | The data-protection key ring | Not a secret anyone types. To discard it: `dc stop api`, `docker volume rm ritocode-production_api-keys`, `dc up -d api`; sign-ins in flight fail once. |
 
 Signed-in learners stay signed in through all of these: sessions live in the database.
@@ -244,6 +248,47 @@ addresses, closes it.
 Two limits of a scheduled workflow: GitHub can start a run several minutes late when it is busy, and
 it **disables the schedule after 60 days without a commit** to the repository — it e-mails a warning
 first; re-enable it under *Actions* → *Monitor*.
+
+The workflow also sends each of its notifications — opened, changed, closed — to Telegram when the
+repository secrets `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` are set and passed to its *Alert* step
+(`scripts/monitor-alert.sh` reads them; until the workflow passes them, only the issue alerts).
+
+### The server's checks
+
+What the workflow cannot see from outside, `deploy/check.sh` checks on the server every five minutes
+from cron ([ADR 0020](adr/0020-observability.md), #296): free disk, memory, load, the containers,
+the database and the backup. `deploy/alert.sh` sends a Telegram message when what fails changes and
+one when everything passes again, nothing in between; what it last sent is in `~/ritocode/monitor-state`.
+A message names the checks and their numbers, never a user, an e-mail or a request. Each run's report
+is in `~/ritocode-check.log`; `./check.sh --no-alert` prints one now without sending anything.
+
+**The bot**, once: in Telegram, @BotFather → `/newbot` — a bot for this alone, not bellboy's — and its
+token into `production.env` as `TELEGRAM_BOT_TOKEN`. Send the bot any message, open
+`https://api.telegram.org/bot<token>/getUpdates`, and put `message.chat.id` in `TELEGRAM_CHAT_ID`.
+Either empty: the checks run and say nothing. **Try it**: `MONITOR_DISK_FREE_PERCENT=101 ./check.sh`
+sends the disk alert; `./check.sh` right after sends the recovery.
+
+While [maintenance](#maintenance) is on, the containers and the database are not checked. The
+thresholds are variables in `production.env` ([production.env.example](../deploy/production.env.example)).
+
+| It says | Means | Look at |
+| --- | --- | --- |
+| `FAIL disk /` | Less than 15 % of the disk is free. | `df -h`, `du -sh /var/lib/docker /var/backups/ritocode`; `docker system prune` removes old images. Logs are capped by Docker ([Read logs](#read-logs)). |
+| `FAIL memory` | Less than 10 % of memory is available. | `docker stats --no-stream`; the API or Umami growing — `dc restart <service>` frees it, and is worth an issue. |
+| `FAIL load` | The five-minute load is above two per CPU. | `top`; `docker stats --no-stream`. |
+| `FAIL container <service>` | The service is not running, is unhealthy, is restarting, or restarted in the last 15 minutes. | `dc ps`, `dc logs --since 30m <service>`. A loop of restarts is usually a bad setting in `production.env` or the database. |
+| `FAIL database` | PostgreSQL did not answer `psql`. | `dc ps postgres`, `dc logs --since 15m postgres`, disk space. |
+| `FAIL database size` | The product's database is above 5 GB. | `dc exec postgres psql -U ritocode -c "\dt+ *.*"` for the largest tables; raise `MONITOR_DATABASE_MAX_MB` if the growth is expected. |
+| `FAIL database connections` | 80 % or more of `max_connections` are taken. | `dc exec postgres psql -U ritocode -c "select application_name, state, count(*) from pg_stat_activity group by 1, 2"`. |
+| `FAIL backup last run` | The last `backup.sh` failed: a dump, or the copy off the server (`BACKUP_REMOTE` empty counts as failed). | `~/ritocode-backup.log`; `rclone lsd <remote>` for the remote; run `./backup.sh` by hand once it is fixed. |
+| `FAIL backup age` | No backup both dumped and copied off the server for 26 hours (or ever). | As above; also that cron runs (`crontab -l`). |
+
+`ok   logs api (the oldest line …)` is not an alert: it says how many days of the API's log Docker
+keeps, against the 14 that ADR 0020 aims for.
+
+The heartbeat behind the two backup checks is `BACKUP_DIR/heartbeat/last-good` (seconds since the
+epoch; `date -d @$(cat …)` reads it), written only when every dump was made and copied off; a failed
+run writes `last-failed`. The admin system page shows `last-good` as *Последняя резервная копия*.
 
 ## Add an admin
 
