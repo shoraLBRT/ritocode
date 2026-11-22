@@ -2,23 +2,13 @@ import { Navigate } from 'react-router';
 import type { RouteObject } from 'react-router';
 import { AppLayout } from './components/AppLayout';
 import { RouteErrorPage } from './errors/RouteErrorPage';
-import { AdminAttemptsPage } from './pages/admin/AdminAttemptsPage';
-import { AdminErrorsPage } from './pages/admin/AdminErrorsPage';
-import { AdminOverviewPage } from './pages/admin/AdminOverviewPage';
-import { AdminSignalsPage } from './pages/admin/AdminSignalsPage';
-import { AdminStatsPage } from './pages/admin/AdminStatsPage';
-import { AdminSystemPage } from './pages/admin/AdminSystemPage';
-import { AdminUsersPage } from './pages/admin/AdminUsersPage';
 import { RequireAdmin } from './pages/admin/RequireAdmin';
 import { HomePage } from './pages/HomePage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { PrivacyPage } from './pages/PrivacyPage';
 import { ProblemPage } from './pages/ProblemPage';
 import { ProblemsPage } from './pages/ProblemsPage';
-import { ProfilePage } from './pages/profile/ProfilePage';
 import { TasksPage } from './pages/TasksPage';
-import { ReviewPage } from './pages/task/ReviewPage';
-import { TaskPage } from './pages/task/TaskPage';
 import { RequireSignIn } from './session';
 
 /**
@@ -29,6 +19,10 @@ import { RequireSignIn } from './session';
  * route (`src/session`), which renders its children only for one: the review of an attempt and
  * the profile. The admin area goes under `RequireAdmin`, which shows anyone but an admin the
  * page of an unknown address.
+ *
+ * The public pages are in the bundle every page loads; the task screen, the review, the profile and
+ * the admin area are each a chunk of their own, loaded when their route is first matched (#310), so
+ * a prerendered page loads none of them.
  */
 export const routes: RouteObject[] = [
   {
@@ -39,12 +33,12 @@ export const routes: RouteObject[] = [
     children: [
       { index: true, Component: HomePage },
       { path: 'tasks', Component: TasksPage },
-      { path: 'tasks/:slug', Component: TaskPage },
+      { path: 'tasks/:slug', lazy: () => import('./pages/task/TaskPage').then((page) => ({ Component: page.TaskPage })) },
       {
         Component: RequireSignIn,
         children: [
-          { path: 'tasks/:slug/attempts/:id', Component: ReviewPage },
-          { path: 'profile', Component: ProfilePage },
+          { path: 'tasks/:slug/attempts/:id', lazy: () => import('./pages/task/ReviewPage').then((page) => ({ Component: page.ReviewPage })) },
+          { path: 'profile', lazy: () => import('./pages/profile/ProfilePage').then((page) => ({ Component: page.ProfilePage })) },
         ],
       },
       // The progress page became the profile (#261); an old link still lands there.
@@ -53,13 +47,13 @@ export const routes: RouteObject[] = [
         path: 'admin',
         Component: RequireAdmin,
         children: [
-          { index: true, Component: AdminOverviewPage },
-          { path: 'signals', Component: AdminSignalsPage },
-          { path: 'users', Component: AdminUsersPage },
-          { path: 'attempts', Component: AdminAttemptsPage },
-          { path: 'stats', Component: AdminStatsPage },
-          { path: 'system', Component: AdminSystemPage },
-          { path: 'errors', Component: AdminErrorsPage },
+          { index: true, lazy: () => import('./pages/admin/AdminOverviewPage').then((page) => ({ Component: page.AdminOverviewPage })) },
+          { path: 'signals', lazy: () => import('./pages/admin/AdminSignalsPage').then((page) => ({ Component: page.AdminSignalsPage })) },
+          { path: 'users', lazy: () => import('./pages/admin/AdminUsersPage').then((page) => ({ Component: page.AdminUsersPage })) },
+          { path: 'attempts', lazy: () => import('./pages/admin/AdminAttemptsPage').then((page) => ({ Component: page.AdminAttemptsPage })) },
+          { path: 'stats', lazy: () => import('./pages/admin/AdminStatsPage').then((page) => ({ Component: page.AdminStatsPage })) },
+          { path: 'system', lazy: () => import('./pages/admin/AdminSystemPage').then((page) => ({ Component: page.AdminSystemPage })) },
+          { path: 'errors', lazy: () => import('./pages/admin/AdminErrorsPage').then((page) => ({ Component: page.AdminErrorsPage })) },
         ],
       },
       { path: 'problems', Component: ProblemsPage },

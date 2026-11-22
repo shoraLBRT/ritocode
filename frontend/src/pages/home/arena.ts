@@ -111,7 +111,7 @@ export function suggestedTasks(tasks: readonly TaskSummary[], now: Date, today: 
 }
 
 /** A few problems to read today, in the day's order. */
-export function suggestedProblems(cards: readonly ProblemCard[], now: Date): ProblemCard[] {
+export function suggestedProblems<C extends Pick<ProblemCard, 'slug'>>(cards: readonly C[], now: Date): C[] {
   return shuffleByDay(cards, now, 2).slice(0, SUGGESTED_PROBLEMS);
 }
 

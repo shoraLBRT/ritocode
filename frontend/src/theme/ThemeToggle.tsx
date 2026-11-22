@@ -1,6 +1,21 @@
-import { useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import { useT } from '../i18n';
 import { applyTheme, currentTheme, saveTheme, themeStorage } from './theme';
+import type { Theme } from './theme';
+
+/** Every mounted toggle, told when one of them switches the theme, so all show the theme the root carries. */
+const listeners = new Set<() => void>();
+
+function subscribe(onChange: () => void): () => void {
+  listeners.add(onChange);
+  return () => {
+    listeners.delete(onChange);
+  };
+}
+
+const snapshot = (): Theme => currentTheme();
+// The prerendered page is light; a hydrated toggle starts from it and then reads the theme chosen (#310).
+const serverSnapshot = (): Theme => 'light';
 
 /**
  * Switches between the light and the dark theme, and remembers the choice. `labelled` makes it a row
@@ -8,7 +23,7 @@ import { applyTheme, currentTheme, saveTheme, themeStorage } from './theme';
  */
 export function ThemeToggle({ className, labelled = false }: { className?: string; labelled?: boolean }) {
   const t = useT();
-  const [theme, setTheme] = useState(() => (typeof document === 'undefined' ? 'light' : currentTheme()));
+  const theme = useSyncExternalStore(subscribe, snapshot, serverSnapshot);
   const next = theme === 'dark' ? 'light' : 'dark';
   const label = t(next === 'dark' ? 'app.themeDark' : 'app.themeLight');
 
@@ -20,7 +35,9 @@ export function ThemeToggle({ className, labelled = false }: { className?: strin
       onClick={() => {
         applyTheme(next);
         saveTheme(themeStorage(), next);
-        setTheme(next);
+        for (const listener of listeners) {
+          listener();
+        }
       }}
     >
       <svg viewBox="0 0 24 24" aria-hidden="true" className="icon">

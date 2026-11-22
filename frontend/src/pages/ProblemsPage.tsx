@@ -19,6 +19,7 @@ import { useStuck } from '../hooks/useStuck';
 import { useStudyMarks } from '../hooks/useStudyMarks';
 import type { StudyMarks } from '../hooks/useStudyMarks';
 import { useT } from '../i18n';
+import { usePrerendered } from '../site';
 import { Icon } from './task/parts';
 
 /**
@@ -34,25 +35,16 @@ import { Icon } from './task/parts';
 export function ProblemsPage() {
   const client = useApiClient();
   const t = useT();
-  const { state, reload } = useApiResource((signal) => getProblemCatalogue(client, signal), [client]);
+  // Prerendered from the content export (docs/SPEC.md §4.1), the page hydrates with the catalogue it
+  // shows and loads nothing (#310): the export is the content the API serves, built with it.
+  const prerendered = usePrerendered('/problems')?.catalogue;
+  const { state, reload } = useApiResource((signal) => getProblemCatalogue(client, signal), [client], prerendered && { data: prerendered });
 
   return (
     <ProblemsFrame>
       {state.status === 'loading' && <LoadingState label={t('problems.loading')} skeleton={<CatalogueSkeleton />} />}
       {state.status === 'error' && <ErrorState error={state.error} onRetry={reload} />}
       {state.status === 'success' && <CatalogueOrEmpty catalogue={state.data} />}
-    </ProblemsFrame>
-  );
-}
-
-/**
- * The same page for a catalogue already in hand: what the build prerenders from the content export
- * (docs/SPEC.md §4.1), so a search engine reads every card without running JavaScript.
- */
-export function StaticProblemsPage({ catalogue }: { catalogue: ProblemCatalogue }) {
-  return (
-    <ProblemsFrame>
-      <CatalogueOrEmpty catalogue={catalogue} />
     </ProblemsFrame>
   );
 }

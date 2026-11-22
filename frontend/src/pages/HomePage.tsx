@@ -2,17 +2,19 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Link } from 'react-router';
 import { getProblemCatalogue, getProgress, listPracticeSince, listTasks, useApiClient } from '../api';
-import type { Practice, ProblemCard, ProblemCatalogue, Progress, TaskSummary } from '../api';
+import type { Practice, Progress, TaskSummary } from '../api';
 import { ErrorState } from '../components/ErrorState';
 import { LoadingState } from '../components/LoadingState';
 import { ActivitySkeleton, DailyTaskSkeleton, StatSkeleton, ProblemsToReadSkeleton, ProgressSkeleton, TaskTableSkeleton } from '../components/skeletons';
 import { TaskTable } from '../components/TaskTable';
 import { useApiResource } from '../hooks/useApiResource';
 import { useCountUp } from '../hooks/useCountUp';
+import { useHydrated } from '../hooks/useHydrated';
 import { useLocale, useT } from '../i18n';
 import { useSession } from '../session';
 import { SignInLinks } from '../session/SignInLinks';
-import { useSiteConfig } from '../site';
+import { usePrerendered, useSiteConfig } from '../site';
+import type { ArenaCard, ArenaCatalogue } from '../site';
 import {
   activity,
   activityLevel,
@@ -39,17 +41,16 @@ import './home/home.css';
  */
 export function HomePage() {
   const client = useApiClient();
-  const { state } = useApiResource((signal) => getProblemCatalogue(client, signal), [client]);
+  // Prerendered, the page hydrates with the classes and the cards it was built with and loads them
+  // no more (#310). The problems to read change with the day, so its first render is for the day it
+  // was built, and the arena moves on to today once it is mounted.
+  const prerendered = usePrerendered('/')?.arena;
+  const { state } = useApiResource<ArenaCatalogue>((signal) => getProblemCatalogue(client, signal), [client], prerendered && { data: prerendered.catalogue });
 
-  return <Arena catalogue={state.status === 'success' ? state.data : null} />;
+  return <Arena catalogue={state.status === 'success' ? state.data : null} builtAt={prerendered?.builtAt} />;
 }
 
-/** The arena for the prerender: the catalogue comes from the content export, not the API. */
-export function StaticHomePage({ catalogue }: { catalogue: ProblemCatalogue }) {
-  return <Arena catalogue={catalogue} />;
-}
-
-function Arena({ catalogue }: { catalogue: ProblemCatalogue | null }) {
+function Arena({ catalogue, builtAt }: { catalogue: ArenaCatalogue | null; builtAt: string | undefined }) {
   const client = useApiClient();
   const t = useT();
   const session = useSession();
@@ -57,7 +58,10 @@ function Arena({ catalogue }: { catalogue: ProblemCatalogue | null }) {
   const tasks = useApiResource((signal) => listTasks(client, { pageSize: 100 }, signal), [client]);
   // One instant for the whole page, so the daily task and the activity agree on what today is. It
   // moves on when the daily task's countdown reaches midnight, and the next day's task takes over.
-  const [now, setNow] = useState(() => new Date());
+  // A hydrated page renders first for the instant it was built for, as its markup is (#310).
+  const [clock, setNow] = useState(() => new Date());
+  const hydrated = useHydrated();
+  const now = hydrated || builtAt === undefined ? clock : new Date(builtAt);
   const nextDay = useCallback(() => {
     setNow(new Date());
   }, []);
@@ -266,9 +270,9 @@ function SuggestedTasks({ tasks }: { tasks: readonly TaskSummary[] }) {
 }
 
 /** A few cards of the catalogue — name, class and summary — each opening at its anchor in `/problems`. */
-function ProblemsToRead({ catalogue, now }: { catalogue: ProblemCatalogue; now: Date }) {
+function ProblemsToRead({ catalogue, now }: { catalogue: ArenaCatalogue; now: Date }) {
   const t = useT();
-  const className = (card: ProblemCard) => catalogue.classes.find((each) => each.id === card.class)?.name ?? card.class;
+  const className = (card: ArenaCard) => catalogue.classes.find((each) => each.id === card.class)?.name ?? card.class;
 
   return (
     <>

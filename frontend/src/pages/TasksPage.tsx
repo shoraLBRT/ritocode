@@ -1,6 +1,6 @@
 import { useSearchParams } from 'react-router';
 import { difficulties, listTasks, taskStatuses, useApiClient } from '../api';
-import type { Difficulty, TaskPreview, TaskStatus, TaskSummary } from '../api';
+import type { Difficulty, TaskStatus, TaskSummary } from '../api';
 import { BackToTop } from '../components/BackToTop';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
@@ -13,6 +13,7 @@ import { useCountUp } from '../hooks/useCountUp';
 import { useStuck } from '../hooks/useStuck';
 import { useT } from '../i18n';
 import { useSession } from '../session';
+import { usePrerendered } from '../site';
 
 type StatusFilter = 'all' | TaskStatus;
 
@@ -28,7 +29,10 @@ export function TasksPage() {
   const client = useApiClient();
   const t = useT();
   const session = useSession();
-  const { state, reload } = useApiResource((signal) => listTasks(client, { pageSize: 100 }, signal), [client]);
+  // Prerendered, the page hydrates with the list as a guest sees it and loads it again in the
+  // background (#310): a signed-in learner's list carries their statuses.
+  const prerendered = usePrerendered('/tasks')?.tasks;
+  const { state, reload } = useApiResource((signal) => listTasks(client, { pageSize: 100 }, signal), [client], prerendered && { data: prerendered, refresh: true });
 
   return (
     <section className="page rc-arena">
@@ -48,33 +52,6 @@ export function TasksPage() {
         </div>
       )}
       <BackToTop />
-    </section>
-  );
-}
-
-/**
- * The same page for tasks already in hand: what the build prerenders from the content export
- * (docs/SPEC.md §4.1) — every task as a guest sees it, so a search engine reads the list without
- * running JavaScript.
- */
-export function StaticTasksPage({ tasks }: { tasks: readonly TaskPreview[] }) {
-  const t = useT();
-  const summaries = tasks.map(({ slug, title, difficulty }): TaskSummary => ({ slug, title, difficulty, status: null }));
-
-  return (
-    <section className="page rc-arena">
-      <header className="rc-page-head">
-        <h1>{t('tasks.title')}</h1>
-        <p>{t('tasks.lead')}</p>
-      </header>
-
-      {summaries.length > 0 ? (
-        <TaskList tasks={summaries} />
-      ) : (
-        <div className="rc-panel">
-          <EmptyState title={t('tasks.empty')} icon="tasks" />
-        </div>
-      )}
     </section>
   );
 }

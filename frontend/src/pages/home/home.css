@@ -23,14 +23,16 @@
   }
 }
 
-/* The page's cards rise one after another, 40 ms apart; the page root itself no longer rises. */
+/* The page's cards rise one after another, 40 ms apart; the page root itself no longer rises. What
+   the page is prerendered with rises only when the arena is navigated to: on the page landed on it is
+   already there (#310). What arrives with the data — the daily task, the learner's cards — rises always. */
 .app__main > .rc-arena {
   animation: none;
 }
 
-.rc-arena__hero,
+.app--navigated .rc-arena__hero,
 article.rc-daily,
-.rc-arena__lists > .rc-panel,
+.app--navigated .rc-arena__lists > .rc-panel,
 .rc-arena__aside > .rc-arena__card {
   animation: rc-rise var(--dur-slow) var(--ease-out) backwards;
 }
