@@ -1,6 +1,6 @@
 # 0007 — Cross-module contract form
 
-- Status: Accepted. §4 was superseded in part by ADR 0009, for command contracts only; 0009 was removed with the product it governed (see the ADR index). [ADR 0021](0021-personal-data-export-and-erasure.md) (Proposed) supersedes §4 for one need: exporting and erasing a user's data, through a seam outside `Contracts`
+- Status: Accepted. §4 was superseded in part by ADR 0009, for command contracts only; 0009 was removed with the product it governed (see the ADR index). [ADR 0021](0021-personal-data-export-and-erasure.md) supersedes §4 for one need: exporting and erasing a user's data, through a seam outside `Contracts`
 - Date: 2026-09-05
 - Relates to: [`docs/DATABASE_SCHEMA.md`](../DATABASE_SCHEMA.md), [#10](https://github.com/shoraLBRT/ritocode/issues/10)
 - Builds on: [0002](0002-modular-monolith-layout.md), [0004](0004-persistence-and-migrations.md)

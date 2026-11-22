@@ -1,6 +1,6 @@
 # 0021 — A user's data is exported and erased by each module, through one seam
 
-- Status: Proposed
+- Status: Accepted (2026-11-22, by the maintainer)
 - Date: 2026-11-22
 - Relates to: [#299](https://github.com/shoraLBRT/ritocode/issues/299), [SPEC.md](../SPEC.md) §9.3, §10.4
 - Builds on: [0002](0002-modular-monolith-layout.md), [0004](0004-persistence-and-migrations.md),
