@@ -2,7 +2,8 @@
 // The build runs this in Node, with no DOM: so does the test.
 import { describe, expect, it } from 'vitest';
 import { ru } from '../i18n';
-import { checkPages, prerender } from './prerender';
+import { checkPages, prerender, previews, structuredData } from './prerender';
+import { wrap } from './preview';
 import type { ContentExport } from './prerender';
 
 const template = `<!doctype html>
@@ -71,6 +72,8 @@ const secrets = {
 const leaky: ContentExport = { ...content, tasks: content.tasks.map((task) => ({ ...task, ...secrets })) };
 
 const files = prerender({ content, template, origin: 'https://ritocode.example/', config: { demoTask: 'flower-shop-daily-revenue' }, lastmod: '2026-11-19' });
+const svgs = previews(content, 'https://ritocode.example/');
+const images = new Set(svgs.keys());
 
 function page(path: string): string {
   const html = files.get(path);
@@ -223,22 +226,24 @@ describe('what else the build writes', () => {
   });
 
   it('finds every card and task with its page, and names what is missing', () => {
-    expect(checkPages(content, files)).toEqual([]);
+    expect(checkPages(content, files, images)).toEqual([]);
 
     const broken = new Map(files);
     broken.delete('problems/money-in-float.html');
     broken.set('tasks/orders-report-small-shop.html', template);
     broken.set('sitemap.xml', '');
 
-    expect(checkPages(content, broken)).toEqual([
+    expect(checkPages(content, broken, images)).toEqual([
       '/problems/secrets-in-repo: not in sitemap.xml.',
       '/problems/money-in-float: no page was written.',
       '/problems/money-in-float: not in sitemap.xml.',
       "/tasks/orders-report-small-shop: the page does not hold 'Выгрузка заказов для магазина чая' as its heading.",
       '/tasks/orders-report-small-shop: not in sitemap.xml.',
       '/tasks/flower-shop-daily-revenue: not in sitemap.xml.',
+      '/tasks/orders-report-small-shop: the page has no link preview.',
+      '/tasks/orders-report-small-shop: the page has no valid structured data.',
     ]);
-    expect(checkPages({ ...content, tasks: [] }, files)).toContain('The export has no cards or no tasks: the content was not read.');
+    expect(checkPages({ ...content, tasks: [] }, files, images)).toContain('The export has no cards or no tasks: the content was not read.');
   });
 
   it('writes the page of an unknown address, not to be indexed', () => {
@@ -286,5 +291,168 @@ describe('what else the build writes', () => {
   it('refuses a template already prerendered, and an origin that is not an address', () => {
     expect(() => prerender({ content, template: page('index.html'), origin: 'https://ritocode.example', config: { demoTask: 'x' } })).toThrow(/empty/);
     expect(() => prerender({ content, template, origin: 'ritocode', config: { demoTask: 'x' } })).toThrow(/SITE_ORIGIN/);
+  });
+});
+
+/** The JSON-LD of a page, parsed: one document, of schema.org. */
+function ld(path: string): Record<string, unknown> {
+  const data = structuredData(page(path));
+  expect(data).toHaveLength(1);
+  const [document] = data as Record<string, unknown>[];
+  expect(document?.['@context']).toBe('https://schema.org');
+  return document ?? {};
+}
+
+/** The content of a `<meta>` tag of a page, by its property or name. */
+function tag(html: string, key: string): string | undefined {
+  return new RegExp(`<meta (?:property|name)="${key}" content="([^"]*)" />`).exec(html)?.[1];
+}
+
+describe('the link previews and structured data (#302)', () => {
+  const publicPages = {
+    'index.html': 'https://ritocode.example/',
+    'problems.html': 'https://ritocode.example/problems',
+    'tasks.html': 'https://ritocode.example/tasks',
+    'privacy.html': 'https://ritocode.example/privacy',
+    'problems/secrets-in-repo.html': 'https://ritocode.example/problems/secrets-in-repo',
+    'problems/money-in-float.html': 'https://ritocode.example/problems/money-in-float',
+    'tasks/orders-report-small-shop.html': 'https://ritocode.example/tasks/orders-report-small-shop',
+    'tasks/flower-shop-daily-revenue.html': 'https://ritocode.example/tasks/flower-shop-daily-revenue',
+  };
+
+  it('gives every public page its Open Graph and Twitter tags, with an image the build makes', () => {
+    for (const [path, url] of Object.entries(publicPages)) {
+      const html = page(path);
+      const title = /<title>([^<]*)<\/title>/.exec(html)?.[1];
+
+      expect(tag(html, 'og:url'), path).toBe(url);
+      expect(html).toContain(`<link rel="canonical" href="${url}" />`);
+      expect(tag(html, 'og:title'), path).toBe(title);
+      expect(tag(html, 'og:description'), path).toBe(/<meta name="description" content="([^"]*)" \/>/.exec(html)?.[1]);
+      expect(tag(html, 'og:site_name')).toBe('Ritocode');
+      expect(tag(html, 'og:locale')).toBe('ru_RU');
+      expect(tag(html, 'og:image:width')).toBe('1200');
+      expect(tag(html, 'og:image:height')).toBe('630');
+      expect(tag(html, 'twitter:card')).toBe('summary_large_image');
+      expect(tag(html, 'twitter:title')).toBe(title);
+
+      const image = tag(html, 'og:image') ?? '';
+      expect(image, path).toMatch(/^https:\/\/ritocode\.example\/og\/.+\.png$/);
+      expect(tag(html, 'twitter:image')).toBe(image);
+      expect(images.has(image.slice('https://ritocode.example/'.length)), path).toBe(true);
+    }
+
+    expect(tag(page('problems/secrets-in-repo.html'), 'og:image')).toBe('https://ritocode.example/og/problems/secrets-in-repo.png');
+    expect(tag(page('tasks/flower-shop-daily-revenue.html'), 'og:image')).toBe('https://ritocode.example/og/tasks/flower-shop-daily-revenue.png');
+    expect(tag(page('problems/secrets-in-repo.html'), 'og:image:alt')).toBe('Ritocode: Секреты в репозитории');
+  });
+
+  it('describes the site and its owner on the landing page', () => {
+    const graph = ld('index.html')['@graph'] as Record<string, unknown>[];
+
+    expect(graph.map((node) => node['@type'])).toEqual(['WebSite', 'Organization']);
+    expect(graph[0]).toMatchObject({ name: 'Ritocode', url: 'https://ritocode.example/', inLanguage: 'ru', publisher: { '@id': 'https://ritocode.example/#organization' } });
+    expect(graph[1]).toMatchObject({ '@id': 'https://ritocode.example/#organization', name: 'Ritocode', url: 'https://ritocode.example/' });
+  });
+
+  it('gives the catalogue as a set of defined terms, and each card as one of them', () => {
+    const set = ld('problems.html');
+    expect(set).toMatchObject({ '@type': 'DefinedTermSet', name: ru.meta.problems.title, url: 'https://ritocode.example/problems' });
+    expect(set.hasDefinedTerm).toEqual([
+      { '@type': 'DefinedTerm', name: 'Секреты в репозитории', termCode: 'secrets-in-repo', description: 'Пароли и ключи в коде.', url: 'https://ritocode.example/problems/secrets-in-repo' },
+      { '@type': 'DefinedTerm', name: 'Деньги во float', termCode: 'money-in-float', description: 'Копейки теряются.', url: 'https://ritocode.example/problems/money-in-float' },
+    ]);
+
+    expect(ld('problems/money-in-float.html')).toMatchObject({
+      '@type': 'DefinedTerm',
+      name: 'Деньги во float',
+      url: 'https://ritocode.example/problems/money-in-float',
+      inDefinedTermSet: { '@type': 'DefinedTermSet', '@id': 'https://ritocode.example/problems#catalogue', url: 'https://ritocode.example/problems' },
+    });
+  });
+
+  it('gives each task as a learning resource, and the tasks page as their list', () => {
+    expect(ld('tasks/orders-report-small-shop.html')).toMatchObject({
+      '@type': 'LearningResource',
+      name: 'Выгрузка заказов для магазина чая',
+      description: 'Сделай выгрузку заказов в CSV для менеджеров.',
+      url: 'https://ritocode.example/tasks/orders-report-small-shop',
+      learningResourceType: 'exercise',
+      educationalLevel: 'Лёгкая',
+      timeRequired: 'PT5M',
+      isAccessibleForFree: true,
+      provider: { '@type': 'Organization', name: 'Ritocode' },
+    });
+    expect(ld('tasks/flower-shop-daily-revenue.html')).toMatchObject({ educationalLevel: 'Сложная', timeRequired: 'PT25M' });
+
+    const list = ld('tasks.html');
+    expect(list).toMatchObject({ '@type': 'ItemList', numberOfItems: 2 });
+    expect(list.itemListElement).toEqual([
+      { '@type': 'ListItem', position: 1, url: 'https://ritocode.example/tasks/orders-report-small-shop', name: 'Выгрузка заказов для магазина чая' },
+      { '@type': 'ListItem', position: 2, url: 'https://ritocode.example/tasks/flower-shop-daily-revenue', name: 'Выручка цветочной лавки за день' },
+    ]);
+    expect(ld('privacy.html')).toMatchObject({ '@type': 'WebPage', url: 'https://ritocode.example/privacy' });
+  });
+
+  it('keeps the answer out of a task’s structured data, and a card’s text from closing the script', () => {
+    const leakyFiles = prerender({ content: leaky, template, origin: 'https://ritocode.example', config: { demoTask: 'x' } });
+    expect(leakyFiles.get('tasks/flower-shop-daily-revenue.html')).not.toContain('СЕКРЕТН');
+
+    const card = { ...content.problems.cards[0], summary: 'Ключ </script><script>alert(1)</script> & "кавычки"' } as ContentExport['problems']['cards'][number];
+    const hostile = prerender({ content: { ...content, problems: { ...content.problems, cards: [card] } }, template, origin: 'https://ritocode.example', config: { demoTask: 'x' } });
+    const html = hostile.get('problems/secrets-in-repo.html') ?? '';
+
+    expect(html).not.toContain('<script>alert(1)');
+    expect(structuredData(html)).toEqual([expect.objectContaining({ description: 'Ключ </script><script>alert(1)</script> & "кавычки"' })]);
+  });
+
+  it('leaves the page of an unknown address without a preview, as it is not to be shared', () => {
+    expect(page('404.html')).not.toContain('og:');
+    expect(structuredData(page('404.html'))).toEqual([]);
+  });
+
+  it('draws a preview for each page type and for each card and task, from its text', () => {
+    expect([...svgs.keys()]).toEqual([
+      'og/home.png',
+      'og/problems.png',
+      'og/tasks.png',
+      'og/problems/secrets-in-repo.png',
+      'og/problems/money-in-float.png',
+      'og/tasks/orders-report-small-shop.png',
+      'og/tasks/flower-shop-daily-revenue.png',
+    ]);
+
+    /** The text of each `<text>` of an SVG, without its runs' markup. */
+    const texts = (svg: string) => [...svg.matchAll(/<text[^>]*>([\s\S]*?)<\/text>/g)].map(([, inner]) => (inner ?? '').replace(/<tspan x[^>]*>/g, '\n').replace(/<[^>]+>/g, '').trim());
+
+    const card = svgs.get('og/problems/secrets-in-repo.png') ?? '';
+    expect(card).toMatch(/^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg" width="1200" height="630"/);
+    expect(texts(card)).toEqual(['Ritocode', 'Гигиена и безопасность', 'Секреты в репозитории', 'Пароли и ключи в коде.', 'ritocode.example']);
+    expect(card).toContain('fill="#ec8f7e"');
+    expect(texts(svgs.get('og/tasks/flower-shop-daily-revenue.png') ?? '')[1]).toBe('Сложная задача · 20–25 минут');
+  });
+
+  it('draws each run of text in the font of its script, at its weight', () => {
+    const card = svgs.get('og/problems/money-in-float.png') ?? '';
+
+    expect(card).toContain('<tspan font-family="Preview cyrillic 600">Деньги</tspan><tspan font-family="Preview latin 600"> </tspan>');
+    expect(card).toContain('<tspan font-family="Preview latin 600"> float</tspan>');
+    expect(card).toContain('<tspan font-family="Preview latin 700">Ritocode</tspan>');
+    expect(card).not.toMatch(/font-family="(?!Preview (latin|cyrillic) (400|600|700)")/);
+  });
+
+  it('breaks a long title into at most three lines, with an ellipsis where it is cut', () => {
+    const long = 'Очень длинное название карточки, которое никак не помещается в одну строку превью и даже в две, а потом ещё и в три строки';
+    const { lines, cut } = wrap(long, 68, 600, 3);
+
+    expect(lines).toHaveLength(3);
+    expect(cut).toBe(true);
+    expect(lines[2]).toMatch(/…$/);
+    expect(wrap('Деньги во float', 68, 600, 3)).toEqual({ lines: ['Деньги во float'], cut: false });
+  });
+
+  it('names a page whose preview image was not made', () => {
+    const fewer = new Set([...images].filter((path) => path !== 'og/tasks.png'));
+    expect(checkPages(content, files, fewer)).toEqual(['/tasks: its preview image og/tasks.png was not made.']);
   });
 });

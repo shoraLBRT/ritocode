@@ -56,6 +56,13 @@ with `build:static`. It renders `src/prerender/prerender.tsx` with Vite's SSR bu
 | `tasks/{slug}.html` | `/tasks/{slug}` and its attempts, for each task of the export — the untouched shell |
 | `404.html` | any other address, with status 404 — the not-found page, rendered, `noindex` |
 | `sitemap.xml`, `robots.txt` | themselves; the sitemap's `lastmod` is `CONTENT_LASTMOD` when set |
+| `og/*.png`, `og/problems/{slug}.png`, `og/tasks/{slug}.png` | the link preview images the pages' `og:image` names (#302) |
+
+Every public page carries Open Graph and Twitter tags and JSON-LD (`src/prerender/seo.ts`). Its
+preview image is drawn from its own text as SVG (`src/prerender/preview.ts`) and rasterised by
+`scripts/previews.mjs` with resvg (`@resvg/resvg-js`, a dev dependency) and IBM Plex Sans from
+`@fontsource` — no system font, so every machine draws the same image. The build fails when a
+public page lacks its tags, its image or JSON-LD that parses.
 
 So the files written are the site's addresses, and the server needs no list of its own: it tries the
 path, then the path with `.html` (an attempt's review takes its task's file), and answers 404 with
