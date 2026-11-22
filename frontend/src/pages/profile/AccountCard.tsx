@@ -26,7 +26,8 @@ export function AccountCard({ index }: { index: number }) {
   }
 
   const { username } = session.user;
-  const matches = typed.trim() === username;
+  // Usernames are stored lower-cased; the server compares without case, and so does this.
+  const matches = typed.trim().toLowerCase() === username.toLowerCase();
 
   return (
     <ProfileCard

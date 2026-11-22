@@ -10,8 +10,8 @@ using Ritocode.Modules.Users.Persistence;
 using Ritocode.Modules.Users.PersonalData;
 using Ritocode.Shared.Contracts.Users;
 using Ritocode.Shared.Modules;
-using Ritocode.Shared.PersonalData;
 using Ritocode.Shared.Persistence;
+using Ritocode.Shared.PersonalData;
 
 namespace Ritocode.Modules.Users;
 

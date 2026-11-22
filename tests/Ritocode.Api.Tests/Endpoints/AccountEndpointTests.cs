@@ -88,7 +88,8 @@ public sealed class AccountEndpointTests(AnonymousTestApi api) : IClassFixture<A
         // one without erasing it fails here rather than passing over an empty table.
         Assert.All(await UserTablesAsync(), table => Assert.True(before.GetValueOrDefault(table) > 0, $"The seed wrote nothing to {table}."));
 
-        using (var deleted = await SendAsync(HttpMethod.Delete, "/api/v1/me", ada.Session, ada.Session.CsrfToken, new { username = "delete-ada" }))
+        // Typed as the learner remembers it: the username is stored lower-cased, and compared without case.
+        using (var deleted = await SendAsync(HttpMethod.Delete, "/api/v1/me", ada.Session, ada.Session.CsrfToken, new { username = " Delete-Ada " }))
         {
             Assert.Equal(HttpStatusCode.NoContent, deleted.StatusCode);
             var cleared = deleted.Headers.GetValues("Set-Cookie").ToList();

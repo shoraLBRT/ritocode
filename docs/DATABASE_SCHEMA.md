@@ -183,6 +183,12 @@ schemas would reinstate exactly the coupling the schema split removes.
 "Validated by" means through a contract in `Ritocode.Shared/Contracts` — such as `IUserLookup` — never
 by opening the owning module's `DbContext` ([ADR 0007](adr/0007-cross-module-contract-form.md)).
 
+**Deleting a user** (`DELETE /api/v1/me`, #299) is no cascade and no single statement: every module
+that keeps a `user_id` erases its own rows through its `IPersonalData`, the `users` row last
+([ADR 0021](adr/0021-personal-data-export-and-erasure.md)). Inside `attempts`, signals go before the
+attempts they name. A table added with a `user_id` joins its module's `IPersonalData`, or
+`PersonalDataTests` and `AccountEndpointTests` fail.
+
 `content.tasks.material` points inside its own schema and still has no constraint: a material is
 never deleted, and ingest validates the reference before it writes anything.
 

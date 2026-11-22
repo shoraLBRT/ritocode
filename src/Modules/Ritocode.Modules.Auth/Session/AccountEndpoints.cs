@@ -97,7 +97,8 @@ internal static partial class AccountEndpoints
             return NoUser(context);
         }
 
-        if (!string.Equals(request.Username?.Trim(), user.Username, StringComparison.Ordinal))
+        // Usernames are stored lower-cased, so the case it is typed in does not matter.
+        if (!string.Equals(request.Username?.Trim(), user.Username, StringComparison.OrdinalIgnoreCase))
         {
             return ApiProblem.ToResult(
                 AppError.Validation(

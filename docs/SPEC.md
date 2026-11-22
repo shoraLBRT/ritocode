@@ -719,6 +719,8 @@ Under `/api/v1`, following ADR 0003.
 | `GET /attempts/{id}` | An attempt, its outcome, and once the answer is revealed its result | owner |
 | `GET /attempts` | The caller's attempts, optionally for one task | signed in |
 | `GET /me`, `GET /me/progress` | The caller, and their progress | signed in |
+| `GET /me/export` | Everything the site keeps about the caller, as a JSON attachment, each module's part under its name; an attempt's result and review only for a task whose answer was revealed (#299, ADR 0021) | signed in |
+| `DELETE /me` | Delete the account and every module's rows about it, the account's own last; the body repeats the username (`{"username":"…"}`, compared without case, else `400 validation_failed`); `204` and the session's cookies cleared (#299, ADR 0021) | signed in |
 | `GET /me/studied` | The caller's marks «Изучено» on published cards, with their dates (§4.2 › Studying) | signed in |
 | `PUT /me/studied/{card}`, `DELETE /me/studied/{card}` | Mark a card studied, keeping the first date; take the mark back. Both idempotent; a card not published is `404 card_not_found` on `PUT` | signed in |
 | `POST /signals` | Send a signal from an attempt | owner of the attempt |
