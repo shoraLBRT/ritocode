@@ -9,6 +9,7 @@ import type {
   AdminSignalStatus,
   AdminUser,
   SystemReport,
+  TrafficReport,
   Attempt,
   AttemptStep,
   AttemptSummary,
@@ -271,4 +272,10 @@ export function readAdminActivity(
 ): Promise<ActivityReport> {
   const params = new URLSearchParams({ from: query.from, to: query.to, bucket: query.bucket });
   return client.request<ActivityReport>(`/admin/stats/activity?${params.toString()}`, signal ? { signal } : {});
+}
+
+/** `GET /admin/stats/traffic` — the site's traffic from Umami over `from`..`to` (UTC dates, both included) (#306). Admins only. */
+export function readAdminTraffic(client: ApiClient, query: { from: string; to: string }, signal?: AbortSignal): Promise<TrafficReport> {
+  const params = new URLSearchParams({ from: query.from, to: query.to });
+  return client.request<TrafficReport>(`/admin/stats/traffic?${params.toString()}`, signal ? { signal } : {});
 }
