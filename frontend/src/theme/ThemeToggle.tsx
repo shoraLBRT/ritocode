@@ -3,12 +3,13 @@ import { useT } from '../i18n';
 import { applyTheme, currentTheme, saveTheme, themeStorage } from './theme';
 import type { Theme } from './theme';
 
-/** The theme the root carries, followed as the toggle changes it. */
+/** Every mounted toggle, told when one of them switches the theme, so all show the theme the root carries. */
+const listeners = new Set<() => void>();
+
 function subscribe(onChange: () => void): () => void {
-  const observer = new MutationObserver(onChange);
-  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  listeners.add(onChange);
   return () => {
-    observer.disconnect();
+    listeners.delete(onChange);
   };
 }
 
@@ -34,6 +35,9 @@ export function ThemeToggle({ className, labelled = false }: { className?: strin
       onClick={() => {
         applyTheme(next);
         saveTheme(themeStorage(), next);
+        for (const listener of listeners) {
+          listener();
+        }
       }}
     >
       <svg viewBox="0 0 24 24" aria-hidden="true" className="icon">

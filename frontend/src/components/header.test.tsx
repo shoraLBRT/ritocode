@@ -71,6 +71,9 @@ function api({
         return Promise.resolve(lists ? jsonResponse({ classes: [], cards }) : problemResponse(503, 'unavailable', 'x'));
       case '/api/v1/attempts':
         return Promise.resolve(jsonResponse(pageOf(attempts, 1, 100)));
+      case '/api/v1/tasks/flower-shop':
+        // The task itself never arrives: the header is what is tested, over the screen's loading state.
+        return new Promise<Response>(() => undefined);
       case '/api/v1/me/studied':
         return Promise.resolve(jsonResponse({ cards: marks }));
       default:
@@ -202,7 +205,8 @@ describe('the header on the task workspace', () => {
   it('keeps the sections beside the steps, so a review is one click from the task list and the catalogue', async () => {
     renderApp(api().stub, '/tasks/flower-shop/attempts/a1');
 
-    const sections = screen.getByRole('navigation', { name: ru.nav.label });
+    // The task screen and the review are chunks of their own (#310): the page renders once they load.
+    const sections = await screen.findByRole('navigation', { name: ru.nav.label });
     expect(within(sections).getByRole('link', { name: ru.nav.tasks })).toHaveAttribute('href', '/tasks');
     expect(within(sections).getByRole('link', { name: ru.nav.problems })).toHaveAttribute('href', '/problems');
     await screen.findByLabelText('Профиль developer');
@@ -211,10 +215,10 @@ describe('the header on the task workspace', () => {
     expect(within(sections).queryByRole('link', { name: ru.header.toProfile })).not.toBeInTheDocument();
   });
 
-  it('keeps them while a task is being solved too', () => {
+  it('keeps them while a task is being solved too', async () => {
     renderApp(api({ signedIn: false }).stub, '/tasks/flower-shop');
 
-    const sections = screen.getByRole('navigation', { name: ru.nav.label });
+    const sections = await screen.findByRole('navigation', { name: ru.nav.label });
     expect(within(sections).getByRole('link', { name: ru.nav.tasks })).toBeInTheDocument();
     expect(within(sections).getByRole('link', { name: ru.nav.problems })).toBeInTheDocument();
   });

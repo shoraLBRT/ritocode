@@ -41,6 +41,11 @@ export function AppLayout() {
   useDocumentMeta();
   const location = useLocation();
   const navigate = useNavigate();
+  // The page the visitor landed on is already in place — prerendered, it was painted before any
+  // script ran — so only a page navigated to rises in (#310): an entrance on the first page would
+  // repaint it, and its largest paint with it, once the animation ends.
+  const [landing] = useState(location.key);
+  const navigated = location.key !== landing;
   // The admin area is offered only to an admin; the profile is in the avatar's menu.
   const session = useSession();
   const admin = session.status === 'signedIn' && session.user.admin;
@@ -137,7 +142,7 @@ export function AppLayout() {
   }, []);
 
   return (
-    <div className={workspace ? 'app app--workspace' : 'app'}>
+    <div className={['app', workspace && 'app--workspace', navigated && 'app--navigated'].filter(Boolean).join(' ')}>
       <a className="skip-link" href="#main">
         {t('app.skipToContent')}
       </a>

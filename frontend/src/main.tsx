@@ -58,7 +58,13 @@ void routerReady(router).then(() => {
   );
 
   if (prerendered !== null) {
-    hydrateRoot(root, app);
+    // A page whose markup does not match its first render is rendered afresh by React; say so, as
+    // that is a bug in the page — something it renders from what the prerender cannot know.
+    hydrateRoot(root, app, {
+      onRecoverableError: (error) => {
+        console.error('The prerendered page did not hydrate:', error);
+      },
+    });
   } else {
     createRoot(root).render(app);
   }

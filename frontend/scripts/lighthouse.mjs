@@ -35,6 +35,29 @@ const reports = process.env.LIGHTHOUSE_REPORTS;
 const dist = resolve('dist');
 const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2', '.svg': 'image/svg+xml', '.xml': 'application/xml', '.txt': 'text/plain', '.ico': 'image/x-icon', '.png': 'image/png' };
 
+// The API as it answers a guest, from the content export the pages were built from (#310): the task
+// list and the catalogue, and 401 for everything that needs a learner. A page is measured as a visitor
+// finds it while the site is up; without CONTENT_EXPORT every request gets 503, as in an outage, and
+// the outage banner then shifts each page down.
+const content = process.env.CONTENT_EXPORT ? JSON.parse(await readFile(process.env.CONTENT_EXPORT, 'utf8')) : null;
+
+function guestApi(pathname) {
+  if (content === null) {
+    return { status: 503, body: {} };
+  }
+
+  if (pathname === '/api/v1/tasks') {
+    const items = content.tasks.map(({ slug, title, difficulty }) => ({ slug, title, difficulty, status: null }));
+    return { status: 200, body: { items, pageNumber: 1, pageSize: 100, totalItems: items.length, totalPages: 1, hasNextPage: false, hasPreviousPage: false } };
+  }
+
+  if (pathname === '/api/v1/problems') {
+    return { status: 200, body: content.problems };
+  }
+
+  return { status: 401, body: { type: 'unauthenticated', title: 'Sign in first.', status: 401 } };
+}
+
 async function isFile(path) {
   try {
     return (await stat(path)).isFile();
@@ -63,7 +86,8 @@ const server = createServer(async (request, response) => {
   const { pathname } = new URL(request.url ?? '/', 'http://localhost');
 
   if (pathname.startsWith('/api/')) {
-    response.writeHead(503).end();
+    const answer = guestApi(pathname);
+    response.writeHead(answer.status, { 'Content-Type': 'application/json' }).end(JSON.stringify(answer.body));
     return;
   }
 
@@ -94,7 +118,7 @@ try {
 
     if (reports) {
       await mkdir(reports, { recursive: true });
-      await writeFile(join(reports, `${page === '/' ? 'home' : page.slice(1)}.json`), JSON.stringify(runs[0]));
+      await writeFile(join(reports, `${page === '/' ? 'home' : page.slice(1).replaceAll('/', '-')}.json`), JSON.stringify(runs[0]));
     }
 
     const scores = Object.fromEntries(Object.keys(BUDGET).map((category) => {

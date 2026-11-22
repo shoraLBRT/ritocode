@@ -213,6 +213,43 @@ describe('the prerendered tasks', () => {
   });
 });
 
+describe('the data a page is hydrated with (#310)', () => {
+  const data = (html: string): Record<string, unknown> | null => {
+    const json = /<script type="application\/json" id="rc-prerendered">([\s\S]*?)<\/script>/.exec(html)?.[1];
+    return json === undefined ? null : (JSON.parse(json) as Record<string, unknown>);
+  };
+
+  it('carries, after the root, what each page the application renders the same was rendered from, for its own address', () => {
+    expect(data(page('index.html'))).toMatchObject({ path: '/', arena: { catalogue: { classes: content.problems.classes } } });
+    expect(data(page('problems.html'))).toEqual({ path: '/problems', catalogue: content.problems });
+    expect(data(page('privacy.html'))).toEqual({ path: '/privacy' });
+    expect(page('privacy.html')).toMatch(/<\/div><script type="application\/json" id="rc-prerendered">/);
+
+    const card = content.problems.cards[0]!;
+    const own = data(page(`problems/${card.slug}.html`)) as { path: string; catalogue: { cards: { class: string }[] } };
+    expect(own.path).toBe(`/problems/${card.slug}`);
+    expect(own.catalogue.cards.every((each) => each.class === card.class)).toBe(true);
+  });
+
+  it('gives /tasks each task as a guest lists it, and nothing beyond', () => {
+    const tasks = data(page('tasks.html'))?.tasks as { items: unknown[] };
+    expect(tasks.items).toEqual(content.tasks.map(({ slug, title, difficulty }) => ({ slug, title, difficulty, status: null })));
+  });
+
+  it('gives none to a task page, which the task screen replaces, nor to the page of an unknown address', () => {
+    expect(data(page(`tasks/${content.tasks[0]!.slug}.html`))).toBeNull();
+    expect(data(page('404.html'))).toBeNull();
+  });
+
+  it('keeps a card’s text from closing the script that carries it', () => {
+    const tricky: ContentExport = { ...content, problems: { ...content.problems, cards: content.problems.cards.map((card) => ({ ...card, summary: '</script><b>&' })) } };
+    const html = prerender({ content: tricky, template, origin: 'https://ritocode.example', config: { demoTask: 'x' } }).get('problems.html') ?? '';
+    const json = /<script type="application\/json" id="rc-prerendered">([\s\S]*?)<\/script>/.exec(html)?.[1] ?? '';
+    expect(json).not.toContain('<');
+    expect((JSON.parse(json) as { catalogue: { cards: { summary: string }[] } }).catalogue.cards[0]!.summary).toBe('</script><b>&');
+  });
+});
+
 describe('what else the build writes', () => {
   it('writes the untouched shell under every other address of the site, and under no other', () => {
     for (const path of ['profile.html', 'admin.html', 'admin/signals.html', 'admin/users.html', 'admin/attempts.html', 'admin/stats.html', 'admin/system.html', 'admin/errors.html']) {

@@ -384,7 +384,8 @@ code {
   font-weight: 600;
 }
 
-/* A routed page rises into place; the workspace only fades (its layout is fixed to the viewport). */
+/* A page navigated to rises into place; the workspace only fades (its layout is fixed to the viewport).
+   The page landed on does not: it is already there (#310). */
 @keyframes rc-rise {
   from {
     opacity: 0;
@@ -399,11 +400,11 @@ code {
   }
 }
 
-.app__main > * {
+.app--navigated .app__main > * {
   animation: rc-rise var(--dur-slow) var(--ease-out) backwards;
 }
 
-.app--workspace .app__main > * {
+.app--navigated.app--workspace .app__main > * {
   animation: rc-fade var(--dur) var(--ease-out) backwards;
 }
 

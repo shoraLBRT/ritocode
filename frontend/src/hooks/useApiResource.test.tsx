@@ -3,8 +3,16 @@ import { act, render, screen, waitFor } from '@testing-library/react';
 import { ApiError } from '../api';
 import { useApiResource } from './useApiResource';
 
-function Probe({ load, deps }: { load: (signal: AbortSignal) => Promise<string>; deps: readonly unknown[] }) {
-  const { state, reload } = useApiResource(load, deps);
+function Probe({
+  load,
+  deps,
+  initial,
+}: {
+  load: (signal: AbortSignal) => Promise<string>;
+  deps: readonly unknown[];
+  initial?: { data: string; refresh?: boolean };
+}) {
+  const { state, reload } = useApiResource(load, deps, initial);
 
   return (
     <div>
@@ -19,6 +27,30 @@ function Probe({ load, deps }: { load: (signal: AbortSignal) => Promise<string>;
 }
 
 describe('useApiResource', () => {
+  it('starts from data already in hand and loads nothing for it (#310)', async () => {
+    const load = vi.fn(() => Promise.resolve('fresh'));
+    render(<Probe load={load} deps={[]} initial={{ data: 'prerendered' }} />);
+
+    expect(screen.getByTestId('data')).toHaveTextContent('prerendered');
+    await act(() => Promise.resolve());
+    expect(load).not.toHaveBeenCalled();
+    expect(screen.getByTestId('data')).toHaveTextContent('prerendered');
+  });
+
+  it('refreshes data in hand in the background, and keeps it when the refresh fails', async () => {
+    render(<Probe load={() => Promise.resolve('fresh')} deps={[]} initial={{ data: 'prerendered', refresh: true }} />);
+    expect(screen.getByTestId('data')).toHaveTextContent('prerendered');
+    await waitFor(() => {
+      expect(screen.getByTestId('data')).toHaveTextContent('fresh');
+    });
+
+    render(<Probe load={() => Promise.reject(new Error('down'))} deps={[]} initial={{ data: 'kept', refresh: true }} />);
+    await act(() => Promise.resolve());
+    expect(screen.getByText('kept')).toBeInTheDocument();
+    expect(screen.queryByTestId('error')).not.toBeInTheDocument();
+  });
+
+
   it('moves from loading to success', async () => {
     render(<Probe load={() => Promise.resolve('value')} deps={[]} />);
 
