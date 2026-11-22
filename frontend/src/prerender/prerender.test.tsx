@@ -225,7 +225,8 @@ describe('the data a page is hydrated with (#310)', () => {
     expect(data(page('privacy.html'))).toEqual({ path: '/privacy' });
     expect(page('privacy.html')).toMatch(/<\/div><script type="application\/json" id="rc-prerendered">/);
 
-    const card = content.problems.cards[0]!;
+    const [card] = content.problems.cards;
+    if (card === undefined) throw new Error('The test content has no card.');
     const own = data(page(`problems/${card.slug}.html`)) as { path: string; catalogue: { cards: { class: string }[] } };
     expect(own.path).toBe(`/problems/${card.slug}`);
     expect(own.catalogue.cards.every((each) => each.class === card.class)).toBe(true);
@@ -237,7 +238,7 @@ describe('the data a page is hydrated with (#310)', () => {
   });
 
   it('gives none to a task page, which the task screen replaces, nor to the page of an unknown address', () => {
-    expect(data(page(`tasks/${content.tasks[0]!.slug}.html`))).toBeNull();
+    expect(data(page(`tasks/${content.tasks[0]?.slug ?? ''}.html`))).toBeNull();
     expect(data(page('404.html'))).toBeNull();
   });
 
@@ -246,7 +247,7 @@ describe('the data a page is hydrated with (#310)', () => {
     const html = prerender({ content: tricky, template, origin: 'https://ritocode.example', config: { demoTask: 'x' } }).get('problems.html') ?? '';
     const json = /<script type="application\/json" id="rc-prerendered">([\s\S]*?)<\/script>/.exec(html)?.[1] ?? '';
     expect(json).not.toContain('<');
-    expect((JSON.parse(json) as { catalogue: { cards: { summary: string }[] } }).catalogue.cards[0]!.summary).toBe('</script><b>&');
+    expect((JSON.parse(json) as { catalogue: { cards: { summary: string }[] } }).catalogue.cards[0]?.summary).toBe('</script><b>&');
   });
 });
 
