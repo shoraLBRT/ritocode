@@ -76,6 +76,11 @@ services:
       Feedback__TurnstileSecretKey: ${TURNSTILE_SECRET_KEY:-}
       # The admin system page asks Umami's heartbeat inside the network (#297).
       System__UmamiUrl: http://umami:3000
+      # The overview's traffic panel reads Umami's API there (#306); without the token or the site's id it
+      # says Umami is not configured. The link to Umami's dashboard is its public address.
+      Traffic__UmamiToken: ${UMAMI_API_TOKEN:-}
+      Traffic__UmamiWebsiteId: ${UMAMI_WEBSITE_ID:-}
+      Traffic__UmamiDashboardUrl: https://${UMAMI_DOMAIN:?set UMAMI_DOMAIN}
     volumes:
       - api-keys:/keys
     depends_on:

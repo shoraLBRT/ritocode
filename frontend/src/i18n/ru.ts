@@ -617,7 +617,7 @@ export const ru = {
       noPages: 'Просмотров нет.',
       funnel: 'Воронка',
       funnelLabel: 'Воронка: от открытой задачи до сданной попытки',
-      ofFirst: '· {share}% от первого шага',
+      ofFirst: '· {share}%',
       steps: {
         'task-opened': 'Открыл задачу',
         'step-2-reached': 'Дошёл до шага 2',
@@ -625,7 +625,7 @@ export const ru = {
         'sign-in-completed': 'Вошёл',
         'attempt-submitted': 'Сдал попытку',
       },
-      funnelNote: 'Шаги — число событий за период, а не одни и те же посетители: доля от первого шага — ориентир, не конверсия.',
+      funnelNote: 'Шаги — число событий за период, а не одни и те же посетители: процент — доля от первого шага, ориентир, а не конверсия.',
       notConfigured: 'Umami не подключён: в production.env нет UMAMI_API_TOKEN или UMAMI_WEBSITE_ID (RUNBOOK). Остальная страница работает.',
       failing: 'Umami не ответил — цифр трафика сейчас нет. Остальная страница работает.',
       refused: 'Umami не принял токен — получите новый UMAMI_API_TOKEN (RUNBOOK).',
