@@ -29,6 +29,21 @@
 		error 503
 	}
 
+	# The log viewer (ADR 0020 decision 2, #295): Dozzle, which has no sign-in of its own. Every request
+	# first asks the API whether its session cookie is an admin's (GET /api/v1/admin/access, the admin
+	# area's own policy): 204 lets it through; the API's refusal — 401 signed out, the unknown-address 404
+	# for anyone else — is the visitor's answer. A named matcher, so it stays after maintenance.
+	@logs path /admin/logs /admin/logs/*
+	handle @logs {
+		forward_auth api:8080 {
+			uri /api/v1/admin/access
+		}
+		# The viewer needs no cookie, so the session's never reaches it.
+		reverse_proxy dozzle:8080 {
+			header_up -Cookie
+		}
+	}
+
 	# The API: the versioned endpoints, sign-in and its callbacks, the health checks.
 	@api path /api/* /auth/* /health/*
 	handle @api {

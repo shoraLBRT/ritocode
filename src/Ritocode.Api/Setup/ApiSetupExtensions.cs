@@ -203,6 +203,7 @@ public static class ApiSetupExtensions
         api.MapMetaEndpoints();
         api.MapFeedbackEndpoints();
         api.MapSystemEndpoints();
+        api.MapAccessEndpoints();
         api.MapActivityEndpoints();
         api.MapTrafficEndpoints();
         api.MapModules(ModuleRegistry.All);

@@ -5,6 +5,8 @@
 #   web       ghcr.io/shoralbrt/ritocode-web, the static build, behind the edge only
 #   postgres  the product's database and Umami's, on a persistent volume
 #   umami     analytics, cookie-less (SPEC §8), at UMAMI_DOMAIN
+#   dozzle    the log viewer at SITE_DOMAIN/admin/logs/, for admins only (ADR 0020, #295)
+#   docker-proxy  the Docker socket for Dozzle, read-only and narrowed to what it reads
 #   migrate   the migrator from the API image, run by a release, never left running
 #
 # Run from deploy/ on the server, with the secrets in production.env beside it (never in the
@@ -24,6 +26,15 @@ x-logging: &logging
   options:
     max-size: "10m"
     max-file: "5"
+
+x-logging-kept: &logging-kept
+  # The API's and the edge's lines are the ones read back (ADR 0020 decision 2): 10 × 20 MB, the rotated
+  # files compressed — 14 days, or this cap if it comes first (deploy/README.md, "Logs").
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "10"
+    compress: "true"
 
 x-api-environment: &api-environment
   Database__ConnectionString: "Host=postgres;Port=5432;Database=ritocode;Username=ritocode;Password=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}"
@@ -50,7 +61,8 @@ services:
       - api
       - web
       - umami
-    logging: *logging
+      - dozzle
+    logging: *logging-kept
 
   api:
     image: ${RITOCODE_REGISTRY:-ghcr.io/shoralbrt}/ritocode-api:${RITOCODE_VERSION:-main}
@@ -93,7 +105,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    logging: *logging
+    logging: *logging-kept
 
   migrate:
     image: ${RITOCODE_REGISTRY:-ghcr.io/shoralbrt}/ritocode-api:${RITOCODE_VERSION:-main}
@@ -142,6 +154,41 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    logging: *logging
+
+  # The log viewer (ADR 0020 decision 2): Docker's own log files, live and searchable, at /admin/logs/ on the
+  # site's address. It has no sign-in of its own: the edge lets a request through only with an admin's session
+  # (forward_auth to /api/v1/admin/access, deploy/Caddyfile). Behind the edge only, no port of its own.
+  dozzle:
+    image: amir20/dozzle:v11
+    restart: unless-stopped
+    environment:
+      DOZZLE_BASE: /admin/logs
+      DOCKER_HOST: tcp://docker-proxy:2375
+      DOZZLE_NO_ANALYTICS: "true"
+      # Read only: no start, stop or restart from the page, no shell into a container.
+      DOZZLE_ENABLE_ACTIONS: "false"
+      DOZZLE_ENABLE_SHELL: "false"
+      # This project's containers, not whatever else runs on the server.
+      DOZZLE_FILTER: label=com.docker.compose.project=ritocode-production
+    depends_on:
+      - docker-proxy
+    logging: *logging
+
+  # The raw socket is root on the host, so Dozzle never sees it: this proxy answers reads of the containers,
+  # their logs, events, the version and info, and refuses everything else (POST off). Inside the network only.
+  docker-proxy:
+    image: tecnativa/docker-socket-proxy:v0.5.0
+    restart: unless-stopped
+    environment:
+      CONTAINERS: 1
+      EVENTS: 1
+      INFO: 1
+      PING: 1
+      VERSION: 1
+      POST: 0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     logging: *logging
 
 volumes:
