@@ -1,6 +1,6 @@
 # 0020 — Observability on one VPS: errors, logs, metrics, alerts
 
-- Status: Proposed
+- Status: Accepted (2026-11-22, by the maintainer, as written)
 - Date: 2026-11-19
 - Relates to: [#293](https://github.com/shoraLBRT/ritocode/issues/293); blocks
   [#294](https://github.com/shoraLBRT/ritocode/issues/294) (errors),
@@ -97,7 +97,7 @@ yet, and on the assumed server it does not fit beside the stack with any margin.
 | **A2. Telegram** | A bot message; the maintainer reads Telegram most, and already runs a Telegram assistant (bellboy) | A bot token and chat id, in `production.env` and/or a repository secret | Only check names and numbers — by rule, never a user id |
 | **A3. E-mail from the server** | SMTP from the VPS | SMTP credentials | Depends on the provider |
 
-## Decision (proposed)
+## Decision
 
 **The light option: everything inside the stack that already runs, one small viewer, a script,
 and Telegram beside the issue.** The whole addition is estimated at **under 100 MB of RAM** and a
