@@ -85,6 +85,7 @@ export type {
   StudiedCards,
   StudyMark,
   TaskDetail,
+  TaskPreview,
   TaskSummary,
   TreatmentBranch,
   TreatmentLeaf,

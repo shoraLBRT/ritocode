@@ -101,15 +101,22 @@ export interface CardSections {
 }
 
 /**
- * `GET /api/v1/tasks/{slug}`: everything a learner needs to solve a task, and nothing that gives the
- * answer away — the cards carry a name, a summary and search keywords only.
+ * A task as its public page shows it before the learner answers: what the content export carries for
+ * each task, which the build prerenders `/tasks` and `/tasks/{slug}` from (docs/SPEC.md §4.1).
  */
-export interface TaskDetail {
+export interface TaskPreview {
   readonly slug: string;
   readonly title: string;
   readonly difficulty: Difficulty;
   readonly context: string;
   readonly brief: string;
+}
+
+/**
+ * `GET /api/v1/tasks/{slug}`: everything a learner needs to solve a task, and nothing that gives the
+ * answer away — the cards carry a name, a summary and search keywords only.
+ */
+export interface TaskDetail extends TaskPreview {
   readonly material: Material;
   readonly classes: readonly ProblemClass[];
   readonly cards: readonly CandidateCard[];

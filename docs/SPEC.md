@@ -246,6 +246,7 @@ Localisation is built in from the first commit; only the Russian content is writ
 | --- | --- | --- |
 | `/` | Home, the arena: what Ritocode teaches, the daily task, tasks and problems to start from, progress (below) | public |
 | `/problems` | Problem catalogue, one page, every card in full, anchor per card (`/problems#secrets-in-repo`) | public |
+| `/problems/{slug}` | One problem card on a page of its own: the card in full, its class, the other cards of its class | public |
 | `/tasks` | Task catalogue | public |
 | `/tasks/{slug}` | Solving a task | public to solve; sign-in to check |
 | `/tasks/{slug}/attempts/{id}` | Review of an attempt | owner only |
@@ -254,8 +255,13 @@ Localisation is built in from the first commit; only the Russian content is writ
 | `/privacy` | Privacy policy | public |
 | `/admin/...` | Admin (§6) | admins only |
 
-`/` and `/problems` must be **readable by search engines without running JavaScript** — including
-Yandex, which matters for a Russian-language audience. They are prerendered to static HTML at build
+The public pages — `/`, `/problems`, `/problems/{slug}` for every card, `/tasks`, `/tasks/{slug}` for every task and
+`/privacy` — must be **readable by search engines without running JavaScript** — including
+Yandex, which matters for a Russian-language audience; `sitemap.xml` lists them all, each with its
+own title, description and canonical address (#301). A task's prerendered page holds its title,
+difficulty, brief and context — what the task screen shows before an answer — and never the answer
+key, the notes, a card weight or the cards to pick from: the content export carries no more, and
+tests hold both the export and the HTML to it. They are prerendered to static HTML at build
 time from the content export; the single-page application takes over once loaded. This revisits
 ADR 0001's "revisit if catalog SEO becomes a goal" without adding a server-rendering layer. An address
 that is not a route of the application — a task slug the export does not name among them — is
@@ -287,8 +293,7 @@ answered 404 with a prerendered not-found page, and each address has one form: a
 - **Progress** for a signed-in learner: found out of met, by class (§4.7), the **streak** and
   the **activity** of the last twelve weeks. A guest sees a sign-in prompt there.
 - **Without JavaScript** the prerendered page carries the lead, the catalogue's counts and the
-  problems to read; the content export names the tasks only by slug, so the daily task and the suggested tasks are
-  filled in by the application.
+  problems to read; the daily task and the suggested tasks are filled in by the application.
 
 ### 4.2 Problem catalogue
 
@@ -296,8 +301,8 @@ One page. Cards are grouped by the six classes. A search box filters by name, su
 and a class filter shows one class or all. A card is shown **folded** — its class, name and summary,
 like a playing card — and **opens** at the centre of the screen with every field of §3.2; the
 maintainer chose this on 2026-11-10 ([#202](https://github.com/shoraLBRT/ritocode/issues/202)).
-Every card has an anchor: `/problems#slug` opens that card, so a card can be linked to without a page
-of its own. Without JavaScript the prerendered page carries every card in full, and a card unfolds in
+Every card has an anchor: `/problems#slug` opens that card in the catalogue, and a page of its own,
+`/problems/{slug}` (#301), where a search for that one problem lands; the open card links to it. Without JavaScript the prerendered page carries every card in full, and a card unfolds in
 place.
 
 **Studying** ([ADR 0018](adr/0018-studying-problems.md)): the opened card has *Изучено*, a toggle; a
@@ -737,7 +742,8 @@ submission limit.
 
 React, Vite and TypeScript, as today. The API client, error handling, layout and loading, error and
 empty states from the existing shell survive. New: a translation catalogue for every string; the
-build-time prerender of `/` and `/problems` (§4.1); a read-only code viewer with Python highlighting;
+build-time prerender of the public pages — `/`, `/problems`, `/problems/{slug}`, `/tasks`,
+`/tasks/{slug}`, `/privacy` (§4.1); a read-only code viewer with Python highlighting;
 a layout that works at phone width.
 
 ### 9.5 Deployment

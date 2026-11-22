@@ -1,25 +1,31 @@
 import { renderToString } from 'react-dom/server';
-import { Route, Routes, StaticRouter } from 'react-router';
+import { Route, Routes, StaticRouter, useParams } from 'react-router';
 import { ApiClient, ApiClientProvider } from '../api';
-import type { ProblemCatalogue } from '../api';
+import type { ProblemCatalogue, TaskPreview } from '../api';
 import { AppLayout } from '../components/AppLayout';
 import { I18nProvider, ru, translate } from '../i18n';
 import type { Translate } from '../i18n';
 import { StaticHomePage } from '../pages/HomePage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { PrivacyPage } from '../pages/PrivacyPage';
+import { StaticProblemPage } from '../pages/ProblemPage';
 import { StaticProblemsPage } from '../pages/ProblemsPage';
+import { StaticTasksPage } from '../pages/TasksPage';
+import { TaskPreviewPage } from '../pages/task/TaskPreviewPage';
 import { SessionProvider } from '../session';
-import { NOT_FOUND_PATH, PRERENDERED_PATHS, SHELL_PATHS, SiteConfigContext, pageMeta } from '../site';
-import type { SiteConfig } from '../site';
+import { NOT_FOUND_PATH, PRERENDERED_PATHS, SHELL_PATHS, SiteConfigContext, pageMeta, problemMeta, taskMeta } from '../site';
+import type { PageMeta, SiteConfig } from '../site';
 
 export { resolveSiteConfig } from '../site';
 
 /** What `content export` writes (`src/Ritocode.ContentTool`): the catalogue as `GET /problems` serves it, and the tasks. */
 export interface ContentExport {
   readonly problems: ProblemCatalogue;
-  /** The slugs of the tasks: `/tasks/{slug}` is an address of the site for these and no other. */
-  readonly tasks: readonly string[];
+  /**
+   * The tasks in the task catalogue's order, each with what its public page shows and nothing more:
+   * `/tasks/{slug}` is an address of the site for these and no other.
+   */
+  readonly tasks: readonly TaskPreview[];
 }
 
 export interface PrerenderInput {
@@ -42,12 +48,14 @@ const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 /**
  * The public pages as static HTML, for search engines that do not run JavaScript — Yandex among them
- * (docs/SPEC.md §4.1): `/`, `/problems` with every card in full and its anchor, and `/privacy`, each with its title,
- * description and canonical address; `404.html`, the page the web image serves with 404 for an address
- * the site does not have; `sitemap.xml` and `robots.txt`; `version.json`, the commit built, for the admin system page; and the untouched shell under every other
- * address of the site — the fixed ones (`SHELL_PATHS`) and `tasks/{slug}.html` for each task of the
- * export. The files written are the site's addresses, so the web image needs no list of its own
- * (`deploy/web.Caddyfile`, #300). Once the bundle loads, the application renders over the static
+ * (docs/SPEC.md §4.1): `/`, `/problems` with every card in full and its anchor, `/problems/{slug}`
+ * for every card, `/tasks` and `/tasks/{slug}` for every task — its title, difficulty, brief and
+ * context, never more — and `/privacy`, each with its title, description and canonical address;
+ * `404.html`, the page the web image serves with 404 for an address the site does not have;
+ * `sitemap.xml` listing every public page and `robots.txt`; `version.json`, the commit built, for the
+ * admin system page; and the untouched shell under every other fixed address of the site
+ * (`SHELL_PATHS`). The files written are the site's addresses, so the web image needs no list of its
+ * own (`deploy/web.Caddyfile`, #300). Once the bundle loads, the application renders over the static
  * markup and takes over.
  *
  * Returns the files to write, by path under the build's output directory.
@@ -65,14 +73,19 @@ export function prerender({ content, template, origin, config, lastmod, commit }
     throw new Error(`The commit '${commit}' is not a git commit; set SOURCE_COMMIT to one, or leave it unset.`);
   }
 
+  for (const slug of [...content.problems.cards.map((card) => card.slug), ...content.tasks.map((task) => task.slug)]) {
+    if (!SLUG.test(slug)) {
+      throw new Error(`The slug '${slug}' is not lowercase words joined by hyphens, so it cannot name a file.`);
+    }
+  }
+
   const site = siteOrigin(origin);
   const t: Translate = (key, params) => translate(ru, 'ru', key, params);
   const files = new Map<string, string>();
 
   /** The page at `path` rendered into the shell, with its title, its description and `head`. */
-  const render = (path: string, head: string): string => {
+  const render = (path: string, meta: PageMeta, head: string): string => {
     const markup = renderToString(<Page path={path} content={content} config={config} />);
-    const meta = pageMeta(path, t);
 
     // Replaced through functions: a replacement string would read `$&` in a card's text as a pattern.
     return template
@@ -81,26 +94,20 @@ export function prerender({ content, template, origin, config, lastmod, commit }
       .replace('</head>', () => `  <meta name="description" content="${escape(meta.description)}" />\n    ${head}\n  </head>`);
   };
 
-  for (const path of PRERENDERED_PATHS) {
-    files.set(path === '/' ? 'index.html' : `${path.slice(1)}.html`, render(path, `<link rel="canonical" href="${escape(site + path)}" />`));
+  const pages = publicPages(content, t);
+
+  for (const { path, meta } of pages) {
+    files.set(fileOf(path), render(path, meta, `<link rel="canonical" href="${escape(site + path)}" />`));
   }
 
   // Served under any address the site lacks: not to be indexed, and no canonical address of its own.
-  files.set('404.html', render(NOT_FOUND_PATH, '<meta name="robots" content="noindex" />'));
+  files.set('404.html', render(NOT_FOUND_PATH, pageMeta(NOT_FOUND_PATH, t), '<meta name="robots" content="noindex" />'));
 
   for (const path of SHELL_PATHS) {
-    files.set(`${path.slice(1)}.html`, template);
+    files.set(fileOf(path), template);
   }
 
-  for (const slug of content.tasks) {
-    if (!SLUG.test(slug)) {
-      throw new Error(`The task slug '${slug}' is not lowercase words joined by hyphens, so it cannot name a file.`);
-    }
-
-    files.set(`tasks/${slug}.html`, template);
-  }
-
-  files.set('sitemap.xml', sitemap(site, lastmod));
+  files.set('sitemap.xml', sitemap(site, pages.map((each) => each.path), lastmod));
   files.set('version.json', `${JSON.stringify({ commit: commit ?? null })}\n`);
   files.set('robots.txt', `User-agent: *\nAllow: /\n\nSitemap: ${site}/sitemap.xml\n`);
 
@@ -108,9 +115,62 @@ export function prerender({ content, template, origin, config, lastmod, commit }
 }
 
 /**
+ * What is wrong with the files `prerender` wrote, as one line each — empty when nothing is: every
+ * card and every task of the export has its page, holding its name or title as text, and is in the
+ * sitemap. The build (`scripts/prerender.mjs`) fails on any, so the CI job *Prerender public pages*
+ * holds the site to the content (#301).
+ */
+export function checkPages(content: ContentExport, files: ReadonlyMap<string, string>): string[] {
+  const sitemap = files.get('sitemap.xml') ?? '';
+  const problems: string[] = [];
+
+  const check = (path: string, text: string) => {
+    const html = files.get(fileOf(path));
+
+    if (html === undefined) {
+      problems.push(`${path}: no page was written.`);
+    } else if (!html.includes(`>${htmlText(text)}</h1>`)) {
+      problems.push(`${path}: the page does not hold '${text}' as its heading.`);
+    }
+
+    if (!sitemap.includes(`${escape(path)}</loc>`)) {
+      problems.push(`${path}: not in sitemap.xml.`);
+    }
+  };
+
+  if (content.problems.cards.length === 0 || content.tasks.length === 0) {
+    problems.push('The export has no cards or no tasks: the content was not read.');
+  }
+
+  for (const card of content.problems.cards) {
+    check(`/problems/${card.slug}`, card.name);
+  }
+
+  for (const task of content.tasks) {
+    check(`/tasks/${task.slug}`, task.title);
+  }
+
+  return problems;
+}
+
+/** The public pages, each prerendered with its canonical address and listed in the sitemap: the fixed ones, then a page per card and per task. */
+function publicPages(content: ContentExport, t: Translate): { path: string; meta: PageMeta }[] {
+  return [
+    ...PRERENDERED_PATHS.map((path) => ({ path, meta: pageMeta(path, t) })),
+    ...content.problems.cards.map((card) => ({ path: `/problems/${card.slug}`, meta: problemMeta(card, t) })),
+    ...content.tasks.map((task) => ({ path: `/tasks/${task.slug}`, meta: taskMeta(task, t) })),
+  ];
+}
+
+/** The file the web image serves for an address: `path.html`, and `index.html` for `/`. */
+function fileOf(path: string): string {
+  return path === '/' ? 'index.html' : `${path.slice(1)}.html`;
+}
+
+/**
  * One page inside the providers the application has. Nothing here reaches the network: effects do
  * not run when rendering to a string, so the session is still loading — the header names nobody —
- * and the catalogue comes from the export rather than from the API.
+ * and the catalogue and the tasks come from the export rather than from the API.
  */
 function Page({ path, content, config }: { path: string; content: ContentExport; config: SiteConfig }) {
   const offline = new ApiClient({
@@ -128,6 +188,9 @@ function Page({ path, content, config }: { path: string; content: ContentExport;
                 <Route path="/" element={<AppLayout />}>
                   <Route index element={<StaticHomePage catalogue={content.problems} />} />
                   <Route path="problems" element={<StaticProblemsPage catalogue={content.problems} />} />
+                  <Route path="problems/:slug" element={<CardRoute catalogue={content.problems} />} />
+                  <Route path="tasks" element={<StaticTasksPage tasks={content.tasks} />} />
+                  <Route path="tasks/:slug" element={<TaskRoute tasks={content.tasks} />} />
                   <Route path="privacy" element={<PrivacyPage />} />
                   <Route path="*" element={<NotFoundPage />} />
                 </Route>
@@ -140,9 +203,26 @@ function Page({ path, content, config }: { path: string; content: ContentExport;
   );
 }
 
-function sitemap(site: string, lastmod: string | undefined): string {
+function CardRoute({ catalogue }: { catalogue: ProblemCatalogue }) {
+  const { slug = '' } = useParams();
+  return <StaticProblemPage catalogue={catalogue} slug={slug} />;
+}
+
+function TaskRoute({ tasks }: { tasks: readonly TaskPreview[] }) {
+  const { slug = '' } = useParams();
+  const task = tasks.find((each) => each.slug === slug);
+
+  // Only the fields the page shows are handed on: whatever else the export carried stays out of the page.
+  return task === undefined ? (
+    <NotFoundPage />
+  ) : (
+    <TaskPreviewPage task={{ slug: task.slug, title: task.title, difficulty: task.difficulty, context: task.context, brief: task.brief }} />
+  );
+}
+
+function sitemap(site: string, paths: readonly string[], lastmod: string | undefined): string {
   const date = lastmod === undefined ? '' : `<lastmod>${lastmod}</lastmod>`;
-  const urls = PRERENDERED_PATHS.map((path) => `  <url><loc>${escape(site + path)}</loc>${date}</url>`);
+  const urls = paths.map((path) => `  <url><loc>${escape(site + path)}</loc>${date}</url>`);
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>\n`;
 }
 
@@ -165,4 +245,9 @@ function siteOrigin(origin: string): string {
 
 function escape(text: string): string {
   return text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
+}
+
+/** Text as React writes it into markup. */
+function htmlText(text: string): string {
+  return escape(text).replaceAll("'", '&#x27;');
 }

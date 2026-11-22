@@ -950,6 +950,98 @@ code {
   gap: 0 34px;
 }
 
+/* A folded card unfolded in place, without JavaScript: the way to its own page. */
+.rc-pcard__page {
+  margin: var(--gap) 0 0;
+  font-size: 0.85rem;
+}
+
+/* A card on its own page (/problems/{slug}): the open card's frame, in the page, with its class's other cards under it. */
+.rc-problem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+.rc-problem > * {
+  width: min(860px, 100%);
+}
+
+.rc-problem__crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  color: var(--text-faint);
+  font-size: 0.85rem;
+}
+
+.rc-problem__card .rc-pcard__face {
+  overflow: visible;
+}
+
+.rc-problem__related h2 {
+  margin: 0 0 10px;
+  font-size: 1.05rem;
+}
+
+.rc-problem__related ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rc-problem__related li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-left: 3px solid var(--k);
+  border-radius: var(--radius);
+  background: var(--ks);
+}
+
+.rc-problem__related a {
+  font-weight: 600;
+}
+
+.rc-problem__related span {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+/* A task as the build prerenders it (/tasks/{slug}): the task screen's context panel, alone. */
+.rc-task-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 46rem;
+}
+
+.rc-task-preview .context__title {
+  font-size: 1.5rem;
+}
+
+.rc-task-preview .context__meta {
+  margin: 0;
+}
+
+.rc-task-preview .context__more .eyebrow {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.rc-task-preview__note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+}
+
 @keyframes rc-fade {
   from {
     opacity: 0;

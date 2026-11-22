@@ -22,10 +22,11 @@ if (!exportPath || !origin) {
 }
 
 const dist = resolve('dist');
-const { prerender, resolveSiteConfig } = await import(pathToFileURL(resolve('dist-ssr/prerender.js')).href);
+const { checkPages, prerender, resolveSiteConfig } = await import(pathToFileURL(resolve('dist-ssr/prerender.js')).href);
+const content = JSON.parse(await readFile(exportPath, 'utf8'));
 
 const files = prerender({
-  content: JSON.parse(await readFile(exportPath, 'utf8')),
+  content,
   template: await readFile(join(dist, 'index.html'), 'utf8'),
   origin,
   config: resolveSiteConfig(process.env),
@@ -39,4 +40,14 @@ for (const [path, text] of files) {
   await writeFile(target, text, 'utf8');
 }
 
-console.log(`dist/: ${files.size} files, ${[...files.keys()].filter((path) => path.startsWith('tasks/')).length} of them task addresses.`);
+// Every card and every task has its page, with its text, in the sitemap: the CI job *Prerender public
+// pages* runs this build, so a card or task without a page fails it (#301).
+const problems = checkPages(content, files);
+
+if (problems.length > 0) {
+  console.error(`The prerendered pages do not cover the content:\n${problems.join('\n')}`);
+  process.exit(1);
+}
+
+const count = (prefix) => [...files.keys()].filter((path) => path.startsWith(prefix)).length;
+console.log(`dist/: ${files.size} files; a page for each of ${count('problems/')} cards and ${count('tasks/')} tasks.`);

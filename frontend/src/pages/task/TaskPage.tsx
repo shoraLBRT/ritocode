@@ -8,6 +8,7 @@ import { LoadingState } from '../../components/LoadingState';
 import { useApiResource } from '../../hooks/useApiResource';
 import { useT } from '../../i18n';
 import { checkReturnPath, SignInLinks, useCheckRequest, useSession } from '../../session';
+import { taskMeta, usePageMeta } from '../../site';
 import { canCheck, cardsWithoutLeaves, toggleCard, toggleLeaf } from './answer';
 import type { Answer } from './answer';
 import { clearDraft, draftStorage, restoreDraft, saveDraft } from './draft';
@@ -67,6 +68,7 @@ function TaskScreen({ task, tree }: { task: TaskDetail; tree: TreatmentTree }) {
   const navigate = useNavigate();
   const path = `/tasks/${task.slug}`;
   const { requested: checkRequested, consume: consumeCheck } = useCheckRequest(path);
+  usePageMeta(taskMeta(task, t));
 
   // Read once: what the browser kept for this task, and whether it was asked to check it.
   const [storage] = useState(draftStorage);
