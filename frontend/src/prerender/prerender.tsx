@@ -15,8 +15,11 @@ import { TaskPreviewPage } from '../pages/task/TaskPreviewPage';
 import { SessionProvider } from '../session';
 import { NOT_FOUND_PATH, PRERENDERED_PATHS, SHELL_PATHS, SiteConfigContext, pageMeta, problemMeta, taskMeta } from '../site';
 import type { PageMeta, SiteConfig } from '../site';
+import { previewSvg } from './preview';
+import { previewImages, publicSeo, seoHead } from './seo';
 
 export { resolveSiteConfig } from '../site';
+export { PREVIEW_FONTS } from './preview';
 
 /** What `content export` writes (`src/Ritocode.ContentTool`): the catalogue as `GET /problems` serves it, and the tasks. */
 export interface ContentExport {
@@ -50,7 +53,9 @@ const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
  * The public pages as static HTML, for search engines that do not run JavaScript — Yandex among them
  * (docs/SPEC.md §4.1): `/`, `/problems` with every card in full and its anchor, `/problems/{slug}`
  * for every card, `/tasks` and `/tasks/{slug}` for every task — its title, difficulty, brief and
- * context, never more — and `/privacy`, each with its title, description and canonical address;
+ * context, never more — and `/privacy`, each with its title, description and canonical address,
+ * its link preview (Open Graph and Twitter tags, with the image `previews` draws) and its structured
+ * data (JSON-LD, `seo.ts`; #302);
  * `404.html`, the page the web image serves with 404 for an address the site does not have;
  * `sitemap.xml` listing every public page and `robots.txt`; `version.json`, the commit built, for the
  * admin system page; and the untouched shell under every other fixed address of the site
@@ -95,9 +100,17 @@ export function prerender({ content, template, origin, config, lastmod, commit }
   };
 
   const pages = publicPages(content, t);
+  const seo = publicSeo(content, site, t);
 
   for (const { path, meta } of pages) {
-    files.set(fileOf(path), render(path, meta, `<link rel="canonical" href="${escape(site + path)}" />`));
+    const url = site + path;
+    const page = seo.get(path);
+
+    if (page === undefined) {
+      throw new Error(`The public page ${path} has no link preview or structured data.`);
+    }
+
+    files.set(fileOf(path), render(path, meta, `<link rel="canonical" href="${escape(url)}" />\n    ${seoHead(url, meta, page, site)}`));
   }
 
   // Served under any address the site lacks: not to be indexed, and no canonical address of its own.
@@ -115,12 +128,24 @@ export function prerender({ content, template, origin, config, lastmod, commit }
 }
 
 /**
+ * The preview image of every public page (#302) as SVG, by the path of the PNG the build rasterises it
+ * to under its output directory (`scripts/prerender.mjs`): one for `/`, `/problems` and `/tasks`, and
+ * one per card and per task, drawn from its text. The pages' `og:image` names these paths.
+ */
+export function previews(content: ContentExport, origin: string): Map<string, string> {
+  const t: Translate = (key, params) => translate(ru, 'ru', key, params);
+  const host = new URL(siteOrigin(origin)).host;
+  return new Map([...previewImages(content, t)].map(([path, preview]) => [path, previewSvg(preview, host)]));
+}
+
+/**
  * What is wrong with the files `prerender` wrote, as one line each — empty when nothing is: every
  * card and every task of the export has its page, holding its name or title as text, and is in the
- * sitemap. The build (`scripts/prerender.mjs`) fails on any, so the CI job *Prerender public pages*
- * holds the site to the content (#301).
+ * sitemap; and every public page has its link preview, with an image among `images`, and JSON-LD
+ * that parses. The build (`scripts/prerender.mjs`) fails on any, so the CI job *Prerender public
+ * pages* holds the site to the content (#301, #302).
  */
-export function checkPages(content: ContentExport, files: ReadonlyMap<string, string>): string[] {
+export function checkPages(content: ContentExport, files: ReadonlyMap<string, string>, images: ReadonlySet<string>): string[] {
   const sitemap = files.get('sitemap.xml') ?? '';
   const problems: string[] = [];
 
@@ -150,7 +175,41 @@ export function checkPages(content: ContentExport, files: ReadonlyMap<string, st
     check(`/tasks/${task.slug}`, task.title);
   }
 
+  // Every public page has its link preview, with an image the build made, and structured data (#302).
+  for (const { path } of publicPages(content, (key) => key)) {
+    const html = files.get(fileOf(path));
+
+    if (html === undefined) {
+      continue;
+    }
+
+    const image = /<meta property="og:image" content="[^"]*?\/(og\/[^"]+)" \/>/.exec(html)?.[1];
+
+    if (image === undefined || !html.includes('<meta property="og:title"') || !html.includes('<meta name="twitter:card"')) {
+      problems.push(`${path}: the page has no link preview.`);
+    } else if (!images.has(image)) {
+      problems.push(`${path}: its preview image ${image} was not made.`);
+    }
+
+    const data = structuredData(html);
+
+    if (data.length === 0 || data.some((each) => typeof each !== 'object' || each === null || (each as Record<string, unknown>)['@context'] !== 'https://schema.org')) {
+      problems.push(`${path}: the page has no valid structured data.`);
+    }
+  }
+
   return problems;
+}
+
+/** The JSON-LD documents of a page, parsed; a block that is not JSON is read as `null`. */
+export function structuredData(html: string): unknown[] {
+  return [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map(([, json]) => {
+    try {
+      return JSON.parse(json ?? '') as unknown;
+    } catch {
+      return null;
+    }
+  });
 }
 
 /** The public pages, each prerendered with its canonical address and listed in the sitemap: the fixed ones, then a page per card and per task. */

@@ -774,6 +774,14 @@ export const ru = {
       title: 'Политика конфиденциальности — Ritocode',
       description: 'Какие данные Ritocode получает при входе через GitHub или Google и что с ними делает.',
     },
+    /** The preview image a link to a page shows in a messenger or a social network (#302). */
+    preview: {
+      home: { kicker: 'Тренажёр ревью кода', title: 'Что ломается в коде, написанном ИИ, и как это увидеть' },
+      problems: { kicker: 'Каталог проблем', title: 'Что ломается в коде, написанном ИИ' },
+      tasks: { kicker: 'Задачи на ревью', title: 'Найди, что не так в коде, который написал агент' },
+      task: '{difficulty} задача · {time}',
+      alt: 'Ritocode: {title}',
+    },
   },
   notFound: {
     title: 'Такой страницы нет',

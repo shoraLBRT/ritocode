@@ -12,6 +12,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { rasterise } from './previews.mjs';
 
 const exportPath = process.env.CONTENT_EXPORT;
 const origin = process.env.SITE_ORIGIN;
@@ -22,7 +23,7 @@ if (!exportPath || !origin) {
 }
 
 const dist = resolve('dist');
-const { checkPages, prerender, resolveSiteConfig } = await import(pathToFileURL(resolve('dist-ssr/prerender.js')).href);
+const { PREVIEW_FONTS, checkPages, prerender, previews, resolveSiteConfig } = await import(pathToFileURL(resolve('dist-ssr/prerender.js')).href);
 const content = JSON.parse(await readFile(exportPath, 'utf8'));
 
 const files = prerender({
@@ -40,9 +41,14 @@ for (const [path, text] of files) {
   await writeFile(target, text, 'utf8');
 }
 
-// Every card and every task has its page, with its text, in the sitemap: the CI job *Prerender public
-// pages* runs this build, so a card or task without a page fails it (#301).
-const problems = checkPages(content, files);
+// Each public page's link preview image, drawn from its text (#302).
+const images = previews(content, origin);
+const bytes = await rasterise(images, dist, PREVIEW_FONTS);
+
+// Every card and every task has its page, with its text, in the sitemap, and every public page its
+// link preview and structured data: the CI job *Prerender public pages* runs this build, so a card or
+// task without a page fails it (#301, #302).
+const problems = checkPages(content, files, new Set(images.keys()));
 
 if (problems.length > 0) {
   console.error(`The prerendered pages do not cover the content:\n${problems.join('\n')}`);
@@ -50,4 +56,4 @@ if (problems.length > 0) {
 }
 
 const count = (prefix) => [...files.keys()].filter((path) => path.startsWith(prefix)).length;
-console.log(`dist/: ${files.size} files; a page for each of ${count('problems/')} cards and ${count('tasks/')} tasks.`);
+console.log(`dist/: ${files.size} files; a page for each of ${count('problems/')} cards and ${count('tasks/')} tasks; ${images.size} preview images, ${Math.round(bytes / 1024)} KiB.`);
