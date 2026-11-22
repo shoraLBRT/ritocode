@@ -815,3 +815,71 @@
   .rc-profile__chip { grid-area: 1 / 2; justify-self: end; }
   .rc-profile__attempt-score { grid-area: 2 / 2; }
 }
+
+/* The learner's data (#299): the export, and deleting the account behind a typed username. */
+.rc-profile__account {
+  align-items: flex-start;
+}
+
+.rc-profile__account-text {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.rc-profile__account-export,
+.rc-profile__account-start {
+  min-height: 40px;
+  text-decoration: none;
+}
+
+.rc-profile__account-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-self: stretch;
+  padding: 14px;
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  background: var(--danger-surface);
+}
+
+.rc-profile__account-warning {
+  margin: 0;
+}
+
+.rc-profile__account-label {
+  overflow-wrap: anywhere;
+}
+
+.rc-profile__account-input {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 24rem;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+.rc-profile__account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rc-profile__account-delete:not(:disabled) {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: var(--surface);
+}
+
+.rc-profile__account .app__session-error {
+  margin: 0;
+}
+
+@media (max-width: 48rem) {
+  .rc-profile__account { order: 7; }
+}

@@ -13,6 +13,7 @@ import { useLocale, useT } from '../../i18n';
 import type { Translate } from '../../i18n';
 import { useSession } from '../../session';
 import { activity, yearSince } from '../home/arena';
+import { AccountCard } from './AccountCard';
 import { ActivityCard } from './ActivityCard';
 import { HistoryPanel } from './HistoryPanel';
 import { StudyCard } from './StudyCard';
@@ -79,6 +80,7 @@ export function ProfilePage() {
         ) : (
           <HistoryPanel recent={recent} tasks={tasks.state.status === 'success' ? tasks.state.data.items : []} progress={progress} />
         )}
+        <AccountCard index={6} />
       </div>
     </div>
   );

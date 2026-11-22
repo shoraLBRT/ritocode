@@ -31,5 +31,7 @@ for database in ritocode umami; do
 	fi
 done
 
-# Seven days kept on the server; the remote keeps by its own lifecycle rule.
+# Seven days kept on the server; the remote keeps by its own lifecycle rule, which must also be seven
+# days — the privacy policy promises a deleted account leaves the backups within a week (RUNBOOK.md ›
+# Personal data).
 find "$BACKUP_DIR" -name '*.dump' -type f -mtime +6 -delete

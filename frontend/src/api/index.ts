@@ -19,6 +19,8 @@ export {
   readAdminCardStats,
   readAdminTaskStats,
   readAdminSystem,
+  deleteAccount,
+  exportUrl,
   listAttempts,
   listAttemptsSince,
   listPracticeSince,

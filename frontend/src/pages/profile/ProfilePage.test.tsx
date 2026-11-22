@@ -368,3 +368,73 @@ describe('the profile', () => {
     expect(stub.mock.calls.some(([input]) => urlOf(input).endsWith('/me/progress'))).toBe(false);
   });
 });
+
+describe("the learner's data", () => {
+  /** {@link api}, with `DELETE /me` answered and the caller gone from `/me` once it was. */
+  function deletable(failDelete = false) {
+    let deleted = false;
+    const base = api();
+    return vi.fn<typeof globalThis.fetch>().mockImplementation((input, init) => {
+      const { pathname } = new URL(urlOf(input));
+      if (pathname === '/api/v1/me' && init?.method === 'DELETE') {
+        if (failDelete) {
+          return Promise.resolve(problemResponse(500, 'internal', 'Сбой.'));
+        }
+        deleted = true;
+        return Promise.resolve(new Response(null, { status: 204 }));
+      }
+      if (pathname === '/api/v1/me' && deleted) {
+        return Promise.resolve(problemResponse(401, 'unauthenticated', 'x'));
+      }
+      return base(input, init);
+    });
+  }
+
+  it('links the export, which the browser downloads', async () => {
+    renderApp(api(), '/profile');
+
+    const account = within(await screen.findByRole('region', { name: ru.profile.account.title }));
+    const link = account.getByRole('link', { name: ru.profile.account.export });
+    expect(link).toHaveAttribute('href', 'http://api.test/api/v1/me/export');
+    expect(link).toHaveAttribute('download');
+  });
+
+  it('deletes the account only once the username is typed, then leaves signed out', async () => {
+    const stub = deletable();
+    renderApp(stub, '/profile');
+
+    const account = within(await screen.findByRole('region', { name: ru.profile.account.title }));
+    fireEvent.click(account.getByRole('button', { name: ru.profile.account.delete }));
+
+    const confirm = account.getByRole('button', { name: ru.profile.account.deleteConfirm });
+    const input = account.getByLabelText(ru.profile.account.deleteLabel.replace('{username}', 'developer'));
+    expect(confirm).toBeDisabled();
+
+    fireEvent.change(input, { target: { value: 'develope' } });
+    expect(confirm).toBeDisabled();
+
+    fireEvent.change(input, { target: { value: 'developer' } });
+    expect(confirm).toBeEnabled();
+    fireEvent.click(confirm);
+
+    // Signed out, at home: the header offers to sign in, and the profile is gone.
+    expect(await screen.findAllByText(ru.session.signIn)).not.toHaveLength(0);
+    expect(screen.queryByRole('region', { name: ru.profile.account.title })).not.toBeInTheDocument();
+
+    const [address, init] = stub.mock.calls.find(([, options]) => options?.method === 'DELETE') ?? [];
+    expect(address && urlOf(address)).toBe('http://api.test/api/v1/me');
+    expect(init?.body).toBe('{"username":"developer"}');
+  });
+
+  it('says so when the deletion fails, and keeps the learner where they are', async () => {
+    renderApp(deletable(true), '/profile');
+
+    const account = within(await screen.findByRole('region', { name: ru.profile.account.title }));
+    fireEvent.click(account.getByRole('button', { name: ru.profile.account.delete }));
+    fireEvent.change(account.getByRole('textbox'), { target: { value: 'developer' } });
+    fireEvent.click(account.getByRole('button', { name: ru.profile.account.deleteConfirm }));
+
+    expect(await account.findByRole('alert')).toHaveTextContent(ru.profile.account.deleteFailed);
+    expect(account.getByRole('button', { name: ru.profile.account.deleteConfirm })).toBeEnabled();
+  });
+});

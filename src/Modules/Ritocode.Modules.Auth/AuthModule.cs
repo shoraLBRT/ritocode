@@ -6,11 +6,13 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Ritocode.Modules.Auth.Contracts;
 using Ritocode.Modules.Auth.Identity;
 using Ritocode.Modules.Auth.Persistence;
+using Ritocode.Modules.Auth.PersonalData;
 using Ritocode.Modules.Auth.Session;
 using Ritocode.Modules.Auth.SignIn;
 using Ritocode.Shared.Contracts.Auth;
 using Ritocode.Shared.Modules;
 using Ritocode.Shared.Persistence;
+using Ritocode.Shared.PersonalData;
 
 namespace Ritocode.Modules.Auth;
 
@@ -50,6 +52,9 @@ public sealed class AuthModule : IModule
         // The admin area's list of users names each user's providers (ADR 0007).
         services.AddScoped<ILinkedProviderLookup, LinkedProviderLookup>();
 
+        // Linked accounts and sessions, exported and erased on their owner's request (ADR 0021).
+        services.AddScoped<IPersonalData, AuthPersonalData>();
+
         // TryAdd, as the other modules do: the clock is host infrastructure.
         services.TryAddSingleton(TimeProvider.System);
 
@@ -82,6 +87,7 @@ public sealed class AuthModule : IModule
         ArgumentNullException.ThrowIfNull(endpoints);
 
         endpoints.MapMeEndpoints();
+        endpoints.MapAccountEndpoints();
     }
 
     public void MapHostEndpoints(IEndpointRouteBuilder root)

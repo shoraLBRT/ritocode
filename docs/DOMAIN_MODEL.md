@@ -20,6 +20,12 @@ Fields:
 An **admin** is a user whose address `Users:Admin:Emails` names (SPEC §6.2). It is not stored: there
 is no role column and no role screen, and an address leaves the list by a configuration change.
 
+A user may **export** everything kept about them and **delete** the account (#299). Deleting erases
+the user and every row any module keeps under their id — linked accounts, sessions, attempts,
+signals, reveals, study marks — at once and for good; nothing is anonymised and kept. Each module
+erases its own ([ADR 0021](adr/0021-personal-data-export-and-erasure.md)). Signing in again later
+with the same address makes a new, empty account.
+
 ## LinkedAccount
 
 Owned by the **Auth** module. Links a Ritocode account to an external identity.

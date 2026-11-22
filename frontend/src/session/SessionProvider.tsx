@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import { takeSignInStarted, track } from '../analytics';
-import { getMe, signOut, useApiClient } from '../api';
+import { deleteAccount, getMe, signOut, useApiClient } from '../api';
 import { useApiResource } from '../hooks/useApiResource';
 import { SessionContext } from './SessionContext';
 import type { Session } from './SessionContext';
@@ -23,16 +23,25 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     reload();
   }, [client, reload]);
 
+  // The server clears the session's cookies with the account; `/me` then answers whoever is left.
+  const removeAccount = useCallback(
+    async (username: string) => {
+      await deleteAccount(client, username);
+      reload();
+    },
+    [client, reload],
+  );
+
   const session = useMemo<Session>(() => {
     switch (state.status) {
       case 'loading':
         return { status: 'loading' };
       case 'success':
-        return { status: 'signedIn', user: state.data, signOut: endSession };
+        return { status: 'signedIn', user: state.data, signOut: endSession, deleteAccount: removeAccount };
       case 'error':
         return state.error.isUnauthenticated ? { status: 'signedOut' } : { status: 'error', error: state.error, retry: reload };
     }
-  }, [state, reload, endSession]);
+  }, [state, reload, endSession, removeAccount]);
 
   // Back from a provider: signed in, the sign-in is counted (SPEC §8); signed out, it failed, and the
   // note is dropped all the same.

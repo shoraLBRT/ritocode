@@ -26,6 +26,8 @@ to the deploy user's shell.
 - [ ] Today's backup exists — `ls -lt /var/backups/ritocode | head` on the server — or take one:
       `./backup.sh`.
 - [ ] You know the commit that is running now, to roll back to: `dc images api` on the server.
+- [ ] The off-server bucket still expires objects after 7 days, and nothing there is older —
+      `rclone lsl "$BACKUP_REMOTE"` ([Personal data](#personal-data)).
 
 ## First setup of a server
 
@@ -39,6 +41,7 @@ Once, by the maintainer (#134 provides the server, the domain and the OAuth apps
    apps' ids and secrets (their callbacks are `https://SITE_DOMAIN/auth/callback/github` and
    `/google`), your sign-in address as `ADMIN_EMAIL`. `chmod 600 production.env`.
 4. **server** For the off-server backup copy: create the bucket and its access key at the provider,
+   with a lifecycle rule deleting objects older than 7 days ([Personal data](#personal-data)),
    run `rclone config` to add a remote for it, and set `BACKUP_REMOTE` (e.g. `backups:ritocode-backups`).
 5. **local** Replace the placeholder in `frontend/src/site/privacy.ru.md` with the privacy policy's
    text (#134) and merge it: `/privacy` renders that file, and every sign-in offer links to it.
@@ -99,6 +102,47 @@ backup taken before the release instead ([Restore a backup](#restore-a-backup)).
 3. Check: `https://SITE_DOMAIN/health/ready`, the catalogue, a signed-in page.
 
 Umami's database the same way: `./restore.sh umami /var/backups/ritocode/umami-<stamp>.dump`.
+
+**A restore brings back accounts deleted after the dump.** Delete them again before anything else:
+every deletion logs `Deleted account <id> on its owner's request` (event 1210) with the id only —
+[Read logs](#read-logs) from the dump's time on, then for each id run the
+[deletion by hand](#delete-an-account-by-hand).
+
+## Personal data
+
+The privacy policy promises what this section keeps (#299, `frontend/src/site/privacy.ru.md`).
+
+- **Export and delete are the learner's own:** both are on `/profile` (`GET /api/v1/me/export`,
+  `DELETE /api/v1/me`). Deleting erases every module's rows at once; nothing is left in the live
+  database.
+- **Backups forget a deleted account within seven days.** `backup.sh` keeps seven daily dumps on the
+  server (`-mtime +6`), so the last dump that holds an account is gone a week after its deletion. The
+  **off-server copy must expire as fast**: give the bucket a lifecycle rule that deletes objects older
+  than **7 days** when you create it ([First setup](#first-setup-of-a-server), step 4), and check it
+  is still there at each release. A longer rule breaks the promise.
+- **A request by e-mail** from someone who cannot sign in any more: confirm the address is theirs,
+  then delete by hand.
+
+### Delete an account by hand
+
+**server**, in `~/ritocode`. Find the id, then erase in the order the API does — every other schema
+first, the account last:
+
+```bash
+dc exec postgres psql -U ritocode ritocode -c "SELECT id FROM users.users WHERE email = lower('<address>')"
+dc exec postgres psql -U ritocode ritocode -c "
+  BEGIN;
+  DELETE FROM attempts.signals     WHERE user_id = '<id>';
+  DELETE FROM attempts.reveals     WHERE user_id = '<id>';
+  DELETE FROM attempts.study_marks WHERE user_id = '<id>';
+  DELETE FROM attempts.attempts    WHERE user_id = '<id>';
+  DELETE FROM auth.sessions        WHERE user_id = '<id>';
+  DELETE FROM auth.linked_accounts WHERE user_id = '<id>';
+  DELETE FROM users.users          WHERE id = '<id>';
+  COMMIT;"
+```
+
+A table added since names a `user_id` too; `docs/DATABASE_SCHEMA.md` lists every one.
 
 ## Rotate a secret
 
