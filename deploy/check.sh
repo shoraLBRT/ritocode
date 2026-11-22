@@ -84,7 +84,8 @@ check_disk() {
 
 check_memory() {
 	total="$(awk '/^MemTotal:/ { print $2 }' "$proc/meminfo" 2>/dev/null)"
-	available="$(awk '/^MemAvailable:/ { print $2 }' "$proc/meminfo" 2>/dev/null)"
+	# MemFree where the kernel does not say MemAvailable (before 3.14, or Git for Windows): a lower bound.
+	available="$(awk '/^MemAvailable:/ { a = $2 } /^MemFree:/ { f = $2 } END { print (a != "" ? a : f) }' "$proc/meminfo" 2>/dev/null)"
 	if ! is_number "$total" || ! is_number "$available" || [ "$total" -eq 0 ]; then
 		fail "memory" "$proc/meminfo could not be read"
 		return

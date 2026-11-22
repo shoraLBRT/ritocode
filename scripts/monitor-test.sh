@@ -135,7 +135,7 @@ sent='telegram "http://telegram.test/bot123:secret/sendMessage"'
 alert "FAIL health https://site.example/health/ready" "     HTTP 503"
 expect_log "with a bot, an opened alert is also a Telegram message" \
 	"create
-$sent: The site, seen from GitHub, needs attention (RUNBOOK.md › Monitoring):"
+$sent: The site, seen from GitHub, needs attention (RUNBOOK.md, section Monitoring):"
 alert "FAIL health https://site.example/health/ready" "     HTTP 502"
 expect_log "and the same failure sends none" ""
 alert "FAIL certificate site.example" "     expired"

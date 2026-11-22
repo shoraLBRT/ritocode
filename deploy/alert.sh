@@ -45,11 +45,11 @@ details="$(awk '/^FAIL / { keep = 1; print; next } /^ok / { keep = 0; next } kee
 if [ -z "$failing" ]; then
 	text="The server of $name: every check passes again."
 elif [ -z "$previous" ]; then
-	text="The server of $name needs attention (RUNBOOK.md › Monitoring):
+	text="The server of $name needs attention (RUNBOOK.md, section Monitoring):
 
 $details"
 else
-	text="The server of $name: what fails has changed (RUNBOOK.md › Monitoring):
+	text="The server of $name: what fails has changed (RUNBOOK.md, section Monitoring):
 
 $details"
 fi

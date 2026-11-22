@@ -192,7 +192,7 @@ alert "ok   disk / (40 % free)" "ok   backup age"
 expect_sent "a passing report with nothing sent before sends nothing" ""
 
 alert "FAIL disk /" "     5 % free; below 15 %" "ok   backup age"
-expect_sent "a failure sends a message" "The server of site.example needs attention (RUNBOOK.md › Monitoring):"
+expect_sent "a failure sends a message" "The server of site.example needs attention (RUNBOOK.md, section Monitoring):"
 if grep -q secret "$FAKE/curl-calls" && ! grep -q 'sendMessage.*|.*secret' "$FAKE/curl-calls"; then
 	ok "the token reaches curl on its standard input, not its arguments"
 else
@@ -205,10 +205,10 @@ expect_sent "the same failure with other numbers sends nothing" ""
 
 echo FAIL >"$FAKE/curl-answer"
 alert "FAIL disk /" "     4 % free; below 15 %" "FAIL backup last run" "     failed 3 min ago"
-expect_sent "a message Telegram refuses fails the alert" "The server of site.example: what fails has changed (RUNBOOK.md › Monitoring):" 1
+expect_sent "a message Telegram refuses fails the alert" "The server of site.example: what fails has changed (RUNBOOK.md, section Monitoring):" 1
 rm "$FAKE/curl-answer"
 alert "FAIL disk /" "     4 % free; below 15 %" "FAIL backup last run" "     failed 8 min ago"
-expect_sent "and is sent on the next run" "The server of site.example: what fails has changed (RUNBOOK.md › Monitoring):"
+expect_sent "and is sent on the next run" "The server of site.example: what fails has changed (RUNBOOK.md, section Monitoring):"
 
 alert "ok   disk / (40 % free)" "ok   backup last run"
 expect_sent "a passing report after a failure sends the recovery" "The server of site.example: every check passes again."

@@ -63,7 +63,7 @@ $failing
 if [ -z "$open" ]; then
 	gh label create "$label" --color B60205 --description "An alert of the uptime check (#34)" --force >/dev/null
 	gh issue create --title "Monitoring: the site needs attention" --label "$label" --body "$body"
-	telegram "The site, seen from GitHub, needs attention (RUNBOOK.md › Monitoring):
+	telegram "The site, seen from GitHub, needs attention (RUNBOOK.md, section Monitoring):
 
 $(cat "$report")"
 	exit 0
