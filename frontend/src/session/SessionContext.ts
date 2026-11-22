@@ -9,7 +9,13 @@ import type { ApiError, Me } from '../api';
  */
 export type Session =
   | { readonly status: 'loading' }
-  | { readonly status: 'signedIn'; readonly user: Me; readonly signOut: () => Promise<void> }
+  | {
+      readonly status: 'signedIn';
+      readonly user: Me;
+      readonly signOut: () => Promise<void>;
+      /** Deletes the account (`DELETE /me`, #299), `username` typed to confirm, then asks `/me` again. */
+      readonly deleteAccount: (username: string) => Promise<void>;
+    }
   | { readonly status: 'signedOut' }
   | { readonly status: 'error'; readonly error: ApiError; readonly retry: () => void };
 

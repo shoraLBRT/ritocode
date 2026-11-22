@@ -232,6 +232,22 @@ export function isLocalPath(value: string): boolean {
   return value.startsWith('/') && value[1] !== '/' && value[1] !== '\\' && !/[\u0000-\u001f\u007f-\u009f]/.test(value);
 }
 
+/**
+ * Where the browser downloads `GET /me/export` — everything the site keeps about the caller, as a
+ * JSON file the server names (#299). A link, not a request: the browser saves the attachment itself.
+ */
+export function exportUrl(client: ApiClient): string {
+  return `${client.baseUrl}/me/export`;
+}
+
+/**
+ * `DELETE /me` — deletes the caller's account and everything every module keeps about it, and clears
+ * the session's cookies. `username` is the caller's, typed to confirm; another is `validation_failed`.
+ */
+export async function deleteAccount(client: ApiClient, username: string): Promise<void> {
+  await client.request<undefined>('/me', { method: 'DELETE', body: { username } });
+}
+
 /** `POST /auth/logout` — ends the session and clears its cookies. Outside the versioned API. */
 export function signOut(client: ApiClient): Promise<void> {
   return client.request<undefined>('/auth/logout', { method: 'POST', outsideApi: true });

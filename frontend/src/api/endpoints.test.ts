@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ApiClient } from './client';
-import { isLocalPath, listModules, signInUrl, signOut } from './endpoints';
+import { deleteAccount, exportUrl, isLocalPath, listModules, signInUrl, signOut } from './endpoints';
 import { jsonResponse } from '../test/responses';
 
 function stub(response: Response) {
@@ -41,5 +41,17 @@ describe('endpoints', () => {
 
     expect(fetchStub.mock.calls[0]?.[0]).toBe('http://api.test/auth/logout');
     expect(fetchStub.mock.calls[0]?.[1]?.method).toBe('POST');
+  });
+
+  it('addresses the export in the versioned API, and deletes the account with the username typed', async () => {
+    const { client, fetchStub } = stub(new Response(null, { status: 204 }));
+
+    expect(exportUrl(client)).toBe('http://api.test/api/v1/me/export');
+
+    await deleteAccount(client, 'ada');
+
+    expect(fetchStub.mock.calls[0]?.[0]).toBe('http://api.test/api/v1/me');
+    expect(fetchStub.mock.calls[0]?.[1]?.method).toBe('DELETE');
+    expect(fetchStub.mock.calls[0]?.[1]?.body).toBe('{"username":"ada"}');
   });
 });
