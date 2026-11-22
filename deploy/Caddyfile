@@ -29,6 +29,17 @@
 		error 503
 	}
 
+	# IndexNow's key file (#303): https://<domain>/<key>.txt holds the key, which is how Yandex and Bing
+	# check that a call from deploy/indexnow.sh is this site's. With no key set, nothing is served.
+	@indexnow_key {
+		path /{$INDEXNOW_KEY}.txt
+		not path /.txt
+	}
+	handle @indexnow_key {
+		header Content-Type "text/plain; charset=utf-8"
+		respond "{$INDEXNOW_KEY}" 200
+	}
+
 	# The log viewer (ADR 0020 decision 2, #295): Dozzle, which has no sign-in of its own. Every request
 	# first asks the API whether its session cookie is an admin's (GET /api/v1/admin/access, the admin
 	# area's own policy): 204 lets it through; the API's refusal — 401 signed out, the unknown-address 404

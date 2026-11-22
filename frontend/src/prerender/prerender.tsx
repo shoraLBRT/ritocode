@@ -61,7 +61,9 @@ const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
  * data (JSON-LD, `seo.ts`; #302);
  * `404.html`, the page the web image serves with 404 for an address the site does not have;
  * `sitemap.xml` listing every public page and `robots.txt`; `version.json`, the commit built, for the
- * admin system page; and the untouched shell under every other fixed address of the site
+ * admin system page; `page-hashes.txt`, a line `<hash> <path>` for every public page, the hash of what
+ * the page says (`pageHash`), from which a release tells IndexNow which pages changed
+ * (`deploy/indexnow.sh`, #303); and the untouched shell under every other fixed address of the site
  * (`SHELL_PATHS`). The files written are the site's addresses, so the web image needs no list of its
  * own (`deploy/web.Caddyfile`, #300). Once the bundle loads, the application renders over the static
  * markup and takes over.
@@ -120,6 +122,7 @@ export function prerender({ content, template, origin, config, builtAt = new Dat
 
   const pages = publicPages(content, t);
   const seo = publicSeo(content, site, t);
+  const hashes: string[] = [];
 
   for (const { path, meta } of pages) {
     const url = site + path;
@@ -129,7 +132,9 @@ export function prerender({ content, template, origin, config, builtAt = new Dat
       throw new Error(`The public page ${path} has no link preview or structured data.`);
     }
 
-    files.set(fileOf(path), render(path, meta, `<link rel="canonical" href="${escape(url)}" />\n    ${seoHead(url, meta, page, site)}`));
+    const html = render(path, meta, `<link rel="canonical" href="${escape(url)}" />\n    ${seoHead(url, meta, page, site)}`);
+    files.set(fileOf(path), html);
+    hashes.push(`${pageHash(html, template)} ${path}`);
   }
 
   // Served under any address the site lacks: not to be indexed, and no canonical address of its own.
@@ -141,6 +146,7 @@ export function prerender({ content, template, origin, config, builtAt = new Dat
 
   files.set('sitemap.xml', sitemap(site, pages.map((each) => each.path), lastmod));
   files.set('version.json', `${JSON.stringify({ commit: commit ?? null })}\n`);
+  files.set('page-hashes.txt', `${hashes.join('\n')}\n`);
   files.set('robots.txt', `User-agent: *\nAllow: /\n\nSitemap: ${site}/sitemap.xml\n`);
 
   return files;
@@ -326,6 +332,20 @@ function TaskRoute({ tasks }: { tasks: readonly TaskPreview[] }) {
   ) : (
     <TaskPreviewPage task={{ slug: task.slug, title: task.title, difficulty: task.difficulty, context: task.context, brief: task.brief }} />
   );
+}
+
+/**
+ * What a page says, hashed (#303): the page without the shell's own lines, whose bundle names change
+ * on every build, and without the preload of its data file, named by data that carries the build's
+ * time — so the hash changes when the page's text, title or head does, not on every release.
+ */
+function pageHash(html: string, template: string): string {
+  const shell = new Set(template.split('\n'));
+  const own = html
+    .split('\n')
+    .filter((line) => !shell.has(line) && !line.includes('/assets/data/'))
+    .join('\n');
+  return createHash('sha256').update(own).digest('hex').slice(0, 16);
 }
 
 function sitemap(site: string, paths: readonly string[], lastmod: string | undefined): string {

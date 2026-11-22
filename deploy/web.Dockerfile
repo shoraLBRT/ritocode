@@ -11,6 +11,8 @@
 #   VITE_API_BASE_URL  where the browser finds the API; same origin by default
 #   VITE_DEMO_TASK     the landing page's demo task; the frontend's default when empty
 #   VITE_UMAMI_SCRIPT_URL, VITE_UMAMI_WEBSITE_ID
+#   VITE_YANDEX_VERIFICATION, VITE_GOOGLE_SITE_VERIFICATION
+#                      the search consoles' meta tags in every page's head (#303); none when empty
 #   VITE_TURNSTILE_SITE_KEY  the feedback widget's captcha (ADR 0019); none when empty
 #   SOURCE_COMMIT      the commit built, served as /version.json for the admin system page (#297); null when empty
 #                      Umami's script and the site's id there (SPEC §8); no analytics unless both are set
@@ -41,6 +43,8 @@ ARG VITE_DEMO_TASK=
 ARG VITE_UMAMI_SCRIPT_URL=
 ARG VITE_UMAMI_WEBSITE_ID=
 ARG VITE_TURNSTILE_SITE_KEY=
+ARG VITE_YANDEX_VERIFICATION=
+ARG VITE_GOOGLE_SITE_VERIFICATION=
 ARG SOURCE_COMMIT=
 ENV CONTENT_EXPORT=/content-export.json \
     SOURCE_COMMIT=${SOURCE_COMMIT} \
@@ -50,7 +54,9 @@ ENV CONTENT_EXPORT=/content-export.json \
     VITE_DEMO_TASK=${VITE_DEMO_TASK} \
     VITE_UMAMI_SCRIPT_URL=${VITE_UMAMI_SCRIPT_URL} \
     VITE_UMAMI_WEBSITE_ID=${VITE_UMAMI_WEBSITE_ID} \
-    VITE_TURNSTILE_SITE_KEY=${VITE_TURNSTILE_SITE_KEY}
+    VITE_TURNSTILE_SITE_KEY=${VITE_TURNSTILE_SITE_KEY} \
+    VITE_YANDEX_VERIFICATION=${VITE_YANDEX_VERIFICATION} \
+    VITE_GOOGLE_SITE_VERIFICATION=${VITE_GOOGLE_SITE_VERIFICATION}
 
 RUN npm run build:static
 
