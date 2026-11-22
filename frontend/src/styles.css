@@ -3494,8 +3494,12 @@ pre {
 }
 
 /* The route error page (#294): the not-found frame, the report's number, two ways out. */
+/* Outside the layout, so it keeps its own gutter. */
 .rc-error-page {
-  padding-top: calc(var(--gap) * 3);
+  box-sizing: border-box;
+  max-width: 48rem;
+  margin-inline: auto;
+  padding: calc(var(--gap) * 3) 1rem;
 }
 
 .rc-error-page__id {

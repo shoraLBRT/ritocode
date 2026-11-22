@@ -163,7 +163,8 @@ function LatestStack({ id }: { id: string }) {
   const [state, setState] = useState<'closed' | 'loading' | 'failed' | AdminErrorOccurrence | null>('closed');
 
   const open = () => {
-    if (state !== 'closed') {
+    // Read once; a read that failed is tried again the next time the stack is opened.
+    if (state !== 'closed' && state !== 'failed') {
       return;
     }
     setState('loading');
