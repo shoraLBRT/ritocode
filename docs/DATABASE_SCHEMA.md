@@ -12,6 +12,7 @@ a module cannot reach another module's data through EF at all.
 | `auth` | Auth | `linked_accounts`, `sessions` |
 | `content` | Content | `taxonomy`, `cards`, `materials`, `tasks` |
 | `attempts` | Attempts | `attempts`, `signals`, `reveals`, `study_marks` |
+| `errors` | Errors | `error_groups`, `error_occurrences` (#294) — no user id, no reference into another schema |
 
 Each schema also holds its own `__migrations_history`, so module migrations are independent.
 
@@ -37,6 +38,31 @@ erDiagram
     TASKS ||..o{ REVEALS : "task_slug (no FK)"
     USERS ||..o{ STUDY_MARKS : "user_id (no FK)"
     CARDS ||..o{ STUDY_MARKS : "card_slug (no FK)"
+    ERROR_GROUPS ||--o{ ERROR_OCCURRENCES : "group_id"
+
+    ERROR_GROUPS {
+        uuid id PK
+        char64 fingerprint UK "SHA-256 of source, type, top frames"
+        text source "Server or Browser"
+        text type "up to 200"
+        text message "the latest, up to 1000"
+        text location "method and route template, or the page's path"
+        bigint count
+        timestamptz first_seen_at
+        timestamptz last_seen_at
+        timestamptz resolved_at "null while open"
+    }
+
+    ERROR_OCCURRENCES {
+        uuid id PK
+        uuid group_id FK "cascade"
+        timestamptz occurred_at
+        text request_id "leads to the log lines"
+        text message
+        text location
+        text stack "up to 8000"
+        text commit "null when the build was not told it"
+    }
 
     USERS {
         uuid id PK
@@ -207,6 +233,8 @@ never deleted, and ingest validates the reference before it writes anything.
 | `fk_signals_attempts_attempt_id` | a signal names an attempt that exists, in the same schema |
 | `pk_reveals` | one reveal per user and task; a second racing the first is refused and taken as revealed |
 | `pk_study_marks` | one mark per user and card; a second racing the first is refused and taken as marked |
+| `ux_error_groups_fingerprint` | one group per fingerprint; two first occurrences racing make one group |
+| `fk_error_occurrences_error_groups_group_id` | an occurrence names a group that exists, in the same schema |
 | `ck_*_<enum column>` | the column holds a value from its enum |
 
 ## Indexes that exist for a specific query
@@ -221,6 +249,9 @@ Beyond primary keys and uniqueness:
 | `attempts (user_id, task_slug)` | a user's attempts at one task, and the task catalogue's solved flags |
 | `signals (user_id, created_at)` | the signal rate limit's count of a user's recent signals |
 | `sessions (user_id)` | ending all of a user's sessions |
+| `error_groups (resolved_at, last_seen_at)` | `/admin/errors`, open or resolved, the most recently seen first |
+| `error_occurrences (group_id, occurred_at)` | a group's latest occurrences, and pruning all but its latest 50 |
+| `error_occurrences (occurred_at)` | pruning occurrences older than 30 days |
 
 ## Working with the schema
 

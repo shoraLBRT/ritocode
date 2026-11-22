@@ -184,7 +184,7 @@ Every secret is in `~/ritocode/production.env` on the server; nothing else holds
 | `UMAMI_APP_SECRET` | Put a new one in `production.env`, `dc up -d umami`; everyone signed in to Umami signs in again, and `UMAMI_API_TOKEN` stops working — get a new one (below). |
 | `UMAMI_API_TOKEN` | [Get an Umami token](#get-an-umami-token), put it in `production.env`, `dc up -d api`. A token outlives Umami's restarts; changing that Umami account's password or `UMAMI_APP_SECRET` ends it, so get a new one after either. |
 | The rclone key | Make a new key at the provider, `rclone config` to update the remote, delete the old key. |
-| `TELEGRAM_BOT_TOKEN` | @BotFather → `/revoke` for the monitoring bot, put the new token in `production.env` (`check.sh` reads it on its next run; nothing to restart) **and** in the repository secret of the same name, which the *Monitor* workflow sends with. |
+| `TELEGRAM_BOT_TOKEN` | @BotFather → `/revoke` for the monitoring bot, put the new token in `production.env` (`check.sh` reads it on its next run; nothing to restart) **and** in the repository secret of the same name, which the *Monitor* workflow sends with; then `dc up -d api`, as the API sends the error alerts with it (#294). |
 | The data-protection key ring | Not a secret anyone types. To discard it: `dc stop api`, `docker volume rm ritocode-production_api-keys`, `dc up -d api`; sign-ins in flight fail once. |
 
 Signed-in learners stay signed in through all of these: sessions live in the database.
@@ -221,6 +221,32 @@ dc logs --no-log-prefix api | jq -c 'select(any(.Scopes[]?; .RequestId == "<id>"
 
 The other services: `dc logs caddy`, `umami`, `postgres`. Docker keeps 5 × 10 MB per service. How the
 API's lines are shaped: [deploy/README.md](../deploy/README.md#logs).
+
+## An error was reported
+
+Every unhandled server exception and every error a visitor's browser sends is kept in the `errors`
+schema, grouped by fingerprint ([ADR 0020](adr/0020-observability.md) decision 1, #294). A **new**
+group, or a resolved one that happens again (**reopened**), sends one Telegram message: the source, the
+type, where (the route template or the page's path), the count and a link to `/admin/errors`. It
+carries no message, no stack and no request id — Telegram is outside Russia.
+
+1. Open **`/admin/errors`** (Админка › Ошибки). A row is a group: the type and the latest message, where,
+   how many times, first and last seen, the latest request ids. *Стек последнего случая* opens the latest
+   occurrence's stack and commit.
+2. Find the request's log lines by one of its request ids ([Read logs](#read-logs)). A browser report's
+   request id is the report's own `POST /api/v1/client-errors`, so its lines say only when it came;
+   the stack and the page are in the record. The error page a visitor saw shows the same id as *Номер
+   ошибки*, so an id quoted in feedback finds its group.
+3. Fix it; after the release, press **Разобрано**. If it happens again the group reopens, and a message
+   says so.
+
+What is kept: occurrences for 30 days and at most the latest 50 per group; the group (its count and
+times) until it is resolved, and after. No request body, address or user id is recorded.
+
+**The bot** is the server checks' own ([Monitoring › The server's checks](#the-servers-checks)): the
+same `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` in `production.env`; after setting them, `dc up -d api`
+as well. Either empty: errors are still recorded, nothing is sent. At most 20
+messages an hour are sent; past that the API logs `Error alert not sent, past the hour's limit`.
 
 ## Monitoring
 
