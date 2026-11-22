@@ -684,7 +684,7 @@ compose stack is PostgreSQL only.
 | --- | --- |
 | `Ritocode.Architecture.Tests` | 16 |
 | `Ritocode.Shared.Tests` | 58 |
-| `Ritocode.Api.Tests` | 251 |
+| `Ritocode.Api.Tests` | 278 |
 | `Ritocode.Modules.Content.Tests` | 78 |
 | `Ritocode.Modules.Attempts.Tests` | 31 |
 | Frontend (vitest) | 541 |
