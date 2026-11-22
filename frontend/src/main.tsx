@@ -1,10 +1,13 @@
 import { StrictMode } from 'react';
-import { createRoot } from 'react-dom/client';
+import { createRoot, hydrateRoot } from 'react-dom/client';
+import { createBrowserRouter } from 'react-router';
+import type { DataRouter } from 'react-router';
 import { loadAnalytics, resolveAnalyticsConfig } from './analytics';
 import { ApiClient, resolveApiBaseUrl } from './api';
 import { App } from './App';
 import { installErrorReporter } from './errors/reporter';
-import { resolveSiteConfig } from './site';
+import { routes } from './routes';
+import { readPrerendered, resolveSiteConfig } from './site';
 import { applyTheme, readTheme, themeStorage } from './theme';
 // IBM Plex, served with the site rather than from a font CDN (docs/DESIGN.md).
 import '@fontsource/ibm-plex-sans/400.css';
@@ -39,8 +42,40 @@ if (analytics !== null) {
   loadAnalytics(analytics);
 }
 
-createRoot(root).render(
-  <StrictMode>
-    <App client={client} config={config} />
-  </StrictMode>,
-);
+// A prerendered page is hydrated with the data it was rendered from, so its markup stays as it is
+// and nothing it shows is fetched again (#310). Under another address than its own — the task page
+// under an attempt's, 404.html under any — or with a query, which a page may read but the prerender
+// never had, the application renders afresh over it instead.
+const prerendered = window.location.search === '' ? readPrerendered(document, window.location.pathname) : null;
+const router = createBrowserRouter(routes);
+
+// A route of its own chunk (routes.tsx) is loaded before the first render, so that render is the page.
+void routerReady(router).then(() => {
+  const app = (
+    <StrictMode>
+      <App client={client} config={config} router={router} prerendered={prerendered} />
+    </StrictMode>
+  );
+
+  if (prerendered !== null) {
+    hydrateRoot(root, app);
+  } else {
+    createRoot(root).render(app);
+  }
+});
+
+function routerReady(router: DataRouter): Promise<void> {
+  return new Promise((resolve) => {
+    if (router.state.initialized) {
+      resolve();
+      return;
+    }
+
+    const stop = router.subscribe((state) => {
+      if (state.initialized) {
+        stop();
+        resolve();
+      }
+    });
+  });
+}

@@ -5,16 +5,16 @@ import type { ProblemCatalogue, TaskPreview } from '../api';
 import { AppLayout } from '../components/AppLayout';
 import { I18nProvider, ru, translate } from '../i18n';
 import type { Translate } from '../i18n';
-import { StaticHomePage } from '../pages/HomePage';
+import { HomePage } from '../pages/HomePage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { PrivacyPage } from '../pages/PrivacyPage';
-import { StaticProblemPage } from '../pages/ProblemPage';
-import { StaticProblemsPage } from '../pages/ProblemsPage';
-import { StaticTasksPage } from '../pages/TasksPage';
+import { ProblemPage } from '../pages/ProblemPage';
+import { ProblemsPage } from '../pages/ProblemsPage';
+import { TasksPage } from '../pages/TasksPage';
 import { TaskPreviewPage } from '../pages/task/TaskPreviewPage';
 import { SessionProvider } from '../session';
-import { NOT_FOUND_PATH, PRERENDERED_PATHS, SHELL_PATHS, SiteConfigContext, pageMeta, problemMeta, taskMeta } from '../site';
-import type { PageMeta, SiteConfig } from '../site';
+import { NOT_FOUND_PATH, PRERENDERED_PATHS, PrerenderedContext, SHELL_PATHS, SiteConfigContext, pageMeta, prerenderedScript, problemMeta, taskMeta } from '../site';
+import type { PageMeta, PrerenderedData, SiteConfig } from '../site';
 import { previewSvg } from './preview';
 import { previewImages, publicSeo, seoHead } from './seo';
 
@@ -38,6 +38,8 @@ export interface PrerenderInput {
   /** Where the site is served, such as `https://ritocode.ru`: the sitemap needs absolute addresses. */
   readonly origin: string;
   readonly config: SiteConfig;
+  /** The instant the build is made for: the arena's problems to read are the ones of its day (#310). Now when absent. */
+  readonly builtAt?: Date;
   /** When the content last changed, as `YYYY-MM-DD`, for the sitemap's `lastmod`; left out when absent. */
   readonly lastmod?: string;
   /** The commit the build is made from, for `version.json` and the admin system page (#297); `null` there when absent. */
@@ -65,7 +67,7 @@ const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
  *
  * Returns the files to write, by path under the build's output directory.
  */
-export function prerender({ content, template, origin, config, lastmod, commit }: PrerenderInput): Map<string, string> {
+export function prerender({ content, template, origin, config, builtAt = new Date(), lastmod, commit }: PrerenderInput): Map<string, string> {
   if (!template.includes(EMPTY_ROOT)) {
     throw new Error(`The template has no empty ${EMPTY_ROOT}: prerender the index.html a fresh 'vite build' wrote.`);
   }
@@ -88,13 +90,19 @@ export function prerender({ content, template, origin, config, lastmod, commit }
   const t: Translate = (key, params) => translate(ru, 'ru', key, params);
   const files = new Map<string, string>();
 
-  /** The page at `path` rendered into the shell, with its title, its description and `head`. */
+  /**
+   * The page at `path` rendered into the shell, with its title, its description and `head` — and,
+   * for a page the application renders the same, the data it was rendered from, which the
+   * application hydrates it with (#310).
+   */
   const render = (path: string, meta: PageMeta, head: string): string => {
-    const markup = renderToString(<Page path={path} content={content} config={config} />);
+    const data = prerenderedData(path, content, builtAt);
+    const markup = renderToString(<Page path={path} content={content} config={config} data={data} />);
+    const root = `<div id="root">${markup}</div>${data === null ? '' : prerenderedScript(data)}`;
 
     // Replaced through functions: a replacement string would read `$&` in a card's text as a pattern.
     return template
-      .replace(EMPTY_ROOT, () => `<div id="root">${markup}</div>`)
+      .replace(EMPTY_ROOT, () => root)
       .replace(/<title>[^<]*<\/title>/, () => `<title>${escape(meta.title)}</title>`)
       .replace('</head>', () => `  <meta name="description" content="${escape(meta.description)}" />\n    ${head}\n  </head>`);
   };
@@ -227,11 +235,44 @@ function fileOf(path: string): string {
 }
 
 /**
- * One page inside the providers the application has. Nothing here reaches the network: effects do
- * not run when rendering to a string, so the session is still loading — the header names nobody —
- * and the catalogue and the tasks come from the export rather than from the API.
+ * What the page at `path` is rendered from and the application hydrates it with (#310), or `null`
+ * for a page the application renders differently — a task's page, which the application replaces
+ * with the task screen, and `404.html`, served under any address. Each page carries only what it
+ * shows (`PrerenderedData`), and a task nothing beyond its slug, title and difficulty.
  */
-function Page({ path, content, config }: { path: string; content: ContentExport; config: SiteConfig }) {
+export function prerenderedData(path: string, content: ContentExport, builtAt: Date): PrerenderedData | null {
+  const { classes, cards } = content.problems;
+
+  if (path === '/') {
+    const arena = cards.map(({ slug, class: kind, name, summary }) => ({ slug, class: kind, name, summary }));
+    return { path, arena: { catalogue: { classes, cards: arena }, builtAt: builtAt.toISOString() } };
+  }
+
+  if (path === '/problems') {
+    return { path, catalogue: content.problems };
+  }
+
+  if (path === '/tasks') {
+    const items = content.tasks.map(({ slug, title, difficulty }) => ({ slug, title, difficulty, status: null }));
+    const page = { items, pageNumber: 1, pageSize: 100, totalItems: items.length, totalPages: 1, hasNextPage: false, hasPreviousPage: false };
+    return { path, tasks: page };
+  }
+
+  if (path === '/privacy') {
+    return { path };
+  }
+
+  const card = path.startsWith('/problems/') ? cards.find((each) => `/problems/${each.slug}` === path) : undefined;
+  return card === undefined ? null : { path, catalogue: { classes, cards: cards.filter((each) => each.class === card.class) } };
+}
+
+/**
+ * One page inside the providers the application has, rendered by the pages the application has
+ * with the data it is then given (`data`), so its first render matches the markup. Nothing here
+ * reaches the network: effects do not run when rendering to a string, so the session is still
+ * loading — the header names nobody — and the catalogue and the tasks come from the export.
+ */
+function Page({ path, content, config, data }: { path: string; content: ContentExport; config: SiteConfig; data: PrerenderedData | null }) {
   const offline = new ApiClient({
     baseUrl: 'http://prerender.invalid/api/v1',
     fetch: () => Promise.reject(new Error('Nothing is fetched while prerendering.')),
@@ -242,29 +283,26 @@ function Page({ path, content, config }: { path: string; content: ContentExport;
       <SiteConfigContext value={config}>
         <ApiClientProvider client={offline}>
           <SessionProvider>
-            <StaticRouter location={path}>
-              <Routes>
-                <Route path="/" element={<AppLayout />}>
-                  <Route index element={<StaticHomePage catalogue={content.problems} />} />
-                  <Route path="problems" element={<StaticProblemsPage catalogue={content.problems} />} />
-                  <Route path="problems/:slug" element={<CardRoute catalogue={content.problems} />} />
-                  <Route path="tasks" element={<StaticTasksPage tasks={content.tasks} />} />
-                  <Route path="tasks/:slug" element={<TaskRoute tasks={content.tasks} />} />
-                  <Route path="privacy" element={<PrivacyPage />} />
-                  <Route path="*" element={<NotFoundPage />} />
-                </Route>
-              </Routes>
-            </StaticRouter>
+            <PrerenderedContext value={data}>
+              <StaticRouter location={path}>
+                <Routes>
+                  <Route path="/" element={<AppLayout />}>
+                    <Route index element={<HomePage />} />
+                    <Route path="problems" element={<ProblemsPage />} />
+                    <Route path="problems/:slug" element={<ProblemPage />} />
+                    <Route path="tasks" element={<TasksPage />} />
+                    <Route path="tasks/:slug" element={<TaskRoute tasks={content.tasks} />} />
+                    <Route path="privacy" element={<PrivacyPage />} />
+                    <Route path="*" element={<NotFoundPage />} />
+                  </Route>
+                </Routes>
+              </StaticRouter>
+            </PrerenderedContext>
           </SessionProvider>
         </ApiClientProvider>
       </SiteConfigContext>
     </I18nProvider>
   );
-}
-
-function CardRoute({ catalogue }: { catalogue: ProblemCatalogue }) {
-  const { slug = '' } = useParams();
-  return <StaticProblemPage catalogue={catalogue} slug={slug} />;
 }
 
 function TaskRoute({ tasks }: { tasks: readonly TaskPreview[] }) {

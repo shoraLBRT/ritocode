@@ -45,10 +45,22 @@ interface Settled<T> {
  * @param deps Says when the request has changed, with the same meaning as a `useEffect`
  * dependency list: a `load` closing over a changing value puts that value in here. Its length
  * must be stable across renders, as React requires of any dependency list.
+ * @param initial What the page already holds — the data it was prerendered from (#310): the first
+ * render is `success` with it, so a hydrated page renders what its markup shows. Nothing is loaded
+ * for it unless `refresh` is set; then it is loaded in the background and replaces the data once it
+ * arrives, and a failure leaves the data as it was. It counts for the first `deps` only.
  */
-export function useApiResource<T>(load: (signal: AbortSignal) => Promise<T>, deps: readonly unknown[]): ApiResource<T> {
+export function useApiResource<T>(
+  load: (signal: AbortSignal) => Promise<T>,
+  deps: readonly unknown[],
+  initial?: { readonly data: T; readonly refresh?: boolean },
+): ApiResource<T> {
   const [attempt, setAttempt] = useState(0);
-  const [settled, setSettled] = useState<Settled<T> | null>(null);
+  const [settled, setSettled] = useState<Settled<T> | null>(() =>
+    initial === undefined ? null : { deps, attempt: 0, state: { status: 'success', data: initial.data } },
+  );
+  // The first load, when it is made for data already in hand: skipped, or quiet when it fails.
+  const [held] = useState(() => (initial === undefined ? null : { deps, refresh: initial.refresh === true }));
 
   // `load` is a fresh closure on every render, so it cannot be an effect dependency without
   // reloading forever — and it cannot be memoised on `deps` either, because a caller that
@@ -62,6 +74,14 @@ export function useApiResource<T>(load: (signal: AbortSignal) => Promise<T>, dep
   });
 
   useEffect(() => {
+    // Decided from the inputs rather than cleared on first use, so a re-run of the same effect —
+    // StrictMode's — decides the same.
+    const holding = held !== null && attempt === 0 && shallowEqual(held.deps, deps) ? held : null;
+
+    if (holding !== null && !holding.refresh) {
+      return;
+    }
+
     const controller = new AbortController();
     const issuedFor = { deps, attempt };
 
@@ -72,8 +92,9 @@ export function useApiResource<T>(load: (signal: AbortSignal) => Promise<T>, dep
         }
       },
       (cause: unknown) => {
-        // An abort is this effect's own cleanup, not a failure to show anyone.
-        if (controller.signal.aborted) {
+        // An abort is this effect's own cleanup, not a failure to show anyone; a failed refresh
+        // leaves the data the page already shows.
+        if (controller.signal.aborted || holding !== null) {
           return;
         }
 

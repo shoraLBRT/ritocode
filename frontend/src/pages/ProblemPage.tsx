@@ -9,7 +9,7 @@ import { Markdown } from '../components/Markdown';
 import { useApiResource } from '../hooks/useApiResource';
 import { useStudyMarks } from '../hooks/useStudyMarks';
 import { useT } from '../i18n';
-import { plainText, problemMeta, usePageMeta } from '../site';
+import { plainText, problemMeta, usePageMeta, usePrerendered } from '../site';
 import { NotFoundPage } from './NotFoundPage';
 import { StudyToggle } from './ProblemsPage';
 
@@ -23,7 +23,9 @@ export function ProblemPage() {
   const client = useApiClient();
   const t = useT();
   const { slug = '' } = useParams();
-  const { state, reload } = useApiResource((signal) => getProblemCatalogue(client, signal), [client]);
+  // Prerendered, the page hydrates with the card and its class it shows, and loads nothing (#310).
+  const prerendered = usePrerendered(`/problems/${slug}`)?.catalogue;
+  const { state, reload } = useApiResource((signal) => getProblemCatalogue(client, signal), [client], prerendered && { data: prerendered });
 
   if (state.status === 'loading') {
     return (
@@ -41,14 +43,9 @@ export function ProblemPage() {
     );
   }
 
-  return <StaticProblemPage catalogue={state.data} slug={slug} />;
-}
+  const card = state.data.cards.find((each) => each.slug === slug);
 
-/** The same page for a catalogue already in hand: what the build prerenders for every card of the content export. */
-export function StaticProblemPage({ catalogue, slug }: { catalogue: ProblemCatalogue; slug: string }) {
-  const card = catalogue.cards.find((each) => each.slug === slug);
-
-  return card === undefined ? <NotFoundPage /> : <CardPage catalogue={catalogue} card={card} />;
+  return card === undefined ? <NotFoundPage /> : <CardPage catalogue={state.data} card={card} />;
 }
 
 function CardPage({ catalogue, card }: { catalogue: ProblemCatalogue; card: ProblemCard }) {
