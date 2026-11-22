@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Ritocode.Shared.Diagnostics;
 using Ritocode.Shared.Errors;
 
 namespace Ritocode.Shared.Http;
@@ -35,6 +38,7 @@ public sealed partial class AppExceptionHandler(ILogger<AppExceptionHandler> log
         if (error.Type == ErrorType.Unexpected)
         {
             LogUnhandled(logger, method, path, exception);
+            await RecordAsync(httpContext, exception, method, path);
         }
         else
         {
@@ -44,6 +48,25 @@ public sealed partial class AppExceptionHandler(ILogger<AppExceptionHandler> log
         await ApiProblem.WriteAsync(httpContext, error, cancellationToken);
 
         return true;
+    }
+
+    /// <summary>
+    /// Hands the exception to the error records (ADR 0020, #294), under the route's template rather than
+    /// its path, so <c>/attempts/{id}</c> is one place however many ids fail there. Not tied to the
+    /// request's cancellation: a client that went away does not unmake the error.
+    /// </summary>
+    private static async Task RecordAsync(HttpContext httpContext, Exception exception, string method, string path)
+    {
+        if (httpContext.RequestServices.GetService<IServerErrorRecorder>() is not { } recorder)
+        {
+            return;
+        }
+
+        var template = (httpContext.GetEndpoint() as RouteEndpoint)?.RoutePattern.RawText;
+        var location = $"{method} {(template is null ? path : "/" + template.TrimStart('/'))}";
+        var requestId = httpContext.Items.TryGetValue(RequestId.ItemsKey, out var value) && value is string id ? id : null;
+
+        await recorder.RecordAsync(new ServerError(exception, location, requestId), CancellationToken.None);
     }
 
     /// <summary>

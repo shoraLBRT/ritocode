@@ -5,7 +5,7 @@ set -uo pipefail
 
 cd "$(dirname "$0")/.."
 
-modules=(Users Auth Content Attempts)
+modules=(Users Auth Content Attempts Errors)
 drifted=()
 
 dotnet tool restore >/dev/null

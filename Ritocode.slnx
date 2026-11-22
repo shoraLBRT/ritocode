@@ -9,6 +9,7 @@
     <Project Path="src/Modules/Ritocode.Modules.Attempts/Ritocode.Modules.Attempts.csproj" />
     <Project Path="src/Modules/Ritocode.Modules.Auth/Ritocode.Modules.Auth.csproj" />
     <Project Path="src/Modules/Ritocode.Modules.Content/Ritocode.Modules.Content.csproj" />
+    <Project Path="src/Modules/Ritocode.Modules.Errors/Ritocode.Modules.Errors.csproj" />
     <Project Path="src/Modules/Ritocode.Modules.Users/Ritocode.Modules.Users.csproj" />
   </Folder>
   <Folder Name="/tests/">

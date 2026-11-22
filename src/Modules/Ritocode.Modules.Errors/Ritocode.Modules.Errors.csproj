@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Module projects reference Ritocode.Shared only.
+    A reference to another Ritocode.Modules.* project is an architecture violation
+    and is rejected by Ritocode.Architecture.Tests. Cross-module communication goes
+    through contracts published in Ritocode.Shared. See docs/adr/0002-modular-monolith-layout.md.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="../../Ritocode.Shared/Ritocode.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The fingerprint and the Telegram message are tested directly, without a request around them. -->
+    <InternalsVisibleTo Include="Ritocode.Api.Tests" />
+  </ItemGroup>
+
+</Project>
