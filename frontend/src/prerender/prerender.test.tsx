@@ -215,11 +215,11 @@ describe('the prerendered tasks', () => {
 
 describe('what else the build writes', () => {
   it('writes the untouched shell under every other address of the site, and under no other', () => {
-    for (const path of ['profile.html', 'admin.html', 'admin/signals.html', 'admin/users.html', 'admin/attempts.html', 'admin/stats.html', 'admin/system.html']) {
+    for (const path of ['profile.html', 'admin.html', 'admin/signals.html', 'admin/users.html', 'admin/attempts.html', 'admin/stats.html', 'admin/system.html', 'admin/errors.html']) {
       expect(page(path)).toBe(template);
     }
 
-    expect([...files.values()].filter((text) => text === template)).toHaveLength(7);
+    expect([...files.values()].filter((text) => text === template)).toHaveLength(8);
     expect([...files.keys()].filter((path) => path.startsWith('tasks/'))).toHaveLength(2);
     expect([...files.keys()].filter((path) => path.startsWith('problems/'))).toHaveLength(2);
     expect(files.has('spa.html')).toBe(false);

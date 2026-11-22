@@ -4,6 +4,7 @@ import type { AdminAttempt, AdminSignal, AdminUser, CardStatsReport, SystemRepor
 import { ru } from '../../i18n';
 import { renderApp } from '../../test/render';
 import { jsonResponse, pageOf, problemResponse } from '../../test/responses';
+import type { AdminErrorGroup, AdminErrorOccurrence } from './adminErrors';
 
 const learner = { id: 'u-1', username: 'ann', email: 'ann@example.test' };
 
@@ -17,6 +18,29 @@ const openSignal: AdminSignal = {
   comment: 'Сумма в float, строка 12.',
   createdAt: '2026-10-01T09:30:00Z',
   resolvedAt: null,
+};
+
+const errorGroup: AdminErrorGroup = {
+  id: 'e-1',
+  source: 'server',
+  type: 'System.InvalidOperationException',
+  message: 'Sequence contains no elements',
+  location: 'GET /api/v1/attempts/{id}',
+  count: 3,
+  firstSeenAt: '2026-11-20T09:00:00Z',
+  lastSeenAt: '2026-11-22T10:00:00Z',
+  resolvedAt: null,
+  latestRequestIds: ['0HN7REQ0001', '0HN7REQ0000'],
+};
+
+const errorOccurrence: AdminErrorOccurrence = {
+  id: 'o-1',
+  occurredAt: '2026-11-22T10:00:00Z',
+  requestId: '0HN7REQ0001',
+  message: 'Sequence contains no elements',
+  location: 'GET /api/v1/attempts/{id}',
+  stack: 'System.InvalidOperationException: Sequence contains no elements\n   at Ritocode.Modules.Attempts.Read()',
+  commit: 'ac1caf1',
 };
 
 const users: AdminUser[] = [
@@ -184,6 +208,19 @@ function api(caller: 'admin' | 'learner' | 'visitor', { resolveFails = false } =
       return Promise.resolve(jsonResponse(pageOf(status === 'resolved' ? closed : open, 1, 50)));
     }
 
+    if (url.pathname.endsWith('/admin/errors/e-1/resolve') && init?.method === 'POST') {
+      resolved = true;
+      return Promise.resolve(jsonResponse({ ...errorGroup, resolvedAt: '2026-11-22T11:00:00Z' }));
+    }
+
+    if (url.pathname.endsWith('/admin/errors/e-1')) {
+      return Promise.resolve(jsonResponse({ group: errorGroup, occurrences: [errorOccurrence] }));
+    }
+
+    if (url.pathname.endsWith('/admin/errors')) {
+      return Promise.resolve(jsonResponse(pageOf(url.searchParams.get('status') === 'resolved' || resolved ? [] : [errorGroup], 1, 50)));
+    }
+
     if (url.pathname.endsWith('/admin/stats/tasks')) {
       return Promise.resolve(jsonResponse(taskStats));
     }
@@ -233,18 +270,18 @@ describe('the admin area', () => {
     expect(requested(fetchStub, '/admin/signals')).toHaveLength(0);
   });
 
-  it.each(['/admin', '/admin/signals', '/admin/users', '/admin/attempts', '/admin/system'])('has one h1, the area name, at %s', async (path) => {
+  it.each(['/admin', '/admin/signals', '/admin/users', '/admin/attempts', '/admin/system', '/admin/errors'])('has one h1, the area name, at %s', async (path) => {
     renderApp(api('admin'), path);
 
     expect(await screen.findByRole('heading', { name: ru.admin.title, level: 1 })).toBeInTheDocument();
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
   });
 
-  it('offers the six sections as links, the current one marked', async () => {
+  it('offers the seven sections as links, the current one marked', async () => {
     renderApp(api('admin'), '/admin/users');
 
     const nav = within(await screen.findByRole('navigation', { name: ru.admin.nav }));
-    expect(nav.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(['/admin', '/admin/signals', '/admin/users', '/admin/attempts', '/admin/stats', '/admin/system']);
+    expect(nav.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(['/admin', '/admin/signals', '/admin/users', '/admin/attempts', '/admin/stats', '/admin/system', '/admin/errors']);
     expect(nav.getByRole('link', { name: ru.admin.users })).toHaveAttribute('aria-current', 'page');
     expect(nav.getByRole('link', { name: ru.admin.overview })).not.toHaveAttribute('aria-current');
   });
@@ -452,6 +489,32 @@ describe('the overview', () => {
     const tiles = within(await screen.findByRole('list', { name: ru.admin.overviewPage.tiles }));
     expect(await tiles.findByText(ru.admin.overviewPage.tileFailed)).toBeInTheDocument();
     expect(await tiles.findByRole('link', { name: new RegExp(`^${ru.admin.overviewPage.signals}\\s*7`) })).toBeInTheDocument();
+  });
+});
+
+describe('the errors page', () => {
+  it('lists the open groups with where, how often, when and their request ids, shows a stack, and resolves one', async () => {
+    const fetchStub = api('admin');
+    renderApp(fetchStub, '/admin/errors');
+
+    const table = within(await screen.findByRole('table'));
+    expect(table.getByText('System.InvalidOperationException')).toBeInTheDocument();
+    expect(table.getByText('GET /api/v1/attempts/{id}')).toBeInTheDocument();
+    expect(table.getByText('0HN7REQ0001')).toBeInTheDocument();
+    expect(table.getByText(ru.admin.errorsPage.server)).toBeInTheDocument();
+    expect(requested(fetchStub, '/admin/errors')[0]?.searchParams.get('status')).toBe('open');
+
+    const details = table.getByText(ru.admin.errorsPage.details).closest('details');
+    if (details === null) {
+      throw new Error('The stack toggle is not a <details>.');
+    }
+    details.open = true;
+    fireEvent(details, new Event('toggle'));
+    expect(await table.findByText(/at Ritocode\.Modules\.Attempts\.Read/)).toBeInTheDocument();
+
+    fireEvent.click(table.getByRole('button', { name: ru.admin.errorsPage.resolve }));
+    expect(await screen.findByText(ru.admin.errorsPage.empty)).toBeInTheDocument();
+    expect(fetchStub.mock.calls.some(([input, init]) => urlOf(input).endsWith('/admin/errors/e-1/resolve') && init?.method === 'POST')).toBe(true);
   });
 });
 

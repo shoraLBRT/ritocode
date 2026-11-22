@@ -1,7 +1,9 @@
 import { Navigate } from 'react-router';
 import type { RouteObject } from 'react-router';
 import { AppLayout } from './components/AppLayout';
+import { RouteErrorPage } from './errors/RouteErrorPage';
 import { AdminAttemptsPage } from './pages/admin/AdminAttemptsPage';
+import { AdminErrorsPage } from './pages/admin/AdminErrorsPage';
 import { AdminOverviewPage } from './pages/admin/AdminOverviewPage';
 import { AdminSignalsPage } from './pages/admin/AdminSignalsPage';
 import { AdminStatsPage } from './pages/admin/AdminStatsPage';
@@ -32,6 +34,8 @@ export const routes: RouteObject[] = [
   {
     path: '/',
     Component: AppLayout,
+    // A page whose render throws shows the error page with its report's number (#294).
+    ErrorBoundary: RouteErrorPage,
     children: [
       { index: true, Component: HomePage },
       { path: 'tasks', Component: TasksPage },
@@ -55,6 +59,7 @@ export const routes: RouteObject[] = [
           { path: 'attempts', Component: AdminAttemptsPage },
           { path: 'stats', Component: AdminStatsPage },
           { path: 'system', Component: AdminSystemPage },
+          { path: 'errors', Component: AdminErrorsPage },
         ],
       },
       { path: 'problems', Component: ProblemsPage },

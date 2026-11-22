@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { loadAnalytics, resolveAnalyticsConfig } from './analytics';
 import { ApiClient, resolveApiBaseUrl } from './api';
 import { App } from './App';
+import { installErrorReporter } from './errors/reporter';
 import { resolveSiteConfig } from './site';
 import { applyTheme, readTheme, themeStorage } from './theme';
 // IBM Plex, served with the site rather than from a font CDN (docs/DESIGN.md).
@@ -28,6 +29,9 @@ if (root === null) {
 // The one place the environment is read. Everything below takes the client and configuration it is given.
 const client = new ApiClient({ baseUrl: resolveApiBaseUrl(import.meta.env) });
 const config = resolveSiteConfig(import.meta.env);
+
+// Uncaught errors reach the maintainer (#294); the route error boundary reports through it too.
+installErrorReporter(client.baseUrl);
 
 // Umami, only when the build names it (docs/SPEC.md §8).
 const analytics = resolveAnalyticsConfig(import.meta.env);

@@ -225,6 +225,47 @@
   overflow-wrap: break-word;
 }
 
+/* The error groups (#294): the type above its message, the latest stack behind a toggle, ids one per line. */
+.rc-admin__table .rc-admin-errors__error {
+  min-width: 18rem;
+}
+
+.rc-admin-errors__message {
+  display: block;
+  margin-top: 0.25rem;
+}
+
+.rc-admin__table .rc-admin-errors__where {
+  overflow-wrap: anywhere;
+}
+
+.rc-admin-errors__ids code {
+  display: block;
+  font-size: 0.8em;
+  white-space: nowrap;
+}
+
+.rc-admin-errors__stack {
+  margin-top: 0.5rem;
+}
+
+.rc-admin-errors__stack summary {
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+.rc-admin-errors__stack pre {
+  max-height: 20rem;
+  max-width: min(48rem, 80vw);
+  overflow: auto;
+  margin: 0.5rem 0 0;
+  padding: 0.5rem;
+  border-radius: var(--radius);
+  background: var(--surface-inset);
+  font-size: 0.75rem;
+  white-space: pre;
+}
+
 /* A learner's free text: it may hold a word as long as a line, so it wraps anywhere, and keeps room. */
 .rc-admin__table .rc-admin__comment {
   min-width: 14rem;
