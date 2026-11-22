@@ -338,10 +338,11 @@ description. As of that day:
   build argument `SOURCE_COMMIT`; passing it from the release workflow is a second PR
   (`claude/297-version-ci`, protected `.github/workflows/`). Until the owner merges it the page shows
   both commits as «неизвестен» in production — everything else works without it.
-  **#293** (2026-11-19, PR open): [ADR 0020](adr/0020-observability.md), **Proposed**, awaiting the
-  maintainer — errors in the product's PostgreSQL on `/admin/errors`, Dozzle behind Caddy for logs,
-  threshold checks in `deploy/check.sh`, alerts as the `monitoring-alert` issue plus Telegram. #294,
-  #295 and #296 are built once it is accepted (Open questions › Observability).
+  **#293** (2026-11-22): [ADR 0020](adr/0020-observability.md) **Accepted** by the maintainer as
+  written — errors in the product's PostgreSQL on `/admin/errors`, Dozzle behind Caddy for logs,
+  threshold checks in `deploy/check.sh`, alerts as the `monitoring-alert` issue plus Telegram. Its
+  assumptions stand: a 2 GB RAM / 30 GB VPS, 14 days of logs, 30 of error occurrences. #294, #295 and
+  #296 build on it.
   **#301** (2026-11-22, PR open): a prerendered page per problem card and per task, and `/tasks`
   prerendered (What exists › A page per card and per task). SPEC §4.1 names the new public address
   `/problems/{slug}`; the issue asked for §6, which is accounts and administration, so the routes
@@ -413,12 +414,6 @@ avatar ([#195](https://github.com/shoraLBRT/ritocode/issues/195)). DESIGN.md lay
 
 Decisions the specification left open are listed in [SPEC.md](SPEC.md) §13. Add here anything a
 future session would otherwise have to rediscover.
-
-- **Observability** (#293, [ADR 0020](adr/0020-observability.md), Proposed): the maintainer accepts
-  it by merging its PR and setting the status to Accepted (or by changing the status later); until
-  then #294, #295 and #296 are not taken. The ADR assumes a 2 GB RAM / 30 GB VPS and asks whether that
-  holds, whether the server's own alerts should open GitHub issues too, and the retention numbers
-  (14 days of logs, 30 of error occurrences).
 
 - **What the two catalogues are called** (the maintainer, 2026-11-04): «Задачи» beside «Каталог
   проблем» feels wrong — perhaps «Каталог задач» and «Каталог проблем», perhaps something else. Not
