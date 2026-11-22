@@ -266,7 +266,12 @@ time from the content export; the single-page application takes over once loaded
 ADR 0001's "revisit if catalog SEO becomes a goal" without adding a server-rendering layer. An address
 that is not a route of the application — a task slug the export does not name among them — is
 answered 404 with a prerendered not-found page, and each address has one form: a trailing slash and
-`/index.html` redirect to it (#300).
+`/index.html` redirect to it (#300). Each public page also carries a **link preview** — Open Graph
+and Twitter tags with a 1200×630 PNG image drawn at build from the page's own text, one for `/`,
+`/problems` and `/tasks` and one per card and per task, so no image is ever made by hand — and
+**structured data** as JSON-LD of schema.org: `WebSite` and `Organization` on `/`, a
+`DefinedTermSet` of the cards on `/problems` and a `DefinedTerm` on each card's page, an `ItemList`
+on `/tasks` and a `LearningResource` on each task's page (#302).
 
 **The home page is an arena** ([ADR 0015](adr/0015-arena-home-and-junior-audience.md),
 [DESIGN.md](DESIGN.md) › The arena; decided by the maintainer on 2026-10-28 in
