@@ -52,6 +52,10 @@ Once, by the maintainer (#134 provides the server, the domain and the OAuth apps
    (`https://UMAMI_DOMAIN/script.js`) and `UMAMI_WEBSITE_ID` (GitHub → Settings → Variables), and
    `SITE_ORIGIN` (`https://SITE_DOMAIN`). The web image takes them at build time, so release once more
    after the next push to `main`.
+   **server** For the traffic panel on `/admin` (#306): put the same site id in `production.env` as
+   `UMAMI_WEBSITE_ID`, and a token as `UMAMI_API_TOKEN` — [get an Umami token](#get-an-umami-token)
+   below, after the password is changed (changing it ends the token) — then `dc up -d api`. Without them the panel says Umami is not configured; nothing else
+   depends on it.
 8. **server** Schedule the backup: `crontab -e`, then
    `15 3 * * * cd ~/ritocode && ./backup.sh >> ~/ritocode-backup.log 2>&1`.
 9. Sign in with GitHub and with Google; open `/admin` — it is there only for `ADMIN_EMAIL`. Each
@@ -174,11 +178,28 @@ Every secret is in `~/ritocode/production.env` on the server; nothing else holds
 | `GITHUB_CLIENT_SECRET`, `GOOGLE_CLIENT_SECRET` | Make a new secret at the provider, put it in `production.env`, `dc up -d api`, then delete the old one at the provider. |
 | `POSTGRES_PASSWORD` | `dc exec postgres psql -U ritocode -c "ALTER ROLE ritocode PASSWORD '<new>'"`, put it in `production.env`, `dc up -d api`. |
 | `UMAMI_DB_PASSWORD` | `dc exec postgres psql -U ritocode -c "ALTER ROLE umami PASSWORD '<new>'"`, put it in `production.env`, `dc up -d umami`. |
-| `UMAMI_APP_SECRET` | Put a new one in `production.env`, `dc up -d umami`; everyone signed in to Umami signs in again. |
+| `UMAMI_APP_SECRET` | Put a new one in `production.env`, `dc up -d umami`; everyone signed in to Umami signs in again, and `UMAMI_API_TOKEN` stops working — get a new one (below). |
+| `UMAMI_API_TOKEN` | [Get an Umami token](#get-an-umami-token), put it in `production.env`, `dc up -d api`. A token outlives Umami's restarts; changing that Umami account's password or `UMAMI_APP_SECRET` ends it, so get a new one after either. |
 | The rclone key | Make a new key at the provider, `rclone config` to update the remote, delete the old key. |
 | The data-protection key ring | Not a secret anyone types. To discard it: `dc stop api`, `docker volume rm ritocode-production_api-keys`, `dc up -d api`; sign-ins in flight fail once. |
 
 Signed-in learners stay signed in through all of these: sessions live in the database.
+
+### Get an Umami token
+
+The traffic panel on `/admin` (#306) reads Umami's API as an Umami account that can see the site. Self-hosted
+Umami has no API keys; its sign-in answers with a token, and that token is what the API sends. On the
+server, through the edge (put the account's password in the prompt, not in the shell's history):
+
+```bash
+read -rsp 'Umami password: ' p; echo
+curl -s https://UMAMI_DOMAIN/api/auth/login -H 'Content-Type: application/json' \
+  -d "{\"username\":\"admin\",\"password\":\"$p\"}" | sed 's/.*"token":"\([^"]*\)".*/\1/'; unset p
+```
+
+The printed value is `UMAMI_API_TOKEN`. It outlives Umami's restarts, and ends when that account's
+password or `UMAMI_APP_SECRET` changes. The panel shows **refused** when Umami no longer takes it, and
+**failing** when Umami does not answer (`dc ps umami`, `dc logs --since 15m umami`).
 
 ## Read logs
 

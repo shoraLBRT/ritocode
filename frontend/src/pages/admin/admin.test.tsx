@@ -353,16 +353,92 @@ describe('the overview', () => {
     const days = (Date.parse(first?.searchParams.get('to') ?? '') - Date.parse(first?.searchParams.get('from') ?? '')) / 86_400_000;
     expect(days).toBe(29);
 
-    fireEvent.click(screen.getByRole('button', { name: '90 дн.' }));
+    const panel = within(screen.getByRole('region', { name: ru.admin.activity.title }));
+    fireEvent.click(panel.getByRole('button', { name: '90 дн.' }));
     await waitFor(() => {
       expect(requested(fetchStub, '/admin/stats/activity').at(-1)?.searchParams.get('bucket')).toBe('week');
     });
+  });
+
+  /** Umami's figures over a range, as `GET /admin/stats/traffic` sends them (#306). */
+  const traffic = {
+    status: 'ok',
+    from: '2026-10-21',
+    to: '2026-11-19',
+    dashboardUrl: 'https://stats.example.test/websites/site-1',
+    summary: { visitors: 120, visits: 150, pageViews: 480 },
+    referrers: [
+      { name: 'news.ycombinator.com', count: 40 },
+      { name: 't.me', count: 9 },
+    ],
+    pages: [{ name: '/tasks/money-floats', count: 77 }],
+    funnel: [
+      { name: 'task-opened', count: 80 },
+      { name: 'step-2-reached', count: 40 },
+      { name: 'check-signed-out', count: 20 },
+      { name: 'sign-in-completed', count: 10 },
+      { name: 'attempt-submitted', count: 8 },
+    ],
+  };
+
+  function withTraffic(report: object) {
+    const base = counted();
+    return vi
+      .fn<typeof globalThis.fetch>()
+      .mockImplementation((input, init) => (urlOf(input).includes('/admin/stats/traffic') ? Promise.resolve(jsonResponse(report)) : base(input, init)));
+  }
+
+  it("shows Umami's traffic over 30 UTC days: figures, referrers, pages, the funnel and a link to Umami", async () => {
+    const fetchStub = withTraffic(traffic);
+    renderApp(fetchStub, '/admin');
+
+    const panel = within(await screen.findByRole('region', { name: ru.admin.traffic.title }));
+    expect(await panel.findByText('480')).toBeInTheDocument();
+    expect(panel.getByText(ru.admin.traffic.visitors)).toBeInTheDocument();
+    expect(panel.getByText('news.ycombinator.com')).toBeInTheDocument();
+    expect(panel.getByText('/tasks/money-floats')).toBeInTheDocument();
+
+    const funnel = within(panel.getByRole('list', { name: ru.admin.traffic.funnelLabel }));
+    const steps = funnel.getAllByRole('listitem');
+    expect(steps).toHaveLength(5);
+    expect(steps[0]).toHaveTextContent(ru.admin.traffic.steps['task-opened']);
+    expect(steps[4]).toHaveTextContent(ru.admin.traffic.steps['attempt-submitted']);
+    expect(steps[4]).toHaveTextContent('10%');
+
+    const link = panel.getByRole('link', { name: ru.admin.traffic.dashboard });
+    expect(link).toHaveAttribute('href', traffic.dashboardUrl);
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+
+    const first = requested(fetchStub, '/admin/stats/traffic')[0];
+    const days = (Date.parse(first?.searchParams.get('to') ?? '') - Date.parse(first?.searchParams.get('from') ?? '')) / 86_400_000;
+    expect(days).toBe(29);
+
+    fireEvent.click(panel.getByRole('button', { name: '7 дн.' }));
+    await waitFor(() => {
+      const last = requested(fetchStub, '/admin/stats/traffic').at(-1);
+      expect((Date.parse(last?.searchParams.get('to') ?? '') - Date.parse(last?.searchParams.get('from') ?? '')) / 86_400_000).toBe(6);
+    });
+  });
+
+  it.each([
+    ['notConfigured', null],
+    ['failing', 'https://stats.example.test/websites/site-1'],
+    ['refused', 'https://stats.example.test/websites/site-1'],
+  ] as const)('says Umami is %s in the panel, and keeps the rest of the page', async (status, dashboardUrl) => {
+    renderApp(withTraffic({ ...traffic, status, dashboardUrl, summary: null, referrers: [], pages: [], funnel: [] }), '/admin');
+
+    const panel = within(await screen.findByRole('region', { name: ru.admin.traffic.title }));
+    expect(await panel.findByText(ru.admin.traffic[status])).toBeInTheDocument();
+    expect(panel.queryByText(ru.admin.traffic.visitors)).not.toBeInTheDocument();
+    expect(panel.queryAllByRole('link', { name: ru.admin.traffic.dashboard })).toHaveLength(dashboardUrl ? 1 : 0);
+    expect(await screen.findByRole('list', { name: ru.admin.overviewPage.tiles })).toBeInTheDocument();
   });
 
   it('keeps the tiles when the activity fails', async () => {
     renderApp(counted(), '/admin');
 
     expect(await screen.findByText(ru.admin.activity.failed)).toBeInTheDocument();
+    expect(await screen.findByText(ru.admin.traffic.failed)).toBeInTheDocument();
     expect(await screen.findByRole('list', { name: ru.admin.overviewPage.tiles })).toBeInTheDocument();
   });
 

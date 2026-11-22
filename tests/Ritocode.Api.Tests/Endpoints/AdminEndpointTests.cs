@@ -284,6 +284,7 @@ public sealed class NonAdminEndpointTests(NonAdminContentTestApi api) : IClassFi
         { "GET", "/api/v1/admin/attempts?user=someone" },
         { "GET", "/api/v1/admin/system" },
         { "GET", "/api/v1/admin/stats/activity?bucket=month" },
+        { "GET", "/api/v1/admin/stats/traffic?from=nonsense" },
         { "GET", "/api/v1/admin/stats/tasks" },
         { "GET", "/api/v1/admin/stats/cards" },
         { "GET", "/api/v1/admin/attempts?task=x&card=y" },
@@ -341,6 +342,7 @@ public sealed class AnonymousAdminEndpointTests(AnonymousTestApi api) : IClassFi
     [InlineData("/api/v1/admin/attempts")]
     [InlineData("/api/v1/admin/system")]
     [InlineData("/api/v1/admin/stats/activity")]
+    [InlineData("/api/v1/admin/stats/traffic")]
     [InlineData("/api/v1/admin/stats/tasks")]
     [InlineData("/api/v1/admin/stats/cards")]
     [InlineData("/api/v1/admin/no-such-list")]

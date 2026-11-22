@@ -53,20 +53,7 @@ public static class ActivityEndpoints
         var fields = new Dictionary<string, string[]>(StringComparer.Ordinal);
         var today = DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime);
 
-        var last = ParseDate(to, today, "to", fields);
-        var first = ParseDate(from, last.AddDays(-(DefaultDays - 1)), "from", fields);
-
-        if (fields.Count == 0)
-        {
-            if (first > last)
-            {
-                fields["from"] = ["Must not be after 'to'."];
-            }
-            else if (last.DayNumber - first.DayNumber + 1 > MaxDays)
-            {
-                fields["from"] = [$"The range must not be longer than {MaxDays} days."];
-            }
-        }
+        var (first, last) = ParseRange(from, to, today, fields);
 
         var size = bucket?.ToUpperInvariant() switch
         {
@@ -86,6 +73,31 @@ public static class ActivityEndpoints
         }
 
         return Results.Ok(await reader.ReadAsync(first, last, size, cancellationToken));
+    }
+
+    /// <summary>
+    /// <c>from</c>..<c>to</c> as UTC dates (<c>yyyy-MM-dd</c>, both included): the last <see cref="DefaultDays"/>
+    /// days ending today by default, at most <see cref="MaxDays"/> long. A wrong value is added to
+    /// <paramref name="fields"/>. Shared with the traffic panel (#306), so both read a range alike.
+    /// </summary>
+    internal static (DateOnly First, DateOnly Last) ParseRange(string? from, string? to, DateOnly today, Dictionary<string, string[]> fields)
+    {
+        var last = ParseDate(to, today, "to", fields);
+        var first = ParseDate(from, last.AddDays(-(DefaultDays - 1)), "from", fields);
+
+        if (fields.Count == 0)
+        {
+            if (first > last)
+            {
+                fields["from"] = ["Must not be after 'to'."];
+            }
+            else if (last.DayNumber - first.DayNumber + 1 > MaxDays)
+            {
+                fields["from"] = [$"The range must not be longer than {MaxDays} days."];
+            }
+        }
+
+        return (first, last);
     }
 
     private static DateOnly ParseDate(string? value, DateOnly fallback, string name, Dictionary<string, string[]> fields)

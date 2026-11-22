@@ -5,11 +5,9 @@ import { Skeleton } from '../../components/Skeleton';
 import { Tabs } from '../../components/TaskTable';
 import { useApiResource } from '../../hooks/useApiResource';
 import { useT } from '../../i18n';
+import { RANGES, utcDate } from './range';
+import type { Range } from './range';
 import { AdminPanel } from './shared';
-
-/** The ranges the picker offers, in days; 90 is read by week so the bars stay readable. */
-const RANGES = ['7', '30', '90'] as const;
-type Range = (typeof RANGES)[number];
 
 /** The figures charted, in order: each is a key of a bucket and of the strings under `admin.activity`. */
 const FIGURES = [
@@ -21,12 +19,6 @@ const FIGURES = [
   'signalsSent',
   'cardsStudied',
 ] as const satisfies readonly (keyof ActivityBucket)[];
-
-/** A UTC date as `yyyy-MM-dd`, `days` before today. */
-function utcDate(daysAgo: number, now = new Date()): string {
-  const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysAgo));
-  return date.toISOString().slice(0, 10);
-}
 
 /**
  * The overview's usage over time (#304): learners active, sign-ups and what learners did, one small bar

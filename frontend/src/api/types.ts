@@ -478,3 +478,26 @@ export interface ActivityReport {
     readonly returnedAfterWeek: number;
   };
 }
+
+/** Whether Umami answered the traffic panel (#306): only `ok` carries figures; none of the others is an error. */
+export type TrafficStatus = 'ok' | 'notConfigured' | 'failing' | 'refused';
+
+/** A referring domain, a page's path or a funnel event, and how many Umami counted. */
+export interface TrafficCount {
+  readonly name: string;
+  readonly count: number;
+}
+
+/** `GET /admin/stats/traffic` (#306): the site's traffic over a range of UTC days, as Umami counted it. */
+export interface TrafficReport {
+  readonly status: TrafficStatus;
+  readonly from: string;
+  readonly to: string;
+  /** The site's dashboard in Umami's own pages, when its address is configured. */
+  readonly dashboardUrl: string | null;
+  readonly summary: { readonly visitors: number; readonly visits: number; readonly pageViews: number } | null;
+  readonly referrers: readonly TrafficCount[];
+  readonly pages: readonly TrafficCount[];
+  /** Every step of the funnel, in order: task opened → step 2 → check signed out → sign-in → submitted. */
+  readonly funnel: readonly TrafficCount[];
+}

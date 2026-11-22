@@ -99,6 +99,9 @@ public static class ApiSetupExtensions
         // The admin usage over time (#304): host-level, as it composes two modules' answers.
         builder.Services.AddActivityStats();
 
+        // The admin traffic panel (#306): host-level, as it reads Umami and belongs to no module.
+        builder.Services.AddTrafficStats(builder.Configuration);
+
         var apiOptions = builder.Configuration.GetSection(ApiOptions.SectionName).Get<ApiOptions>() ?? new ApiOptions();
 
         // A body larger than any request the product makes is refused by the server before it is read.
@@ -201,6 +204,7 @@ public static class ApiSetupExtensions
         api.MapFeedbackEndpoints();
         api.MapSystemEndpoints();
         api.MapActivityEndpoints();
+        api.MapTrafficEndpoints();
         api.MapModules(ModuleRegistry.All);
         app.MapModuleHostEndpoints(ModuleRegistry.All);
 
