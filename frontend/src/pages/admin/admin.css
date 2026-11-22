@@ -454,6 +454,53 @@
   }
 }
 
+/* Per-task and per-card statistics (#305): a heading sorts its table, a cell may carry a second line. */
+.rc-admin__sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.rc-admin__sort:hover,
+th[aria-sort] .rc-admin__sort {
+  color: var(--text);
+}
+
+.rc-admin__sort:focus-visible {
+  border-radius: 4px;
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.rc-admin__sort-mark {
+  display: inline-block;
+  min-width: 0.75em;
+  color: var(--accent);
+}
+
+.rc-admin__table .rc-admin__sub {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-faint);
+  font-size: 0.72rem;
+}
+
+.rc-admin__table .rc-admin__text .rc-admin__chips {
+  margin-top: 6px;
+}
+
+/* A median slower than the band's estimate. */
+.rc-admin__over {
+  color: var(--warn);
+  font-weight: 600;
+}
+
 /* Usage over time (#304): figures over the range, then one small bar chart a figure. */
 .rc-admin__activity {
   display: grid;

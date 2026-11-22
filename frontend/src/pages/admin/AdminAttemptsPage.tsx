@@ -13,7 +13,8 @@ const STATUSES: readonly AdminAttemptStatus[] = ['all', 'open', 'submitted'];
 /**
  * `/admin/attempts` — every attempt, newest first (docs/SPEC.md §6.2): learner, task, first or
  * practice, started, submitted, time taken, score, and for one never submitted the step reached —
- * "where they gave up". `?user=` narrows it to one learner, as the list of users links it.
+ * "where they gave up". `?user=` narrows it to one learner, as the list of users links it; `?task=` and
+ * `?card=` to one task or to the attempts whose result names a card, as the statistics link them (#305).
  */
 export function AdminAttemptsPage() {
   const client = useApiClient();
@@ -22,18 +23,33 @@ export function AdminAttemptsPage() {
   const requested = params.get('status');
   const status: AdminAttemptStatus = STATUSES.find((value) => value === requested) ?? 'all';
   const user = params.get('user') ?? undefined;
+  const task = params.get('task') ?? undefined;
+  const card = params.get('card') ?? undefined;
   const page = pageParam(params.get('page'));
 
   const { state, reload } = useApiResource(
-    (signal) => listAdminAttempts(client, { status, ...(user ? { user } : {}), page, pageSize: ADMIN_PAGE_SIZE }, signal),
-    [client, status, user, page],
+    (signal) =>
+      listAdminAttempts(
+        client,
+        { status, ...(user ? { user } : {}), ...(task ? { task } : {}), ...(card ? { card } : {}), page, pageSize: ADMIN_PAGE_SIZE },
+        signal,
+      ),
+    [client, status, user, task, card, page],
   );
 
-  const address = (changes: { status?: AdminAttemptStatus; user?: string | undefined; page?: number }) => {
-    const next = { status, user, page: 1, ...changes };
+  const address = (changes: {
+    status?: AdminAttemptStatus;
+    user?: string | undefined;
+    task?: string | undefined;
+    card?: string | undefined;
+    page?: number;
+  }) => {
+    const next = { status, user, task, card, page: 1, ...changes };
     return {
       ...(next.status !== 'all' ? { status: next.status } : {}),
       ...(next.user ? { user: next.user } : {}),
+      ...(next.task ? { task: next.task } : {}),
+      ...(next.card ? { card: next.card } : {}),
       ...(next.page > 1 ? { page: String(next.page) } : {}),
     };
   };
@@ -55,16 +71,25 @@ export function AdminAttemptsPage() {
             }}
           />
           {user && (
-            <span className="rc-admin__chip rc-admin__chip--filter">
-              <span>{t('admin.attemptsPage.forLearner', { learner: learner ? (learner.email ?? learner.id) : user })}</span>
-              <Link
-                to={{ search: new URLSearchParams(address({ user: undefined })).toString() }}
-                aria-label={t('admin.attemptsPage.allLearners')}
-                title={t('admin.attemptsPage.allLearners')}
-              >
-                <Icon name="close" />
-              </Link>
-            </span>
+            <FilterChip
+              text={t('admin.attemptsPage.forLearner', { learner: learner ? (learner.email ?? learner.id) : user })}
+              clear={t('admin.attemptsPage.allLearners')}
+              search={new URLSearchParams(address({ user: undefined })).toString()}
+            />
+          )}
+          {task && (
+            <FilterChip
+              text={t('admin.attemptsPage.forTask', { task })}
+              clear={t('admin.attemptsPage.allTasks')}
+              search={new URLSearchParams(address({ task: undefined })).toString()}
+            />
+          )}
+          {card && (
+            <FilterChip
+              text={t('admin.attemptsPage.forCard', { card })}
+              clear={t('admin.attemptsPage.allCards')}
+              search={new URLSearchParams(address({ card: undefined })).toString()}
+            />
           )}
         </>
       }
@@ -106,6 +131,18 @@ export function AdminAttemptsPage() {
         )}
       </ListBody>
     </AdminPanel>
+  );
+}
+
+/** What the list is narrowed to, removable by its cross. */
+function FilterChip({ text, clear, search }: { text: string; clear: string; search: string }) {
+  return (
+    <span className="rc-admin__chip rc-admin__chip--filter">
+      <span>{text}</span>
+      <Link to={{ search }} aria-label={clear} title={clear}>
+        <Icon name="close" />
+      </Link>
+    </span>
   );
 }
 

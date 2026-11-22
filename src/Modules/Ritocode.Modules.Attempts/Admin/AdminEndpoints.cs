@@ -23,6 +23,10 @@ internal static class AdminEndpoints
         admin.MapGet("/signals", ListSignalsAsync).WithName("AdminListSignals");
         admin.MapPost("/signals/{id}/resolve", ResolveSignalAsync).WithName("AdminResolveSignal");
         admin.MapGet("/attempts", ListAttemptsAsync).WithName("AdminListAttempts");
+        admin.MapGet("/stats/tasks", (IStatsReader reader, CancellationToken cancellationToken) => reader.TasksAsync(cancellationToken))
+            .WithName("AdminTaskStats");
+        admin.MapGet("/stats/cards", (IStatsReader reader, CancellationToken cancellationToken) => reader.CardsAsync(cancellationToken))
+            .WithName("AdminCardStats");
 
         return endpoints;
     }
@@ -67,12 +71,18 @@ internal static class AdminEndpoints
         return result.Match(signal => Results.Ok(signal), error => ApiProblem.ToResult(error, context));
     }
 
-    /// <summary><c>?status=all</c> (the default), <c>open</c> or <c>submitted</c>, and <c>?user=</c> for one learner; newest first.</summary>
+    /// <summary>
+    /// <c>?status=all</c> (the default), <c>open</c> or <c>submitted</c>; <c>?user=</c> for one learner,
+    /// <c>?task=</c> for one task, <c>?card=</c> for the submitted attempts whose result names the card
+    /// (#305); newest first.
+    /// </summary>
     private static async Task<IResult> ListAttemptsAsync(
         IAdminReader reader,
         HttpContext context,
         string? status,
         string? user,
+        string? task,
+        string? card,
         int? page,
         int? pageSize,
         CancellationToken cancellationToken)
@@ -100,7 +110,7 @@ internal static class AdminEndpoints
 
         return fields.Count > 0
             ? Invalid(fields, context)
-            : Results.Ok(await reader.ListAttemptsAsync(filter, userId, request.Value, cancellationToken));
+            : Results.Ok(await reader.ListAttemptsAsync(filter, new AttemptFilter(userId, Blank(task), Blank(card)), request.Value, cancellationToken));
     }
 
     /// <summary>A status by its name, ignoring case; <paramref name="fallback"/> when absent. Numbers are not names.</summary>
@@ -124,6 +134,8 @@ internal static class AdminEndpoints
         status = Enum.Parse<TStatus>(match);
         return true;
     }
+
+    private static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value;
 
     /// <summary>The page parameters' own messages, to which the filters add theirs, so one answer names every bad parameter.</summary>
     private static Dictionary<string, string[]> FieldsOf(Result<PageRequest> request) =>

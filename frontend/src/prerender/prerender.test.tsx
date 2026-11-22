@@ -118,7 +118,7 @@ describe('the prerendered privacy policy', () => {
 
 describe('what else the build writes', () => {
   it('writes the untouched shell under every other address of the site, and under no other', () => {
-    for (const path of ['tasks.html', 'profile.html', 'admin.html', 'admin/signals.html', 'admin/users.html', 'admin/attempts.html', 'admin/system.html']) {
+    for (const path of ['tasks.html', 'profile.html', 'admin.html', 'admin/signals.html', 'admin/users.html', 'admin/attempts.html', 'admin/stats.html', 'admin/system.html']) {
       expect(page(path)).toBe(template);
     }
 

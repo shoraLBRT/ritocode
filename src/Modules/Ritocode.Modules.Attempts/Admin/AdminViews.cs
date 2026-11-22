@@ -37,6 +37,9 @@ public sealed record AdminAttemptView(
     int? Score,
     int? MaxScore);
 
+/// <summary>Which attempts the list narrows to: one learner, one task, one card named in the result — each optional.</summary>
+public sealed record AttemptFilter(Guid? UserId, string? Task, string? Card);
+
 /// <summary>Which signals the list shows (SPEC §6.2: open or resolved).</summary>
 public enum SignalStatus
 {

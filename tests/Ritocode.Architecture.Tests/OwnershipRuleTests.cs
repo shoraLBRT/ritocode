@@ -79,7 +79,8 @@ public sealed class OwnershipRuleTests
             "Ritocode.Modules.Attempts.Persistence.EveryonesRows",
             Method: null,
             "Every user's rows, for the admin area: called only from AdminReader, whose endpoints are behind "
-            + "the admin policy, and from AttemptTallyLookup, which answers counts and no row."),
+            + "the admin policy, from StatsReader, whose statistics endpoints are behind it too, and from "
+            + "AttemptTallyLookup and LearnerActivityLookup, which answer counts and moments and no row."),
     ];
 
     private static readonly HashSet<Type> GuardedEntities = [.. OwnedContexts.SelectMany(EntitiesMappedBy)];

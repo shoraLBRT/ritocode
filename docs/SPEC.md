@@ -584,6 +584,14 @@ database's size, and each dependency's state — PostgreSQL, Umami, the feedback
 credential — as working, not answering, or not configured. The last good backup is shown once the
 backup monitoring leaves a heartbeat (#296); until then it is absent, not an error.
 
+**Statistics** (`/admin/stats`, #305) is what calibrates the size bands (§3.4) and the scoring (§5):
+per task, its first and practice attempts, the share of learners who solved it and who revealed the
+answer, the median time from start to submit and its spread beside the difficulty's band, where open
+attempts stopped and the mean score of first attempts; per card, across every learner's first
+attempts, how often it was met, found, missed, picked when absent and treated right. Both tables sort
+by any column; a task or a card leads to its attempts; a task solved by almost nobody and a card picked
+when absent more often than found are marked.
+
 Adding or editing tasks through the admin area is a later iteration (§12). In the MVP, content
 reaches the product only through the repository (§7).
 
@@ -713,6 +721,8 @@ Under `/api/v1`, following ADR 0003.
 | `GET /admin/signals`, `POST /admin/signals/{id}/resolve` | Signals | admin |
 | `GET /admin/users`, `GET /admin/attempts` | Users and attempts | admin |
 | `GET /admin/system` | What is deployed and how it is (§6.2 › System) | admin |
+| `GET /admin/stats/activity` | Usage over time (§6.2, #304) | admin |
+| `GET /admin/stats/tasks`, `GET /admin/stats/cards` | How learners fare per task and per card (§6.2 › Statistics) | admin |
 
 Sign-in lives outside the versioned API: `GET /auth/login/{provider}?returnUrl=`, the providers'
 callbacks, and `POST /auth/logout`.
