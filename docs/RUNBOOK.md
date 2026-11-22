@@ -207,20 +207,34 @@ password or `UMAMI_APP_SECRET` changes. The panel shows **refused** when Umami n
 
 ## Read logs
 
-**server**
+**browser** — `https://SITE_DOMAIN/admin/logs/`, signed in as an admin (Dozzle, #295). Signed out it
+answers 401, signed in as anyone else 404. Pick `api` (or `caddy`, `umami`, `postgres`…) in the list;
+the page tails live, and the search box filters the lines shown.
+
+- A request a user reports by its id (the `X-Request-Id` every error shows): search for the id. Every
+  line of that request carries it, the summary line (method, path, status, duration) included.
+- By level: search for `"LogLevel":"Error"` (or `Warning`, `Critical`) — the API's lines are JSON with
+  the level in `LogLevel`.
+- Further back than the page has loaded: scroll up, or widen the time range at the top.
+
+**server** — the same files over SSH, when the site or the viewer is down:
 
 ```bash
 dc logs --since 1h api
-```
-
-A request a user reports by its id (the `X-Request-Id` every error shows):
-
-```bash
 dc logs --no-log-prefix api | jq -c 'select(any(.Scopes[]?; .RequestId == "<id>"))'
+dc logs --no-log-prefix api | jq -c 'select(.LogLevel == "Error")'
 ```
 
-The other services: `dc logs caddy`, `umami`, `postgres`. Docker keeps 5 × 10 MB per service. How the
-API's lines are shaped: [deploy/README.md](../deploy/README.md#logs).
+The other services: `dc logs caddy`, `umami`, `postgres`, `dozzle`.
+
+How long they are kept: Docker's driver, 10 × 20 MB compressed for the API and Caddy, 5 × 10 MB for
+the rest — about 14 days, or less if the cap comes first; a release starts the API's log anew. The
+server's checks report how many days the API's log actually reaches back ([The server's
+checks](#the-servers-checks)). How the API's lines are shaped and the settings:
+[deploy/README.md](../deploy/README.md#logs).
+
+**The viewer is down** (`FAIL container dozzle` or `docker-proxy`, or `/admin/logs/` answers 502/503):
+`dc ps dozzle docker-proxy`, `dc logs --since 15m dozzle docker-proxy`, `dc up -d dozzle docker-proxy`.
 
 ## An error was reported
 

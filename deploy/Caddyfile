@@ -38,9 +38,11 @@
 		forward_auth api:8080 {
 			uri /api/v1/admin/access
 		}
-		# The viewer needs no cookie, so the session's never reaches it.
+		# The viewer needs no cookie, so the session's never reaches it. Its live tail is a stream:
+		# flushed as it comes, never buffered.
 		reverse_proxy dozzle:8080 {
 			header_up -Cookie
+			flush_interval -1
 		}
 	}
 

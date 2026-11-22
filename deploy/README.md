@@ -157,7 +157,8 @@ The API writes **one JSON object per line** to standard output (the console's `j
 - levels come from `Logging:LogLevel`, overridable by environment variable, such as
   `Logging__LogLevel__Default=Warning`.
 
-To find a request's lines by the id a user reports:
+To find a request's lines by the id a user reports, search for the id in the viewer (below), or on
+the server:
 
 ```bash
 docker compose logs --no-log-prefix api | jq -c 'select(any(.Scopes[]?; .RequestId == "<id>"))'
@@ -167,16 +168,30 @@ ASP.NET adds a scope of its own that also has a `RequestId` key: the server's co
 It has a different format and never equals a client's id, so the query above finds exactly the
 request.
 
-**Rotation is Docker's.** The production Compose file (#135) gives the API, and every other
-service, the `json-file` driver with a cap, so the disk never fills:
+**Retention is Docker's** ([ADR 0020](../docs/adr/0020-observability.md) decision 2, #295): every
+service of the production Compose file is on the `json-file` driver with a cap, so the disk never
+fills. The two whose lines are read back — the API and the edge (Caddy) — keep more:
 
-```yaml
-logging:
-  driver: json-file
-  options:
-    max-size: "10m"
-    max-file: "5"
-```
+| Services | Driver options | On disk at most |
+| --- | --- | --- |
+| `api`, `caddy` (`x-logging-kept`) | `max-size: "20m"`, `max-file: "10"`, `compress: "true"` | 200 MB each before compression; the rotated files gzip to a fraction of it |
+| the rest (`x-logging`) | `max-size: "10m"`, `max-file: "5"` | 50 MB each |
+
+That is a cap, not a number of days: the aim is **14 days, or the cap if it comes first**.
+`deploy/check.sh` reports the age of the API's oldest line (`ok   logs api (the oldest line …)`), so
+the real number is known. A container recreated by a release — the API's on every one — starts a
+new log: Docker removes the old container's files with it, so the API's log never reaches back past
+the last release either.
+
+**Reading without SSH**: [Dozzle](https://dozzle.dev) at `https://SITE_DOMAIN/admin/logs/`, for
+admins only. It has no sign-in of its own: Caddy's `forward_auth` asks the API
+(`GET /api/v1/admin/access`) whether the request's session cookie is an admin's — 204 lets it
+through, a signed-out visitor gets the API's 401, a signed-in non-admin its 404 — and the cookie is
+not passed on to Dozzle. Dozzle reads Docker through `docker-proxy` (Tecnativa's socket proxy), which
+answers reads of containers, logs, events, info and version and refuses every write; Dozzle never
+sees the raw socket. Actions and the shell are off, and only this project's containers
+(`com.docker.compose.project=ritocode-production`) are listed. How to read them: [RUNBOOK › Read
+logs](../docs/RUNBOOK.md#read-logs).
 
 ## Monitoring
 
