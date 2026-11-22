@@ -1,0 +1,101 @@
+<!doctype html>
+<!--
+  The page the edge serves when the site cannot answer (#298, deploy/Caddyfile): the API or the web
+  image is down, or a release has switched maintenance on (deploy/release.sh, docs/RUNBOOK.md). It
+  is served by Caddy itself, so it depends on nothing behind it: no script, no request for anything
+  else, the light theme's tokens of docs/DESIGN.md copied in (light is the default, and the
+  learner's choice of dark is a script's to apply), IBM Plex only if the visitor has it.
+-->
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Сайт временно недоступен — Ritocode</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --page: #e6e7ee;
+        --surface: #ffffff;
+        --text: #18181f;
+        --text-muted: #4c4c5a;
+        --border: #dcdce5;
+        --accent: #4a4fb0;
+        --accent-soft: #e6e7f7;
+        --font-sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+        --font-mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Code', 'Consolas', monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        display: grid;
+        min-height: 100vh;
+        margin: 0;
+        padding: 1rem;
+        place-items: center;
+        background: var(--page);
+        color: var(--text);
+        font: 400 1rem/1.55 var(--font-sans);
+      }
+
+      main {
+        width: 100%;
+        max-width: 34rem;
+        padding: 2rem;
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        background: var(--surface);
+        box-shadow: 0 1px 2px rgb(24 24 31 / 6%), 0 4px 16px rgb(24 24 31 / 7%);
+      }
+
+      .brand {
+        margin: 0 0 1.5rem;
+        color: var(--accent);
+        font: 600 0.95rem/1 var(--font-mono);
+        letter-spacing: 0.02em;
+      }
+
+      .code {
+        display: inline-block;
+        margin: 0 0 0.75rem;
+        padding: 0.2rem 0.55rem;
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: var(--accent);
+        font: 500 0.8rem/1.4 var(--font-mono);
+      }
+
+      h1 {
+        margin: 0 0 0.75rem;
+        font-size: 1.6rem;
+        font-weight: 600;
+        line-height: 1.25;
+      }
+
+      p {
+        margin: 0 0 0.75rem;
+      }
+
+      .muted {
+        color: var(--text-muted);
+      }
+
+      a {
+        color: var(--accent);
+        font-weight: 500;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="brand">Ritocode</p>
+      <p class="code">503</p>
+      <h1>Сайт временно недоступен</h1>
+      <p>Мы обновляем сайт или чиним неполадку. Обычно это занимает несколько минут.</p>
+      <p class="muted">Твой прогресс сохранён. <a href="/">Обнови страницу</a> чуть позже — всё вернётся на место.</p>
+    </main>
+  </body>
+</html>
