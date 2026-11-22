@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { useLocation } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import type { Location } from 'react-router';
 import { track } from '../analytics';
 import { getProblemCatalogue, useApiClient } from '../api';
@@ -343,6 +343,10 @@ function Card({
           </summary>
           <div className="rc-pcard__sections">
             <CardSectionsView sections={card.sections} />
+            {/* Seen without JavaScript only, where the card unfolds in place: the way to its own page. */}
+            <p className="rc-pcard__page">
+              <Link to={`/problems/${card.slug}`}>{t('problems.page', { name: card.name })}</Link>
+            </p>
           </div>
         </details>
       </div>
@@ -431,6 +435,9 @@ function OpenCard({ card, className, marks, onClose }: { card: ProblemCard; clas
             <a href={`#${card.slug}`} aria-label={t('problems.anchor', { name: card.name })}>
               {t('problems.slug', { slug: card.slug })}
             </a>
+            <Link to={`/problems/${card.slug}`} aria-label={t('problems.page', { name: card.name })}>
+              {t('problems.pageLink')}
+            </Link>
           </span>
           <span className="rc-pcard__seal" aria-hidden="true" />
         </div>
@@ -447,22 +454,7 @@ function OpenCard({ card, className, marks, onClose }: { card: ProblemCard; clas
           <div className="rc-pcard__summary">
             <Markdown source={card.summary} />
           </div>
-          {marks.ready && (
-            <div className="rc-pcard__study">
-              <button
-                type="button"
-                className={`button rc-pcard__study-toggle${marks.studied.has(card.slug) ? ' button--primary' : ''}`}
-                aria-pressed={marks.studied.has(card.slug)}
-                onClick={() => {
-                  marks.toggle(card.slug);
-                }}
-              >
-                <Icon name="check" />
-                {t('problems.studied')}
-              </button>
-              {marks.guest && <span className="rc-pcard__study-note">{t('problems.guestStudied')}</span>}
-            </div>
-          )}
+          <StudyToggle slug={card.slug} marks={marks} />
           <div className="rc-pcard__sections">
             <CardSectionsView sections={card.sections} />
           </div>
@@ -473,7 +465,32 @@ function OpenCard({ card, className, marks, onClose }: { card: ProblemCard; clas
   );
 }
 
-/** Puts a card's slug in the address — or takes it out — without a navigation, keeping the router's state. */
+/** The toggle «Изучено» of an open card (ADR 0018), once the marks are known: the dialog and the card's own page. */
+export function StudyToggle({ slug, marks }: { slug: string; marks: StudyMarks }) {
+  const t = useT();
+
+  if (!marks.ready) {
+    return null;
+  }
+
+  return (
+    <div className="rc-pcard__study">
+      <button
+        type="button"
+        className={`button rc-pcard__study-toggle${marks.studied.has(slug) ? ' button--primary' : ''}`}
+        aria-pressed={marks.studied.has(slug)}
+        onClick={() => {
+          marks.toggle(slug);
+        }}
+      >
+        <Icon name="check" />
+        {t('problems.studied')}
+      </button>
+      {marks.guest && <span className="rc-pcard__study-note">{t('problems.guestStudied')}</span>}
+    </div>
+  );
+}
+
 /** How many times the browser has changed the address's hash while the page is shown. */
 function useHashChanges(): number {
   const [count, setCount] = useState(0);

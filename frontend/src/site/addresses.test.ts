@@ -28,7 +28,7 @@ describe('the addresses the build writes', () => {
     expect([...written].filter((path) => !fixed.includes(path))).toEqual([]);
   });
 
-  it('leave only the task addresses to the content export', () => {
-    expect(table.filter((path) => path.includes(':'))).toEqual(['/tasks/:slug', '/tasks/:slug/attempts/:id']);
+  it('leave only the card and task addresses to the content export', () => {
+    expect(table.filter((path) => path.includes(':'))).toEqual(['/tasks/:slug', '/tasks/:slug/attempts/:id', '/problems/:slug']);
   });
 });

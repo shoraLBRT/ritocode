@@ -1,5 +1,5 @@
 export { DEFAULT_DEMO_TASK, SiteConfigContext, resolveSiteConfig, useSiteConfig } from './SiteConfig';
 export type { SiteConfig } from './SiteConfig';
-export { NOT_FOUND_PATH, PRERENDERED_PATHS, SHELL_PATHS, pageMeta } from './pageMeta';
+export { NOT_FOUND_PATH, PRERENDERED_PATHS, SHELL_PATHS, pageMeta, plainText, problemMeta, taskMeta } from './pageMeta';
 export type { PageMeta } from './pageMeta';
-export { useDocumentMeta } from './useDocumentMeta';
+export { useDocumentMeta, usePageMeta } from './useDocumentMeta';

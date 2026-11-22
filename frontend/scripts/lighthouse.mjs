@@ -10,7 +10,7 @@
 //
 // Needs Chrome (CHROME_PATH when it is not where chrome-launcher looks).
 import { createServer } from 'node:http';
-import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { extname, join, normalize, resolve } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import * as chromeLauncher from 'chrome-launcher';
@@ -25,7 +25,10 @@ import lighthouse from 'lighthouse';
  * fails them for what the test lacks, not for what it does.
  */
 const BUDGET = { performance: 45, accessibility: 90, seo: 90 };
-const PAGES = ['/', '/problems', '/privacy'];
+// The fixed public pages, and the first page of a card and of a task the build wrote (#301): they
+// share one layout each, so one of each stands for the rest.
+const firstPage = async (directory) => `/${directory}/${(await readdir(join('dist', directory))).filter((name) => name.endsWith('.html')).sort()[0].slice(0, -'.html'.length)}`;
+const PAGES = ['/', '/problems', '/tasks', '/privacy', await firstPage('problems'), await firstPage('tasks')];
 const RUNS = Number(process.env.LIGHTHOUSE_RUNS ?? 3);
 const reports = process.env.LIGHTHOUSE_REPORTS;
 

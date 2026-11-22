@@ -11,6 +11,7 @@ import { RequireAdmin } from './pages/admin/RequireAdmin';
 import { HomePage } from './pages/HomePage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { PrivacyPage } from './pages/PrivacyPage';
+import { ProblemPage } from './pages/ProblemPage';
 import { ProblemsPage } from './pages/ProblemsPage';
 import { ProfilePage } from './pages/profile/ProfilePage';
 import { TasksPage } from './pages/TasksPage';
@@ -57,6 +58,7 @@ export const routes: RouteObject[] = [
         ],
       },
       { path: 'problems', Component: ProblemsPage },
+      { path: 'problems/:slug', Component: ProblemPage },
       { path: 'privacy', Component: PrivacyPage },
       { path: '*', Component: NotFoundPage },
     ],

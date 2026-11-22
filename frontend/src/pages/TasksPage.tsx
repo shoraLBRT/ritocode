@@ -1,6 +1,6 @@
 import { useSearchParams } from 'react-router';
 import { difficulties, listTasks, taskStatuses, useApiClient } from '../api';
-import type { Difficulty, TaskStatus, TaskSummary } from '../api';
+import type { Difficulty, TaskPreview, TaskStatus, TaskSummary } from '../api';
 import { BackToTop } from '../components/BackToTop';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
@@ -48,6 +48,33 @@ export function TasksPage() {
         </div>
       )}
       <BackToTop />
+    </section>
+  );
+}
+
+/**
+ * The same page for tasks already in hand: what the build prerenders from the content export
+ * (docs/SPEC.md §4.1) — every task as a guest sees it, so a search engine reads the list without
+ * running JavaScript.
+ */
+export function StaticTasksPage({ tasks }: { tasks: readonly TaskPreview[] }) {
+  const t = useT();
+  const summaries = tasks.map(({ slug, title, difficulty }): TaskSummary => ({ slug, title, difficulty, status: null }));
+
+  return (
+    <section className="page rc-arena">
+      <header className="rc-page-head">
+        <h1>{t('tasks.title')}</h1>
+        <p>{t('tasks.lead')}</p>
+      </header>
+
+      {summaries.length > 0 ? (
+        <TaskList tasks={summaries} />
+      ) : (
+        <div className="rc-panel">
+          <EmptyState title={t('tasks.empty')} icon="tasks" />
+        </div>
+      )}
     </section>
   );
 }

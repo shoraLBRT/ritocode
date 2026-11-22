@@ -187,7 +187,8 @@ internal sealed class ContentIngest(ContentDbContext context, TimeProvider clock
         return unpublished;
     }
 
-    private static string DifficultyName(TaskDifficulty difficulty) => difficulty switch
+    /// <summary>A difficulty as the schema and the API write it.</summary>
+    internal static string DifficultyName(TaskDifficulty difficulty) => difficulty switch
     {
         TaskDifficulty.Easy => "easy",
         TaskDifficulty.Medium => "medium",
