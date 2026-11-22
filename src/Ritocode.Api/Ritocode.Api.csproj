@@ -12,6 +12,7 @@
   <ItemGroup>
     <ProjectReference Include="../Ritocode.Shared/Ritocode.Shared.csproj" />
     <ProjectReference Include="../Modules/Ritocode.Modules.Auth/Ritocode.Modules.Auth.csproj" />
+    <ProjectReference Include="../Modules/Ritocode.Modules.Errors/Ritocode.Modules.Errors.csproj" />
     <ProjectReference Include="../Modules/Ritocode.Modules.Users/Ritocode.Modules.Users.csproj" />
     <ProjectReference Include="../Modules/Ritocode.Modules.Content/Ritocode.Modules.Content.csproj" />
     <ProjectReference Include="../Modules/Ritocode.Modules.Attempts/Ritocode.Modules.Attempts.csproj" />

@@ -82,6 +82,9 @@ function AdminShell() {
         <NavLink to="/admin/system" className="rc-admin__tab">
           {t('admin.system')}
         </NavLink>
+        <NavLink to="/admin/errors" className="rc-admin__tab">
+          {t('admin.errors')}
+        </NavLink>
       </nav>
 
       <AdminOutletContext value={{ openSignals, reloadOpenSignals }}>

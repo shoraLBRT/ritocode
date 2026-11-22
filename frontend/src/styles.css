@@ -3493,6 +3493,26 @@ pre {
   color: var(--text-muted);
 }
 
+/* The route error page (#294): the not-found frame, the report's number, two ways out. */
+/* Outside the layout, so it keeps its own gutter. */
+.rc-error-page {
+  box-sizing: border-box;
+  max-width: 48rem;
+  margin-inline: auto;
+  padding: calc(var(--gap) * 3) 1rem;
+}
+
+.rc-error-page__id {
+  margin: 0 0 calc(var(--gap) * 2);
+  overflow-wrap: anywhere;
+  color: var(--text-muted);
+}
+
+.rc-error-page .rc-notfound__ways {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: 34rem;
+}
+
 .rc-notfound__ways {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

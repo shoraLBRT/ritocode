@@ -83,6 +83,10 @@ services:
       Traffic__UmamiDashboardUrl: https://${UMAMI_DOMAIN:?set UMAMI_DOMAIN}
       # The backup's heartbeat (#296), which backup.sh writes on the host, for the system page's backup line.
       System__BackupHeartbeatPath: /backup-heartbeat/last-good
+      # A new or reopened error group is told on Telegram (ADR 0020, #294); without both, nothing is sent.
+      Errors__Telegram__BotToken: ${TELEGRAM_BOT_TOKEN:-}
+      Errors__Telegram__ChatId: ${TELEGRAM_CHAT_ID:-}
+      Errors__Telegram__SiteOrigin: https://${SITE_DOMAIN:?set SITE_DOMAIN}
     volumes:
       - api-keys:/keys
       - ${BACKUP_DIR:-/var/backups/ritocode}/heartbeat:/backup-heartbeat:ro

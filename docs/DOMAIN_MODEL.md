@@ -94,6 +94,20 @@ signal ever sees.
 Since #229 a signal is sent only once the learner has **revealed** the answer to the task (below):
 before that no extra pick is named, and any card is `409 answer_not_revealed`.
 
+## ErrorGroup and ErrorOccurrence
+
+Owned by the **Errors** module ([ADR 0020](adr/0020-observability.md) decision 1, #294). An
+unhandled server exception, or an error a visitor's browser reports, is an **occurrence** of a
+**group**, which its **fingerprint** names: the source (server or browser), the type and the top three
+stack frames — the method alone on the server, the function name in the browser, where the message
+with its numbers taken out is part of it too. A group keeps the count, the first and last time, the
+latest message and location (the method and route template, or the page's path), and when the
+maintainer resolved it; an occurrence keeps its time, the request id, the message, location, stack
+and commit. Neither keeps a request body, an address or a user id: the request id leads to the log
+lines. A new group, and an occurrence of a resolved group — which **reopens** it — each send one
+Telegram message. Occurrences are pruned: 30 days, and at most the latest 50 per group; a group
+stays.
+
 ## Reveal
 
 Owned by the **Attempts** module ([ADR 0017](adr/0017-a-result-without-the-answer.md)). A learner
