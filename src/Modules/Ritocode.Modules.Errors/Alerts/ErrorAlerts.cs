@@ -98,7 +98,8 @@ internal sealed partial class TelegramErrorAlerts(HttpClient http, IOptions<Erro
             return;
         }
 
-        var address = new Uri(settings.ApiBaseUrl, $"bot{settings.BotToken}/sendMessage");
+        // Joined as text: as a relative address, `bot123:abc/…` would read as a scheme.
+        var address = new Uri($"{settings.ApiBaseUrl.ToString().TrimEnd('/')}/bot{settings.BotToken}/sendMessage");
         var body = new { chat_id = settings.ChatId, text = Text(alert, settings.SiteOrigin), disable_web_page_preview = true };
 
         try
