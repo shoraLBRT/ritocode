@@ -792,9 +792,11 @@ export const ru = {
     retry: 'Повторить',
     requestId: 'Идентификатор запроса: {id}',
     fieldError: '{field}: {messages}',
-    unreachable: 'Не удалось связаться с API. Проверь, что сервер запущен.',
     unexpectedStatus: 'API ответил неожиданным статусом ({status}).',
     unexpectedResponse: 'API ответил неожиданным статусом.',
     failed: 'Что-то пошло не так.',
+    unavailable: 'Данные не загрузились: сайт сейчас недоступен.',
+    unavailableBanner: 'У сайта неполадки: сервер сейчас не отвечает. Попробуй обновить страницу через пару минут.',
+    reload: 'Обновить',
   },
 } as const;

@@ -6,6 +6,7 @@ import { readSignInReturn, SignInLinks, SignInReturnContext, useSession, without
 import type { SignInError, SignInReturnState } from '../session';
 import { useDocumentMeta, useSiteConfig } from '../site';
 import { ThemeToggle } from '../theme';
+import { ApiUnavailableBanner } from './ApiUnavailableBanner';
 import { AppFooter } from './AppFooter';
 import { HeaderSearch } from './HeaderSearch';
 import { HeaderSlotContext } from './HeaderSlot';
@@ -216,6 +217,8 @@ export function AppLayout() {
           </button>
         </div>
       )}
+
+      <ApiUnavailableBanner />
 
       <main className="app__main" id="main">
         <SignInReturnContext value={signInReturn}>
