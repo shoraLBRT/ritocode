@@ -48,6 +48,8 @@
 	# Always 503 with Retry-After, which tells a crawler and the pages' banner it is temporary. An
 	# answer the API gave itself, a 503 of its own included, passes through untouched.
 	handle_errors 502 503 504 {
+		# An error starts a fresh response: the site's headers again, then the page's own.
+		import site_headers
 		header {
 			Content-Security-Policy "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
 			Cache-Control "no-store"
