@@ -525,13 +525,14 @@ future session would otherwise have to rediscover.
   a file for every address (frontend/README.md › The prerendered pages), so a new route goes into
   `SHELL_PATHS`. `index.html` is the rendered landing, so it must not be the fallback for other routes. `SITE_ORIGIN` is the production address; CI uses
   a placeholder until the domain exists (#134).
-- **The application renders over the prerendered markup** rather than hydrating it: `/problems`
-  fetches its catalogue, so the first client render would not match. A visitor with JavaScript
-  sees the catalogue give way to the loading state for as long as `GET /problems` takes. Embedding
-  the export in the page as initial data would remove that, if it is ever noticed. Lighthouse noticed
-  it (#300): the largest paint waits for the bundle and the API, so performance stands at 77–80 on
-  `/` and `/privacy` and 53–54 on `/problems` (cumulative layout shift 0.4 there), and the budget in
-  `scripts/lighthouse.mjs` is 45 until that is fixed.
+- **`/problems` is under the performance budget of 90** (#310): its first paint waits for the whole
+  document — every card in full, about 64 kB compressed, plus the catalogue again as the hydration
+  data, about 50 kB more — 3.8 s on Lighthouse's simulated phone network, and the class tabs move as
+  the fonts arrive (cumulative layout shift 0.14). The budget holds it where it stands (`EXCEPTIONS`
+  in `scripts/lighthouse.mjs`). Reaching 90 needs a smaller page: the card sections out of
+  `/problems` (every card has its own page since #301, but SPEC §4.1 asks for the catalogue in full
+  for search engines — the maintainer's call), the hydration data as a file of its own fetched
+  before hydrating, and the tabs' fonts preloaded.
 - Tasks are ordered by difficulty, then title. SPEC §4.3 says "then publication", which needs a
   first-published timestamp the schema does not keep yet; add it if the order starts to matter.
 - **The review's notes and lesson are kept with the attempt on submit** (#29), as the key is, so a
@@ -632,6 +633,14 @@ dotnet run --project src/Ritocode.ContentTool -- export content-export.json cont
 
 ```bash
 cd frontend && CONTENT_EXPORT=../content-export.json SITE_ORIGIN=https://ritocode.example npm run build:static
+```
+
+The Lighthouse budget of those pages (#300, #310), on a build that addresses the API on its own
+origin, as the web image's does (in Git Bash prefix `MSYS_NO_PATHCONV=1`, or `/api/v1` becomes a
+Windows path), then measured against the API as a guest finds it, answered from the export:
+
+```bash
+cd frontend && VITE_API_BASE_URL=/api/v1 CONTENT_EXPORT=../content-export.json SITE_ORIGIN=https://ritocode.example npm run build:static && CONTENT_EXPORT=../content-export.json npm run lighthouse
 ```
 
 The end-to-end test, from `e2e/`, with the compose PostgreSQL up (`./scripts/dev-up.sh`) and

@@ -3,8 +3,15 @@
 // Serves dist/ the way the web image does (deploy/web.Caddyfile: the path, the path as a page of the
 // build, else 404.html with 404; compressed, as Caddy's `encode` does), runs Lighthouse in headless Chrome on each public page — mobile,
 // Lighthouse's default — and fails when a category scores under its budget. Performance is the median
-// of RUNS runs, since it moves from run to run; the other categories do not. There is no API behind
-// the server: a page asking for one gets 503, as when the API is down, which is what a crawler sees.
+// of RUNS runs, since it moves from run to run; the other categories do not. Behind the server is the
+// API as a guest finds it, answered from CONTENT_EXPORT (`guestApi`, #310); without it, 503, as in an
+// outage. Measure the build the web image makes — the API on the same origin:
+//
+//   VITE_API_BASE_URL=/api/v1 CONTENT_EXPORT=… SITE_ORIGIN=… npm run build:static
+//   CONTENT_EXPORT=… npm run lighthouse
+//
+// (In Git Bash, MSYS_NO_PATHCONV=1 keeps `/api/v1` from becoming a Windows path.) A build left at
+// the development API address asks a port nobody answers, and the outage banner shifts every page.
 //
 // LIGHTHOUSE_REPORTS=<directory> keeps the first run's report of each page there, as JSON.
 //
@@ -17,14 +24,23 @@ import * as chromeLauncher from 'chrome-launcher';
 import lighthouse from 'lighthouse';
 
 /**
- * The lowest score each category may have, out of 100. Performance is held where it stands, not at
- * the 90 #300 asks for: the application renders over the prerendered markup with `createRoot` and
- * fetches what the page already shows, so the largest paint waits for the whole bundle and the API —
- * 77–78 on `/`, 53–54 on `/problems` and 78–80 on `/privacy` when the budget was set. Raise it as
- * that is fixed. Best practices are left out: served over plain HTTP with no API behind it, the page
- * fails them for what the test lacks, not for what it does.
+ * The lowest score each category may have, out of 100. Since #310 the pages hydrate their markup with
+ * the data they were built from and load the task screen, profile and admin as chunks of their own:
+ * performance 99–100 on `/`, `/tasks`, `/privacy` and a card's page when the budget was raised. Best
+ * practices are left out: served over plain HTTP, the page fails them for what the test lacks, not
+ * for what it does.
  */
-const BUDGET = { performance: 45, accessibility: 90, seo: 90 };
+const BUDGET = { performance: 90, accessibility: 90, seo: 90 };
+
+/**
+ * Pages held lower, by path or by a path prefix ending in `/`, each with the reason (#310):
+ * - `/problems`, 72 when set: its first paint waits for the whole document, every card in full and the
+ *   catalogue again as hydration data (docs/PROJECT_STATE.md › Open questions);
+ * - a task's page, 80–100 from run to run: the task screen replaces its prerendered preview, and the
+ *   screen's own paint is the largest.
+ */
+const EXCEPTIONS = { '/problems': { performance: 65 }, '/tasks/': { performance: 75 } };
+const exceptionOf = (page) => EXCEPTIONS[page] ?? Object.entries(EXCEPTIONS).find(([prefix]) => prefix.endsWith('/') && page.startsWith(prefix))?.[1] ?? {};
 // The fixed public pages, and the first page of a card and of a task the build wrote (#301): they
 // share one layout each, so one of each stands for the rest.
 const firstPage = async (directory) => `/${directory}/${(await readdir(join('dist', directory))).filter((name) => name.endsWith('.html')).sort()[0].slice(0, -'.html'.length)}`;
@@ -129,11 +145,13 @@ try {
     console.log(`${page.padEnd(10)} ${Object.entries(scores).map(([category, score]) => `${category} ${score}`).join(', ')}`);
 
     for (const [category, score] of Object.entries(scores)) {
-      if (score < BUDGET[category]) {
+      const budget = { ...BUDGET, ...exceptionOf(page) }[category];
+
+      if (score < budget) {
         const audits = Object.values(runs[0].audits)
           .filter((audit) => audit.score !== null && audit.score < 0.9 && runs[0].categories[category].auditRefs.some((ref) => ref.id === audit.id && ref.weight > 0))
           .map((audit) => audit.id);
-        failures.push(`${page}: ${category} ${score} < ${BUDGET[category]} (${audits.join(', ')})`);
+        failures.push(`${page}: ${category} ${score} < ${budget} (${audits.join(', ')})`);
       }
     }
   }
@@ -147,4 +165,5 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log(`Every page within the budget: ${Object.entries(BUDGET).map(([category, score]) => `${category} ≥ ${score}`).join(', ')}.`);
+const within = (budget) => Object.entries(budget).map(([category, score]) => `${category} ≥ ${score}`).join(', ');
+console.log(`Every page within the budget: ${within(BUDGET)}${Object.entries(EXCEPTIONS).map(([page, budget]) => `; ${page}: ${within(budget)}`).join('')}.`);
