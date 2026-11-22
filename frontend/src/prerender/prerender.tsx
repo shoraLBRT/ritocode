@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { renderToString } from 'react-dom/server';
 import { Route, Routes, StaticRouter, useParams } from 'react-router';
 import { ApiClient, ApiClientProvider } from '../api';
@@ -13,7 +14,7 @@ import { ProblemsPage } from '../pages/ProblemsPage';
 import { TasksPage } from '../pages/TasksPage';
 import { TaskPreviewPage } from '../pages/task/TaskPreviewPage';
 import { SessionProvider } from '../session';
-import { NOT_FOUND_PATH, PRERENDERED_PATHS, PrerenderedContext, SHELL_PATHS, SiteConfigContext, pageMeta, prerenderedScript, problemMeta, taskMeta } from '../site';
+import { NOT_FOUND_PATH, PRERENDERED_PATHS, PrerenderedContext, SHELL_PATHS, SiteConfigContext, pageMeta, prerenderedLink, problemMeta, taskMeta } from '../site';
 import type { PageMeta, PrerenderedData, SiteConfig } from '../site';
 import { previewSvg } from './preview';
 import { previewImages, publicSeo, seoHead } from './seo';
@@ -93,18 +94,28 @@ export function prerender({ content, template, origin, config, builtAt = new Dat
   /**
    * The page at `path` rendered into the shell, with its title, its description and `head` — and,
    * for a page the application renders the same, the data it was rendered from, which the
-   * application hydrates it with (#310).
+   * application hydrates it with (#310): written as a file of its own under `assets/data/`, named by
+   * its content so it is cached for good, and preloaded from the page's head. Inside the page, as it
+   * once was, `/problems` carried its catalogue twice and its first paint waited for both.
    */
   const render = (path: string, meta: PageMeta, head: string): string => {
     const data = prerenderedData(path, content, builtAt);
     const markup = renderToString(<Page path={path} content={content} config={config} data={data} />);
-    const root = `<div id="root">${markup}</div>${data === null ? '' : prerenderedScript(data)}`;
+    const root = `<div id="root">${markup}</div>`;
+    let preload = '';
+
+    if (data !== null) {
+      const json = JSON.stringify(data);
+      const file = `assets/data/${fileOf(path).slice(0, -'.html'.length)}-${createHash('sha256').update(json).digest('hex').slice(0, 12)}.json`;
+      files.set(file, json);
+      preload = `\n    ${prerenderedLink(`/${file}`)}`;
+    }
 
     // Replaced through functions: a replacement string would read `$&` in a card's text as a pattern.
     return template
       .replace(EMPTY_ROOT, () => root)
       .replace(/<title>[^<]*<\/title>/, () => `<title>${escape(meta.title)}</title>`)
-      .replace('</head>', () => `  <meta name="description" content="${escape(meta.description)}" />\n    ${head}\n  </head>`);
+      .replace('</head>', () => `  <meta name="description" content="${escape(meta.description)}" />\n    ${head}${preload}\n  </head>`);
   };
 
   const pages = publicPages(content, t);

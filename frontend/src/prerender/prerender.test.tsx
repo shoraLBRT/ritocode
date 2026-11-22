@@ -214,16 +214,18 @@ describe('the prerendered tasks', () => {
 });
 
 describe('the data a page is hydrated with (#310)', () => {
+  const link = (html: string): string | undefined => /<link rel="preload" id="rc-prerendered" href="\/([^"]+)" as="fetch"[^>]*crossorigin="anonymous" \/>/.exec(html)?.[1];
   const data = (html: string): Record<string, unknown> | null => {
-    const json = /<script type="application\/json" id="rc-prerendered">([\s\S]*?)<\/script>/.exec(html)?.[1];
-    return json === undefined ? null : (JSON.parse(json) as Record<string, unknown>);
+    const file = link(html);
+    return file === undefined ? null : (JSON.parse(page(file)) as Record<string, unknown>);
   };
 
-  it('carries, after the root, what each page the application renders the same was rendered from, for its own address', () => {
+  it('preloads, from the head, a file of what each page the application renders the same was rendered from, for its own address', () => {
     expect(data(page('index.html'))).toMatchObject({ path: '/', arena: { catalogue: { classes: content.problems.classes } } });
     expect(data(page('problems.html'))).toEqual({ path: '/problems', catalogue: content.problems });
     expect(data(page('privacy.html'))).toEqual({ path: '/privacy' });
-    expect(page('privacy.html')).toMatch(/<\/div><script type="application\/json" id="rc-prerendered">/);
+    expect(page('privacy.html')).toMatch(/<link rel="preload" id="rc-prerendered"[^>]*>\n {2}<\/head>/);
+    expect(page('problems.html')).not.toContain('<script type="application/json"');
 
     const [card] = content.problems.cards;
     if (card === undefined) throw new Error('The test content has no card.');
@@ -242,12 +244,16 @@ describe('the data a page is hydrated with (#310)', () => {
     expect(data(page('404.html'))).toBeNull();
   });
 
-  it('keeps a card’s text from closing the script that carries it', () => {
-    const tricky: ContentExport = { ...content, problems: { ...content.problems, cards: content.problems.cards.map((card) => ({ ...card, summary: '</script><b>&' })) } };
-    const html = prerender({ content: tricky, template, origin: 'https://ritocode.example', config: { demoTask: 'x' } }).get('problems.html') ?? '';
-    const json = /<script type="application\/json" id="rc-prerendered">([\s\S]*?)<\/script>/.exec(html)?.[1] ?? '';
-    expect(json).not.toContain('<');
-    expect((JSON.parse(json) as { catalogue: { cards: { summary: string }[] } }).catalogue.cards[0]?.summary).toBe('</script><b>&');
+  it('names each file under assets/ by its content, so it can be cached for good and changes name when the content does', () => {
+    expect(link(page('problems.html'))).toMatch(/^assets\/data\/problems-[0-9a-f]{12}\.json$/);
+    expect(link(page(`problems/${content.problems.cards[0]?.slug ?? ''}.html`))).toMatch(/^assets\/data\/problems\/[a-z0-9-]+-[0-9a-f]{12}\.json$/);
+
+    const again = prerender({ content, template, origin: 'https://ritocode.example', config: { demoTask: 'x' } }).get('problems.html') ?? '';
+    expect(link(again)).toBe(link(page('problems.html')));
+
+    const edited: ContentExport = { ...content, problems: { ...content.problems, cards: content.problems.cards.map((card) => ({ ...card, summary: `${card.summary} Ещё.` })) } };
+    const changed = prerender({ content: edited, template, origin: 'https://ritocode.example', config: { demoTask: 'x' } }).get('problems.html') ?? '';
+    expect(link(changed)).not.toBe(link(page('problems.html')));
   });
 });
 
