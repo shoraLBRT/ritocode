@@ -83,10 +83,10 @@ catalogue from the API as it always does.
 ### The Lighthouse budget
 
 `npm run lighthouse`, after `build:static`, serves `dist/` the way the web image does and runs
-Lighthouse in headless Chrome on `/`, `/problems` and `/privacy`, failing when a category is under
-its budget (`scripts/lighthouse.mjs`): accessibility and SEO at 90, performance at 45 — where it
-stands, since the application renders over the prerendered markup and waits for the bundle and the
-API to paint the page again. `LIGHTHOUSE_RUNS` (3) sets how many runs the performance median takes,
+Lighthouse in headless Chrome on `/`, `/problems`, `/tasks`, `/privacy` and the first card's and
+task's page, failing when a category is under its budget (`scripts/lighthouse.mjs`): every category
+at 90, except performance on `/problems` (85: a steady 87 on GitHub's runners) and on a task's page
+(75: the task screen replaces its preview). Frontend CI runs it on every pull request. `LIGHTHOUSE_RUNS` (3) sets how many runs the performance median takes,
 `LIGHTHOUSE_REPORTS=<dir>` keeps the reports, and `CHROME_PATH` names Chrome when it is not found.
 
 ## How it is put together
