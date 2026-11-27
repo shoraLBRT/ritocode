@@ -86,6 +86,8 @@ jobs:
             CONTENT_LASTMOD=${{ steps.content.outputs.lastmod }}
             VITE_UMAMI_SCRIPT_URL=${{ vars.UMAMI_SCRIPT_URL }}
             VITE_UMAMI_WEBSITE_ID=${{ vars.UMAMI_WEBSITE_ID }}
+            VITE_YANDEX_VERIFICATION=${{ vars.YANDEX_VERIFICATION }}
+            VITE_GOOGLE_SITE_VERIFICATION=${{ vars.GOOGLE_SITE_VERIFICATION }}
             VITE_TURNSTILE_SITE_KEY=${{ vars.TURNSTILE_SITE_KEY }}
             SOURCE_COMMIT=${{ github.sha }}
           cache-from: type=gha,scope=${{ matrix.image }}

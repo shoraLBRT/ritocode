@@ -294,8 +294,8 @@ it **disables the schedule after 60 days without a commit** to the repository �
 first; re-enable it under *Actions* → *Monitor*.
 
 The workflow also sends each of its notifications — opened, changed, closed — to Telegram when the
-repository secrets `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` are set and passed to its *Alert* step
-(`scripts/monitor-alert.sh` reads them; until the workflow passes them, only the issue alerts).
+repository secrets `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` are set; the workflow passes them to its
+*Alert* step and `scripts/monitor-alert.sh` reads them. Without them, only the issue alerts.
 
 ### The server's checks
 
