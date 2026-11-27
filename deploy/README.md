@@ -68,11 +68,8 @@ of its own in that PostgreSQL. Only Caddy publishes ports (80 and 443).
 - **The search consoles** (#303): Yandex Webmaster's and Google Search Console's verification codes are
   the repository variables `YANDEX_VERIFICATION` and `GOOGLE_SITE_VERIFICATION`, which the web image
   is built with (build arguments `VITE_YANDEX_VERIFICATION`, `VITE_GOOGLE_SITE_VERIFICATION`); each
-  puts its meta tag in every page's head, none when empty. The release-images workflow is to pass them
-  beside Umami's; until the owner adds these two lines to its `build-args` (a protected file), released
-  images carry no tags:
-  `VITE_YANDEX_VERIFICATION=${{ vars.YANDEX_VERIFICATION }}` and
-  `VITE_GOOGLE_SITE_VERIFICATION=${{ vars.GOOGLE_SITE_VERIFICATION }}`.
+  puts its meta tag in every page's head, none when empty. The release-images workflow passes them
+  beside Umami's.
 - **IndexNow** (#303): `release.sh` reads the public pages' hashes (`page-hashes.txt`, written by the
   prerender) from the running web image before the release and from the new one after it, and
   `indexnow.sh` sends the new, changed and gone addresses with `INDEXNOW_KEY` from `production.env`.

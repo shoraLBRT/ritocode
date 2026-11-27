@@ -333,16 +333,12 @@ description. As of that day:
   same location, so the page also counts `hashchange`. Lint, build and vitest (498) pass; checked in
   the built-in browser at 375 and 1280 px, light and dark, against the exported catalogue (the header
   search was not, it needs the API).
-- **Operations** (#293–#306): **#300** (2026-11-19, part, PR open) — real 404s, canonical redirects,
-  the sitemap's `lastmod` and `npm run lighthouse` are built and checked against the web image
-  locally; the CI job that runs the budget is a second PR (`claude/300-lighthouse-ci`), on the
-  protected `.github/workflows/`, which also passes `CONTENT_LASTMOD` to the release build. Until the
-  owner merges it the issue stays open, and released images have no `lastmod`.
-  **#297** (2026-11-19, PR open): the admin system page, `/admin/system` from
-  `GET /api/v1/admin/system` (What exists › Admin system page). The images take the commit as the
-  build argument `SOURCE_COMMIT`; passing it from the release workflow is a second PR
-  (`claude/297-version-ci`, protected `.github/workflows/`). Until the owner merges it the page shows
-  both commits as «неизвестен» in production — everything else works without it.
+- **Operations** (#293–#306): **#300** (done 2026-11-26) — real 404s, canonical redirects,
+  the sitemap's `lastmod` and `npm run lighthouse`; Frontend CI runs the budget on every pull request
+  and the release build takes `CONTENT_LASTMOD` (#309).
+  **#297** (done 2026-11-26): the admin system page, `/admin/system` from
+  `GET /api/v1/admin/system` (What exists › Admin system page); the release workflow passes
+  `SOURCE_COMMIT` to both images (#312), so the page shows the deployed commits.
   **#293** (2026-11-22): [ADR 0020](adr/0020-observability.md) **Accepted** by the maintainer as
   written — errors in the product's PostgreSQL on `/admin/errors`, Dozzle behind Caddy for logs,
   threshold checks in `deploy/check.sh`, alerts as the `monitoring-alert` issue plus Telegram. Its
@@ -378,10 +374,9 @@ description. As of that day:
   off-server bucket's 7-day lifecycle rule is set at the provider (#134), and the policy's own text
   (#128/#134) keeps the promise the placeholder now makes.
   **#303** (2026-11-22, PR open, partial): the search consoles' meta tags and IndexNow after a release
-  (What exists › Search consoles and IndexNow). Left for the owner: the two lines passing
-  `YANDEX_VERIFICATION` and `GOOGLE_SITE_VERIFICATION` into the web image's `build-args` in the protected
-  `.github/workflows/release-images.yml` (deploy/README.md › The search consoles), and, once the domain
-  of #134 exists, the registration, the variables, `INDEXNOW_KEY` on the server and the first release
+  (What exists › Search consoles and IndexNow). The release workflow passes `YANDEX_VERIFICATION` and
+  `GOOGLE_SITE_VERIFICATION` into the web image's `build-args` since 2026-11-27. Left for the owner,
+  once the domain of #134 exists: the registration, the variables, `INDEXNOW_KEY` on the server and the first release
   that sends (RUNBOOK › Search consoles).
   **#298** (2026-11-22, PR open): the maintenance page, the switch and the banner (What exists ›
   Maintenance page). Checked on the local production stack, not yet on the server of #134.
@@ -390,9 +385,9 @@ description. As of that day:
   the issue: the acceptance run on the local production stack (Docker was unavailable to the session)
   and the same on the server of #134.
   **#296** (2026-11-22, PR open): the server's checks and their Telegram alert (What exists › Server
-  checks). Checked on the local production stack, not yet on the server of #134. Left for the
-  owner: the *Monitor* workflow passing the `TELEGRAM_*` secrets to its *Alert* step (a protected
-  path), and the bot itself.
+  checks). Checked on the local production stack, not yet on the server of #134. The *Monitor*
+  workflow passes the `TELEGRAM_*` secrets to its *Alert* step since 2026-11-27. Left for the owner:
+  the bot itself and the two secrets, in the repository and in `production.env`.
 - **Later** holds the post-MVP iterations that were SPEC §12; not taken until the maintainer moves one.
   Since 2026-11-11 it also holds the **incident**
   ([#227](https://github.com/shoraLBRT/ritocode/issues/227),
