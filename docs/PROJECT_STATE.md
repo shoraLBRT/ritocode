@@ -4,7 +4,7 @@
 in the same pull request as the work it describes — a session that skips this makes the next one
 start from nothing.
 
-- **Last updated:** 2026-11-22
+- **Last updated:** 2026-11-28
 - **Current stage:** S7 · Production — its engineering can be built against a local stack (#135's
   Compose file, #136's release command, #34's monitor, #41); the real checks wait on the VPS and domain of #134.
   S6 closed with #133: `/` and `/problems` read without JavaScript (#132), and every listed event
@@ -172,6 +172,10 @@ description. As of that day:
   focus lost on *Не сейчас* and after the reveal. **#235 is done** (2026-11-12): per-card progress
   leaves out the tasks whose answer is not revealed, and `/progress` says how many; the per-class
   counts still take every first attempt, which narrows an unrevealed key (Open questions).
+  **#332** (2026-11-28, PR open): the review test *moves focus to the score once the answer is
+  revealed* waits for the focus (`waitFor`) rather than only for the full review: the review can be
+  in the DOM before React runs the effect that moves the focus, which made it fail now and then on
+  CI. The component is unchanged; 20 local runs of `ReviewPage.test.tsx` pass.
   **#243** (2026-11-14, PR open): the feedback widget and `POST /api/v1/feedback`, built and
   tested with a fake tracker. Left: the real check — an issue in this repository sent from the
   deployed site, which needs #134/#135 and shows whether the Russian VPS reaches `api.github.com` and

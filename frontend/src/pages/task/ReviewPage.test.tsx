@@ -337,7 +337,11 @@ describe('the review before the answer is revealed', () => {
     fireEvent.click(screen.getByRole('button', { name: ru.review.revealConfirm }));
     await screen.findByRole('article', { name: 'Секреты в репозитории' });
 
-    expect(screen.getByRole('region', { name: ru.review.title })).toHaveFocus();
+    // The full review can be in the DOM before React runs its passive effects, and the focus moves
+    // in one of them (#332): wait for the focus itself, not only for the review it lands in.
+    await waitFor(() => {
+      expect(screen.getByRole('region', { name: ru.review.title })).toHaveFocus();
+    });
   });
 
   it('leaves focus alone when a review opens with its answer revealed', async () => {
